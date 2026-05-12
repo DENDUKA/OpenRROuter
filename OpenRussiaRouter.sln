@@ -1,0 +1,106 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{48553977-5017-49FC-AC38-784B7269DFD0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.BuildingBlocks", "src\OpenRussiaRouter.BuildingBlocks\OpenRussiaRouter.BuildingBlocks.csproj", "{E9DBC051-E863-4672-B80B-9369B3FFD0EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.Contracts", "src\OpenRussiaRouter.Contracts\OpenRussiaRouter.Contracts.csproj", "{52CE60C2-074B-4E76-9D32-1EA963C3B8DB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.ApiGateway", "src\OpenRussiaRouter.ApiGateway\OpenRussiaRouter.ApiGateway.csproj", "{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.AuthService", "src\OpenRussiaRouter.AuthService\OpenRussiaRouter.AuthService.csproj", "{C63611D6-A3B2-45EA-AA10-C4C0CEA06817}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.BillingService", "src\OpenRussiaRouter.BillingService\OpenRussiaRouter.BillingService.csproj", "{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.ControlPlane", "src\OpenRussiaRouter.ControlPlane\OpenRussiaRouter.ControlPlane.csproj", "{9C36DF31-1BCB-43A7-8BE4-FD7959981A57}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.WebApp", "src\OpenRussiaRouter.WebApp\OpenRussiaRouter.WebApp.csproj", "{C5C74946-C872-4426-ACA5-864C8C3A909D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{54996DA5-B6D9-40E7-8BC1-461A999B7D34}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.BuildingBlocks.Tests", "tests\OpenRussiaRouter.BuildingBlocks.Tests\OpenRussiaRouter.BuildingBlocks.Tests.csproj", "{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.AuthService.Tests", "tests\OpenRussiaRouter.AuthService.Tests\OpenRussiaRouter.AuthService.Tests.csproj", "{9E8688F3-C76C-47EA-B790-B4C32444D2AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.ApiGateway.Tests", "tests\OpenRussiaRouter.ApiGateway.Tests\OpenRussiaRouter.ApiGateway.Tests.csproj", "{9852DBBD-505D-4A13-B500-C58CEC99FFB9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.BillingService.Tests", "tests\OpenRussiaRouter.BillingService.Tests\OpenRussiaRouter.BillingService.Tests.csproj", "{E9552468-076B-4457-B5A2-97FCBC7AA5F4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.ControlPlane.Tests", "tests\OpenRussiaRouter.ControlPlane.Tests\OpenRussiaRouter.ControlPlane.Tests.csproj", "{CA183F6C-3801-45CD-B731-B5EA54DFE28F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E9DBC051-E863-4672-B80B-9369B3FFD0EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9DBC051-E863-4672-B80B-9369B3FFD0EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9DBC051-E863-4672-B80B-9369B3FFD0EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9DBC051-E863-4672-B80B-9369B3FFD0EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{52CE60C2-074B-4E76-9D32-1EA963C3B8DB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{52CE60C2-074B-4E76-9D32-1EA963C3B8DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{52CE60C2-074B-4E76-9D32-1EA963C3B8DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{52CE60C2-074B-4E76-9D32-1EA963C3B8DB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C63611D6-A3B2-45EA-AA10-C4C0CEA06817}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C63611D6-A3B2-45EA-AA10-C4C0CEA06817}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C63611D6-A3B2-45EA-AA10-C4C0CEA06817}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C63611D6-A3B2-45EA-AA10-C4C0CEA06817}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9C36DF31-1BCB-43A7-8BE4-FD7959981A57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9C36DF31-1BCB-43A7-8BE4-FD7959981A57}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9C36DF31-1BCB-43A7-8BE4-FD7959981A57}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9C36DF31-1BCB-43A7-8BE4-FD7959981A57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5C74946-C872-4426-ACA5-864C8C3A909D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5C74946-C872-4426-ACA5-864C8C3A909D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5C74946-C872-4426-ACA5-864C8C3A909D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5C74946-C872-4426-ACA5-864C8C3A909D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9E8688F3-C76C-47EA-B790-B4C32444D2AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9E8688F3-C76C-47EA-B790-B4C32444D2AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9E8688F3-C76C-47EA-B790-B4C32444D2AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9E8688F3-C76C-47EA-B790-B4C32444D2AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9852DBBD-505D-4A13-B500-C58CEC99FFB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9852DBBD-505D-4A13-B500-C58CEC99FFB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9852DBBD-505D-4A13-B500-C58CEC99FFB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9852DBBD-505D-4A13-B500-C58CEC99FFB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9552468-076B-4457-B5A2-97FCBC7AA5F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9552468-076B-4457-B5A2-97FCBC7AA5F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9552468-076B-4457-B5A2-97FCBC7AA5F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9552468-076B-4457-B5A2-97FCBC7AA5F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA183F6C-3801-45CD-B731-B5EA54DFE28F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA183F6C-3801-45CD-B731-B5EA54DFE28F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA183F6C-3801-45CD-B731-B5EA54DFE28F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA183F6C-3801-45CD-B731-B5EA54DFE28F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{E9DBC051-E863-4672-B80B-9369B3FFD0EA} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{52CE60C2-074B-4E76-9D32-1EA963C3B8DB} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{07AC5C6F-ABD0-4B6C-B651-AB339FFA0769} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{C63611D6-A3B2-45EA-AA10-C4C0CEA06817} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{6AA1D64F-F9F5-45D0-8EE9-E6BB1AFC7492} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{9C36DF31-1BCB-43A7-8BE4-FD7959981A57} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{C5C74946-C872-4426-ACA5-864C8C3A909D} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{5E2C4C4C-4394-4CF2-B31B-8D5B3D1F4D07} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
+		{9E8688F3-C76C-47EA-B790-B4C32444D2AC} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
+		{9852DBBD-505D-4A13-B500-C58CEC99FFB9} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
+		{E9552468-076B-4457-B5A2-97FCBC7AA5F4} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
+		{CA183F6C-3801-45CD-B731-B5EA54DFE28F} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
+	EndGlobalSection
+EndGlobal

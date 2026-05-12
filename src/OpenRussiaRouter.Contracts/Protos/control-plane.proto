@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package openrussiarouter.controlplane.v1;
+
+option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1";
+
+service RouterControlPlane {
+  rpc SelectRouterNode (SelectRouterNodeRequest) returns (SelectRouterNodeResponse);
+  rpc ReleaseRouterNode (ReleaseRouterNodeRequest) returns (ReleaseRouterNodeResponse);
+}
+
+message SelectRouterNodeRequest {
+  string model_id = 1;
+  string request_id = 2;
+}
+
+message SelectRouterNodeResponse {
+  string lease_id = 1;
+  string node_id = 2;
+  string endpoint_url = 3;
+  string token_secret_name = 4;
+  string error_code = 5;
+}
+
+message ReleaseRouterNodeRequest {
+  string lease_id = 1;
+  string status = 2;
+}
+
+message ReleaseRouterNodeResponse {
+  bool accepted = 1;
+}

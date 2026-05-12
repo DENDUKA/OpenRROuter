@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package openrussiarouter.billing.v1;
+
+option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Billing.V1";
+
+service BillingService {
+  rpc CheckBalanceAndModel (CheckBalanceAndModelRequest) returns (CheckBalanceAndModelResponse);
+  rpc RecordUsage (RecordUsageRequest) returns (RecordUsageResponse);
+  rpc ListPublicModels (ListPublicModelsRequest) returns (ListPublicModelsResponse);
+}
+
+message CheckBalanceAndModelRequest {
+  string user_id = 1;
+  string model_id = 2;
+}
+
+message CheckBalanceAndModelResponse {
+  bool allowed = 1;
+  string model_id = 2;
+  string price_version = 3;
+  string balance_rub = 4;
+  string error_code = 5;
+}
+
+message TokenUsage {
+  int64 input_tokens = 1;
+  int64 output_tokens = 2;
+  int64 cache_tokens = 3;
+}
+
+message RecordUsageRequest {
+  string request_id = 1;
+  string user_id = 2;
+  string api_key_id = 3;
+  string model_id = 4;
+  string router_node_id = 5;
+  TokenUsage usage = 6;
+  string status = 7;
+  string started_at_utc = 8;
+  string completed_at_utc = 9;
+}
+
+message RecordUsageResponse {
+  bool accepted = 1;
+  string request_id = 2;
+  string error_code = 3;
+}
+
+message ListPublicModelsRequest {
+}
+
+message PublicModel {
+  string id = 1;
+  string display_name = 2;
+}
+
+message ListPublicModelsResponse {
+  repeated PublicModel models = 1;
+}

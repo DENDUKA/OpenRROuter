@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package openrussiarouter.auth.v1;
+
+option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Auth.V1";
+
+service AuthService {
+  rpc ValidateApiKey (ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+}
+
+message ValidateApiKeyRequest {
+  string raw_key = 1;
+}
+
+message ValidateApiKeyResponse {
+  bool is_valid = 1;
+  string user_id = 2;
+  string api_key_id = 3;
+  string error_code = 4;
+}

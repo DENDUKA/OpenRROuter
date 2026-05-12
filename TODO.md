@@ -4,6 +4,43 @@
 
 Этот документ превращает PRD в технический backlog для MVP. Каждая задача описывает постановку, важные технические особенности и минимальные тесты. Формат рассчитан на перенос в YouTrack/Jira/GitHub Issues.
 
+## Статус выполнения
+
+### Закрыто
+
+- `[x] PLATFORM-001` - создана структура solution, сервисные проекты, shared contracts/building blocks и test projects. `dotnet build OpenRussiaRouter.sln` проходит.
+
+### Частично закрыто
+
+- `[~] PLATFORM-002` - добавлены shared `ApiError` и `ErrorCodes`, но еще не реализованы gRPC interceptors/error details и contract tests маппинга.
+- `[~] PLATFORM-003` - добавлены health/readiness endpoints и correlation id primitive, но еще нет полноценного logging/metrics/tracing pipeline и log redaction tests.
+- `[~] AUTH-001` - реализованы доменные модели `UserAccount`, `Invite`, роли, статусы, одноразовый invite token, PostgreSQL persistence entities/mapping для users/invites, SQL migration `db/migrations/auth/001_initial.sql` и тесты invite/persistence lifecycle. Еще нужны Dapper repository для invite registration, admin endpoints/gRPC methods и invite delivery/display flow.
+- `[~] AUTH-002` - реализован `LoginService`: проверка email/password credential, disabled user, выдача session token и unit-тесты. Еще нужны Blazor login screens, session persistence/cookie/JWT wiring и authorization policies.
+- `[~] AUTH-003` - реализованы доменная модель `ApiKey`, secure raw key generation, SHA-256 hash storage, revoke/rename/use flow, PostgreSQL schema/mapping, SQL migration и Dapper-backed `ValidateApiKey` с `lastUsedAt` update. Еще нужны Dapper repository для create/revoke/rename и user-facing API/gRPC methods.
+- `[~] AUTH-004` - подключен gRPC hosting в Auth Service, добавлен `ValidateApiKey` service, `auth.proto` csharp namespace, in-memory validator для local mode, Dapper-backed validator при наличии `ConnectionStrings:AuthDb`, SQL contract tests и opt-in PostgreSQL integration test. Еще нужны остальные методы `.proto` и integration tests через gRPC test server.
+- `[~] GATEWAY-005` - Gateway подключен к Auth `ValidateApiKey` по gRPC, Bearer parsing вынесен в отдельный компонент, `/v1/models` и `/v1/chat/completions` теперь требуют валидный Auth ответ. Еще нужны integration tests с настоящим gRPC test server, кеширование validation по необходимости и связка с persisted API keys.
+- `[~] GATEWAY-001` - `/v1/models` теперь получает список моделей из Billing `ListPublicModels` по gRPC и возвращает OpenAI-compatible list shape. Еще нужны integration tests и реальный persisted model catalog.
+- `[~] GATEWAY-002` - `/v1/chat/completions` теперь извлекает `model`, проверяет Auth и Billing `CheckBalanceAndModel`, выбирает 9Router-ноду через Control Plane, проксирует non-streaming запрос в HTTP adapter, возвращает upstream response и пишет `RecordUsage` при наличии usage payload. Еще нужны integration tests через test server, streaming path и контракт с реальным 9Router.
+- `[~] GATEWAY-004` - при сетевой ошибке Gateway освобождает lease со статусом `failed` и возвращает typed router unavailable. Еще нужен один retry на другую healthy-ноду для safe non-streaming/до первого SSE chunk.
+- `[~] BILLING-001` - реализован append-only ledger, virtual top-up, баланс из ledger, `IBillingStore`, in-memory и Dapper/PostgreSQL store с idempotency key handling, SQL migration и opt-in PostgreSQL integration test. Еще нужны admin gRPC/UI method.
+- `[~] BILLING-002` - реализована проверка `balance > 0 + enabled model` в application layer с тестами. Еще нужен gRPC endpoint `CheckBalanceAndModel` и интеграция Gateway.
+- `[~] BILLING-003` - реализован model/pricing catalog, enabled/disabled фильтр, price version в usage record и Dapper/PostgreSQL persistence model. Еще нужны admin gRPC/UI methods и immutable price history вместо одного active row.
+- `[~] BILLING-004` - реализован прием usage event в application layer, идемпотентность по requestId, charge ledger entry, anomalies для invalid tokens / missing model price и Dapper/PostgreSQL store для usage/anomalies. Еще нужны PostgreSQL-backed outbox и integration tests на реальной PG.
+- `[~] BILLING-005` - реализован shared `UsageCostCalculator` и подключен в Billing/Usage application service. Еще нужны persisted price snapshots и UI breakdown.
+- `[~] BILLING-007` - подключен gRPC hosting в Billing Service, добавлены endpoints `CheckBalanceAndModel`, `RecordUsage`, `ListPublicModels`, runtime switch in-memory/Dapper по `ConnectionStrings:BillingDb`, SQL contract tests и opt-in PostgreSQL integration test. Еще нужны admin-only methods и integration tests через gRPC test server + PostgreSQL.
+- `[~] CONTROL-001` - реализован registry внешних 9Router-нodi, HTTPS endpoint validation, enable/disable, `IControlPlaneStore`, in-memory и Dapper/PostgreSQL store, SQL migration и opt-in PostgreSQL integration test. Еще нужны admin gRPC/UI methods.
+- `[~] CONTROL-002` - реализовано применение health status в application layer, исключение disabled nodes из health/routing, HTTP health-check client с node token, background worker и Dapper/PostgreSQL поля health status/latency/error. Еще нужны cooldown/flapping policy и сохранение capabilities/version.
+- `[~] CONTROL-003` - реализован least-load выбор healthy enabled ноды по normalized in-flight/capacity, gRPC `SelectRouterNode` и тесты. Еще нужны capability/model-aware routing и persisted metrics.
+- `[~] CONTROL-004` - реализованы lease/release, TTL cleanup, защита счетчика in-flight от ухода ниже нуля, background cleanup worker и Dapper/PostgreSQL persisted leases. Еще нужны recovery policy после рестарта сервиса и integration tests на реальной PG.
+- `[~] CONTROL-005` - подключен gRPC hosting в Control Plane, реализованы `SelectRouterNode` и `ReleaseRouterNode`, runtime switch in-memory/Dapper по `ConnectionStrings:ControlPlaneDb`, SQL contract tests и opt-in PostgreSQL integration test. Еще нужны admin management methods в `.proto` и gRPC integration tests.
+
+### Следующий фокус
+
+- Persistence layer для `AUTH-001/AUTH-003`: Dapper repositories для invite/api-key create/revoke/rename.
+- PostgreSQL Testcontainers runner вместо env-only opt-in integration tests.
+- Gateway streaming/retry integration без развертывания 9Router: SSE proxy contract, safe retry и test fake upstream.
+- Blazor UI для login/API keys/balance/admin basics.
+
 ## Общие правила реализации
 
 - Основной стек: .NET 8/9, C#, ASP.NET Core, gRPC, PostgreSQL, Kubernetes.
@@ -728,4 +765,3 @@
 7. UI-001, UI-002, UI-003, UI-004, UI-005, UI-006, UI-007.
 8. INFRA-001, INFRA-002, INFRA-003, INFRA-004.
 9. E2E-001, E2E-002, E2E-003, E2E-004.
-

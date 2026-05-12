@@ -1,0 +1,12 @@
+bin/
+obj/
+.dotnet/
+.nuget/
+.appdata/
+.userprofile/
+.msbuild/
+NuGet/
+**/NuGet/
+*.binlog
+*.log
+TestResults/

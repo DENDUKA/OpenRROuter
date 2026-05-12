@@ -10,12 +10,9 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
-/// <summary>
-/// gRPC Billing API used by Gateway and internal UI backends.
-/// </summary>
 public sealed class GrpcBillingService(BillingApplicationService billing) : BillingGrpc.BillingServiceBase
 {
-    /// <inheritdoc />
+
     public override Task<CheckBalanceAndModelResponse> CheckBalanceAndModel(
         CheckBalanceAndModelRequest request,
         ServerCallContext context)
@@ -32,7 +29,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         });
     }
 
-    /// <inheritdoc />
     public override Task<ListPublicModelsResponse> ListPublicModels(
         ListPublicModelsRequest request,
         ServerCallContext context)
@@ -47,7 +43,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         return Task.FromResult(response);
     }
 
-    /// <inheritdoc />
     public override Task<RecordUsageResponse> RecordUsage(
         RecordUsageRequest request,
         ServerCallContext context)
@@ -76,7 +71,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         });
     }
 
-    /// <inheritdoc />
     public override Task<GetBalanceResponse> GetBalance(
         GetBalanceRequest request,
         ServerCallContext context)
@@ -96,7 +90,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         }
     }
 
-    /// <inheritdoc />
     public override Task<CreateVirtualTopUpResponse> CreateVirtualTopUp(
         CreateVirtualTopUpRequest request,
         ServerCallContext context)
@@ -128,7 +121,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         }
     }
 
-    /// <inheritdoc />
     public override Task<UpsertModelPriceResponse> UpsertModelPrice(
         UpsertModelPriceRequest request,
         ServerCallContext context)
@@ -158,7 +150,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         }
     }
 
-    /// <inheritdoc />
     public override Task<ListBillingAnomaliesResponse> ListBillingAnomalies(
         ListBillingAnomaliesRequest request,
         ServerCallContext context)
@@ -176,7 +167,6 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
 return Task.FromResult(response);
     }
 
-    /// <inheritdoc />
     public override Task<ListModelsResponse> ListModels(
         ListModelsRequest request,
         ServerCallContext context)
@@ -197,7 +187,6 @@ return Task.FromResult(response);
 return Task.FromResult(response);
     }
 
-    /// <inheritdoc />
     public override Task<ListUsageResponse> ListUsage(
         ListUsageRequest request,
         ServerCallContext context)

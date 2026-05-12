@@ -7,16 +7,13 @@ using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-/// <summary>
-/// gRPC Auth API used by API Gateway and internal services.
-/// </summary>
 public sealed class GrpcAuthService(
     IAuthApiKeyValidator apiKeyValidator,
     IAuthRepository repository,
     AuthAccountApplicationService accounts,
     LoginService loginService) : AuthGrpc.AuthServiceBase
 {
-    /// <inheritdoc />
+
     public override Task<ValidateApiKeyResponse> ValidateApiKey(
         ValidateApiKeyRequest request,
         ServerCallContext context)
@@ -32,7 +29,6 @@ public sealed class GrpcAuthService(
         });
     }
 
-    /// <inheritdoc />
     public override Task<LoginResponse> Login(
         LoginRequest request,
         ServerCallContext context)
@@ -54,7 +50,6 @@ public sealed class GrpcAuthService(
         });
     }
 
-    /// <inheritdoc />
     public override Task<CreateInviteResponse> CreateInvite(
         CreateInviteRequest request,
         ServerCallContext context)
@@ -85,7 +80,6 @@ public sealed class GrpcAuthService(
         }
     }
 
-    /// <inheritdoc />
     public override Task<CompleteInviteResponse> CompleteInvite(
         CompleteInviteRequest request,
         ServerCallContext context)
@@ -107,7 +101,6 @@ public sealed class GrpcAuthService(
         }
     }
 
-    /// <inheritdoc />
     public override Task<CreateApiKeyResponse> CreateApiKey(
         CreateApiKeyRequest request,
         ServerCallContext context)
@@ -131,7 +124,6 @@ public sealed class GrpcAuthService(
         }
     }
 
-    /// <inheritdoc />
     public override Task<RevokeApiKeyResponse> RevokeApiKey(
         RevokeApiKeyRequest request,
         ServerCallContext context)
@@ -151,7 +143,6 @@ public sealed class GrpcAuthService(
         }
     }
 
-    /// <inheritdoc />
     public override Task<ListApiKeysResponse> ListApiKeys(
         ListApiKeysRequest request,
         ServerCallContext context)
@@ -175,7 +166,6 @@ public sealed class GrpcAuthService(
         });
     }
 
-    /// <inheritdoc />
     public override Task<RenameApiKeyResponse> RenameApiKey(
         RenameApiKeyRequest request,
         ServerCallContext context)
@@ -195,7 +185,6 @@ public sealed class GrpcAuthService(
         }
     }
 
-    /// <inheritdoc />
     public override Task<ListUsersResponse> ListUsers(
         ListUsersRequest request,
         ServerCallContext context)

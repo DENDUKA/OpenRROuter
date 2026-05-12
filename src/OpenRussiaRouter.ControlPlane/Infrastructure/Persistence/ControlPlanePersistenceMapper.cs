@@ -3,9 +3,6 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 
-/// <summary>
-/// Maps Control Plane domain objects to PostgreSQL persistence rows and back.
-/// </summary>
 public static class ControlPlanePersistenceMapper
 {
     public static RouterNodeEntity ToEntity(RouterNode node)

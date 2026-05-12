@@ -11,7 +11,4 @@ Startup.ConfigurePipeline(app);
 
 app.Run();
 
-/// <summary>
-/// API Gateway entry point exposed for integration tests.
-/// </summary>
 public partial class Program;

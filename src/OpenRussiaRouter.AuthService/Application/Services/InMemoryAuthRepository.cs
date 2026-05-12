@@ -2,9 +2,6 @@ using OpenRussiaRouter.AuthService.Domain.Entities;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-/// <summary>
-/// In-memory Auth repository for local development and unit tests.
-/// </summary>
 public sealed class InMemoryAuthRepository : IAuthRepository
 {
     private readonly object gate = new();
@@ -12,7 +9,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     private readonly List<Invite> invites = [];
     private readonly List<ApiKey> apiKeys = [];
 
-    /// <inheritdoc />
     public void AddInvite(Invite invite)
     {
         lock (gate)
@@ -21,7 +17,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public Invite? GetInviteByTokenHash(string tokenHash)
     {
         lock (gate)
@@ -30,7 +25,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public void AddUserAndMarkInviteUsed(UserAccount user, Invite invite)
     {
         lock (gate)
@@ -39,7 +33,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public UserAccount? GetUser(string userId)
     {
         lock (gate)
@@ -48,7 +41,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public UserAccount? GetUserByEmail(string email)
     {
         lock (gate)
@@ -65,7 +57,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public void AddApiKey(ApiKey apiKey)
     {
         lock (gate)
@@ -74,7 +65,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public ApiKey? GetApiKey(string apiKeyId)
     {
         lock (gate)
@@ -83,11 +73,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <summary>
-    /// Gets an API key by stored secret hash.
-    /// </summary>
-    /// <param name="secretHash">Stored secret hash.</param>
-    /// <returns>API key or null.</returns>
     public ApiKey? GetApiKeyBySecretHash(string secretHash)
     {
         lock (gate)
@@ -96,7 +81,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
     {
         lock (gate)
@@ -105,7 +89,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public bool RenameApiKey(string userId, string apiKeyId, string name)
     {
         lock (gate)
@@ -121,7 +104,6 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    /// <inheritdoc />
     public bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc)
     {
         lock (gate)

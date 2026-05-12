@@ -6,12 +6,9 @@ using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.ApiGateway.Auth;
 
-/// <summary>
-/// API key authenticator backed by Auth Service gRPC API.
-/// </summary>
 public sealed class GrpcApiKeyAuthenticator(AuthGrpc.AuthServiceClient authClient) : IApiKeyAuthenticator
 {
-    /// <inheritdoc />
+
     public async Task<ApiKeyAuthenticationResult> AuthenticateAsync(
         string rawApiKey,
         CancellationToken cancellationToken)

@@ -3,12 +3,9 @@ using OpenRussiaRouter.ApiGateway.Router;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-/// <summary>
-/// Resolves router node tokens from configuration section <c>RouterNodeTokens</c>.
-/// </summary>
 public sealed class ConfigurationRouterNodeTokenProvider(IConfiguration configuration) : IRouterNodeTokenProvider
 {
-    /// <inheritdoc />
+
     public string Resolve(string tokenSecretName)
     {
         if (string.IsNullOrWhiteSpace(tokenSecretName))

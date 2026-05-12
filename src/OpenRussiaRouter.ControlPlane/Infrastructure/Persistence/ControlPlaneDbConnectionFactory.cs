@@ -6,10 +6,6 @@ public sealed class ControlPlaneDbConnectionFactory : IControlPlaneDbConnectionF
 {
     private readonly Npgsql.NpgsqlDataSource _dataSource;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ControlPlaneDbConnectionFactory"/> class.
-    /// </summary>
-    /// <param name="connectionString">PostgreSQL connection string.</param>
     public ControlPlaneDbConnectionFactory(string connectionString)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
@@ -17,9 +13,7 @@ public sealed class ControlPlaneDbConnectionFactory : IControlPlaneDbConnectionF
         _dataSource = dataSourceBuilder.Build();
     }
 
-    /// <inheritdoc />
     public IDbConnection CreateConnection() => _dataSource.CreateConnection();
 
-    /// <inheritdoc />
     public ValueTask DisposeAsync() => _dataSource.DisposeAsync();
 }

@@ -3,16 +3,9 @@ using OpenRussiaRouter.AuthService.Domain.Enums;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 
-/// <summary>
-/// Maps Auth domain objects to PostgreSQL persistence rows and back.
-/// </summary>
 public static class AuthPersistenceMapper
 {
-    /// <summary>
-    /// Converts a domain user to a persistence entity.
-    /// </summary>
-    /// <param name="user">Domain user.</param>
-    /// <returns>Persistence entity.</returns>
+
     public static UserAccountEntity ToEntity(UserAccount user)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -27,11 +20,6 @@ public static class AuthPersistenceMapper
         };
     }
 
-    /// <summary>
-    /// Converts a persisted user to the domain model.
-    /// </summary>
-    /// <param name="entity">Persistence entity.</param>
-    /// <returns>Domain user.</returns>
     public static UserAccount ToDomain(UserAccountEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -44,11 +32,6 @@ public static class AuthPersistenceMapper
         return user;
     }
 
-    /// <summary>
-    /// Converts a domain invite to a persistence entity.
-    /// </summary>
-    /// <param name="invite">Domain invite.</param>
-    /// <returns>Persistence entity.</returns>
     public static InviteEntity ToEntity(Invite invite)
     {
         ArgumentNullException.ThrowIfNull(invite);
@@ -65,11 +48,6 @@ public static class AuthPersistenceMapper
         };
     }
 
-    /// <summary>
-    /// Converts a persisted invite to the domain model.
-    /// </summary>
-    /// <param name="entity">Persistence entity.</param>
-    /// <returns>Domain invite.</returns>
     public static Invite ToDomain(InviteEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
@@ -90,11 +68,6 @@ public static class AuthPersistenceMapper
         return invite;
     }
 
-    /// <summary>
-    /// Converts a domain API key to a persistence entity.
-    /// </summary>
-    /// <param name="apiKey">Domain API key.</param>
-    /// <returns>Persistence entity.</returns>
     public static ApiKeyEntity ToEntity(ApiKey apiKey)
     {
         ArgumentNullException.ThrowIfNull(apiKey);
@@ -111,11 +84,6 @@ public static class AuthPersistenceMapper
         };
     }
 
-    /// <summary>
-    /// Converts a persisted API key to the domain model.
-    /// </summary>
-    /// <param name="entity">Persistence entity.</param>
-    /// <returns>Domain API key.</returns>
     public static ApiKey ToDomain(ApiKeyEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);

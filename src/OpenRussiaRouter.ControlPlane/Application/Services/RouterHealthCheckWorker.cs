@@ -5,9 +5,6 @@ using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-/// <summary>
-/// Periodically refreshes health status for enabled external 9Router nodes.
-/// </summary>
 public sealed class RouterHealthCheckWorker(
     RouterControlPlaneService controlPlane,
     IRouterNodeHealthClient healthClient,
@@ -15,10 +12,7 @@ public sealed class RouterHealthCheckWorker(
     ILogger<RouterHealthCheckWorker> logger)
     : BackgroundService
 {
-    /// <summary>
-    /// Runs one health check round.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
+
     public async Task RunOnceAsync(CancellationToken cancellationToken)
     {
         if (!options.CurrentValue.Enabled)
@@ -39,7 +33,6 @@ public sealed class RouterHealthCheckWorker(
         }
     }
 
-    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)

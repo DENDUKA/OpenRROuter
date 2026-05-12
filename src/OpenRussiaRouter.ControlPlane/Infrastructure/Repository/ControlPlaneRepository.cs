@@ -5,12 +5,9 @@ using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
-/// <summary>
-/// Dapper/PostgreSQL-backed Control Plane repository.
-/// </summary>
 public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory connectionFactory) : IControlPlaneRepository
 {
-    /// <inheritdoc />
+
     public void UpsertNode(RouterNode node)
     {
         ArgumentNullException.ThrowIfNull(node);
@@ -40,7 +37,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             ToParameters(node));
     }
 
-    /// <inheritdoc />
     public RouterNode? GetNode(string nodeId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -49,7 +45,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             : null;
     }
 
-    /// <inheritdoc />
     public (IReadOnlyCollection<RouterNode> Items, bool HasMore) ListNodes(int limit, string? afterName = null)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -72,7 +67,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         return (items, hasMore);
     }
 
-    /// <inheritdoc />
     public void AddLease(RouterLease lease)
     {
         ArgumentNullException.ThrowIfNull(lease);
@@ -87,7 +81,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             lease);
     }
 
-    /// <inheritdoc />
     public RouterLease? RemoveLease(string leaseId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -107,7 +100,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 : null;
     }
 
-    /// <inheritdoc />
     public IReadOnlyCollection<RouterLease> RemoveExpiredLeases(DateTimeOffset nowUtc)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -127,7 +119,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             .ToArray();
     }
 
-    /// <inheritdoc />
     public void ReleaseNodes(IReadOnlyCollection<string> nodeIds)
     {
         if (nodeIds.Count == 0)

@@ -5,13 +5,10 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.ApiGateway.ControlPlane;
 
-/// <summary>
-/// Gateway Control Plane client backed by gRPC.
-/// </summary>
 public sealed class GrpcControlPlaneGatewayClient(ControlGrpc.RouterControlPlaneClient controlClient)
     : IControlPlaneGatewayClient
 {
-    /// <inheritdoc />
+
     public async Task<GatewayRouterLease?> SelectRouterNodeAsync(
         string modelId,
         string requestId,
@@ -47,7 +44,6 @@ public sealed class GrpcControlPlaneGatewayClient(ControlGrpc.RouterControlPlane
         }
     }
 
-    /// <inheritdoc />
     public async Task ReleaseRouterNodeAsync(string leaseId, string status, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(leaseId))

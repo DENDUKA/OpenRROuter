@@ -4,19 +4,13 @@ using Microsoft.Extensions.Options;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-/// <summary>
-/// Periodically releases expired router leases so load counters recover from abandoned requests.
-/// </summary>
 public sealed class RouterLeaseCleanupWorker(
     RouterControlPlaneService controlPlane,
     IOptionsMonitor<RouterLeaseCleanupOptions> options,
     ILogger<RouterLeaseCleanupWorker> logger)
     : BackgroundService
 {
-    /// <summary>
-    /// Runs one cleanup round.
-    /// </summary>
-    /// <param name="nowUtc">Current timestamp.</param>
+
     public void RunOnce(DateTimeOffset nowUtc)
     {
         if (!options.CurrentValue.Enabled)
@@ -27,7 +21,6 @@ public sealed class RouterLeaseCleanupWorker(
         controlPlane.ReleaseExpiredLeases(nowUtc);
     }
 
-    /// <inheritdoc />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)

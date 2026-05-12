@@ -7,20 +7,12 @@ using OpenRussiaRouter.Contracts.Auth;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-/// <summary>
-/// In-memory API key validator used until PostgreSQL persistence is added.
-/// </summary>
 public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
 {
     private readonly ConcurrentDictionary<string, StoredApiKey> _keysByHash = new(StringComparer.Ordinal);
     private readonly IAuthRepository? repository;
     private readonly Sha256SecretHasher _secretHasher;
 
-    /// <summary>
-    /// Creates an in-memory validator.
-    /// </summary>
-    /// <param name="secretHasher">Secret hasher.</param>
-    /// <param name="configuration">Application configuration with optional seed keys.</param>
     public InMemoryAuthApiKeyValidator(Sha256SecretHasher secretHasher, IConfiguration configuration, IAuthRepository? repository = null)
     {
         this.repository = repository;
@@ -28,7 +20,6 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         LoadSeedKeys(configuration);
     }
 
-    /// <inheritdoc />
     public ValidateApiKeyResult Validate(string rawKey)
     {
         if (string.IsNullOrWhiteSpace(rawKey))
@@ -51,12 +42,6 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, null);
     }
 
-    /// <summary>
-    /// Registers a raw key for tests or bootstrap flows.
-    /// </summary>
-    /// <param name="rawKey">Raw API key.</param>
-    /// <param name="userId">Owner user id.</param>
-    /// <param name="apiKeyId">API key id.</param>
     public void RegisterRawKey(string rawKey, string userId, string apiKeyId)
     {
         var key = new StoredApiKey(userId, apiKeyId, Revoked: false);

@@ -1,8 +1,5 @@
 namespace OpenRussiaRouter.BuildingBlocks.Errors;
 
-/// <summary>
-/// Shared error codes used across Gateway, Auth, Billing and Control Plane.
-/// </summary>
 public static class ErrorCodes
 {
     public const string AuthenticationRequired = "authentication_required";

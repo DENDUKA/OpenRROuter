@@ -13,16 +13,9 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.ApiGateway.Application.Extensions;
 
-/// <summary>
-/// Extension methods for configuring API Gateway dependencies.
-/// </summary>
 public static class ApiGatewayExtensions
 {
-    /// <summary>
-    /// Adds API Gateway gRPC client dependencies.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">Application configuration.</param>
+
     public static IServiceCollection AddGatewayGrpcClients(this IServiceCollection services, IConfiguration configuration)
     {
         services.Configure<GatewayGrpcOptions>(options =>
@@ -89,10 +82,6 @@ public static class ApiGatewayExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds API Gateway router dependencies.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
     public static IServiceCollection AddGatewayRouter(this IServiceCollection services)
     {
         services.AddReverseProxy();

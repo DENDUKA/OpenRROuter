@@ -7,16 +7,13 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-/// <summary>
-/// HTTP health client for external 9Router nodes.
-/// </summary>
 public sealed class HttpRouterNodeHealthClient(
     HttpClient httpClient,
     IRouterNodeTokenResolver tokenResolver,
     IOptionsMonitor<RouterHealthCheckOptions> options)
     : IRouterNodeHealthClient
 {
-    /// <inheritdoc />
+
     public async Task<RouterNodeHealthResult> CheckAsync(RouterNode node, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(node);

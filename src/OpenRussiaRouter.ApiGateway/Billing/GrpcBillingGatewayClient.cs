@@ -8,12 +8,9 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.ApiGateway.Billing;
 
-/// <summary>
-/// Billing Gateway client backed by Billing Service gRPC API.
-/// </summary>
 public sealed class GrpcBillingGatewayClient(BillingGrpc.BillingServiceClient billingClient) : IBillingGatewayClient
 {
-    /// <inheritdoc />
+
     public async Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken cancellationToken)
     {
         var response = await billingClient.ListPublicModelsAsync(
@@ -25,7 +22,6 @@ public sealed class GrpcBillingGatewayClient(BillingGrpc.BillingServiceClient bi
             .ToArray();
     }
 
-    /// <inheritdoc />
     public async Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(
         string userId,
         string modelId,
@@ -61,7 +57,6 @@ public sealed class GrpcBillingGatewayClient(BillingGrpc.BillingServiceClient bi
             : 0m;
     }
 
-    /// <inheritdoc />
     public async Task<bool> RecordUsageAsync(GatewayUsageEvent usageEvent, CancellationToken cancellationToken)
     {
         var response = await billingClient.RecordUsageAsync(

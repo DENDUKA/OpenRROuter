@@ -6,12 +6,9 @@ using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
-/// <summary>
-/// Dapper/PostgreSQL-backed Billing repository.
-/// </summary>
 public sealed class BillingRepository(IBillingDbConnectionFactory connectionFactory) : IBillingRepository
 {
-    /// <inheritdoc />
+
     public LedgerEntry AddLedgerEntry(LedgerEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -41,7 +38,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             new { entry.IdempotencyKey }));
     }
 
-    /// <inheritdoc />
     public MoneyAmount GetBalance(string userId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -52,7 +48,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return MoneyAmount.Rub(amount);
     }
 
-    /// <inheritdoc />
     public void UpsertModel(ModelPrice model)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -89,7 +84,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             });
     }
 
-    /// <inheritdoc />
     public ModelPrice? GetEnabledModel(string modelId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -100,7 +94,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 : null;
     }
 
-    /// <inheritdoc />
     public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -124,7 +117,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
-    /// <inheritdoc />
     public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -147,7 +139,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
-    /// <inheritdoc />
     public UsageRecord AddUsage(UsageRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);
@@ -184,7 +175,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             new { record.RequestId }));
     }
 
-    /// <inheritdoc />
     public UsageRecord? GetUsage(string requestId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -195,7 +185,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 : null;
     }
 
-    /// <inheritdoc />
     public (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -219,7 +208,6 @@ var items = connection.Query<UsageRecordEntity>(
         return (items, hasMore);
     }
 
-    /// <inheritdoc />
     public void AddAnomaly(BillingAnomaly anomaly)
     {
         ArgumentNullException.ThrowIfNull(anomaly);
@@ -234,7 +222,6 @@ var items = connection.Query<UsageRecordEntity>(
             anomaly);
     }
 
-    /// <inheritdoc />
     public (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null)
     {
         using var connection = connectionFactory.CreateConnection();

@@ -2,12 +2,9 @@ using System.Security.Cryptography;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 
-/// <summary>
-/// Generates URL-safe high-entropy secrets.
-/// </summary>
 public sealed class SecretGenerator : ISecretGenerator
 {
-    /// <inheritdoc />
+
     public string Generate(string prefix, int bytes = 32)
     {
         if (string.IsNullOrWhiteSpace(prefix))

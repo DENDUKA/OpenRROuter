@@ -6,16 +6,9 @@ using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.BillingService.Application.Extensions;
 
-/// <summary>
-/// Extension methods for configuring Billing Service dependencies.
-/// </summary>
 public static class BillingServiceExtensions
 {
-    /// <summary>
-    /// Adds Billing Service infrastructure dependencies.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="connectionString">PostgreSQL connection string.</param>
+
     public static IServiceCollection AddBillingInfrastructure(
         this IServiceCollection services,
         string? connectionString)
@@ -33,10 +26,6 @@ public static class BillingServiceExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds Billing Service application services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
     public static IServiceCollection AddBillingApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<IUsageCostCalculator, UsageCostCalculator>();

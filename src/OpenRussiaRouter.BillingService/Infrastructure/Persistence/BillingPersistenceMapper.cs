@@ -5,9 +5,6 @@ using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 
-/// <summary>
-/// Maps Billing domain objects to PostgreSQL persistence rows and back.
-/// </summary>
 public static class BillingPersistenceMapper
 {
     public static LedgerEntryEntity ToEntity(LedgerEntry entry)

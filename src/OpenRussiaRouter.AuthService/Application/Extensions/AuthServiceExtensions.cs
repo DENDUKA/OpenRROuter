@@ -6,16 +6,9 @@ using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Extensions;
 
-/// <summary>
-/// Extension methods for configuring Auth Service dependencies.
-/// </summary>
 public static class AuthServiceExtensions
 {
-    /// <summary>
-    /// Adds Auth Service infrastructure dependencies.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="connectionString">PostgreSQL connection string.</param>
+
     public static IServiceCollection AddAuthInfrastructure(
         this IServiceCollection services,
         string? connectionString)
@@ -35,10 +28,6 @@ public static class AuthServiceExtensions
         return services;
     }
 
-    /// <summary>
-    /// Adds Auth Service application services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
     public static IServiceCollection AddAuthApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<Sha256SecretHasher>();

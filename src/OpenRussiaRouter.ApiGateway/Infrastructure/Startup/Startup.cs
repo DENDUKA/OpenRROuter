@@ -16,17 +16,9 @@ using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Infrastructure.Startup;
 
-/// <summary>
-/// API Gateway startup configuration.
-/// </summary>
 public static class Startup
 {
-    /// <summary>
-    /// Configures API Gateway services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">Application configuration.</param>
-    /// <returns>The service collection for chaining.</returns>
+
     public static IServiceCollection ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddLogging();
@@ -38,11 +30,6 @@ public static class Startup
         return services;
     }
 
-    /// <summary>
-    /// Configures the API Gateway application pipeline.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    /// <returns>The application builder for chaining.</returns>
     public static WebApplication ConfigurePipeline(WebApplication app)
     {
         app.UseHttpLogging();

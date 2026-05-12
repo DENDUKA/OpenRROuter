@@ -3,16 +3,9 @@ using System.Text;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 
-/// <summary>
-/// Hashes high-entropy tokens and API keys with SHA-256.
-/// </summary>
 public sealed class Sha256SecretHasher
 {
-    /// <summary>
-    /// Hashes a raw secret.
-    /// </summary>
-    /// <param name="rawSecret">Raw secret value.</param>
-    /// <returns>Base64 encoded SHA-256 hash.</returns>
+
     public string Hash(string rawSecret)
     {
         if (string.IsNullOrWhiteSpace(rawSecret))
@@ -24,12 +17,6 @@ public sealed class Sha256SecretHasher
         return Convert.ToBase64String(bytes);
     }
 
-    /// <summary>
-    /// Verifies a raw secret against a stored hash.
-    /// </summary>
-    /// <param name="rawSecret">Raw secret value.</param>
-    /// <param name="hash">Stored hash.</param>
-    /// <returns>Whether the secret matches.</returns>
     public bool Verify(string rawSecret, string hash)
     {
         if (string.IsNullOrWhiteSpace(hash))

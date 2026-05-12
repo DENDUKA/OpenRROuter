@@ -2,14 +2,10 @@ using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BuildingBlocks.Usage;
 
-/// <summary>
-/// Calculates request cost from token usage and per-million-token model prices.
-/// </summary>
 public sealed class UsageCostCalculator : IUsageCostCalculator
 {
     private const decimal OneMillion = 1_000_000m;
 
-    /// <inheritdoc />
     public MoneyAmount Calculate(TokenUsage usage, ModelTokenPrice price)
     {
         usage.EnsureValid();

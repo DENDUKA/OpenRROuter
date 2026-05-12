@@ -4,64 +4,29 @@ using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Http;
 
-/// <summary>
-/// Creates public OpenAI-compatible Gateway error responses.
-/// </summary>
 public static class GatewayErrors
 {
-    /// <summary>
-    /// Creates an authentication error response.
-    /// </summary>
-    /// <param name="request">HTTP request.</param>
-    /// <param name="code">Machine-readable error code.</param>
-    /// <param name="message">Safe message.</param>
-    /// <returns>HTTP result.</returns>
+
     public static IResult Authentication(HttpRequest request, string code, string message)
     {
         return Error(request, StatusCodes.Status401Unauthorized, "authentication_error", code, message);
     }
 
-    /// <summary>
-    /// Creates a service unavailable response.
-    /// </summary>
-    /// <param name="request">HTTP request.</param>
-    /// <param name="code">Machine-readable error code.</param>
-    /// <param name="message">Safe message.</param>
-    /// <returns>HTTP result.</returns>
     public static IResult ServiceUnavailable(HttpRequest request, string code, string message)
     {
         return Error(request, StatusCodes.Status503ServiceUnavailable, "service_unavailable", code, message);
     }
 
-    /// <summary>
-    /// Creates a validation error response.
-    /// </summary>
-    /// <param name="request">HTTP request.</param>
-    /// <param name="code">Machine-readable error code.</param>
-    /// <param name="message">Safe message.</param>
-    /// <returns>HTTP result.</returns>
     public static IResult Validation(HttpRequest request, string code, string message)
     {
         return Error(request, StatusCodes.Status400BadRequest, "invalid_request_error", code, message);
     }
 
-    /// <summary>
-    /// Creates a billing error response.
-    /// </summary>
-    /// <param name="request">HTTP request.</param>
-    /// <param name="code">Machine-readable error code.</param>
-    /// <param name="message">Safe message.</param>
-    /// <returns>HTTP result.</returns>
     public static IResult Billing(HttpRequest request, string code, string message)
     {
         return Error(request, StatusCodes.Status402PaymentRequired, "billing_error", code, message);
     }
 
-    /// <summary>
-    /// Creates an internal error response without leaking implementation details.
-    /// </summary>
-    /// <param name="request">HTTP request.</param>
-    /// <returns>HTTP result.</returns>
     public static IResult Internal(HttpRequest request)
     {
         return Error(

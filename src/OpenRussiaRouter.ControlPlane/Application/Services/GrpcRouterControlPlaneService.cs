@@ -6,13 +6,10 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-/// <summary>
-/// gRPC Router Control Plane API used by Gateway.
-/// </summary>
 public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService controlPlane)
     : ControlGrpc.RouterControlPlaneBase
 {
-    /// <inheritdoc />
+
     public override Task<SelectRouterNodeResponse> SelectRouterNode(
         SelectRouterNodeRequest request,
         ServerCallContext context)
@@ -37,7 +34,6 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
         }
     }
 
-    /// <inheritdoc />
     public override Task<ReleaseRouterNodeResponse> ReleaseRouterNode(
         ReleaseRouterNodeRequest request,
         ServerCallContext context)
@@ -46,7 +42,6 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
         return Task.FromResult(new ReleaseRouterNodeResponse { Accepted = true });
     }
 
-    /// <inheritdoc />
     public override Task<RegisterRouterNodeResponse> RegisterRouterNode(
         RegisterRouterNodeRequest request,
         ServerCallContext context)
@@ -72,7 +67,6 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
         }
     }
 
-    /// <inheritdoc />
     public override Task<DisableRouterNodeResponse> DisableRouterNode(
         DisableRouterNodeRequest request,
         ServerCallContext context)
@@ -88,7 +82,6 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
         }
     }
 
-    /// <inheritdoc />
     public override Task<ListRouterNodesResponse> ListRouterNodes(
         ListRouterNodesRequest request,
         ServerCallContext context)

@@ -7,17 +7,9 @@ using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Startup;
 
-/// <summary>
-/// Control Plane startup configuration.
-/// </summary>
 public static class Startup
 {
-    /// <summary>
-    /// Configures Control Plane services.
-    /// </summary>
-    /// <param name="services">The service collection.</param>
-    /// <param name="configuration">Application configuration.</param>
-    /// <returns>The service collection for chaining.</returns>
+
     public static IServiceCollection ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddGrpc();
@@ -38,11 +30,6 @@ public static class Startup
         return services;
     }
 
-    /// <summary>
-    /// Configures the Control Plane application pipeline.
-    /// </summary>
-    /// <param name="app">The application builder.</param>
-    /// <returns>The application builder for chaining.</returns>
     public static WebApplication ConfigurePipeline(WebApplication app)
     {
         app.MapGrpcService<GrpcRouterControlPlaneService>();

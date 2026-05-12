@@ -5,12 +5,9 @@ using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
-/// <summary>
-/// Dapper/PostgreSQL repository for Auth lifecycle data.
-/// </summary>
 public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) : IAuthRepository
 {
-    /// <inheritdoc />
+
     public void AddInvite(Invite invite)
     {
         ArgumentNullException.ThrowIfNull(invite);
@@ -25,7 +22,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             ToParameters(invite));
     }
 
-    /// <inheritdoc />
     public Invite? GetInviteByTokenHash(string tokenHash)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -36,7 +32,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    /// <inheritdoc />
     public void AddUserAndMarkInviteUsed(UserAccount user, Invite invite)
     {
         ArgumentNullException.ThrowIfNull(user);
@@ -79,7 +74,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         transaction.Commit();
     }
 
-    /// <inheritdoc />
     public UserAccount? GetUser(string userId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -90,7 +84,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    /// <inheritdoc />
     public UserAccount? GetUserByEmail(string email)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -101,7 +94,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    /// <inheritdoc />
     public IReadOnlyCollection<UserAccount> ListUsers()
     {
         using var connection = connectionFactory.CreateConnection();
@@ -110,7 +102,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             .ToArray();
     }
 
-    /// <inheritdoc />
     public void AddApiKey(ApiKey apiKey)
     {
         ArgumentNullException.ThrowIfNull(apiKey);
@@ -125,7 +116,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             ToParameters(apiKey));
     }
 
-    /// <inheritdoc />
     public ApiKey? GetApiKey(string apiKeyId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -136,7 +126,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    /// <inheritdoc />
     public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -147,7 +136,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             .ToArray();
     }
 
-    /// <inheritdoc />
     public bool RenameApiKey(string userId, string apiKeyId, string name)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -162,7 +150,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             new { UserId = userId, ApiKeyId = apiKeyId, Name = name }) == 1;
     }
 
-    /// <inheritdoc />
     public bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc)
     {
         using var connection = connectionFactory.CreateConnection();

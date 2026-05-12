@@ -4,22 +4,10 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-/// <summary>
-/// Handles router node registry, health status and least-load leases.
-/// </summary>
 public sealed class RouterControlPlaneService(IControlPlaneRepository repository)
 {
     private static readonly TimeSpan DefaultLeaseTtl = TimeSpan.FromMinutes(5);
 
-    /// <summary>
-    /// Registers a new external 9Router node.
-    /// </summary>
-    /// <param name="name">Display name.</param>
-    /// <param name="endpointUrl">HTTPS endpoint.</param>
-    /// <param name="tokenSecretName">Token secret reference.</param>
-    /// <param name="capacityWeight">Relative capacity weight.</param>
-    /// <param name="nowUtc">Creation timestamp.</param>
-    /// <returns>Created node.</returns>
     public RouterNode RegisterNode(
         string name,
         Uri endpointUrl,
@@ -39,10 +27,6 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         return node;
     }
 
-    /// <summary>
-    /// Disables a router node.
-    /// </summary>
-    /// <param name="nodeId">Router node id.</param>
     public void DisableNode(string nodeId)
     {
         var node = GetRequiredNode(nodeId);
@@ -50,12 +34,6 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         repository.UpsertNode(node);
     }
 
-    /// <summary>
-    /// Applies latest health status.
-    /// </summary>
-    /// <param name="nodeId">Router node id.</param>
-    /// <param name="status">Health status.</param>
-    /// <param name="checkedAtUtc">Health check timestamp.</param>
     public void ApplyHealth(
         string nodeId,
         RouterNodeStatus status,
@@ -68,12 +46,6 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         repository.UpsertNode(node);
     }
 
-    /// <summary>
-    /// Selects the healthy node with the lowest normalized load and creates a lease.
-    /// </summary>
-    /// <param name="requestId">Gateway request id.</param>
-    /// <param name="nowUtc">Current timestamp.</param>
-    /// <returns>Router node lease.</returns>
     public RouterNodeLease SelectRouterNode(string requestId, DateTimeOffset nowUtc)
     {
         if (string.IsNullOrWhiteSpace(requestId))
@@ -109,10 +81,6 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         return new RouterNodeLease(lease.Id, node.Id, node.EndpointUrl, node.TokenSecretName);
     }
 
-    /// <summary>
-    /// Releases an existing lease.
-    /// </summary>
-    /// <param name="leaseId">Lease id.</param>
     public void ReleaseRouterNode(string leaseId)
     {
         var lease = repository.RemoveLease(leaseId);
@@ -128,10 +96,6 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         }
     }
 
-    /// <summary>
-    /// Lists router nodes for admin dashboard.
-    /// </summary>
-    /// <returns>Router node summaries.</returns>
     public IReadOnlyCollection<RouterNodeSummary> ListRouterNodes()
     {
         return repository.ListNodes(1000, null)
@@ -146,19 +110,11 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             .ToArray();
     }
 
-    /// <summary>
-    /// Lists nodes with secrets for the internal health checker.
-    /// </summary>
-    /// <returns>Router nodes.</returns>
     public IReadOnlyCollection<RouterNode> ListNodesForHealthChecks()
     {
         return repository.ListNodes(1000, null).Items;
     }
 
-    /// <summary>
-    /// Releases expired leases.
-    /// </summary>
-    /// <param name="nowUtc">Current timestamp.</param>
     public void ReleaseExpiredLeases(DateTimeOffset nowUtc)
     {
         var expiredLeases = repository.RemoveExpiredLeases(nowUtc);

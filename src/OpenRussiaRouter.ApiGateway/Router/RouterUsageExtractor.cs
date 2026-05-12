@@ -3,17 +3,9 @@ using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-/// <summary>
-/// Extracts token usage from a 9Router/OpenAI-compatible response body.
-/// </summary>
 public static class RouterUsageExtractor
 {
-    /// <summary>
-    /// Attempts to extract usage from JSON response body.
-    /// </summary>
-    /// <param name="json">Router response JSON.</param>
-    /// <param name="usage">Extracted usage.</param>
-    /// <returns>Whether usage was found.</returns>
+
     public static bool TryExtract(string json, out TokenUsage usage)
     {
         usage = default;

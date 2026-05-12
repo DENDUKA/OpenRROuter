@@ -4,22 +4,10 @@ using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-/// <summary>
-/// Handles invite creation and one-time invite completion.
-/// </summary>
 public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, Pbkdf2PasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
     private const string InvitePrefix = "orr_invite";
 
-    /// <summary>
-    /// Creates an invite and returns the raw one-time token.
-    /// </summary>
-    /// <param name="email">Invited email.</param>
-    /// <param name="role">Role assigned to the created user.</param>
-    /// <param name="createdByAdminId">Admin user id.</param>
-    /// <param name="expiresAtUtc">Expiration timestamp.</param>
-    /// <param name="nowUtc">Creation timestamp.</param>
-    /// <returns>Invite plus raw token shown once.</returns>
     public CreatedInvite CreateInvite(
         string email,
         UserRole role,
@@ -45,14 +33,6 @@ public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, P
         return new CreatedInvite(invite, rawToken);
     }
 
-    /// <summary>
-    /// Completes an invite and returns the created user.
-    /// </summary>
-    /// <param name="invite">Stored invite.</param>
-    /// <param name="rawToken">Raw invite token.</param>
-    /// <param name="password">Raw password.</param>
-    /// <param name="nowUtc">Current timestamp.</param>
-    /// <returns>Created user account.</returns>
     public UserAccount CompleteInvite(Invite invite, string rawToken, string password, DateTimeOffset nowUtc)
     {
         ArgumentNullException.ThrowIfNull(invite);
@@ -84,10 +64,5 @@ public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, P
     }
 }
 
-/// <summary>
-/// Invite creation result containing the stored invite and raw token shown once.
-/// </summary>
-/// <param name="Invite">Stored invite.</param>
-/// <param name="RawToken">Raw one-time token.</param>
 public sealed record CreatedInvite(Invite Invite, string RawToken);
 

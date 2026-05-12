@@ -9,9 +9,6 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-/// <summary>
-/// YARP-backed adapter for the internal 9Router contract.
-/// </summary>
 public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeTokenProvider tokenProvider)
     : IRouterProxyClient
 {
@@ -32,7 +29,6 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         ActivityTimeout = TimeSpan.FromMinutes(5)
     };
 
-    /// <inheritdoc />
     public async Task<RouterProxyResponse> SendChatCompletionAsync(
         GatewayRouterLease lease,
         string requestJson,

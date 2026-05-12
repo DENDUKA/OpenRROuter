@@ -7,9 +7,6 @@ using OpenRussiaRouter.Contracts.Auth;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
-/// <summary>
-/// Dapper/PostgreSQL-backed API key validator.
-/// </summary>
 public sealed class DapperAuthApiKeyValidator(
     IAuthDbConnectionFactory connectionFactory,
     Sha256SecretHasher secretHasher)
@@ -33,7 +30,6 @@ public sealed class DapperAuthApiKeyValidator(
         where id = @ApiKeyId;
         """;
 
-    /// <inheritdoc />
     public ValidateApiKeyResult Validate(string rawKey)
     {
         if (string.IsNullOrWhiteSpace(rawKey))

@@ -40,9 +40,9 @@ public sealed class AuthRepositoryPostgresTests
         service.RevokeApiKey(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3));
 
         Assert.Equal(1, connection.ExecuteScalar<int>("select count(*) from auth.users;"));
-        Assert.NotNull(connection.ExecuteScalar<DateTimeOffset?>("select used_at_utc from auth.invites limit 1;"));
+        Assert.NotNull(connection.ExecuteScalar<DateTime?>("select used_at_utc from auth.invites limit 1;"));
         Assert.Equal("renamed", connection.ExecuteScalar<string>("select name from auth.api_keys limit 1;"));
-        Assert.NotNull(connection.ExecuteScalar<DateTimeOffset?>("select revoked_at_utc from auth.api_keys limit 1;"));
+        Assert.NotNull(connection.ExecuteScalar<DateTime?>("select revoked_at_utc from auth.api_keys limit 1;"));
         Assert.Equal(0, connection.ExecuteScalar<int>(
             "select count(*) from auth.api_keys where secret_hash = @RawKey;",
             new { apiKey.RawKey }));

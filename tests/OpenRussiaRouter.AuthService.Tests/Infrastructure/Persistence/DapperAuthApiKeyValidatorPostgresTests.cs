@@ -43,7 +43,7 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
         Assert.True(result.IsValid);
         Assert.Equal("user-1", result.UserId);
         Assert.Equal("key-1", result.ApiKeyId);
-        Assert.NotNull(connection.ExecuteScalar<DateTimeOffset?>(
+        Assert.NotNull(connection.ExecuteScalar<DateTime?>(
             "select last_used_at_utc from auth.api_keys where id = 'key-1';"));
     }
 

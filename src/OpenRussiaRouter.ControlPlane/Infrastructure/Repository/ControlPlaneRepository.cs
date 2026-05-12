@@ -50,10 +50,10 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         using var connection = connectionFactory.CreateConnection();
         var items = connection.Query<RouterNodeEntity>(
                 NodeSelectSql + """
-                 where @AfterName is null or name > @AfterName
-                 order by name
-                 limit @Limit;
-                 """,
+                where (@AfterName is null or name > @AfterName)
+                order by name
+                limit @Limit;
+                """,
                 new { Limit = limit + 1, AfterName = afterName })
             .Select(ControlPlanePersistenceMapper.ToDomain)
             .ToArray();
@@ -170,7 +170,8 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             last_health_error_code as LastHealthErrorCode,
             created_at_utc as CreatedAtUtc
         from control.router_nodes
+
         """;
 
-    private const string NodeByIdSql = NodeSelectSql + " where id = @NodeId;";
+    private const string NodeByIdSql = NodeSelectSql + "\nwhere id = @NodeId;";
 }

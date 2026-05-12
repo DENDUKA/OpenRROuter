@@ -188,13 +188,13 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null)
     {
         using var connection = connectionFactory.CreateConnection();
-var items = connection.Query<UsageRecordEntity>(
+        var items = connection.Query<UsageRecordEntity>(
                 UsageSelectSql + """
-                 where (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
-                   and (@UserId is null or user_id = @UserId)
-                 order by created_at_utc
-                 limit @Limit;
-                 """,
+                where (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
+                  and (@UserId is null or user_id = @UserId)
+                order by created_at_utc
+                limit @Limit;
+                """,
                 new { Limit = limit + 1, AfterCreatedAtUtc = afterCreatedAtUtc, UserId = userId })
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
@@ -295,6 +295,7 @@ var items = connection.Query<UsageRecordEntity>(
             status as Status,
             created_at_utc as CreatedAtUtc
         from billing.usage_records
+
         """;
 
     private const string UsageByRequestSql = UsageSelectSql + """

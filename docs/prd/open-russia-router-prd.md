@@ -10,40 +10,97 @@
 ## System Design: схема взаимодействия
 
 ```mermaid
-flowchart LR
-    Client["Клиентское приложение / SDK"] -->|OpenAI-compatible HTTP| Ingress["Kubernetes Ingress / API Endpoint"]
-    Ingress --> Gateway["API Gateway Service"]
+flowchart TB
+    subgraph Users["Клиенты и операторы"]
+        Client["Клиентское приложение / SDK"]
+        User["Пользователь"]
+        Admin["Администратор"]
+    end
 
-    User["Пользователь"] -->|Blazor UI| WebUI["User Cabinet"]
-    Admin["Администратор"] -->|Blazor UI| AdminUI["Admin Dashboard"]
+    subgraph Edge["Публичный слой"]
+        Ingress["Kubernetes Ingress / API Endpoint"]
+        Gateway["API Gateway Service\nOpenAI-compatible API"]
+        WebApp["Blazor WebApp\nUser Cabinet + Admin Dashboard"]
+    end
 
-    WebUI -->|gRPC| Auth["Auth Service"]
-    WebUI -->|gRPC| Billing["Billing / Usage Service"]
-    AdminUI -->|gRPC| Auth
-    AdminUI -->|gRPC| Billing
-    AdminUI -->|gRPC| Control["Router Control Plane"]
+    subgraph Services["Внутренние .NET-сервисы"]
+        Auth["Auth Service\nusers, invites, API keys"]
+        Billing["Billing / Usage Service\nbalance, prices, usage, ledger"]
+        Control["Router Control Plane\nnode registry, health, lease"]
+    end
 
-    Gateway -->|gRPC: validate key| Auth
-    Gateway -->|gRPC: check balance / model price| Billing
-    Gateway -->|gRPC: select healthy least-loaded node| Control
+    subgraph Data["PostgreSQL ownership"]
+        AuthDb[("Auth DB")]
+        BillingDb[("Billing DB")]
+        ControlDb[("Control DB")]
+    end
 
-    Gateway -->|HTTPS + node token| Router1["9Router Node A\nExternal server + VPN"]
-    Gateway -->|HTTPS + node token| Router2["9Router Node B\nExternal server + VPN"]
-    Gateway -->|HTTPS + node token| RouterN["9Router Node N\nExternal server + VPN"]
+    subgraph RouterLayer["Внешний routing слой"]
+        RouterPool["9Router node pool\nexternal servers + VPN"]
+        RouterA["Node A"]
+        RouterB["Node B"]
+        RouterN["Node N"]
+    end
 
-    Router1 -->|VPN / egress| LLM["Upstream LLM Providers"]
-    Router2 -->|VPN / egress| LLM
+    subgraph Upstream["Внешние LLM-провайдеры"]
+        LLM["Upstream LLM APIs"]
+    end
+
+    Client -->|OpenAI-compatible HTTP| Ingress
+    Ingress --> Gateway
+    User -->|HTTPS| WebApp
+    Admin -->|HTTPS| WebApp
+
+    WebApp -->|gRPC| Auth
+    WebApp -->|gRPC| Billing
+    WebApp -->|gRPC| Control
+
+    Gateway -->|gRPC: ValidateApiKey| Auth
+    Gateway -->|gRPC: CheckBalanceAndModel| Billing
+    Gateway -->|gRPC: Select/ReleaseRouterNode| Control
+    Gateway -->|gRPC: RecordUsage| Billing
+
+    Auth --> AuthDb
+    Billing --> BillingDb
+    Control --> ControlDb
+
+    Gateway -->|HTTPS + node token| RouterPool
+    Control -.->|health checks| RouterPool
+    RouterPool --> RouterA
+    RouterPool --> RouterB
+    RouterPool --> RouterN
+    RouterA -->|VPN / egress| LLM
+    RouterB -->|VPN / egress| LLM
     RouterN -->|VPN / egress| LLM
+```
 
-    Gateway -->|gRPC: usage event after response| Billing
-    Billing --> BillingDb[("Billing PostgreSQL")]
-    Auth --> AuthDb[("Auth PostgreSQL")]
-    Control --> ControlDb[("Control Plane PostgreSQL")]
+### System Design: pipeline chat completion
 
-    Billing -->|PostgreSQL outbox workers| Aggregates["Usage Aggregates / Billing Anomalies"]
-    Control -->|health checks| Router1
-    Control -->|health checks| Router2
-    Control -->|health checks| RouterN
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as Клиент / SDK
+    participant Gateway as API Gateway
+    participant Auth as Auth Service
+    participant Billing as Billing Service
+    participant Control as Router Control Plane
+    participant Router as 9Router node
+    participant LLM as Upstream LLM
+
+    Client->>Gateway: POST /v1/chat/completions
+    Gateway->>Auth: ValidateApiKey(raw key)
+    Auth-->>Gateway: userId, apiKeyId или отказ
+    Gateway->>Billing: CheckBalanceAndModel(userId, model)
+    Billing-->>Gateway: allowed, priceVersion или отказ
+    Gateway->>Control: SelectRouterNode(model, requestId)
+    Control-->>Gateway: leaseId, endpoint, tokenSecret
+    Gateway->>Router: HTTPS request + node token
+    Router->>LLM: VPN / egress request
+    LLM-->>Router: completion + usage
+    Router-->>Gateway: OpenAI-compatible response
+    Gateway->>Billing: RecordUsage(requestId, tokens, status)
+    Gateway->>Control: ReleaseRouterNode(leaseId, status)
+    Gateway-->>Client: OpenAI-compatible response
 ```
 
 ## Ключевые продуктовые решения

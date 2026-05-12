@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: orr-dev
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/openrussiarouter/openrussiarouter.git
+    targetRevision: master
+    path: infra/kustomize/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: orr-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

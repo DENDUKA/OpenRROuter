@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: orr-dev
+resources:
+  - ../../base
+commonAnnotations:
+  orr.dev/version: "dev"
+images:
+  - name: ghcr.io/openrussiarouter/api-gateway
+    newTag: dev-latest
+  - name: ghcr.io/openrussiarouter/auth-service
+    newTag: dev-latest
+  - name: ghcr.io/openrussiarouter/billing-service
+    newTag: dev-latest
+  - name: ghcr.io/openrussiarouter/control-plane
+    newTag: dev-latest
+  - name: ghcr.io/openrussiarouter/webapp
+    newTag: dev-latest

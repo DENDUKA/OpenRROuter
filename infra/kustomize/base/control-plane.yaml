@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+  namespace: orr-dev
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: control-plane
+  template:
+    metadata:
+      labels:
+        app: control-plane
+    spec:
+      containers:
+        - name: control-plane
+          image: ghcr.io/openrussiarouter/control-plane:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+            - name: ORR_POSTGRES_CONNECTION
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: control-connection
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: control-plane
+  namespace: orr-dev
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8080
+  selector:
+    app: control-plane

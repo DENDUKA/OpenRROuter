@@ -1,0 +1,212 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: openrussiarouter
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: orr
+          POSTGRES_MULTIPLE_DATABASES: orr_auth,orr_billing,orr_control
+          POSTGRES_PASSWORD: testpass
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed services
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            shared:
+              - 'Directory.Build.props'
+              - 'Directory.Packages.props'
+              - 'NuGet.Config'
+              - 'global.json'
+              - 'OpenRussiaRouter.sln'
+              - 'src/OpenRussiaRouter.BuildingBlocks/**'
+              - 'src/OpenRussiaRouter.Contracts/**'
+              - 'tests/**'
+            api_gateway:
+              - 'src/OpenRussiaRouter.ApiGateway/**'
+              - 'tests/OpenRussiaRouter.ApiGateway.Tests/**'
+            auth_service:
+              - 'src/OpenRussiaRouter.AuthService/**'
+              - 'tests/OpenRussiaRouter.AuthService.Tests/**'
+            billing_service:
+              - 'src/OpenRussiaRouter.BillingService/**'
+              - 'tests/OpenRussiaRouter.BillingService.Tests/**'
+            control_plane:
+              - 'src/OpenRussiaRouter.ControlPlane/**'
+              - 'tests/OpenRussiaRouter.ControlPlane.Tests/**'
+            webapp:
+              - 'src/OpenRussiaRouter.WebApp/**'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore OpenRussiaRouter.sln --configfile NuGet.Config
+        shell: bash
+
+      - name: Build
+        run: dotnet build OpenRussiaRouter.sln --no-restore -c Release
+        shell: bash
+
+      - name: Test
+        run: dotnet test OpenRussiaRouter.sln --no-build -c Release
+        shell: bash
+        env:
+          ORR_AUTH_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_auth;Username=orr;Password=testpass
+          ORR_BILLING_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_billing;Username=orr;Password=testpass
+          ORR_CONTROL_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_control;Username=orr;Password=testpass
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ApiGateway
+        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.api_gateway == 'true')
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/OpenRussiaRouter.ApiGateway
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push AuthService
+        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.auth_service == 'true')
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/OpenRussiaRouter.AuthService
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push BillingService
+        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.billing_service == 'true')
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/OpenRussiaRouter.BillingService
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push ControlPlane
+        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.control_plane == 'true')
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/OpenRussiaRouter.ControlPlane
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push WebApp
+        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.webapp == 'true')
+        uses: docker/build-push-action@v5
+        with:
+          context: ./src/OpenRussiaRouter.WebApp
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:dev-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update Infra Manifests
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          KUSTOMIZATION="infra/kustomize/overlays/dev/kustomization.yaml"
+          TAG="sha-${{ github.sha }}"
+          IMAGES=()
+
+          update_image() {
+            IMAGES+=("${{ env.REGISTRY }}/${{ env.OWNER }}/$1")
+          }
+
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.api_gateway }}" == "true" ]]; then update_image api-gateway; fi
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.auth_service }}" == "true" ]]; then update_image auth-service; fi
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.billing_service }}" == "true" ]]; then update_image billing-service; fi
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.control_plane }}" == "true" ]]; then update_image control-plane; fi
+          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.webapp }}" == "true" ]]; then update_image webapp; fi
+
+          if [[ ${#IMAGES[@]} -eq 0 ]]; then
+            echo "No service image changes detected."
+            exit 0
+          fi
+
+          python - "$KUSTOMIZATION" "$TAG" "${IMAGES[@]}" <<'PY'
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          tag = sys.argv[2]
+          images = set(sys.argv[3:])
+          lines = path.read_text(encoding="utf-8").splitlines()
+
+          current = None
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("- name: "):
+                  current = stripped.removeprefix("- name: ")
+              elif stripped.startswith("newTag: ") and current in images:
+                  indent = line[: len(line) - len(line.lstrip())]
+                  lines[index] = f"{indent}newTag: {tag}"
+
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+        shell: bash
+
+      - name: Commit and Push Changes
+        if: github.event_name != 'pull_request'
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add infra/
+          git diff --staged --quiet && exit 0
+          git commit -m "ci: update image tags to sha-${{ github.sha }}"
+          git push

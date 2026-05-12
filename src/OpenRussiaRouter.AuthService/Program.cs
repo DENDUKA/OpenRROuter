@@ -10,10 +10,15 @@ using OpenRussiaRouter.BuildingBlocks.Health;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGrpc();
 builder.Services.AddSingleton<Sha256SecretHasher>();
+builder.Services.AddSingleton<Pbkdf2PasswordHasher>();
+builder.Services.AddSingleton<InviteRegistrationService>();
+builder.Services.AddSingleton<ApiKeyFactory>();
 var authDbConnectionString = builder.Configuration.GetConnectionString("AuthDb");
 if (!string.IsNullOrWhiteSpace(authDbConnectionString))
 {
     builder.Services.AddSingleton<IAuthDbConnectionFactory>(_ => new NpgsqlAuthDbConnectionFactory(authDbConnectionString));
+    builder.Services.AddSingleton<IAuthRepository, DapperAuthRepository>();
+    builder.Services.AddSingleton<AuthAccountApplicationService>();
     builder.Services.AddSingleton<IAuthApiKeyValidator, DapperAuthApiKeyValidator>();
 }
 else

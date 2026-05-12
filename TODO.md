@@ -14,10 +14,10 @@
 
 - `[~] PLATFORM-002` - добавлены shared `ApiError` и `ErrorCodes`, но еще не реализованы gRPC interceptors/error details и contract tests маппинга.
 - `[~] PLATFORM-003` - добавлены health/readiness endpoints и correlation id primitive, но еще нет полноценного logging/metrics/tracing pipeline и log redaction tests.
-- `[~] AUTH-001` - реализованы доменные модели `UserAccount`, `Invite`, роли, статусы, одноразовый invite token, PostgreSQL persistence entities/mapping для users/invites, SQL migration `db/migrations/auth/001_initial.sql` и тесты invite/persistence lifecycle. Еще нужны Dapper repository для invite registration, admin endpoints/gRPC methods и invite delivery/display flow.
+- `[~] AUTH-001` - реализованы доменные модели `UserAccount`, `Invite`, роли, статусы, одноразовый invite token, PostgreSQL persistence entities/mapping, SQL migration `db/migrations/auth/001_initial.sql`, Dapper repository и persisted invite completion flow. Еще нужны admin endpoints/gRPC methods и invite delivery/display flow.
 - `[~] AUTH-002` - реализован `LoginService`: проверка email/password credential, disabled user, выдача session token и unit-тесты. Еще нужны Blazor login screens, session persistence/cookie/JWT wiring и authorization policies.
-- `[~] AUTH-003` - реализованы доменная модель `ApiKey`, secure raw key generation, SHA-256 hash storage, revoke/rename/use flow, PostgreSQL schema/mapping, SQL migration и Dapper-backed `ValidateApiKey` с `lastUsedAt` update. Еще нужны Dapper repository для create/revoke/rename и user-facing API/gRPC methods.
-- `[~] AUTH-004` - подключен gRPC hosting в Auth Service, добавлен `ValidateApiKey` service, `auth.proto` csharp namespace, in-memory validator для local mode, Dapper-backed validator при наличии `ConnectionStrings:AuthDb`, SQL contract tests и opt-in PostgreSQL integration test. Еще нужны остальные методы `.proto` и integration tests через gRPC test server.
+- `[~] AUTH-003` - реализованы доменная модель `ApiKey`, secure raw key generation, SHA-256 hash storage, revoke/rename/use flow, PostgreSQL schema/mapping, SQL migration, Dapper-backed `ValidateApiKey` с `lastUsedAt` update и Dapper repository для create/revoke/rename/list. Еще нужны user-facing API/gRPC methods.
+- `[~] AUTH-004` - подключен gRPC hosting в Auth Service, добавлен `ValidateApiKey` service, `auth.proto` csharp namespace, in-memory validator для local mode, Dapper-backed validator/repository при наличии `ConnectionStrings:AuthDb`, SQL contract tests и opt-in PostgreSQL integration tests. Еще нужны остальные методы `.proto` и integration tests через gRPC test server.
 - `[~] GATEWAY-005` - Gateway подключен к Auth `ValidateApiKey` по gRPC, Bearer parsing вынесен в отдельный компонент, `/v1/models` и `/v1/chat/completions` теперь требуют валидный Auth ответ. Еще нужны integration tests с настоящим gRPC test server, кеширование validation по необходимости и связка с persisted API keys.
 - `[~] GATEWAY-001` - `/v1/models` теперь получает список моделей из Billing `ListPublicModels` по gRPC и возвращает OpenAI-compatible list shape. Еще нужны integration tests и реальный persisted model catalog.
 - `[~] GATEWAY-002` - `/v1/chat/completions` теперь извлекает `model`, проверяет Auth и Billing `CheckBalanceAndModel`, выбирает 9Router-ноду через Control Plane, проксирует non-streaming запрос в HTTP adapter, возвращает upstream response и пишет `RecordUsage` при наличии usage payload. Еще нужны integration tests через test server, streaming path и контракт с реальным 9Router.
@@ -36,7 +36,7 @@
 
 ### Следующий фокус
 
-- Persistence layer для `AUTH-001/AUTH-003`: Dapper repositories для invite/api-key create/revoke/rename.
+- Auth gRPC API expansion: `CreateInvite`, `CompleteInvite`, `CreateApiKey`, `RevokeApiKey` поверх нового persisted application service.
 - PostgreSQL Testcontainers runner вместо env-only opt-in integration tests.
 - Gateway streaming/retry integration без развертывания 9Router: SSE proxy contract, safe retry и test fake upstream.
 - Blazor UI для login/API keys/balance/admin basics.

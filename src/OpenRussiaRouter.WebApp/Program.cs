@@ -53,6 +53,7 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
 });
 builder.Services.AddScoped<BillingClient>();
 
+
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
 builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
 {

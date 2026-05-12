@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using OpenRussiaRouter.AuthService.Infrastructure.Startup;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 Startup.ConfigureServices(builder.Services, builder.Configuration);

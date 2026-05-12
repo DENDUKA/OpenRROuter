@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using OpenRussiaRouter.ApiGateway.Infrastructure.Startup;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 Startup.ConfigureServices(builder.Services, builder.Configuration);

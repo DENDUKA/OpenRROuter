@@ -1,5 +1,4 @@
 @page "/cabinet/usage"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject AuthClient AuthClient
 @inject BillingClient BillingClient
 @inject AuthState AuthState
@@ -80,7 +79,6 @@
 </div>
 
 @code {
-    private const string Route = "/cabinet/usage";
     private BalanceInfo? Balance { get; set; }
     private IReadOnlyList<UsageInfo>? UsageRecords { get; set; }
     private string? ErrorMessage { get; set; }

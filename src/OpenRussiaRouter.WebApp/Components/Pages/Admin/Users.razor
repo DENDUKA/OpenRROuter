@@ -1,5 +1,4 @@
 @page "/admin/users"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject AuthClient AuthClient
 @inject BillingClient BillingClient
 @inject AuthState AuthState
@@ -141,7 +140,6 @@
 </div>
 
 @code {
-    private const string Route = "/admin/users";
     private IReadOnlyList<UserInfo>? UserList { get; set; }
     private Dictionary<string, decimal> UserBalances { get; set; } = new();
     private bool ShowCreateInvitePanel { get; set; }

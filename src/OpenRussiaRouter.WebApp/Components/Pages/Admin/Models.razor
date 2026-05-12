@@ -1,5 +1,4 @@
 @page "/admin/models"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject BillingClient BillingClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
@@ -142,7 +141,6 @@
 </div>
 
 @code {
-    private const string Route = "/admin/models";
     private IReadOnlyList<ModelInfo>? ModelList { get; set; }
     private bool ShowEditPanel { get; set; }
     private bool IsNewModel { get; set; }

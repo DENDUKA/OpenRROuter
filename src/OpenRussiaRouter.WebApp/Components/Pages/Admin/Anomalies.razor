@@ -1,5 +1,4 @@
 @page "/admin/anomalies"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject BillingClient BillingClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
@@ -60,7 +59,6 @@
 </div>
 
 @code {
-    private const string Route = "/admin/anomalies";
     private IReadOnlyList<AnomalyInfo>? AnomalyList { get; set; }
     private string? ErrorMessage { get; set; }
 

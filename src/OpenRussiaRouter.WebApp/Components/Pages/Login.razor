@@ -1,9 +1,8 @@
 @page "/login"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject AuthClient AuthClient
 @inject NavigationManager Navigation
 @inject AuthState AuthState
-@inject SessionStorage SessionStorage
+@inject ISessionStorage SessionStorage
 
 <PageTitle>Login - OpenRussiaRouter</PageTitle>
 
@@ -47,7 +46,6 @@
 </div>
 
 @code {
-    private const string Route = "/login";
     private LoginModel Model { get; set; } = new();
     private bool IsLoading { get; set; }
     private string? ErrorMessage { get; set; }

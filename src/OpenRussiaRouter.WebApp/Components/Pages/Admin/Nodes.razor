@@ -1,5 +1,4 @@
 @page "/admin/nodes"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject ControlPlaneClient ControlPlaneClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
@@ -107,7 +106,6 @@
 </div>
 
 @code {
-    private const string Route = "/admin/nodes";
     private IReadOnlyList<RouterNodeInfo>? NodeList { get; set; }
     private bool ShowAddModal { get; set; }
     private bool IsAdding { get; set; }

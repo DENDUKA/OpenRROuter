@@ -85,8 +85,6 @@ app.UseAntiforgery();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
-app.MapRazorPages();
-
 app.Run();
 
 public partial class Program;

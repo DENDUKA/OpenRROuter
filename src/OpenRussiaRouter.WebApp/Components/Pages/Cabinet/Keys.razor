@@ -1,5 +1,4 @@
 @page "/cabinet/keys"
-@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
 @inject AuthClient AuthClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
@@ -172,7 +171,6 @@
 }
 
 @code {
-    private const string Route = "/cabinet/keys";
     private IReadOnlyList<ApiKeyInfo>? KeyList { get; set; }
     private bool ShowCreatePanel { get; set; }
     private bool ShowRevokeConfirm { get; set; }

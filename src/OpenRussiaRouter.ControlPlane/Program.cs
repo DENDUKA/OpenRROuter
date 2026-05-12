@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Startup;
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 Startup.ConfigureServices(builder.Services, builder.Configuration);

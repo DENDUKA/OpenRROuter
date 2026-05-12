@@ -10,3 +10,4 @@ NuGet/
 *.binlog
 *.log
 TestResults/
+/.vs

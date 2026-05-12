@@ -1,6 +1,7 @@
 using Dapper;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
+using OpenRussiaRouter.AuthService.Infrastructure.Repository;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Infrastructure.Persistence;
@@ -34,7 +35,7 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
             """,
             new { NowUtc = DateTimeOffset.UtcNow, SecretHash = hasher.Hash("orr_test_secret") });
         var validator = new DapperAuthApiKeyValidator(
-            new NpgsqlAuthDbConnectionFactory(connectionString),
+            new AuthDbConnectionFactory(connectionString),
             hasher);
 
         var result = validator.Validate("orr_test_secret");

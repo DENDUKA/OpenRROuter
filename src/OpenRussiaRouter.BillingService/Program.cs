@@ -1,38 +1,13 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.BillingService.Application.Interfaces;
-using OpenRussiaRouter.BillingService.Application.Services;
-using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
-using OpenRussiaRouter.BuildingBlocks.Health;
+using OpenRussiaRouter.BillingService.Infrastructure.Startup;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddGrpc();
-var billingDbConnectionString = builder.Configuration.GetConnectionString("BillingDb");
-if (!string.IsNullOrWhiteSpace(billingDbConnectionString))
-{
-    builder.Services.AddSingleton<IBillingDbConnectionFactory>(_ => new NpgsqlBillingDbConnectionFactory(billingDbConnectionString));
-    builder.Services.AddSingleton<IBillingRepository, DapperBillingRepository>();
-    builder.Services.AddSingleton<BillingApplicationService>();
-}
-else
-{
-    builder.Services.AddSingleton<IBillingRepository, InMemoryBillingRepository>();
-    builder.Services.AddSingleton<BillingApplicationService>();
-}
+
+Startup.ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
 
-app.MapGrpcService<GrpcBillingService>();
-app.MapGet("/healthz", () => ServiceHealth.Ok("billing-service"));
-app.MapGet("/ready", () => ServiceHealth.Ok("billing-service"));
-
-app.MapGet("/", () => Results.Json(new
-{
-    service = "OpenRussiaRouter Billing / Usage Service",
-    contracts = new[] { "CheckBalanceAndModel", "RecordUsage", "ListPublicModels", "GetBalance", "CreateVirtualTopUp", "UpsertModelPrice", "ListUsage", "ListBillingAnomalies" }
-}));
+Startup.ConfigurePipeline(app);
 
 app.Run();
 

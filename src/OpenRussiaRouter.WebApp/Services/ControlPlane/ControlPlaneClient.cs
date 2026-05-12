@@ -2,14 +2,6 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 
-public sealed record RouterNodeInfo(
-    string NodeId,
-    string Name,
-    string EndpointUrl,
-    string Status,
-    int InFlightRequests,
-    DateTimeOffset? LastCheckedAt);
-
 public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient client)
 {
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)

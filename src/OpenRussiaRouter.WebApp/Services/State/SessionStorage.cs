@@ -2,13 +2,6 @@ using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 
 namespace OpenRussiaRouter.WebApp.Services.State;
 
-public interface ISessionStorage
-{
-    Task SaveSessionAsync(UserSession session, CancellationToken cancellationToken = default);
-    Task<UserSession?> LoadSessionAsync(CancellationToken cancellationToken = default);
-    Task ClearSessionAsync(CancellationToken cancellationToken = default);
-}
-
 public sealed class SessionStorage(ProtectedLocalStorage localStorage) : ISessionStorage
 {
     private const string SessionKey = "orr_session";

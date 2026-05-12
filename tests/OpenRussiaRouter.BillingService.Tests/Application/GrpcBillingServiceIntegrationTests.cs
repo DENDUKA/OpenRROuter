@@ -1,5 +1,7 @@
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Mvc.Testing;
+using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 
 namespace OpenRussiaRouter.BillingService.Tests.Application;

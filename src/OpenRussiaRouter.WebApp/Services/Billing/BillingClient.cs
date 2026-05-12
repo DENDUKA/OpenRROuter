@@ -2,29 +2,6 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.WebApp.Services.Billing;
 
-public sealed record BalanceInfo(decimal Amount);
-
-public sealed record ModelInfo(string Id, string DisplayName, string UpstreamModelId, string PriceVersion, decimal InputPrice, decimal OutputPrice, decimal CachePrice, bool Enabled);
-
-public sealed record UsageInfo(
-    string RequestId,
-    string UserId,
-    string ApiKeyId,
-    string ModelId,
-    long InputTokens,
-    long OutputTokens,
-    long CacheTokens,
-    decimal CostRub,
-    string Status,
-    DateTimeOffset CreatedAt);
-
-public sealed record AnomalyInfo(string Id, string RequestId, string Type, string Message, DateTimeOffset CreatedAt);
-
-public sealed class BillingException(string ErrorCode) : Exception
-{
-    public string ErrorCode { get; } = ErrorCode;
-}
-
 public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
 {
     public async Task<BalanceInfo> GetBalanceAsync(string userId, CancellationToken cancellationToken = default)
@@ -74,6 +51,40 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
     {
         var response = await client.ListPublicModelsAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListPublicModelsRequest(), cancellationToken: cancellationToken);
         return response.Models.Select(m => new ModelInfo(m.Id, m.DisplayName, "", "", 0m, 0m, 0m, true)).ToList();
+    }
+
+    public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await client.ListModelsAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListModelsRequest(), cancellationToken: cancellationToken);
+        return response.Models.Select(m => new ModelInfo(
+            m.Id,
+            m.DisplayName,
+            m.UpstreamModelId,
+            m.PriceVersion,
+            decimal.Parse(m.InputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.OutputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.CachePricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
+            m.Enabled)).ToList();
+    }
+
+    public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
+    {
+        var response = await client.UpsertModelPriceAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertModelPriceRequest
+            {
+                ModelId = model.Id,
+                DisplayName = model.DisplayName,
+                UpstreamModelId = model.UpstreamModelId,
+                PriceVersion = model.PriceVersion,
+                InputPricePer1MRub = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                OutputPricePer1MRub = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                CachePricePer1MRub = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                Enabled = model.Enabled
+            }, cancellationToken: cancellationToken);
+        if (!response.Upserted)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
     }
 
     public async Task<IReadOnlyList<AnomalyInfo>> ListAnomaliesAsync(CancellationToken cancellationToken = default)

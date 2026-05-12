@@ -1,4 +1,3 @@
-using OpenRussiaRouter.AuthService.Application.Interfaces;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;

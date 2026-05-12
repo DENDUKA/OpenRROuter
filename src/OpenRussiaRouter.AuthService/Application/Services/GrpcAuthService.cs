@@ -1,5 +1,5 @@
 using Grpc.Core;
-using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
@@ -12,9 +12,9 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// </summary>
 public sealed class GrpcAuthService(
     IAuthApiKeyValidator apiKeyValidator,
-    IAuthRepository? repository = null,
-    AuthAccountApplicationService? accounts = null,
-    LoginService? loginService = null) : AuthGrpc.AuthServiceBase
+    IAuthRepository repository,
+    AuthAccountApplicationService accounts,
+    LoginService loginService) : AuthGrpc.AuthServiceBase
 {
     /// <inheritdoc />
     public override Task<ValidateApiKeyResponse> ValidateApiKey(
@@ -37,11 +37,6 @@ public sealed class GrpcAuthService(
         LoginRequest request,
         ServerCallContext context)
     {
-        if (repository is null || loginService is null)
-        {
-            return Task.FromResult(new LoginResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         var user = repository.GetUserByEmail(request.Email);
         var result = loginService.Login(user, request.Password, DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
 
@@ -64,11 +59,6 @@ public sealed class GrpcAuthService(
         CreateInviteRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new CreateInviteResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         try
         {
             var expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(request.ExpiresAtUnixTimeSeconds);
@@ -100,11 +90,6 @@ public sealed class GrpcAuthService(
         CompleteInviteRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new CompleteInviteResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         try
         {
             var user = accounts.CompleteInvite(request.RawToken, request.Password, DateTimeOffset.UtcNow);
@@ -127,11 +112,6 @@ public sealed class GrpcAuthService(
         CreateApiKeyRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new CreateApiKeyResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         try
         {
             var created = accounts.CreateApiKey(request.UserId, request.Name, DateTimeOffset.UtcNow);
@@ -151,16 +131,11 @@ public sealed class GrpcAuthService(
         }
     }
 
-/// <inheritdoc />
+    /// <inheritdoc />
     public override Task<RevokeApiKeyResponse> RevokeApiKey(
         RevokeApiKeyRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new RevokeApiKeyResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         try
         {
             accounts.RevokeApiKey(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow);
@@ -181,11 +156,6 @@ public sealed class GrpcAuthService(
         ListApiKeysRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new ListApiKeysResponse());
-        }
-
         var keys = accounts.ListApiKeys(request.UserId);
         return Task.FromResult(new ListApiKeysResponse
         {
@@ -210,11 +180,6 @@ public sealed class GrpcAuthService(
         RenameApiKeyRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new RenameApiKeyResponse { ErrorCode = ErrorCodes.InternalError });
-        }
-
         try
         {
             accounts.RenameApiKey(request.UserId, request.ApiKeyId, request.Name);
@@ -235,11 +200,6 @@ public sealed class GrpcAuthService(
         ListUsersRequest request,
         ServerCallContext context)
     {
-        if (accounts is null)
-        {
-            return Task.FromResult(new ListUsersResponse());
-        }
-
         var users = accounts.ListUsers();
         return Task.FromResult(new ListUsersResponse
         {

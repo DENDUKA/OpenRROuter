@@ -12,6 +12,9 @@ create table if not exists auth.users (
 create unique index if not exists ux_auth_users_email
     on auth.users (email);
 
+create index if not exists ix_auth_users_email_lower
+    on auth.users (lower(email));
+
 create table if not exists auth.invites (
     id varchar(64) primary key,
     email varchar(320) not null,

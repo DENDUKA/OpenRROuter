@@ -12,7 +12,8 @@ service BillingService {
   rpc CreateVirtualTopUp (CreateVirtualTopUpRequest) returns (CreateVirtualTopUpResponse);
   rpc UpsertModelPrice (UpsertModelPriceRequest) returns (UpsertModelPriceResponse);
   rpc ListUsage (ListUsageRequest) returns (ListUsageResponse);
-  rpc ListBillingAnomalies (ListBillingAnomaliesRequest) returns (ListBillingAnomaliesResponse);
+rpc ListBillingAnomalies (ListBillingAnomaliesRequest) returns (ListBillingAnomaliesResponse);
+  rpc ListModels (ListModelsRequest) returns (ListModelsResponse);
 }
 
 message CheckBalanceAndModelRequest {
@@ -111,6 +112,32 @@ message UpsertModelPriceResponse {
 message ListBillingAnomaliesRequest {
 }
 
+message ListModelsRequest {
+}
+
+message ModelDetail {
+  string id = 1;
+  string display_name = 2;
+  string upstream_model_id = 3;
+  string price_version = 4;
+  string input_price_per_1m_rub = 5;
+  string output_price_per_1m_rub = 6;
+  string cache_price_per_1m_rub = 7;
+  bool enabled = 8;
+}
+
+message ListModelsResponse {
+  repeated ModelDetail models = 1;
+}
+
+message BillingAnomaly {
+  string id = 1;
+  string request_id = 2;
+  string type = 3;
+  string message = 4;
+  string created_at_utc = 5;
+}
+
 message ListUsageRequest {
   string user_id = 1;
 }
@@ -130,14 +157,6 @@ message UsageRecord {
 
 message ListUsageResponse {
   repeated UsageRecord records = 1;
-}
-
-message BillingAnomaly {
-  string id = 1;
-  string request_id = 2;
-  string type = 3;
-  string message = 4;
-  string created_at_utc = 5;
 }
 
 message ListBillingAnomaliesResponse {

@@ -1,4 +1,3 @@
-using OpenRussiaRouter.AuthService.Application.Interfaces;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
@@ -89,10 +88,11 @@ public sealed class AuthAccountApplicationServiceTests
     private static AuthAccountApplicationService CreateService(TestAuthRepository repository)
     {
         var secretHasher = new Sha256SecretHasher();
+        var secretGenerator = new SecretGenerator();
         return new AuthAccountApplicationService(
             repository,
-            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher()),
-            new ApiKeyFactory(secretHasher),
+            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher(), secretGenerator),
+            new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);
     }
 
@@ -127,6 +127,11 @@ public sealed class AuthAccountApplicationServiceTests
         public UserAccount? GetUserByEmail(string email)
         {
             return Users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant());
+        }
+
+        public IReadOnlyCollection<UserAccount> ListUsers()
+        {
+            return Users.Values.ToArray();
         }
 
         public void AddApiKey(ApiKey apiKey)

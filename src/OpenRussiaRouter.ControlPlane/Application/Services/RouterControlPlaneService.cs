@@ -1,5 +1,5 @@
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application.Interfaces;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -161,14 +161,14 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
     /// <param name="nowUtc">Current timestamp.</param>
     public void ReleaseExpiredLeases(DateTimeOffset nowUtc)
     {
-        foreach (var lease in repository.RemoveExpiredLeases(nowUtc))
+        var expiredLeases = repository.RemoveExpiredLeases(nowUtc);
+        if (expiredLeases.Count == 0)
         {
-            if (repository.GetNode(lease.NodeId) is { } node)
-            {
-                node.Release();
-                repository.UpsertNode(node);
-            }
+            return;
         }
+
+        var nodeIds = expiredLeases.Select(l => l.NodeId).Distinct().ToArray();
+        repository.ReleaseNodes(nodeIds);
     }
 
     private RouterNode GetRequiredNode(string nodeId)

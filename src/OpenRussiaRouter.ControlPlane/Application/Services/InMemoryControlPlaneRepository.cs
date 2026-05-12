@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using OpenRussiaRouter.ControlPlane.Application.Interfaces;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -85,5 +85,17 @@ public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
         }
 
         return expired;
+    }
+
+    /// <inheritdoc />
+    public void ReleaseNodes(IReadOnlyCollection<string> nodeIds)
+    {
+        foreach (var nodeId in nodeIds)
+        {
+            if (_nodes.TryGetValue(nodeId, out var node))
+            {
+                node.Release();
+            }
+        }
     }
 }

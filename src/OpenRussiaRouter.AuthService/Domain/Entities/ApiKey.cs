@@ -1,3 +1,5 @@
+using OpenRussiaRouter.BuildingBlocks.Common;
+
 namespace OpenRussiaRouter.AuthService.Domain.Entities;
 
 /// <summary>
@@ -16,11 +18,11 @@ public sealed class ApiKey
     /// <param name="createdAtUtc">Creation timestamp.</param>
     public ApiKey(string id, string userId, string name, string prefix, string secretHash, DateTimeOffset createdAtUtc)
     {
-        Id = RequireValue(id, nameof(id));
-        UserId = RequireValue(userId, nameof(userId));
-        Name = RequireValue(name, nameof(name));
-        Prefix = RequireValue(prefix, nameof(prefix));
-        SecretHash = RequireValue(secretHash, nameof(secretHash));
+        Id = Preconditions.RequireValue(id, nameof(id));
+        UserId = Preconditions.RequireValue(userId, nameof(userId));
+        Name = Preconditions.RequireValue(name, nameof(name));
+        Prefix = Preconditions.RequireValue(prefix, nameof(prefix));
+        SecretHash = Preconditions.RequireValue(secretHash, nameof(secretHash));
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -73,7 +75,7 @@ public sealed class ApiKey
     /// Renames the API key.
     /// </summary>
     /// <param name="name">New display name.</param>
-    public void Rename(string name) => Name = RequireValue(name, nameof(name));
+    public void Rename(string name) => Name = Preconditions.RequireValue(name, nameof(name));
 
     /// <summary>
     /// Marks the key as revoked.
@@ -96,16 +98,6 @@ public sealed class ApiKey
         }
 
         LastUsedAtUtc = usedAtUtc;
-    }
-
-    private static string RequireValue(string value, string name)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", name);
-        }
-
-        return value.Trim();
     }
 }
 

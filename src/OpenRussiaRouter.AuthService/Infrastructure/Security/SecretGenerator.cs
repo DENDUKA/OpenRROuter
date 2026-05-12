@@ -5,15 +5,10 @@ namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 /// <summary>
 /// Generates URL-safe high-entropy secrets.
 /// </summary>
-public static class SecretGenerator
+public sealed class SecretGenerator : ISecretGenerator
 {
-    /// <summary>
-    /// Generates a URL-safe secret.
-    /// </summary>
-    /// <param name="prefix">Human-readable product prefix.</param>
-    /// <param name="bytes">Random byte count before encoding.</param>
-    /// <returns>Generated secret.</returns>
-    public static string Generate(string prefix, int bytes = 32)
+    /// <inheritdoc />
+    public string Generate(string prefix, int bytes = 32)
     {
         if (string.IsNullOrWhiteSpace(prefix))
         {

@@ -1,0 +1,274 @@
+@page "/admin/models"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject BillingClient BillingClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Models - OpenRussiaRouter Admin</PageTitle>
+
+<h1>Models</h1>
+
+<div class="row mt-4">
+    <div class="col-md-10">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (ShowEditPanel)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">@(IsNewModel ? "Add Model" : $"Edit Model: {EditingModel!.Id}")</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@EditForm" OnValidSubmit="HandleSave">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label for="modelId" class="form-label">Model ID</label>
+                            <InputText id="modelId" class="form-control" @bind-Value="EditForm.Id" disabled="@(!IsNewModel)" />
+                            <ValidationMessage For="@(() => EditForm.Id)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="displayName" class="form-label">Display Name</label>
+                            <InputText id="displayName" class="form-control" @bind-Value="EditForm.DisplayName" />
+                            <ValidationMessage For="@(() => EditForm.DisplayName)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="upstreamModelId" class="form-label">Upstream Model ID</label>
+                            <InputText id="upstreamModelId" class="form-control" @bind-Value="EditForm.UpstreamModelId" />
+                            <ValidationMessage For="@(() => EditForm.UpstreamModelId)" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="priceVersion" class="form-label">Price Version</label>
+                            <InputText id="priceVersion" class="form-control" @bind-Value="EditForm.PriceVersion" />
+                            <ValidationMessage For="@(() => EditForm.PriceVersion)" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="inputPrice" class="form-label">Input Price per 1M (RUB)</label>
+                                <InputNumber id="inputPrice" class="form-control" @bind-Value="EditForm.InputPrice" />
+                                <ValidationMessage For="@(() => EditForm.InputPrice)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="outputPrice" class="form-label">Output Price per 1M (RUB)</label>
+                                <InputNumber id="outputPrice" class="form-control" @bind-Value="EditForm.OutputPrice" />
+                                <ValidationMessage For="@(() => EditForm.OutputPrice)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="cachePrice" class="form-label">Cache Price per 1M (RUB)</label>
+                                <InputNumber id="cachePrice" class="form-control" @bind-Value="EditForm.CachePrice" />
+                                <ValidationMessage For="@(() => EditForm.CachePrice)" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <InputCheckbox id="enabled" class="form-check-input" @bind-Value="EditForm.Enabled" />
+                                <label for="enabled" class="form-check-label">Enabled</label>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary" disabled="@IsSaving">
+                            @if (IsSaving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Save
+                        </button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEdit">Cancel</button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Public Models</span>
+                <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel">
+                    <span class="bi bi-plus"></span> Add Model
+                </button>
+            </div>
+            <div class="card-body">
+                @if (ModelList is null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (ModelList.Count == 0)
+                {
+                    <p class="text-muted">No models configured.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Display Name</th>
+                                <th>Upstream</th>
+                                <th>Price Version</th>
+                                <th>Input / Output / Cache per 1M</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var model in ModelList)
+                            {
+                                <tr>
+                                    <td><code>@model.Id</code></td>
+                                    <td>@model.DisplayName</td>
+                                    <td><code>@model.UpstreamModelId</code></td>
+                                    <td>@model.PriceVersion</td>
+                                    <td>
+                                        @model.InputPrice.ToString("N2") / @model.OutputPrice.ToString("N2") / @model.CachePrice.ToString("N2") RUB
+                                    </td>
+                                    <td>
+                                        <span class="badge @(model.Enabled ? "bg-success" : "bg-secondary")">
+                                            @(model.Enabled ? "Enabled" : "Disabled")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(model)">Edit</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Route = "/admin/models";
+    private IReadOnlyList<ModelInfo>? ModelList { get; set; }
+    private bool ShowEditPanel { get; set; }
+    private bool IsNewModel { get; set; }
+    private bool IsSaving { get; set; }
+    private string? ErrorMessage { get; set; }
+    private ModelInfo? EditingModel { get; set; }
+    private EditFormModel EditForm { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadModels();
+    }
+
+    private async Task LoadModels()
+    {
+        try
+        {
+            ModelList = await BillingClient.ListModelsAsync();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to load models.";
+        }
+    }
+
+    private void ShowAddPanel()
+    {
+        EditingModel = null;
+        IsNewModel = true;
+        EditForm = new EditFormModel
+        {
+            Id = "",
+            DisplayName = "",
+            UpstreamModelId = "",
+            PriceVersion = "v1",
+            InputPrice = 0m,
+            OutputPrice = 0m,
+            CachePrice = 0m,
+            Enabled = true
+        };
+        ShowEditPanel = true;
+    }
+
+    private void StartEdit(ModelInfo model)
+    {
+        EditingModel = model;
+        IsNewModel = false;
+        EditForm = new EditFormModel
+        {
+            Id = model.Id,
+            DisplayName = model.DisplayName,
+            UpstreamModelId = model.UpstreamModelId,
+            PriceVersion = model.PriceVersion,
+            InputPrice = model.InputPrice,
+            OutputPrice = model.OutputPrice,
+            CachePrice = model.CachePrice,
+            Enabled = model.Enabled
+        };
+        ShowEditPanel = true;
+    }
+
+    private void CancelEdit()
+    {
+        EditingModel = null;
+        ShowEditPanel = false;
+    }
+
+    private async Task HandleSave()
+    {
+        IsSaving = true;
+        ErrorMessage = null;
+        try
+        {
+            var model = new ModelInfo(
+                EditForm.Id,
+                EditForm.DisplayName,
+                EditForm.UpstreamModelId,
+                EditForm.PriceVersion,
+                EditForm.InputPrice,
+                EditForm.OutputPrice,
+                EditForm.CachePrice,
+                EditForm.Enabled);
+            await BillingClient.UpsertModelAsync(model);
+            ShowEditPanel = false;
+            EditingModel = null;
+            await LoadModels();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to save model: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private class EditFormModel
+    {
+        [Required]
+        [RegularExpression(@"^[a-zA-Z0-9_\-\.]+$", ErrorMessage = "ID must be alphanumeric with dashes/underscores")]
+        public string Id { get; set; } = "";
+
+        [Required]
+        public string DisplayName { get; set; } = "";
+
+        [Required]
+        public string UpstreamModelId { get; set; } = "";
+
+        [Required]
+        public string PriceVersion { get; set; } = "v1";
+
+        [Range(0, 1000000)]
+        public decimal InputPrice { get; set; }
+
+        [Range(0, 1000000)]
+        public decimal OutputPrice { get; set; }
+
+        [Range(0, 1000000)]
+        public decimal CachePrice { get; set; }
+
+        public bool Enabled { get; set; } = true;
+    }
+}

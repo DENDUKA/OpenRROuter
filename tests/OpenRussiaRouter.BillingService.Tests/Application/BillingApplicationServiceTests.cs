@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
@@ -132,7 +133,10 @@ public sealed class BillingApplicationServiceTests
 
     private static BillingApplicationService CreateService()
     {
-        return new BillingApplicationService(new InMemoryBillingRepository());
+        return new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }));
     }
 
     private static BillingApplicationService CreateServiceWithModel()

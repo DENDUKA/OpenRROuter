@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Tests.Application;
 
 public sealed class InviteRegistrationServiceTests
 {
-    private readonly InviteRegistrationService _service = new(new Sha256SecretHasher(), new Pbkdf2PasswordHasher());
+    private readonly InviteRegistrationService _service = new(new Sha256SecretHasher(), new Pbkdf2PasswordHasher(), new SecretGenerator());
 
     [Fact]
     public void CreateInvite_ValidInput_ReturnsInviteAndRawToken()

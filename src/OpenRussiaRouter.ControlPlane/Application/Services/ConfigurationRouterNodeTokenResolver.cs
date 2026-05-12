@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using OpenRussiaRouter.ControlPlane.Application.Interfaces;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 

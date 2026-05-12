@@ -1,18 +1,17 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.ApiGateway.Auth;
-using OpenRussiaRouter.ApiGateway.Auth.Interfaces;
-using OpenRussiaRouter.ApiGateway.Billing;
-using OpenRussiaRouter.ApiGateway.Billing.Interfaces;
-using OpenRussiaRouter.ApiGateway.ControlPlane;
-using OpenRussiaRouter.ApiGateway.ControlPlane.Interfaces;
-using OpenRussiaRouter.ApiGateway.Http;
-using OpenRussiaRouter.ApiGateway.OpenAi;
-using OpenRussiaRouter.ApiGateway.Router;
-using OpenRussiaRouter.ApiGateway.Router.Interfaces;
-using OpenRussiaRouter.BuildingBlocks.Errors;
-using OpenRussiaRouter.BuildingBlocks.Health;
-using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
-using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
-using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
+using OpenRussiaRouter.ApiGateway.Infrastructure.Startup;
+
+var builder = WebApplication.CreateBuilder(args);
+
+Startup.ConfigureServices(builder.Services, builder.Configuration);
+
+var app = builder.Build();
+
+Startup.ConfigurePipeline(app);
+
+app.Run();
+
+/// <summary>
+/// API Gateway entry point exposed for integration tests.
+/// </summary>
+public partial class Program;

@@ -8,13 +8,14 @@ namespace OpenRussiaRouter.AuthService.Tests.Application;
 public sealed class LoginServiceTests
 {
     private readonly Pbkdf2PasswordHasher _passwordHasher = new();
+    private readonly ISecretGenerator _secretGenerator = new SecretGenerator();
 
     [Fact]
     public void Login_ValidCredentials_ReturnsSession()
     {
         var now = DateTimeOffset.UtcNow;
         var user = CreateUser("StrongPassword123!", now);
-        var service = new LoginService(_passwordHasher);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
 
         var result = service.Login(user, "StrongPassword123!", now, TimeSpan.FromHours(8));
 
@@ -29,7 +30,7 @@ public sealed class LoginServiceTests
     [Fact]
     public void Login_UnknownUser_ReturnsInvalidCredentials()
     {
-        var service = new LoginService(_passwordHasher);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
 
         var result = service.Login(null, "StrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 
@@ -42,7 +43,7 @@ public sealed class LoginServiceTests
     public void Login_WrongPassword_ReturnsInvalidCredentials()
     {
         var user = CreateUser("StrongPassword123!", DateTimeOffset.UtcNow);
-        var service = new LoginService(_passwordHasher);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
 
         var result = service.Login(user, "WrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 
@@ -56,7 +57,7 @@ public sealed class LoginServiceTests
     {
         var user = CreateUser("StrongPassword123!", DateTimeOffset.UtcNow);
         user.Disable();
-        var service = new LoginService(_passwordHasher);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
 
         var result = service.Login(user, "StrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 

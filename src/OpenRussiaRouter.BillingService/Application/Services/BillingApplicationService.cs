@@ -1,4 +1,4 @@
-using OpenRussiaRouter.BillingService.Application.Interfaces;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Errors;
@@ -8,10 +8,10 @@ using OpenRussiaRouter.Contracts.Billing;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
-/// <summary>
-/// Handles Billing MVP operations: top-up, balance checks, model prices and usage charges.
-/// </summary>
-public sealed class BillingApplicationService(IBillingRepository repository)
+public sealed class BillingApplicationService(
+    IBillingRepository repository,
+    IUsageCostCalculator usageCostCalculator,
+    IOptions<BillingPaginationOptions> paginationOptions)
 {
     /// <summary>
     /// Creates an idempotent virtual top-up.
@@ -84,10 +84,21 @@ public sealed class BillingApplicationService(IBillingRepository repository)
     /// <returns>Public model list.</returns>
     public IReadOnlyCollection<PublicModel> ListPublicModels()
     {
-        return repository.ListEnabledModels(1000, null)
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListEnabledModels(pageSize, null)
             .Items
             .Select(model => new PublicModel(model.ModelId, model.DisplayName, model.Enabled))
             .ToArray();
+    }
+
+    /// <summary>
+    /// Lists all model prices (including disabled) for admin views.
+    /// </summary>
+    /// <returns>All model prices.</returns>
+    public IReadOnlyCollection<ModelPrice> ListAllModels()
+    {
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListAllModels(pageSize, null).Items;
     }
 
     /// <summary>
@@ -122,7 +133,7 @@ public sealed class BillingApplicationService(IBillingRepository repository)
             return new RecordUsageResult(false, null, MoneyAmount.Rub(0), "model_price_missing");
         }
 
-        var cost = UsageCostCalculator.Calculate(usageEvent.Usage, model.Price);
+        var cost = usageCostCalculator.Calculate(usageEvent.Usage, model.Price);
         var record = repository.AddUsage(new UsageRecord(
             usageEvent.RequestId,
             usageEvent.UserId,
@@ -158,14 +169,22 @@ public sealed class BillingApplicationService(IBillingRepository repository)
     /// Lists billing anomalies.
     /// </summary>
     /// <returns>Billing anomalies.</returns>
-    public IReadOnlyCollection<BillingAnomaly> ListAnomalies() => repository.ListAnomalies(1000, null).Items;
+    public IReadOnlyCollection<BillingAnomaly> ListAnomalies()
+    {
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListAnomalies(pageSize, null).Items;
+    }
 
-/// <summary>
+    /// <summary>
     /// Lists usage records for admin views.
     /// </summary>
     /// <param name="userId">Filter by user id (null for all users).</param>
     /// <returns>Usage records.</returns>
-    public IReadOnlyCollection<UsageRecord> ListUsage(string? userId = null) => repository.ListUsage(1000, null, userId).Items;
+    public IReadOnlyCollection<UsageRecord> ListUsage(string? userId = null)
+    {
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListUsage(pageSize, null, userId).Items;
+    }
 
     private static void ValidatePositiveRub(MoneyAmount amount, string name)
     {
@@ -195,12 +214,3 @@ public sealed class BillingApplicationService(IBillingRepository repository)
         repository.AddAnomaly(new BillingAnomaly(Guid.NewGuid().ToString("N"), requestId, type, message, nowUtc));
     }
 }
-
-/// <summary>
-/// Result of usage recording.
-/// </summary>
-/// <param name="Accepted">Whether usage was accepted.</param>
-/// <param name="RequestId">Accepted request id.</param>
-/// <param name="Cost">Calculated cost.</param>
-/// <param name="ErrorCode">Machine-readable error code.</param>
-public sealed record RecordUsageResult(bool Accepted, string? RequestId, MoneyAmount Cost, string? ErrorCode);

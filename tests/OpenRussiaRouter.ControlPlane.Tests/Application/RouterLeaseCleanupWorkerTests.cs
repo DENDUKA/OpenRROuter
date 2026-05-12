@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 

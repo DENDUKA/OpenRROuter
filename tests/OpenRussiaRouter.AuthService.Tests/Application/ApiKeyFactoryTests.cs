@@ -5,7 +5,7 @@ namespace OpenRussiaRouter.AuthService.Tests.Application;
 
 public sealed class ApiKeyFactoryTests
 {
-    private readonly ApiKeyFactory _factory = new(new Sha256SecretHasher());
+    private readonly ApiKeyFactory _factory = new(new Sha256SecretHasher(), new SecretGenerator());
 
     [Fact]
     public void Create_ValidInput_ReturnsRawKeyOnceAndStoredHash()

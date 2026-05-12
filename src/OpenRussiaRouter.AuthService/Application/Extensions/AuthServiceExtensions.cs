@@ -1,0 +1,54 @@
+using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
+using OpenRussiaRouter.AuthService.Infrastructure.Repository;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
+
+namespace OpenRussiaRouter.AuthService.Application.Extensions;
+
+/// <summary>
+/// Extension methods for configuring Auth Service dependencies.
+/// </summary>
+public static class AuthServiceExtensions
+{
+    /// <summary>
+    /// Adds Auth Service infrastructure dependencies.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="connectionString">PostgreSQL connection string.</param>
+    public static IServiceCollection AddAuthInfrastructure(
+        this IServiceCollection services,
+        string? connectionString)
+    {
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddSingleton<IAuthDbConnectionFactory>(_ => new AuthDbConnectionFactory(connectionString));
+            services.AddSingleton<IAuthRepository, AuthRepository>();
+            services.AddSingleton<IAuthApiKeyValidator, DapperAuthApiKeyValidator>();
+        }
+        else
+        {
+            services.AddSingleton<IAuthRepository, InMemoryAuthRepository>();
+            services.AddSingleton<IAuthApiKeyValidator, InMemoryAuthApiKeyValidator>();
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds Auth Service application services.
+    /// </summary>
+    /// <param name="services">The service collection.</param>
+    public static IServiceCollection AddAuthApplicationServices(this IServiceCollection services)
+    {
+        services.AddSingleton<Sha256SecretHasher>();
+        services.AddSingleton<Pbkdf2PasswordHasher>();
+        services.AddSingleton<ISecretGenerator, SecretGenerator>();
+        services.AddSingleton<InviteRegistrationService>();
+        services.AddSingleton<ApiKeyFactory>();
+        services.AddSingleton<LoginService>();
+        services.AddSingleton<AuthAccountApplicationService>();
+
+        return services;
+    }
+}

@@ -3,21 +3,6 @@ using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.WebApp.Services.Auth;
 
-public sealed record LoginResponse(string SessionToken, string UserId, string Role);
-
-public sealed record InviteCompletionResponse(string UserId, string Email, string Role);
-
-public sealed record ApiKeyInfo(string Id, string Name, string Prefix, DateTimeOffset CreatedAt, DateTimeOffset? LastUsed, bool IsActive);
-
-public sealed record UserInfo(string Id, string Email, string Role, string Status, DateTimeOffset CreatedAt);
-
-public sealed record CreateApiKeyResponse(string ApiKeyId, string RawKey, string Name);
-
-public sealed class AuthException(string ErrorCode) : Exception
-{
-    public string ErrorCode { get; } = ErrorCode;
-}
-
 public sealed class AuthClient(AuthGrpc.AuthServiceClient client)
 {
     public async Task<LoginResponse> LoginAsync(string email, string password, CancellationToken cancellationToken = default)

@@ -6,7 +6,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// <summary>
 /// Creates API keys and validates raw key material.
 /// </summary>
-public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher)
+public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher, ISecretGenerator secretGenerator)
 {
     private const string ApiKeyPrefix = "orr";
     private const int VisiblePrefixLength = 12;
@@ -20,7 +20,7 @@ public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher)
     /// <returns>API key plus raw secret shown once.</returns>
     public CreatedApiKey Create(string userId, string name, DateTimeOffset createdAtUtc)
     {
-        var rawKey = SecretGenerator.Generate(ApiKeyPrefix, 36);
+        var rawKey = secretGenerator.Generate(ApiKeyPrefix, 36);
         var prefix = rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
         var apiKey = new ApiKey(
             Guid.NewGuid().ToString("N"),

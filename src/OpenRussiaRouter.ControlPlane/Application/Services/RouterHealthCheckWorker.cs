@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using OpenRussiaRouter.ControlPlane.Application.Interfaces;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
@@ -54,7 +54,7 @@ public sealed class RouterHealthCheckWorker(
             }
             catch (Exception exception)
             {
-                logger.LogWarning(exception, "Router health check round failed.");
+                logger.LogWarning(exception, "Router health check round failed with error: {ErrorMessage}", exception.Message);
             }
 
             await Task.Delay(options.CurrentValue.Interval, stoppingToken).ConfigureAwait(false);

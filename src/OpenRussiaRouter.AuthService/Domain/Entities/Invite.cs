@@ -1,4 +1,5 @@
 using OpenRussiaRouter.AuthService.Domain.Enums;
+using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Domain.Entities;
 
@@ -26,12 +27,12 @@ public sealed class Invite
         string createdByAdminId,
         DateTimeOffset createdAtUtc)
     {
-        Id = RequireValue(id, nameof(id));
-        Email = NormalizeEmail(email);
+        Id = Preconditions.RequireValue(id, nameof(id));
+        Email = EmailValidator.Normalize(email);
         Role = role;
-        TokenHash = RequireValue(tokenHash, nameof(tokenHash));
+        TokenHash = Preconditions.RequireValue(tokenHash, nameof(tokenHash));
         ExpiresAtUtc = expiresAtUtc;
-        CreatedByAdminId = RequireValue(createdByAdminId, nameof(createdByAdminId));
+        CreatedByAdminId = Preconditions.RequireValue(createdByAdminId, nameof(createdByAdminId));
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -100,26 +101,5 @@ public sealed class Invite
     /// <param name="nowUtc">Current UTC timestamp.</param>
     /// <returns>Whether invite is expired.</returns>
     public bool IsExpired(DateTimeOffset nowUtc) => nowUtc >= ExpiresAtUtc;
-
-    private static string NormalizeEmail(string email)
-    {
-        var value = RequireValue(email, nameof(email)).Trim().ToLowerInvariant();
-        if (!value.Contains('@', StringComparison.Ordinal))
-        {
-            throw new ArgumentException("Email must contain '@'.", nameof(email));
-        }
-
-        return value;
-    }
-
-    private static string RequireValue(string value, string name)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", name);
-        }
-
-        return value;
-    }
 }
 

@@ -1,5 +1,5 @@
 using Grpc.Core;
-using OpenRussiaRouter.ApiGateway.ControlPlane.Interfaces;
+using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 

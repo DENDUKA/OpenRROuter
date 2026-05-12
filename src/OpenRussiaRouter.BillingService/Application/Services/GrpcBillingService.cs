@@ -173,7 +173,28 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
             CreatedAtUtc = anomaly.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
         }));
 
-        return Task.FromResult(response);
+return Task.FromResult(response);
+    }
+
+    /// <inheritdoc />
+    public override Task<ListModelsResponse> ListModels(
+        ListModelsRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListModelsResponse();
+        response.Models.AddRange(billing.ListAllModels().Select(model => new Contracts.Grpc.Billing.V1.ModelDetail
+        {
+            Id = model.ModelId,
+            DisplayName = model.DisplayName,
+            UpstreamModelId = model.RouterModelId,
+            PriceVersion = model.PriceVersion,
+            InputPricePer1MRub = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            OutputPricePer1MRub = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            CachePricePer1MRub = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            Enabled = model.Enabled
+        }));
+
+return Task.FromResult(response);
     }
 
     /// <inheritdoc />
@@ -181,7 +202,7 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         ListUsageRequest request,
         ServerCallContext context)
     {
-var response = new ListUsageResponse();
+        var response = new ListUsageResponse();
         response.Records.AddRange(billing.ListUsage(string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId).Select(usage => new Contracts.Grpc.Billing.V1.UsageRecord
         {
             RequestId = usage.RequestId,

@@ -1,6 +1,6 @@
 using System.Globalization;
 using Grpc.Core;
-using OpenRussiaRouter.ApiGateway.Billing.Interfaces;
+using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;

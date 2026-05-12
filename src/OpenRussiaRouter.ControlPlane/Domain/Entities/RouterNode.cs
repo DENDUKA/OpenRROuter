@@ -1,3 +1,4 @@
+using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.Contracts.ControlPlane;
 
 namespace OpenRussiaRouter.ControlPlane.Domain.Entities;
@@ -24,10 +25,10 @@ public sealed class RouterNode
         int capacityWeight,
         DateTimeOffset createdAtUtc)
     {
-        Id = RequireValue(id, nameof(id));
-        Name = RequireValue(name, nameof(name));
+        Id = Preconditions.RequireValue(id, nameof(id));
+        Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = RequireValue(tokenSecretName, nameof(tokenSecretName));
+        TokenSecretName = Preconditions.RequireValue(tokenSecretName, nameof(tokenSecretName));
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
         CreatedAtUtc = createdAtUtc;
     }
@@ -101,9 +102,9 @@ public sealed class RouterNode
     /// <param name="capacityWeight">Relative capacity weight.</param>
     public void Update(string name, Uri endpointUrl, string tokenSecretName, int capacityWeight)
     {
-        Name = RequireValue(name, nameof(name));
+        Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = RequireValue(tokenSecretName, nameof(tokenSecretName));
+        TokenSecretName = Preconditions.RequireValue(tokenSecretName, nameof(tokenSecretName));
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
     }
 
@@ -174,13 +175,4 @@ public sealed class RouterNode
         return endpointUrl;
     }
 
-    private static string RequireValue(string value, string name)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", name);
-        }
-
-        return value.Trim();
-    }
 }

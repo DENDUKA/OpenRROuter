@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using OpenRussiaRouter.BillingService.Application.Interfaces;
+using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
@@ -67,6 +67,30 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     {
         var ordered = _models.Values
             .Where(model => model.Enabled)
+            .OrderBy(model => model.ModelId)
+            .AsEnumerable();
+
+        if (afterModelId != null)
+        {
+            ordered = ordered.Where(model => string.Compare(model.ModelId, afterModelId, StringComparison.Ordinal) > 0);
+        }
+
+        var items = ordered.Take(limit + 1).ToArray();
+        var hasMore = items.Length > limit;
+        if (hasMore)
+        {
+            items = items.Take(limit).ToArray();
+        }
+
+        return (items, hasMore);
+    }
+
+    /// <summary>
+    /// Lists all model prices (including disabled) for admin views.
+    /// </summary>
+    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
+    {
+        var ordered = _models.Values
             .OrderBy(model => model.ModelId)
             .AsEnumerable();
 

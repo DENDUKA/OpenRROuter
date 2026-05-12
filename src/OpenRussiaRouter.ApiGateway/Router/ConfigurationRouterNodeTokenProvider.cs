@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Configuration;
-using OpenRussiaRouter.ApiGateway.Router.Interfaces;
+using OpenRussiaRouter.ApiGateway.Router;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 

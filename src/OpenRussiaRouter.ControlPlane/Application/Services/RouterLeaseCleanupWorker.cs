@@ -38,7 +38,7 @@ public sealed class RouterLeaseCleanupWorker(
             }
             catch (Exception exception)
             {
-                logger.LogWarning(exception, "Router lease cleanup round failed.");
+                logger.LogWarning(exception, "Router lease cleanup round failed with error: {ErrorMessage}", exception.Message);
             }
 
             await Task.Delay(options.CurrentValue.Interval, stoppingToken).ConfigureAwait(false);

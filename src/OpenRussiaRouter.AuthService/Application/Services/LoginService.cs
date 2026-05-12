@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// <summary>
 /// Handles email/password login and session creation.
 /// </summary>
-public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher)
+public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
     private const string SessionPrefix = "orr_session";
 
@@ -32,21 +32,21 @@ public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher)
 
         if (user is null)
         {
-            return LoginResult.Failed("invalid_credentials");
+            return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
         }
 
         if (user.Status == UserStatus.Disabled)
         {
-            return LoginResult.Failed("user_disabled");
+            return LoginResult.Failed(AuthErrorCodes.UserDisabled);
         }
 
         if (!passwordHasher.VerifyPassword(password, user.PasswordHash))
         {
-            return LoginResult.Failed("invalid_credentials");
+            return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
         }
 
         var session = new UserSession(
-            SecretGenerator.Generate(SessionPrefix, 32),
+            secretGenerator.Generate(SessionPrefix, 32),
             user.Id,
             user.Role,
             nowUtc,

@@ -5,6 +5,8 @@ namespace OpenRussiaRouter.BuildingBlocks.Tests.Usage;
 
 public sealed class UsageCostCalculatorTests
 {
+    private readonly UsageCostCalculator _calculator = new();
+
     [Theory]
     [InlineData(1_000_000, 0, 0, 10, 20, 1, 10)]
     [InlineData(0, 1_000_000, 0, 10, 20, 1, 20)]
@@ -25,7 +27,7 @@ public sealed class UsageCostCalculatorTests
             MoneyAmount.Rub(outputPrice),
             MoneyAmount.Rub(cachePrice));
 
-        var result = UsageCostCalculator.Calculate(usage, price);
+        var result = _calculator.Calculate(usage, price);
 
         Assert.Equal(Currency.Rub, result.Currency);
         Assert.Equal(expected, result.Amount);
@@ -43,7 +45,7 @@ public sealed class UsageCostCalculatorTests
             MoneyAmount.Rub(20),
             MoneyAmount.Rub(1));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => UsageCostCalculator.Calculate(usage, price));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _calculator.Calculate(usage, price));
     }
 
     [Fact]
@@ -55,7 +57,7 @@ public sealed class UsageCostCalculatorTests
             MoneyAmount.Rub(20),
             MoneyAmount.Rub(1));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => UsageCostCalculator.Calculate(usage, price));
+        Assert.Throws<ArgumentOutOfRangeException>(() => _calculator.Calculate(usage, price));
     }
 }
 

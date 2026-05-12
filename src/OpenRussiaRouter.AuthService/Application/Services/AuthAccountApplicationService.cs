@@ -1,4 +1,4 @@
-using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
@@ -110,6 +110,10 @@ public sealed class AuthAccountApplicationService(
         return repository.ListApiKeys(RequireValue(userId, nameof(userId)));
     }
 
+    /// <summary>
+    /// Lists all users for admin views.
+    /// </summary>
+    /// <returns>All user accounts.</returns>
     public IReadOnlyCollection<UserAccount> ListUsers()
     {
         return repository.ListUsers();

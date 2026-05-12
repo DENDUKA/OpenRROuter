@@ -1,4 +1,3 @@
-using OpenRussiaRouter.AuthService.Application.Interfaces;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.Contracts.Auth;
@@ -11,7 +10,11 @@ public sealed class GrpcAuthServiceTests
     [Fact]
     public async Task ValidateApiKey_ValidKey_ReturnsGrpcResponse()
     {
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(true, "user-1", "key-1", null)));
+        var service = new GrpcAuthService(
+            new StubValidator(new ValidateApiKeyResult(true, "user-1", "key-1", null)),
+            new InMemoryAuthRepository(),
+            CreateAccounts(),
+            CreateLoginService());
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_test" }, context: null!);
 
@@ -24,7 +27,11 @@ public sealed class GrpcAuthServiceTests
     [Fact]
     public async Task ValidateApiKey_InvalidKey_ReturnsErrorCode()
     {
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "invalid_api_key")));
+        var service = new GrpcAuthService(
+            new StubValidator(new ValidateApiKeyResult(false, null, null, "invalid_api_key")),
+            new InMemoryAuthRepository(),
+            CreateAccounts(),
+            CreateLoginService());
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_bad" }, context: null!);
 
@@ -38,7 +45,7 @@ public sealed class GrpcAuthServiceTests
     public async Task InviteAndApiKeyMethods_PersistWorkflow_ReturnSuccessResponses()
     {
         var accounts = CreateAccounts();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), accounts: accounts);
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), CreateInMemoryAuthRepository(), accounts, CreateLoginService());
 
         var invite = await service.CreateInvite(new CreateInviteRequest
         {
@@ -80,7 +87,7 @@ public sealed class GrpcAuthServiceTests
     public async Task CreateInvite_InvalidRole_ReturnsValidationError()
     {
         var accounts = CreateAccounts();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), accounts: accounts);
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), CreateInMemoryAuthRepository(), accounts, CreateLoginService());
 
         var response = await service.CreateInvite(new CreateInviteRequest
         {
@@ -102,10 +109,18 @@ public sealed class GrpcAuthServiceTests
     private static AuthAccountApplicationService CreateAccounts()
     {
         var secretHasher = new Sha256SecretHasher();
+        var secretGenerator = new SecretGenerator();
         return new AuthAccountApplicationService(
             new InMemoryAuthRepository(),
-            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher()),
-            new ApiKeyFactory(secretHasher),
+            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher(), secretGenerator),
+            new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);
+    }
+
+    private static IAuthRepository CreateInMemoryAuthRepository() => new InMemoryAuthRepository();
+
+    private static LoginService CreateLoginService()
+    {
+        return new LoginService(new Pbkdf2PasswordHasher(), new SecretGenerator());
     }
 }

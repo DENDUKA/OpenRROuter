@@ -1,4 +1,5 @@
 using OpenRussiaRouter.AuthService.Domain.Enums;
+using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Domain.Entities;
 
@@ -17,10 +18,10 @@ public sealed class UserAccount
     /// <param name="createdAtUtc">Creation timestamp.</param>
     public UserAccount(string id, string email, UserRole role, string passwordHash, DateTimeOffset createdAtUtc)
     {
-        Id = RequireValue(id, nameof(id));
-        Email = NormalizeEmail(email);
+        Id = Preconditions.RequireValue(id, nameof(id));
+        Email = EmailValidator.Normalize(email);
         Role = role;
-        PasswordHash = RequireValue(passwordHash, nameof(passwordHash));
+        PasswordHash = Preconditions.RequireValue(passwordHash, nameof(passwordHash));
         CreatedAtUtc = createdAtUtc;
     }
 
@@ -59,25 +60,5 @@ public sealed class UserAccount
     /// </summary>
     public void Disable() => Status = UserStatus.Disabled;
 
-    private static string NormalizeEmail(string email)
-    {
-        var value = RequireValue(email, nameof(email)).Trim().ToLowerInvariant();
-        if (!value.Contains('@', StringComparison.Ordinal))
-        {
-            throw new ArgumentException("Email must contain '@'.", nameof(email));
-        }
-
-        return value;
-    }
-
-    private static string RequireValue(string value, string name)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", name);
-        }
-
-        return value;
-    }
 }
 

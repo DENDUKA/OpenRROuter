@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
@@ -86,7 +87,10 @@ public sealed class GrpcBillingServiceTests
     [Fact]
     public async Task CreateVirtualTopUp_ValidRequest_ReturnsLedgerAndBalance()
     {
-        var billing = new BillingApplicationService(new InMemoryBillingRepository());
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }));
         var service = new GrpcBillingService(billing);
 
         var response = await service.CreateVirtualTopUp(new CreateVirtualTopUpRequest
@@ -109,7 +113,10 @@ public sealed class GrpcBillingServiceTests
     [Fact]
     public async Task CreateVirtualTopUp_InvalidAmount_ReturnsValidationFailed()
     {
-        var service = new GrpcBillingService(new BillingApplicationService(new InMemoryBillingRepository()));
+        var service = new GrpcBillingService(new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 })));
 
         var response = await service.CreateVirtualTopUp(new CreateVirtualTopUpRequest
         {
@@ -127,7 +134,10 @@ public sealed class GrpcBillingServiceTests
     [Fact]
     public async Task UpsertModelPrice_ValidRequest_ModelAppearsInPublicList()
     {
-        var billing = new BillingApplicationService(new InMemoryBillingRepository());
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }));
         var service = new GrpcBillingService(billing);
 
         var response = await service.UpsertModelPrice(new UpsertModelPriceRequest
@@ -151,7 +161,10 @@ public sealed class GrpcBillingServiceTests
     [Fact]
     public async Task UpsertModelPrice_InvalidPrice_ReturnsValidationFailed()
     {
-        var service = new GrpcBillingService(new BillingApplicationService(new InMemoryBillingRepository()));
+        var service = new GrpcBillingService(new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 })));
 
         var response = await service.UpsertModelPrice(new UpsertModelPriceRequest
         {
@@ -229,7 +242,10 @@ public sealed class GrpcBillingServiceTests
 
     private static BillingApplicationService CreateBillingWithModelAndBalance()
     {
-        var billing = new BillingApplicationService(new InMemoryBillingRepository());
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }));
         billing.UpsertModel(new ModelPrice(
             "gpt-test",
             "GPT Test",

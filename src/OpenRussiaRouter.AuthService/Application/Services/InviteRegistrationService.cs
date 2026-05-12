@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// <summary>
 /// Handles invite creation and one-time invite completion.
 /// </summary>
-public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, Pbkdf2PasswordHasher passwordHasher)
+public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, Pbkdf2PasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
     private const string InvitePrefix = "orr_invite";
 
@@ -32,7 +32,7 @@ public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, P
             throw new ArgumentException("Invite expiration must be in the future.", nameof(expiresAtUtc));
         }
 
-        var rawToken = SecretGenerator.Generate(InvitePrefix);
+        var rawToken = secretGenerator.Generate(InvitePrefix);
         var invite = new Invite(
             Guid.NewGuid().ToString("N"),
             email,

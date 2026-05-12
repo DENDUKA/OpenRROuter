@@ -7,6 +7,9 @@ option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1";
 service RouterControlPlane {
   rpc SelectRouterNode (SelectRouterNodeRequest) returns (SelectRouterNodeResponse);
   rpc ReleaseRouterNode (ReleaseRouterNodeRequest) returns (ReleaseRouterNodeResponse);
+  rpc RegisterRouterNode (RegisterRouterNodeRequest) returns (RegisterRouterNodeResponse);
+  rpc DisableRouterNode (DisableRouterNodeRequest) returns (DisableRouterNodeResponse);
+  rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -29,4 +32,42 @@ message ReleaseRouterNodeRequest {
 
 message ReleaseRouterNodeResponse {
   bool accepted = 1;
+}
+
+message RegisterRouterNodeRequest {
+  string name = 1;
+  string endpoint_url = 2;
+  string token_secret_name = 3;
+  int32 capacity_weight = 4;
+}
+
+message RegisterRouterNodeResponse {
+  bool registered = 1;
+  string node_id = 2;
+  string error_code = 3;
+}
+
+message DisableRouterNodeRequest {
+  string node_id = 1;
+}
+
+message DisableRouterNodeResponse {
+  bool disabled = 1;
+  string error_code = 2;
+}
+
+message ListRouterNodesRequest {
+}
+
+message RouterNodeSummary {
+  string node_id = 1;
+  string name = 2;
+  string endpoint_url = 3;
+  string status = 4;
+  int32 in_flight_requests = 5;
+  string last_checked_at_utc = 6;
+}
+
+message ListRouterNodesResponse {
+  repeated RouterNodeSummary nodes = 1;
 }

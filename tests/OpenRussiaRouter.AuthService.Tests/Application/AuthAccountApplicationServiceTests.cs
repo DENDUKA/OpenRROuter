@@ -1,6 +1,8 @@
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Domain;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Domain.Entities;
+using OpenRussiaRouter.AuthService.Domain.Enums;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Application;
 
@@ -120,6 +122,11 @@ public sealed class AuthAccountApplicationServiceTests
         public UserAccount? GetUser(string userId)
         {
             return Users.GetValueOrDefault(userId);
+        }
+
+        public UserAccount? GetUserByEmail(string email)
+        {
+            return Users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant());
         }
 
         public void AddApiKey(ApiKey apiKey)

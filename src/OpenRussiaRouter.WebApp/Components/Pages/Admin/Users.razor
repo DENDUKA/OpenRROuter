@@ -1,0 +1,273 @@
+@page "/admin/users"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject AuthClient AuthClient
+@inject BillingClient BillingClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Users - OpenRussiaRouter Admin</PageTitle>
+
+<h1>Users</h1>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (ShowCreateInvitePanel)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Create Invite</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(NewInviteToken))
+                    {
+                        <div class="alert alert-success">
+                            <strong>Invite created!</strong>
+                            <p class="mb-1">Share this link with the user:</p>
+                            <code class="d-block p-2 bg-light border rounded">@Navigation.BaseUri.TrimEnd('/')/invite/@NewInviteToken</code>
+                        </div>
+                        <button class="btn btn-primary" @onclick="CloseInvitePanel">Done</button>
+                    }
+                    else
+                    {
+                        <EditForm Model="@InviteForm" OnValidSubmit="HandleCreateInvite">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label for="inviteEmail" class="form-label">Email</label>
+                                <InputText id="inviteEmail" class="form-control" @bind-Value="InviteForm.Email" />
+                                <ValidationMessage For="@(() => InviteForm.Email)" />
+                            </div>
+                            <div class="mb-3">
+                                <label for="inviteRole" class="form-label">Role</label>
+                                <InputSelect id="inviteRole" class="form-select" @bind-Value="InviteForm.Role">
+                                    <option value="User">User</option>
+                                    <option value="Admin">Admin</option>
+                                </InputSelect>
+                            </div>
+                            <button type="submit" class="btn btn-primary" disabled="@IsCreating">
+                                @if (IsCreating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Create Invite
+                            </button>
+                            <button type="button" class="btn btn-secondary ms-2" @onclick="CloseInvitePanel">Cancel</button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (ShowTopUpPanel && SelectedUserItem is not null)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Virtual Top-Up for @SelectedUserItem.Email</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="topUpAmount" class="form-label">Amount (RUB)</label>
+                        <InputNumber id="topUpAmount" class="form-control" @bind-Value="TopUpForm.Amount" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="topUpReason" class="form-label">Reason</label>
+                        <InputText id="topUpReason" class="form-control" @bind-Value="TopUpForm.Reason" />
+                    </div>
+                    <button class="btn btn-primary" @onclick="ConfirmTopUp" disabled="@IsTopingUp">Top Up</button>
+                    <button class="btn btn-secondary ms-2" @onclick="CancelTopUp">Cancel</button>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>All Users</span>
+                <button class="btn btn-sm btn-primary" @onclick="ShowCreateInvitePanel_Click">
+                    <span class="bi bi-plus"></span> Create Invite
+                </button>
+            </div>
+            <div class="card-body">
+                @if (UserList is null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (UserList.Count == 0)
+                {
+                    <p class="text-muted">No users yet.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Balance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var user in UserList)
+                            {
+                                <tr>
+                                    <td>@user.Email</td>
+                                    <td>@user.Role</td>
+                                    <td>
+                                        <span class="badge @(user.Status == "Active" ? "bg-success" : "bg-secondary")">
+                                            @user.Status
+                                        </span>
+                                    </td>
+                                    <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
+                                    <td>@UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartTopUp(user)">Top Up</button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Route = "/admin/users";
+    private IReadOnlyList<UserInfo>? UserList { get; set; }
+    private Dictionary<string, decimal> UserBalances { get; set; } = new();
+    private bool ShowCreateInvitePanel { get; set; }
+    private bool ShowTopUpPanel { get; set; }
+    private bool IsCreating { get; set; }
+    private bool IsTopingUp { get; set; }
+    private string? NewInviteToken { get; set; }
+    private string? ErrorMessage { get; set; }
+    private UserInfo? SelectedUserItem { get; set; }
+    private InviteFormModel InviteForm { get; set; } = new();
+    private TopUpFormModel TopUpForm { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            UserList = await AuthClient.ListUsersAsync();
+            foreach (var user in UserList)
+            {
+                try
+                {
+                    var balance = await BillingClient.GetBalanceAsync(user.Id);
+                    UserBalances[user.Id] = balance.Amount;
+                }
+                catch
+                {
+                    UserBalances[user.Id] = 0;
+                }
+            }
+        }
+        catch
+        {
+            ErrorMessage = "Failed to load users.";
+        }
+    }
+
+    private void ShowCreateInvitePanel_Click()
+    {
+        InviteForm = new InviteFormModel();
+        NewInviteToken = null;
+        ShowCreateInvitePanel = true;
+    }
+
+    private void CloseInvitePanel()
+    {
+        ShowCreateInvitePanel = false;
+        NewInviteToken = null;
+    }
+
+    private async Task HandleCreateInvite()
+    {
+        if (AuthState.CurrentSession is null) return;
+        IsCreating = true;
+        ErrorMessage = null;
+        try
+        {
+            var result = await AuthClient.CreateInviteAsync(InviteForm.Email, InviteForm.Role, AuthState.CurrentSession.UserId);
+            NewInviteToken = result.RawToken;
+        }
+        catch
+        {
+            ErrorMessage = "Failed to create invite.";
+        }
+        finally
+        {
+            IsCreating = false;
+        }
+    }
+
+    private void StartTopUp(UserInfo user)
+    {
+        SelectedUserItem = user;
+        TopUpForm = new TopUpFormModel { Amount = 1000, Reason = "Virtual top-up" };
+        ShowTopUpPanel = true;
+    }
+
+    private void CancelTopUp()
+    {
+        SelectedUserItem = null;
+        ShowTopUpPanel = false;
+    }
+
+    private async Task ConfirmTopUp()
+    {
+        if (SelectedUserItem is null) return;
+        IsTopingUp = true;
+        try
+        {
+            await BillingClient.CreateVirtualTopUpAsync(AuthState.CurrentSession!.UserId, SelectedUserItem.Id, TopUpForm.Amount, TopUpForm.Reason);
+            SelectedUserItem = null;
+            ShowTopUpPanel = false;
+            await LoadUsers();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to top up balance.";
+        }
+        finally
+        {
+            IsTopingUp = false;
+        }
+    }
+
+    private class InviteFormModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string Role { get; set; } = "User";
+    }
+
+    private class TopUpFormModel
+    {
+        public decimal Amount { get; set; }
+        public string Reason { get; set; } = "";
+    }
+}

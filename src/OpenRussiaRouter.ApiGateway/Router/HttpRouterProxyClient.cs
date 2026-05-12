@@ -1,5 +1,6 @@
 using System.Text;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
+using OpenRussiaRouter.ApiGateway.Router.Interfaces;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Router;

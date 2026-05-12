@@ -1,0 +1,111 @@
+@page "/cabinet/usage"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject AuthClient AuthClient
+@inject BillingClient BillingClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Usage - OpenRussiaRouter</PageTitle>
+
+<h1>Usage</h1>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Current Balance</div>
+            <div class="card-body">
+                @if (Balance is null)
+                {
+                    <p>Loading...</p>
+                }
+                else
+                {
+                    <h2 class="mb-0">@Balance.Amount.ToString("N2") RUB</h2>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">Recent Usage</div>
+            <div class="card-body">
+                @if (UsageRecords is null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (UsageRecords.Count == 0)
+                {
+                    <p class="text-muted">No usage records yet.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Model</th>
+                                <th>Input Tokens</th>
+                                <th>Output Tokens</th>
+                                <th>Cache Tokens</th>
+                                <th>Cost (RUB)</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var record in UsageRecords)
+                            {
+                                <tr>
+                                    <td>@record.CreatedAt.ToLocalTime().ToString("g")</td>
+                                    <td>@record.ModelId</td>
+                                    <td>@record.InputTokens.ToString("N0")</td>
+                                    <td>@record.OutputTokens.ToString("N0")</td>
+                                    <td>@record.CacheTokens.ToString("N0")</td>
+                                    <td>@record.CostRub.ToString("N4")</td>
+                                    <td>
+                                        <span class="badge @(record.Status == "completed" ? "bg-success" : "bg-warning")">
+                                            @record.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Route = "/cabinet/usage";
+    private BalanceInfo? Balance { get; set; }
+    private IReadOnlyList<UsageInfo>? UsageRecords { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        if (AuthState.CurrentSession is null) return;
+        try
+        {
+            Balance = await BillingClient.GetBalanceAsync(AuthState.CurrentSession.UserId);
+            UsageRecords = await BillingClient.ListUsageAsync(AuthState.CurrentSession.UserId);
+        }
+        catch
+        {
+            ErrorMessage = "Failed to load usage data.";
+        }
+    }
+}

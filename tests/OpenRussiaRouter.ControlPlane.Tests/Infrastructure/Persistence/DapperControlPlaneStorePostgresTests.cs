@@ -6,23 +6,24 @@ using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Infrastructure.Persistence;
 
-public sealed class DapperControlPlaneStorePostgresTests
+public sealed class DapperControlPlaneRepositoryPostgresTests
 {
     [Fact]
     [Trait("Category", "PostgreSQL")]
-    public void Store_AppliedMigration_PersistsNodeLeaseAndCleanup()
+    public async Task Store_AppliedMigration_PersistsNodeLeaseAndCleanup()
     {
-        var connectionString = GetConnectionString();
-        if (connectionString is null)
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
         {
             return;
         }
 
-        ApplyMigration(connectionString, "control");
+        var connectionString = database.ConnectionString;
+        database.ApplyMigration();
         using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute("truncate control.router_leases, control.router_nodes restart identity cascade;");
+        database.Truncate();
         var service = new RouterControlPlaneService(
-            new DapperControlPlaneStore(new NpgsqlControlPlaneDbConnectionFactory(connectionString)));
+            new DapperControlPlaneRepository(new NpgsqlControlPlaneDbConnectionFactory(connectionString)));
         var now = DateTimeOffset.UtcNow;
         var node = service.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         service.ApplyHealth(node.Id, RouterNodeStatus.Healthy, now, 15, null);
@@ -36,26 +37,4 @@ public sealed class DapperControlPlaneStorePostgresTests
         Assert.Equal(RouterNodeStatus.Healthy, summary.Status);
     }
 
-    private static string? GetConnectionString()
-    {
-        return Environment.GetEnvironmentVariable("ORR_CONTROL_POSTGRES_TEST_CONNECTION")
-            ?? Environment.GetEnvironmentVariable("ORR_POSTGRES_TEST_CONNECTION");
-    }
-
-    private static void ApplyMigration(string connectionString, string service)
-    {
-        using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", service, "001_initial.sql")));
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "OpenRussiaRouter.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
-    }
 }

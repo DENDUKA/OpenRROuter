@@ -1,6 +1,6 @@
 using Dapper;
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
 

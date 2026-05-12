@@ -1,0 +1,13 @@
+@page "/logout"
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+@inject SessionStorage SessionStorage
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await SessionStorage.ClearSessionAsync();
+        AuthState.ClearSession();
+        Navigation.NavigateTo("/login");
+    }
+}

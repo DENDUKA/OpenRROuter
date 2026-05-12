@@ -1,5 +1,5 @@
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
@@ -98,7 +98,7 @@ public sealed class RouterControlPlaneServiceTests
 
     private static RouterControlPlaneService CreateService()
     {
-        return new RouterControlPlaneService(new InMemoryControlPlaneStore());
+        return new RouterControlPlaneService(new InMemoryControlPlaneRepository());
     }
 }
 

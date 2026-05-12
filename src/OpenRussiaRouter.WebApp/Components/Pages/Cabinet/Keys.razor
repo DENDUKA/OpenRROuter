@@ -1,0 +1,328 @@
+@page "/cabinet/keys"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject AuthClient AuthClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>API Keys - OpenRussiaRouter</PageTitle>
+
+<h1>API Keys</h1>
+
+<div class="row mt-4">
+    <div class="col-md-8">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (ShowCreatePanel)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">New API Key</h5>
+                </div>
+                <div class="card-body">
+                    @if (!string.IsNullOrEmpty(NewKey))
+                    {
+                        <div class="alert alert-success">
+                            <strong>Save your API key now - it won't be shown again!</strong>
+                            <div class="mt-2">
+                                <code class="d-block p-2 bg-light border rounded">@NewKey</code>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary" @onclick="CloseCreatePanel">Done</button>
+                    }
+                    else
+                    {
+                        <EditForm Model="@CreateModel" OnValidSubmit="HandleCreate">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label for="keyName" class="form-label">Key Name</label>
+                                <InputText id="keyName" class="form-control" @bind-Value="CreateModel.Name" />
+                                <ValidationMessage For="@(() => CreateModel.Name)" />
+                            </div>
+                            <button type="submit" class="btn btn-primary" disabled="@IsCreating">
+                                @if (IsCreating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-secondary ms-2" @onclick="CloseCreatePanel">Cancel</button>
+                        </EditForm>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (ShowRevokeConfirm)
+        {
+            <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Revoke API Key</h5>
+                        </div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to revoke <strong>@KeyToRevoke?.Name</strong>?</p>
+                            <p class="text-muted">This action cannot be undone.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-danger" @onclick="ConfirmRevoke" disabled="@IsRevoking">
+                                @if (IsRevoking)
+                                {
+                                    <span class="spinner-border spinner-border-sm"></span>
+                                }
+                                Revoke
+                            </button>
+                            <button class="btn btn-secondary" @onclick="CancelRevoke">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Your API Keys</span>
+                <button class="btn btn-sm btn-primary" @onclick="ShowCreatePanel_Click">
+                    <span class="bi bi-plus"></span> Create Key
+                </button>
+            </div>
+            <div class="card-body">
+                @if (KeyList is null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (KeyList.Count == 0)
+                {
+                    <p class="text-muted">No API keys yet. Create one to get started.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Prefix</th>
+                                <th>Created</th>
+                                <th>Last Used</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var key in KeyList)
+                            {
+                                <tr>
+                                    <td>@key.Name</td>
+                                    <td><code>@key.Prefix***</code></td>
+                                    <td>@key.CreatedAt.ToLocalTime().ToString("g")</td>
+                                    <td>@(key.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                                    <td>
+                                        @if (key.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Revoked</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (key.IsActive)
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartRename(key)">Rename</button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => StartRevoke(key)">Revoke</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ShowRenameModal)
+{
+    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Rename API Key</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newName" class="form-label">New Name</label>
+                        <InputText id="newName" class="form-control" @bind-Value="RenameModel.Name" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-primary" @onclick="ConfirmRename" disabled="@IsRenaming">Save</button>
+                    <button class="btn btn-secondary" @onclick="CancelRename">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const string Route = "/cabinet/keys";
+    private IReadOnlyList<ApiKeyInfo>? KeyList { get; set; }
+    private bool ShowCreatePanel { get; set; }
+    private bool ShowRevokeConfirm { get; set; }
+    private bool ShowRenameModal { get; set; }
+    private bool IsCreating { get; set; }
+    private bool IsRevoking { get; set; }
+    private bool IsRenaming { get; set; }
+    private string? NewKey { get; set; }
+    private string? ErrorMessage { get; set; }
+    private ApiKeyInfo? KeyToRevoke { get; set; }
+    private ApiKeyInfo? KeyToRename { get; set; }
+    private CreateKeyModel CreateModel { get; set; } = new();
+    private RenameKeyModel RenameModel { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadKeys();
+    }
+
+    private async Task LoadKeys()
+    {
+        if (AuthState.CurrentSession is null) return;
+        try
+        {
+            KeyList = await AuthClient.ListApiKeysAsync(AuthState.CurrentSession.UserId);
+        }
+        catch
+        {
+            ErrorMessage = "Failed to load API keys.";
+        }
+    }
+
+    private void ShowCreatePanel_Click()
+    {
+        CreateModel = new CreateKeyModel();
+        NewKey = null;
+        ShowCreatePanel = true;
+    }
+
+    private void CloseCreatePanel()
+    {
+        ShowCreatePanel = false;
+        NewKey = null;
+        CreateModel = new CreateKeyModel();
+    }
+
+    private async Task HandleCreate()
+    {
+        if (AuthState.CurrentSession is null) return;
+        IsCreating = true;
+        ErrorMessage = null;
+        try
+        {
+            var result = await AuthClient.CreateApiKeyAsync(AuthState.CurrentSession.UserId, CreateModel.Name);
+            NewKey = result.RawKey;
+            await LoadKeys();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to create API key.";
+        }
+        finally
+        {
+            IsCreating = false;
+        }
+    }
+
+    private void StartRevoke(ApiKeyInfo key)
+    {
+        KeyToRevoke = key;
+        ShowRevokeConfirm = true;
+    }
+
+    private void CancelRevoke()
+    {
+        KeyToRevoke = null;
+        ShowRevokeConfirm = false;
+    }
+
+    private async Task ConfirmRevoke()
+    {
+        if (AuthState.CurrentSession is null || KeyToRevoke is null) return;
+        IsRevoking = true;
+        try
+        {
+            await AuthClient.RevokeApiKeyAsync(AuthState.CurrentSession.UserId, KeyToRevoke.Id);
+            KeyToRevoke = null;
+            ShowRevokeConfirm = false;
+            await LoadKeys();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to revoke API key.";
+        }
+        finally
+        {
+            IsRevoking = false;
+        }
+    }
+
+    private void StartRename(ApiKeyInfo key)
+    {
+        KeyToRename = key;
+        RenameModel = new RenameKeyModel { Name = key.Name };
+        ShowRenameModal = true;
+    }
+
+    private void CancelRename()
+    {
+        KeyToRename = null;
+        ShowRenameModal = false;
+    }
+
+    private async Task ConfirmRename()
+    {
+        if (AuthState.CurrentSession is null || KeyToRename is null) return;
+        IsRenaming = true;
+        try
+        {
+            await AuthClient.RenameApiKeyAsync(AuthState.CurrentSession.UserId, KeyToRename.Id, RenameModel.Name);
+            KeyToRename = null;
+            ShowRenameModal = false;
+            await LoadKeys();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to rename API key.";
+        }
+        finally
+        {
+            IsRenaming = false;
+        }
+    }
+
+    private class CreateKeyModel
+    {
+        [Required]
+        [MinLength(1)]
+        public string Name { get; set; } = "";
+    }
+
+    private class RenameKeyModel
+    {
+        [Required]
+        [MinLength(1)]
+        public string Name { get; set; } = "";
+    }
+}

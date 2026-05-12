@@ -1,6 +1,7 @@
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Domain;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Domain.Entities;
+using OpenRussiaRouter.AuthService.Domain.Enums;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Application;
 

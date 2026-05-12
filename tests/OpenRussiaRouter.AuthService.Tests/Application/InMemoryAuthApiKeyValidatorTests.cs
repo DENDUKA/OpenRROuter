@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 
 namespace OpenRussiaRouter.AuthService.Tests.Application;

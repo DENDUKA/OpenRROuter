@@ -11,3 +11,4 @@ NuGet/
 *.log
 TestResults/
 /.vs
+/.kilo

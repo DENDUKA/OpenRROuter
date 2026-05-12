@@ -2,7 +2,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\auth.proto" GrpcServices="Server" Link="Protos\auth.proto" />
+    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\auth.proto" GrpcServices="Both" Link="Protos\auth.proto" />
     <ProjectReference Include="..\OpenRussiaRouter.BuildingBlocks\OpenRussiaRouter.BuildingBlocks.csproj" />
     <ProjectReference Include="..\OpenRussiaRouter.Contracts\OpenRussiaRouter.Contracts.csproj" />
   </ItemGroup>

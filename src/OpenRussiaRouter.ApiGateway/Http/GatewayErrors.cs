@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Http;
 
 /// <summary>
-/// Creates public OpenAI-compatible-ish Gateway error responses.
+/// Creates public OpenAI-compatible Gateway error responses.
 /// </summary>
 public static class GatewayErrors
 {
@@ -17,16 +18,7 @@ public static class GatewayErrors
     /// <returns>HTTP result.</returns>
     public static IResult Authentication(HttpRequest request, string code, string message)
     {
-        return Results.Json(
-            new
-            {
-                error = new ApiError(
-                    "authentication_error",
-                    code,
-                    message,
-                    CorrelationIdReader.Get(request))
-            },
-            statusCode: StatusCodes.Status401Unauthorized);
+        return Error(request, StatusCodes.Status401Unauthorized, "authentication_error", code, message);
     }
 
     /// <summary>
@@ -38,16 +30,7 @@ public static class GatewayErrors
     /// <returns>HTTP result.</returns>
     public static IResult ServiceUnavailable(HttpRequest request, string code, string message)
     {
-        return Results.Json(
-            new
-            {
-                error = new ApiError(
-                    "service_unavailable",
-                    code,
-                    message,
-                    CorrelationIdReader.Get(request))
-            },
-            statusCode: StatusCodes.Status503ServiceUnavailable);
+        return Error(request, StatusCodes.Status503ServiceUnavailable, "service_unavailable", code, message);
     }
 
     /// <summary>
@@ -59,16 +42,7 @@ public static class GatewayErrors
     /// <returns>HTTP result.</returns>
     public static IResult Validation(HttpRequest request, string code, string message)
     {
-        return Results.Json(
-            new
-            {
-                error = new ApiError(
-                    "invalid_request_error",
-                    code,
-                    message,
-                    CorrelationIdReader.Get(request))
-            },
-            statusCode: StatusCodes.Status400BadRequest);
+        return Error(request, StatusCodes.Status400BadRequest, "invalid_request_error", code, message);
     }
 
     /// <summary>
@@ -80,15 +54,41 @@ public static class GatewayErrors
     /// <returns>HTTP result.</returns>
     public static IResult Billing(HttpRequest request, string code, string message)
     {
+        return Error(request, StatusCodes.Status402PaymentRequired, "billing_error", code, message);
+    }
+
+    /// <summary>
+    /// Creates an internal error response without leaking implementation details.
+    /// </summary>
+    /// <param name="request">HTTP request.</param>
+    /// <returns>HTTP result.</returns>
+    public static IResult Internal(HttpRequest request)
+    {
+        return Error(
+            request,
+            StatusCodes.Status500InternalServerError,
+            "internal_error",
+            ErrorCodes.InternalError,
+            "Internal server error.");
+    }
+
+    private static IResult Error(HttpRequest request, int statusCode, string type, string code, string message)
+    {
+        var requestId = CorrelationIdReader.Get(request);
+        request.HttpContext.Response.Headers[CorrelationIds.HeaderName] = requestId;
+        request.HttpContext.Response.Headers["X-Request-Id"] = requestId;
+
         return Results.Json(
             new
             {
-                error = new ApiError(
-                    "billing_error",
+                error = new
+                {
+                    type,
                     code,
                     message,
-                    CorrelationIdReader.Get(request))
+                    request_id = requestId
+                }
             },
-            statusCode: StatusCodes.Status402PaymentRequired);
+            statusCode: statusCode);
     }
 }

@@ -6,6 +6,14 @@ option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Auth.V1";
 
 service AuthService {
   rpc ValidateApiKey (ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+  rpc Login (LoginRequest) returns (LoginResponse);
+  rpc CreateInvite (CreateInviteRequest) returns (CreateInviteResponse);
+  rpc CompleteInvite (CompleteInviteRequest) returns (CompleteInviteResponse);
+  rpc CreateApiKey (CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  rpc RevokeApiKey (RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+  rpc ListApiKeys (ListApiKeysRequest) returns (ListApiKeysResponse);
+  rpc RenameApiKey (RenameApiKeyRequest) returns (RenameApiKeyResponse);
+  rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -17,4 +25,116 @@ message ValidateApiKeyResponse {
   string user_id = 2;
   string api_key_id = 3;
   string error_code = 4;
+}
+
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  bool succeeded = 1;
+  string session_token = 2;
+  string user_id = 3;
+  string role = 4;
+  string error_code = 5;
+}
+
+message CreateInviteRequest {
+  string email = 1;
+  string role = 2;
+  string created_by_admin_id = 3;
+  int64 expires_at_unix_time_seconds = 4;
+}
+
+message CreateInviteResponse {
+  bool is_created = 1;
+  string invite_id = 2;
+  string raw_token = 3;
+  string email = 4;
+  string role = 5;
+  int64 expires_at_unix_time_seconds = 6;
+  string error_code = 7;
+}
+
+message CompleteInviteRequest {
+  string raw_token = 1;
+  string password = 2;
+}
+
+message CompleteInviteResponse {
+  bool is_completed = 1;
+  string user_id = 2;
+  string email = 3;
+  string role = 4;
+  string error_code = 5;
+}
+
+message CreateApiKeyRequest {
+  string user_id = 1;
+  string name = 2;
+}
+
+message CreateApiKeyResponse {
+  bool is_created = 1;
+  string api_key_id = 2;
+  string raw_key = 3;
+  string prefix = 4;
+  string name = 5;
+  int64 created_at_unix_time_seconds = 6;
+  string error_code = 7;
+}
+
+message RevokeApiKeyRequest {
+  string user_id = 1;
+  string api_key_id = 2;
+}
+
+message RevokeApiKeyResponse {
+  bool is_revoked = 1;
+  string error_code = 2;
+}
+
+message ListApiKeysRequest {
+  string user_id = 1;
+}
+
+message ListApiKeysResponse {
+  repeated ApiKeyInfo keys = 1;
+}
+
+message ApiKeyInfo {
+  string id = 1;
+  string name = 2;
+  string prefix = 3;
+  int64 created_at_unix_time_seconds = 4;
+  int64 last_used_at_unix_time_seconds = 5;
+  int64 revoked_at_unix_time_seconds = 6;
+  bool is_active = 7;
+}
+
+message RenameApiKeyRequest {
+  string user_id = 1;
+  string api_key_id = 2;
+  string name = 3;
+}
+
+message RenameApiKeyResponse {
+  bool is_renamed = 1;
+  string error_code = 2;
+}
+
+message ListUsersRequest {
+}
+
+message ListUsersResponse {
+  repeated UserInfo users = 1;
+}
+
+message UserInfo {
+  string id = 1;
+  string email = 2;
+  string role = 3;
+  string status = 4;
+  int64 created_at_unix_time_seconds = 5;
 }

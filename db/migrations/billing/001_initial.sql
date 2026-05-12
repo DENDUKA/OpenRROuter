@@ -30,7 +30,8 @@ create table if not exists billing.model_prices (
 );
 
 create index if not exists ix_billing_model_prices_enabled
-    on billing.model_prices (enabled);
+    on billing.model_prices (model_id)
+    where enabled = true;
 
 create table if not exists billing.usage_records (
     request_id varchar(128) primary key,

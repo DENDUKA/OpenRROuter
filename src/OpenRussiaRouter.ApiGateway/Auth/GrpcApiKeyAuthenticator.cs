@@ -1,4 +1,5 @@
 using Grpc.Core;
+using OpenRussiaRouter.ApiGateway.Auth.Interfaces;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;

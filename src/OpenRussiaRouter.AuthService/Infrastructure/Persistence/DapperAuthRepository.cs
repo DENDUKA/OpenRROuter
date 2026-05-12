@@ -1,6 +1,6 @@
 using Dapper;
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Domain;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Domain.Entities;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 
@@ -90,6 +90,26 @@ public sealed class DapperAuthRepository(IAuthDbConnectionFactory connectionFact
     }
 
     /// <inheritdoc />
+    public UserAccount? GetUserByEmail(string email)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return connection.QuerySingleOrDefault<UserAccountEntity>(
+            UserSelectSql + " where lower(email) = lower(@Email);",
+            new { Email = email }) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyCollection<UserAccount> ListUsers()
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return connection.Query<UserAccountEntity>(UserSelectSql + " order by created_at_utc desc limit 1000;")
+            .Select(AuthPersistenceMapper.ToDomain)
+            .ToArray();
+    }
+
+    /// <inheritdoc />
     public void AddApiKey(ApiKey apiKey)
     {
         ArgumentNullException.ThrowIfNull(apiKey);
@@ -120,7 +140,7 @@ public sealed class DapperAuthRepository(IAuthDbConnectionFactory connectionFact
     {
         using var connection = connectionFactory.CreateConnection();
         return connection.Query<ApiKeyEntity>(
-                ApiKeySelectSql + " where user_id = @UserId order by created_at_utc desc;",
+                ApiKeySelectSql + " where user_id = @UserId order by created_at_utc desc limit 1000;",
                 new { UserId = userId })
             .Select(AuthPersistenceMapper.ToDomain)
             .ToArray();

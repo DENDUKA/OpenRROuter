@@ -1,4 +1,4 @@
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Security;
 

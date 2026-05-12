@@ -3,14 +3,23 @@ using Npgsql;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 
-/// <summary>
-/// Npgsql connection factory for Billing Service.
-/// </summary>
-public sealed class NpgsqlBillingDbConnectionFactory(string connectionString) : IBillingDbConnectionFactory
+public sealed class NpgsqlBillingDbConnectionFactory : IBillingDbConnectionFactory, IAsyncDisposable
 {
-    /// <inheritdoc />
+    private readonly NpgsqlDataSource _dataSource;
+
+    public NpgsqlBillingDbConnectionFactory(string connectionString)
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        _dataSource = dataSourceBuilder.Build();
+    }
+
     public IDbConnection CreateConnection()
     {
-        return new NpgsqlConnection(connectionString);
+        return _dataSource.CreateConnection();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _dataSource.DisposeAsync();
     }
 }

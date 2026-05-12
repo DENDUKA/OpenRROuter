@@ -1,4 +1,5 @@
-using OpenRussiaRouter.AuthService.Domain;
+using OpenRussiaRouter.AuthService.Domain.Entities;
+using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 
 namespace OpenRussiaRouter.AuthService.Tests.Infrastructure.Persistence;

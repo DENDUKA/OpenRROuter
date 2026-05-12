@@ -2,7 +2,8 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.BillingService.Application;
+using OpenRussiaRouter.BillingService.Application.Interfaces;
+using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 using OpenRussiaRouter.BuildingBlocks.Health;
 
@@ -12,12 +13,12 @@ var billingDbConnectionString = builder.Configuration.GetConnectionString("Billi
 if (!string.IsNullOrWhiteSpace(billingDbConnectionString))
 {
     builder.Services.AddSingleton<IBillingDbConnectionFactory>(_ => new NpgsqlBillingDbConnectionFactory(billingDbConnectionString));
-    builder.Services.AddSingleton<IBillingStore, DapperBillingStore>();
+    builder.Services.AddSingleton<IBillingRepository, DapperBillingRepository>();
     builder.Services.AddSingleton<BillingApplicationService>();
 }
 else
 {
-    builder.Services.AddSingleton<IBillingStore, InMemoryBillingStore>();
+    builder.Services.AddSingleton<IBillingRepository, InMemoryBillingRepository>();
     builder.Services.AddSingleton<BillingApplicationService>();
 }
 
@@ -30,7 +31,12 @@ app.MapGet("/ready", () => ServiceHealth.Ok("billing-service"));
 app.MapGet("/", () => Results.Json(new
 {
     service = "OpenRussiaRouter Billing / Usage Service",
-    contracts = new[] { "CheckBalanceAndModel", "RecordUsage", "ListPublicModels" }
+    contracts = new[] { "CheckBalanceAndModel", "RecordUsage", "ListPublicModels", "GetBalance", "CreateVirtualTopUp", "UpsertModelPrice", "ListUsage", "ListBillingAnomalies" }
 }));
 
 app.Run();
+
+/// <summary>
+/// Billing Service entry point exposed for integration tests.
+/// </summary>
+public partial class Program;

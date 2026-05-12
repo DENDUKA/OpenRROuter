@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application;
+using OpenRussiaRouter.ControlPlane.Application.Interfaces;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.BuildingBlocks.Health;
 
@@ -20,12 +22,12 @@ var controlDbConnectionString = builder.Configuration.GetConnectionString("Contr
 if (!string.IsNullOrWhiteSpace(controlDbConnectionString))
 {
     builder.Services.AddSingleton<IControlPlaneDbConnectionFactory>(_ => new NpgsqlControlPlaneDbConnectionFactory(controlDbConnectionString));
-    builder.Services.AddSingleton<IControlPlaneStore, DapperControlPlaneStore>();
+    builder.Services.AddSingleton<IControlPlaneRepository, DapperControlPlaneRepository>();
     builder.Services.AddSingleton<RouterControlPlaneService>();
 }
 else
 {
-    builder.Services.AddSingleton<IControlPlaneStore, InMemoryControlPlaneStore>();
+    builder.Services.AddSingleton<IControlPlaneRepository, InMemoryControlPlaneRepository>();
     builder.Services.AddSingleton<RouterControlPlaneService>();
 }
 
@@ -43,7 +45,12 @@ app.MapGet("/ready", () => ServiceHealth.Ok("control-plane"));
 app.MapGet("/", () => Results.Json(new
 {
     service = "OpenRussiaRouter Router Control Plane",
-    contracts = new[] { "SelectRouterNode", "ReleaseRouterNode", "ListRouterNodes" }
+    contracts = new[] { "SelectRouterNode", "ReleaseRouterNode", "RegisterRouterNode", "DisableRouterNode", "ListRouterNodes" }
 }));
 
 app.Run();
+
+/// <summary>
+/// Control Plane entry point exposed for integration tests.
+/// </summary>
+public partial class Program;

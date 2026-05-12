@@ -1,0 +1,199 @@
+@page "/admin/nodes"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject ControlPlaneClient ControlPlaneClient
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<PageTitle>Router NodeList - OpenRussiaRouter Admin</PageTitle>
+
+<h1>Router NodeList</h1>
+
+<div class="row mt-4">
+    <div class="col-md-10">
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <div class="alert alert-danger" role="alert">
+                @ErrorMessage
+            </div>
+        }
+
+        @if (ShowAddModal)
+        {
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Add Router Node</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@AddForm" OnValidSubmit="HandleAddNode">
+                        <div class="mb-3">
+                            <label for="nodeName" class="form-label">Name</label>
+                            <InputText id="nodeName" class="form-control" @bind-Value="AddForm.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="nodeUrl" class="form-label">Endpoint URL</label>
+                            <InputText id="nodeUrl" class="form-control" @bind-Value="AddForm.EndpointUrl" placeholder="https://..." />
+                        </div>
+                        <div class="mb-3">
+                            <label for="tokenName" class="form-label">Token Secret Name</label>
+                            <InputText id="tokenName" class="form-control" @bind-Value="AddForm.TokenSecretName" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="capacity" class="form-label">Capacity Weight</label>
+                            <InputNumber id="capacity" class="form-control" @bind-Value="AddForm.CapacityWeight" />
+                        </div>
+                        <button type="submit" class="btn btn-primary" disabled="@IsAdding">Add Node</button>
+                        <button type="button" class="btn btn-secondary ms-2" @onclick="CloseAddModal">Cancel</button>
+                    </EditForm>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Router NodeList</span>
+                <button class="btn btn-sm btn-primary" @onclick="ShowAddModal_Click">
+                    <span class="bi bi-plus"></span> Add Node
+                </button>
+            </div>
+            <div class="card-body">
+                @if (NodeList is null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (NodeList.Count == 0)
+                {
+                    <p class="text-muted">No router nodes configured.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Endpoint</th>
+                                <th>Status</th>
+                                <th>In-Flight</th>
+                                <th>Last Checked</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var node in NodeList)
+                            {
+                                <tr>
+                                    <td>@node.Name</td>
+                                    <td><small>@node.EndpointUrl</small></td>
+                                    <td>
+                                        <span class="badge @(GetStatusBadgeClass(node.Status))">
+                                            @node.Status
+                                        </span>
+                                    </td>
+                                    <td>@node.InFlightRequests</td>
+                                    <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
+                                    <td>
+                                        @if (node.Status != "disabled")
+                                        {
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DisableNode(node)">Disable</button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Route = "/admin/nodes";
+    private IReadOnlyList<RouterNodeInfo>? NodeList { get; set; }
+    private bool ShowAddModal { get; set; }
+    private bool IsAdding { get; set; }
+    private string? ErrorMessage { get; set; }
+    private AddNodeForm AddForm { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        await LoadNodeList();
+    }
+
+    private async Task LoadNodeList()
+    {
+        try
+        {
+            NodeList = await ControlPlaneClient.ListRouterNodesAsync();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to load router nodes.";
+        }
+    }
+
+    private void ShowAddModal_Click()
+    {
+        AddForm = new AddNodeForm();
+        ShowAddModal = true;
+    }
+
+    private void CloseAddModal()
+    {
+        ShowAddModal = false;
+    }
+
+    private async Task HandleAddNode()
+    {
+        IsAdding = true;
+        ErrorMessage = null;
+        try
+        {
+            await ControlPlaneClient.RegisterRouterNodeAsync(AddForm.Name, AddForm.EndpointUrl, AddForm.TokenSecretName, AddForm.CapacityWeight);
+            ShowAddModal = false;
+            await LoadNodeList();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to add router node.";
+        }
+        finally
+        {
+            IsAdding = false;
+        }
+    }
+
+    private async Task DisableNode(RouterNodeInfo node)
+    {
+        try
+        {
+            await ControlPlaneClient.DisableRouterNodeAsync(node.NodeId);
+            await LoadNodeList();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to disable router node.";
+        }
+    }
+
+    private static string GetStatusBadgeClass(string status) => status switch
+    {
+        "healthy" => "bg-success",
+        "degraded" => "bg-warning",
+        "unhealthy" => "bg-danger",
+        "disabled" => "bg-secondary",
+        _ => "bg-secondary"
+    };
+
+    private class AddNodeForm
+    {
+        public string Name { get; set; } = "";
+        public string EndpointUrl { get; set; } = "";
+        public string TokenSecretName { get; set; } = "";
+        public int CapacityWeight { get; set; } = 100;
+    }
+}

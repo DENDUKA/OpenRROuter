@@ -1,0 +1,63 @@
+@page "/cabinet"
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+@inject SessionStorage SessionStorage
+
+<PageTitle>User Cabinet - OpenRussiaRouter</PageTitle>
+
+<h1>User Cabinet</h1>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">Account</div>
+            <div class="card-body">
+                <p><strong>User ID:</strong> @AuthState.CurrentSession?.UserId</p>
+                <p><strong>Role:</strong> @AuthState.CurrentSession?.Role</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>API Keys</span>
+                <button class="btn btn-sm btn-primary">Create Key</button>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">No API keys yet.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">Usage</div>
+            <div class="card-body">
+                <p class="text-muted">No usage yet.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        if (!AuthState.IsAuthenticated)
+        {
+            var session = await SessionStorage.LoadSessionAsync();
+            if (session is null)
+            {
+                Navigation.NavigateTo("/login");
+            }
+            else
+            {
+                AuthState.SetSession(session);
+            }
+        }
+    }
+}

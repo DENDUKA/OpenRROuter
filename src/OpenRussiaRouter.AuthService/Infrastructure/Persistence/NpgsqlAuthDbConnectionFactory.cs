@@ -3,14 +3,23 @@ using Npgsql;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 
-/// <summary>
-/// Npgsql connection factory for Auth Service.
-/// </summary>
-public sealed class NpgsqlAuthDbConnectionFactory(string connectionString) : IAuthDbConnectionFactory
+public sealed class NpgsqlAuthDbConnectionFactory : IAuthDbConnectionFactory, IAsyncDisposable
 {
-    /// <inheritdoc />
+    private readonly NpgsqlDataSource _dataSource;
+
+    public NpgsqlAuthDbConnectionFactory(string connectionString)
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        _dataSource = dataSourceBuilder.Build();
+    }
+
     public IDbConnection CreateConnection()
     {
-        return new NpgsqlConnection(connectionString);
+        return _dataSource.CreateConnection();
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return _dataSource.DisposeAsync();
     }
 }

@@ -1,4 +1,6 @@
-using OpenRussiaRouter.AuthService.Application;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 
@@ -32,9 +34,78 @@ public sealed class GrpcAuthServiceTests
         Assert.Equal("invalid_api_key", response.ErrorCode);
     }
 
+    [Fact]
+    public async Task InviteAndApiKeyMethods_PersistWorkflow_ReturnSuccessResponses()
+    {
+        var accounts = CreateAccounts();
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), accounts: accounts);
+
+        var invite = await service.CreateInvite(new CreateInviteRequest
+        {
+            Email = "USER@example.com",
+            Role = "Admin",
+            CreatedByAdminId = "admin-1",
+            ExpiresAtUnixTimeSeconds = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds()
+        }, context: null!);
+        var user = await service.CompleteInvite(new CompleteInviteRequest
+        {
+            RawToken = invite.RawToken,
+            Password = "StrongPassword123!"
+        }, context: null!);
+        var apiKey = await service.CreateApiKey(new CreateApiKeyRequest
+        {
+            UserId = user.UserId,
+            Name = "default"
+        }, context: null!);
+        var revoked = await service.RevokeApiKey(new RevokeApiKeyRequest
+        {
+            UserId = user.UserId,
+            ApiKeyId = apiKey.ApiKeyId
+        }, context: null!);
+
+        Assert.True(invite.IsCreated);
+        Assert.NotEmpty(invite.RawToken);
+        Assert.Equal("user@example.com", invite.Email);
+        Assert.Equal("Admin", invite.Role);
+        Assert.True(user.IsCompleted);
+        Assert.Equal("user@example.com", user.Email);
+        Assert.Equal("Admin", user.Role);
+        Assert.True(apiKey.IsCreated);
+        Assert.StartsWith("orr_", apiKey.RawKey, StringComparison.Ordinal);
+        Assert.NotEmpty(apiKey.Prefix);
+        Assert.True(revoked.IsRevoked);
+    }
+
+    [Fact]
+    public async Task CreateInvite_InvalidRole_ReturnsValidationError()
+    {
+        var accounts = CreateAccounts();
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, "unused")), accounts: accounts);
+
+        var response = await service.CreateInvite(new CreateInviteRequest
+        {
+            Email = "user@example.com",
+            Role = "Owner",
+            CreatedByAdminId = "admin-1",
+            ExpiresAtUnixTimeSeconds = DateTimeOffset.UtcNow.AddDays(1).ToUnixTimeSeconds()
+        }, context: null!);
+
+        Assert.False(response.IsCreated);
+        Assert.Equal("validation_failed", response.ErrorCode);
+    }
+
     private sealed class StubValidator(ValidateApiKeyResult result) : IAuthApiKeyValidator
     {
         public ValidateApiKeyResult Validate(string rawKey) => result;
     }
-}
 
+    private static AuthAccountApplicationService CreateAccounts()
+    {
+        var secretHasher = new Sha256SecretHasher();
+        return new AuthAccountApplicationService(
+            new InMemoryAuthRepository(),
+            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher()),
+            new ApiKeyFactory(secretHasher),
+            secretHasher);
+    }
+}

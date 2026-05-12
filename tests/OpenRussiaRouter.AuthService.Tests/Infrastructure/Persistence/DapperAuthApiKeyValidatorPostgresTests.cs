@@ -1,7 +1,7 @@
 using Dapper;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Infrastructure.Persistence;
 
@@ -9,17 +9,18 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
 {
     [Fact]
     [Trait("Category", "PostgreSQL")]
-    public void Validate_AppliedMigrationAndActiveKey_ReturnsContext()
+    public async Task Validate_AppliedMigrationAndActiveKey_ReturnsContext()
     {
-        var connectionString = GetConnectionString();
-        if (connectionString is null)
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
         {
             return;
         }
 
-        ApplyMigration(connectionString, "auth");
+        var connectionString = database.ConnectionString;
+        database.ApplyAuthMigration();
         using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute("truncate auth.api_keys, auth.invites, auth.users restart identity cascade;");
+        database.TruncateAuth();
         var hasher = new Sha256SecretHasher();
         connection.Execute(
             """
@@ -45,26 +46,4 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
             "select last_used_at_utc from auth.api_keys where id = 'key-1';"));
     }
 
-    private static string? GetConnectionString()
-    {
-        return Environment.GetEnvironmentVariable("ORR_AUTH_POSTGRES_TEST_CONNECTION")
-            ?? Environment.GetEnvironmentVariable("ORR_POSTGRES_TEST_CONNECTION");
-    }
-
-    private static void ApplyMigration(string connectionString, string service)
-    {
-        using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", service, "001_initial.sql")));
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "OpenRussiaRouter.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
-    }
 }

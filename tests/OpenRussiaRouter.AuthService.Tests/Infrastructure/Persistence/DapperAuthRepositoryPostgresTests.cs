@@ -1,9 +1,10 @@
 using Dapper;
 using Npgsql;
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Domain;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Infrastructure.Persistence;
 
@@ -11,17 +12,18 @@ public sealed class DapperAuthRepositoryPostgresTests
 {
     [Fact]
     [Trait("Category", "PostgreSQL")]
-    public void Repository_AppliedMigration_PersistsInviteUserAndApiKeyLifecycle()
+    public async Task Repository_AppliedMigration_PersistsInviteUserAndApiKeyLifecycle()
     {
-        var connectionString = GetConnectionString();
-        if (connectionString is null)
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
         {
             return;
         }
 
-        ApplyMigration(connectionString, "auth");
+        var connectionString = database.ConnectionString;
+        database.ApplyAuthMigration();
         using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute("truncate auth.api_keys, auth.invites, auth.users restart identity cascade;");
+        database.TruncateAuth();
         var secretHasher = new Sha256SecretHasher();
         var service = new AuthAccountApplicationService(
             new DapperAuthRepository(new NpgsqlAuthDbConnectionFactory(connectionString)),
@@ -45,26 +47,4 @@ public sealed class DapperAuthRepositoryPostgresTests
             new { apiKey.RawKey }));
     }
 
-    private static string? GetConnectionString()
-    {
-        return Environment.GetEnvironmentVariable("ORR_AUTH_POSTGRES_TEST_CONNECTION")
-            ?? Environment.GetEnvironmentVariable("ORR_POSTGRES_TEST_CONNECTION");
-    }
-
-    private static void ApplyMigration(string connectionString, string service)
-    {
-        using var connection = new NpgsqlConnection(connectionString);
-        connection.Execute(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", service, "001_initial.sql")));
-    }
-
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "OpenRussiaRouter.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
-    }
 }

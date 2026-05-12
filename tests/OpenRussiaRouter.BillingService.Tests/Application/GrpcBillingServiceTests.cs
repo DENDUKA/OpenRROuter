@@ -1,5 +1,6 @@
-using OpenRussiaRouter.BillingService.Application;
-using OpenRussiaRouter.BillingService.Domain;
+using OpenRussiaRouter.BillingService.Application.Services;
+using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
@@ -69,9 +70,166 @@ public sealed class GrpcBillingServiceTests
         Assert.Equal(MoneyAmount.Rub(90), billing.GetBalance("user-1"));
     }
 
+    [Fact]
+    public async Task GetBalance_ExistingUser_ReturnsBalanceRub()
+    {
+        var billing = CreateBillingWithModelAndBalance();
+        var service = new GrpcBillingService(billing);
+
+        var response = await service.GetBalance(new GetBalanceRequest { UserId = "user-1" }, context: null!);
+
+        Assert.Equal("user-1", response.UserId);
+        Assert.Equal("100", response.BalanceRub);
+        Assert.Equal(string.Empty, response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_ValidRequest_ReturnsLedgerAndBalance()
+    {
+        var billing = new BillingApplicationService(new InMemoryBillingRepository());
+        var service = new GrpcBillingService(billing);
+
+        var response = await service.CreateVirtualTopUp(new CreateVirtualTopUpRequest
+        {
+            AdminId = "admin-1",
+            UserId = "user-1",
+            AmountRub = "25.50",
+            Reason = "manual top-up",
+            IdempotencyKey = "topup-1"
+        }, context: null!);
+
+        Assert.True(response.Created);
+        Assert.NotEmpty(response.LedgerEntryId);
+        Assert.Equal("user-1", response.UserId);
+        Assert.Equal("25.50", response.AmountRub);
+        Assert.Equal("25.50", response.BalanceRub);
+        Assert.Equal(string.Empty, response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_InvalidAmount_ReturnsValidationFailed()
+    {
+        var service = new GrpcBillingService(new BillingApplicationService(new InMemoryBillingRepository()));
+
+        var response = await service.CreateVirtualTopUp(new CreateVirtualTopUpRequest
+        {
+            AdminId = "admin-1",
+            UserId = "user-1",
+            AmountRub = "0",
+            Reason = "manual top-up",
+            IdempotencyKey = "topup-1"
+        }, context: null!);
+
+        Assert.False(response.Created);
+        Assert.Equal("validation_failed", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task UpsertModelPrice_ValidRequest_ModelAppearsInPublicList()
+    {
+        var billing = new BillingApplicationService(new InMemoryBillingRepository());
+        var service = new GrpcBillingService(billing);
+
+        var response = await service.UpsertModelPrice(new UpsertModelPriceRequest
+        {
+            ModelId = "gpt-admin",
+            DisplayName = "GPT Admin",
+            UpstreamModelId = "router/gpt-admin",
+            PriceVersion = "v1",
+            InputPricePer1MRub = "10",
+            OutputPricePer1MRub = "20",
+            CachePricePer1MRub = "1",
+            Enabled = true
+        }, context: null!);
+        var models = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
+
+        Assert.True(response.Upserted);
+        Assert.Equal("gpt-admin", response.ModelId);
+        Assert.Equal("gpt-admin", Assert.Single(models.Models).Id);
+    }
+
+    [Fact]
+    public async Task UpsertModelPrice_InvalidPrice_ReturnsValidationFailed()
+    {
+        var service = new GrpcBillingService(new BillingApplicationService(new InMemoryBillingRepository()));
+
+        var response = await service.UpsertModelPrice(new UpsertModelPriceRequest
+        {
+            ModelId = "gpt-admin",
+            DisplayName = "GPT Admin",
+            UpstreamModelId = "router/gpt-admin",
+            PriceVersion = "v1",
+            InputPricePer1MRub = "bad",
+            OutputPricePer1MRub = "20",
+            CachePricePer1MRub = "1",
+            Enabled = true
+        }, context: null!);
+
+        Assert.False(response.Upserted);
+        Assert.Equal("validation_failed", response.ErrorCode);
+    }
+
+    [Fact]
+    public async Task ListBillingAnomalies_AfterInvalidUsage_ReturnsAnomaly()
+    {
+        var billing = CreateBillingWithModelAndBalance();
+        var service = new GrpcBillingService(billing);
+
+        _ = await service.RecordUsage(new RecordUsageRequest
+        {
+            RequestId = "req-invalid",
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            ModelId = "gpt-test",
+            RouterNodeId = "router-1",
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = -1 },
+            Status = "failed",
+            StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
+            CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
+        }, context: null!);
+
+        var response = await service.ListBillingAnomalies(new ListBillingAnomaliesRequest(), context: null!);
+
+        var anomaly = Assert.Single(response.Anomalies);
+        Assert.Equal("req-invalid", anomaly.RequestId);
+        Assert.Equal("invalid_token_count", anomaly.Type);
+        Assert.NotEmpty(anomaly.CreatedAtUtc);
+    }
+
+    [Fact]
+    public async Task ListUsage_AfterValidUsage_ReturnsUsageRecord()
+    {
+        var billing = CreateBillingWithModelAndBalance();
+        var service = new GrpcBillingService(billing);
+        var now = DateTimeOffset.UtcNow;
+
+        _ = await service.RecordUsage(new RecordUsageRequest
+        {
+            RequestId = "req-usage",
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            ModelId = "gpt-test",
+            RouterNodeId = "router-1",
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 1_000_000, OutputTokens = 500_000 },
+            Status = "succeeded",
+            StartedAtUtc = now.AddSeconds(-1).ToString("O"),
+            CompletedAtUtc = now.ToString("O")
+        }, context: null!);
+
+        var response = await service.ListUsage(new ListUsageRequest(), context: null!);
+
+        var record = Assert.Single(response.Records);
+        Assert.Equal("req-usage", record.RequestId);
+        Assert.Equal("user-1", record.UserId);
+        Assert.Equal("gpt-test", record.ModelId);
+        Assert.Equal("20", record.CostRub);
+        Assert.Equal(1_000_000, record.Usage.InputTokens);
+        Assert.Equal(500_000, record.Usage.OutputTokens);
+    }
+
     private static BillingApplicationService CreateBillingWithModelAndBalance()
     {
-        var billing = new BillingApplicationService(new InMemoryBillingStore());
+        var billing = new BillingApplicationService(new InMemoryBillingRepository());
         billing.UpsertModel(new ModelPrice(
             "gpt-test",
             "GPT Test",

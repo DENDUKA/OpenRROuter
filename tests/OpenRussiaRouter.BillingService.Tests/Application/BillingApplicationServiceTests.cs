@@ -1,5 +1,6 @@
-using OpenRussiaRouter.BillingService.Application;
-using OpenRussiaRouter.BillingService.Domain;
+using OpenRussiaRouter.BillingService.Application.Services;
+using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
@@ -131,7 +132,7 @@ public sealed class BillingApplicationServiceTests
 
     private static BillingApplicationService CreateService()
     {
-        return new BillingApplicationService(new InMemoryBillingStore());
+        return new BillingApplicationService(new InMemoryBillingRepository());
     }
 
     private static BillingApplicationService CreateServiceWithModel()

@@ -1,5 +1,5 @@
-using OpenRussiaRouter.AuthService.Application;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Application;
 

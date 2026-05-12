@@ -9,7 +9,7 @@ public sealed class RouterLeaseCleanupWorkerTests
     [Fact]
     public void RunOnce_ExpiredLease_ReleasesLoad()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneStore());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
         var now = DateTimeOffset.UtcNow;
         var node = controlPlane.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         controlPlane.ApplyHealth(node.Id, RouterNodeStatus.Healthy, now);
@@ -28,7 +28,7 @@ public sealed class RouterLeaseCleanupWorkerTests
     [Fact]
     public void RunOnce_Disabled_DoesNotReleaseExpiredLease()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneStore());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
         var now = DateTimeOffset.UtcNow;
         var node = controlPlane.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         controlPlane.ApplyHealth(node.Id, RouterNodeStatus.Healthy, now);

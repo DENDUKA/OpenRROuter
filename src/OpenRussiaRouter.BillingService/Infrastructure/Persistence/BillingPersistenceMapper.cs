@@ -1,4 +1,5 @@
-using OpenRussiaRouter.BillingService.Domain;
+using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 

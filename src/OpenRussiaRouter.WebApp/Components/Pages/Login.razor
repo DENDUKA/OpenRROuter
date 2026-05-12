@@ -1,0 +1,123 @@
+@page "/login"
+@attribute [Microsoft.AspNetCore.Components.RouteAttribute(Route)]
+@inject AuthClient AuthClient
+@inject NavigationManager Navigation
+@inject AuthState AuthState
+@inject SessionStorage SessionStorage
+
+<PageTitle>Login - OpenRussiaRouter</PageTitle>
+
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card mt-5">
+            <div class="card-header">
+                <h4 class="mb-0">Login</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @ErrorMessage
+                    </div>
+                }
+
+                <EditForm Model="@Model" OnValidSubmit="HandleLogin">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <InputText id="email" class="form-control" @bind-Value="Model.Email" />
+                        <ValidationMessage For="@(() => Model.Email)" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <InputText id="password" type="password" class="form-control" @bind-Value="Model.Password" />
+                        <ValidationMessage For="@(() => Model.Password)" />
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" disabled="@IsLoading">
+                        @if (IsLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                        }
+                        Login
+                    </button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const string Route = "/login";
+    private LoginModel Model { get; set; } = new();
+    private bool IsLoading { get; set; }
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+            NavigateByRole(session.Role);
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            var response = await AuthClient.LoginAsync(Model.Email, Model.Password);
+            var session = new UserSession
+            {
+                SessionToken = response.SessionToken,
+                UserId = response.UserId,
+                Role = response.Role
+            };
+            await SessionStorage.SaveSessionAsync(session);
+            AuthState.SetSession(session);
+            NavigateByRole(response.Role);
+        }
+        catch (AuthException ex)
+        {
+            ErrorMessage = ex.ErrorCode switch
+            {
+                "invalid_credentials" => "Invalid email or password.",
+                "user_disabled" => "Your account has been disabled.",
+                _ => "Login failed. Please try again."
+            };
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void NavigateByRole(string role)
+    {
+        if (role == "Admin")
+        {
+            Navigation.NavigateTo("/admin");
+        }
+        else
+        {
+            Navigation.NavigateTo("/cabinet");
+        }
+    }
+
+    private class LoginModel
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; } = "";
+
+        [Required]
+        public string Password { get; set; } = "";
+    }
+}

@@ -2,9 +2,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.AuthService.Application;
+using OpenRussiaRouter.AuthService.Application.Interfaces;
+using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
-using OpenRussiaRouter.AuthService.Security;
+using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Health;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,6 +14,7 @@ builder.Services.AddSingleton<Sha256SecretHasher>();
 builder.Services.AddSingleton<Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<InviteRegistrationService>();
 builder.Services.AddSingleton<ApiKeyFactory>();
+builder.Services.AddSingleton<LoginService>();
 var authDbConnectionString = builder.Configuration.GetConnectionString("AuthDb");
 if (!string.IsNullOrWhiteSpace(authDbConnectionString))
 {
@@ -23,6 +25,8 @@ if (!string.IsNullOrWhiteSpace(authDbConnectionString))
 }
 else
 {
+    builder.Services.AddSingleton<IAuthRepository, InMemoryAuthRepository>();
+    builder.Services.AddSingleton<AuthAccountApplicationService>();
     builder.Services.AddSingleton<IAuthApiKeyValidator, InMemoryAuthApiKeyValidator>();
 }
 
@@ -39,3 +43,8 @@ app.MapGet("/", () => Results.Json(new
 }));
 
 app.Run();
+
+/// <summary>
+/// Auth Service entry point exposed for integration tests.
+/// </summary>
+public partial class Program;

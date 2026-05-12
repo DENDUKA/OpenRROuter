@@ -1,7 +1,7 @@
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
-using OpenRussiaRouter.ControlPlane.Application;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
@@ -27,7 +27,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task SelectRouterNode_NoHealthyNodes_ReturnsRouterUnavailable()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneStore()));
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()));
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -52,9 +52,63 @@ public sealed class GrpcRouterControlPlaneServiceTests
         Assert.Equal(0, summary.InFlightRequests);
     }
 
+    [Fact]
+    public async Task RegisterAndListRouterNode_ValidRequest_ReturnsNodeSummary()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var service = new GrpcRouterControlPlaneService(control);
+
+        var registered = await service.RegisterRouterNode(new RegisterRouterNodeRequest
+        {
+            Name = "node-a",
+            EndpointUrl = "https://router-a.example",
+            TokenSecretName = "secret-a",
+            CapacityWeight = 2
+        }, context: null!);
+        var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
+
+        Assert.True(registered.Registered);
+        Assert.NotEmpty(registered.NodeId);
+        var node = Assert.Single(nodes.Nodes);
+        Assert.Equal(registered.NodeId, node.NodeId);
+        Assert.Equal("node-a", node.Name);
+        Assert.Equal("https://router-a.example/", node.EndpointUrl);
+    }
+
+    [Fact]
+    public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
+    {
+        var control = CreateControlPlaneWithHealthyNode();
+        var service = new GrpcRouterControlPlaneService(control);
+        var nodeId = Assert.Single(control.ListRouterNodes()).Id;
+
+        var disabled = await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
+        var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
+
+        Assert.True(disabled.Disabled);
+        Assert.Equal("Disabled", Assert.Single(nodes.Nodes).Status);
+    }
+
+    [Fact]
+    public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
+    {
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()));
+
+        var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
+        {
+            Name = "node-a",
+            EndpointUrl = "http://router-a.example",
+            TokenSecretName = "secret-a",
+            CapacityWeight = 1
+        }, context: null!);
+
+        Assert.False(response.Registered);
+        Assert.Equal(ErrorCodes.ValidationFailed, response.ErrorCode);
+    }
+
     private static RouterControlPlaneService CreateControlPlaneWithHealthyNode()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneStore());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
         var node = control.RegisterNode(
             "node-a",
             new Uri("https://router-a.example"),

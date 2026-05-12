@@ -113,54 +113,63 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Build and push AuthService
         if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.auth_service == 'true')
         uses: docker/build-push-action@v5
         with:
-          context: ./src/OpenRussiaRouter.AuthService
+          context: .
+          file: ./src/OpenRussiaRouter.AuthService/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Build and push BillingService
         if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.billing_service == 'true')
         uses: docker/build-push-action@v5
         with:
-          context: ./src/OpenRussiaRouter.BillingService
+          context: .
+          file: ./src/OpenRussiaRouter.BillingService/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Build and push ControlPlane
         if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.control_plane == 'true')
         uses: docker/build-push-action@v5
         with:
-          context: ./src/OpenRussiaRouter.ControlPlane
+          context: .
+          file: ./src/OpenRussiaRouter.ControlPlane/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Build and push WebApp
         if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.webapp == 'true')
         uses: docker/build-push-action@v5
         with:
-          context: ./src/OpenRussiaRouter.WebApp
+          context: .
+          file: ./src/OpenRussiaRouter.WebApp/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: Update Infra Manifests
         if: github.event_name != 'pull_request'

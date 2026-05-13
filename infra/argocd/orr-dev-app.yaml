@@ -1,20 +1,25 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: yc-platform-services
+  name: orr-services
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
     argocd-image-updater.argoproj.io/image-list: api-gateway=ghcr.io/denduka/api-gateway:dev-latest,auth-service=ghcr.io/denduka/auth-service:dev-latest,billing-service=ghcr.io/denduka/billing-service:dev-latest,control-plane=ghcr.io/denduka/control-plane:dev-latest,webapp=ghcr.io/denduka/webapp:dev-latest
     argocd-image-updater.argoproj.io/api-gateway.update-strategy: digest
+    argocd-image-updater.argoproj.io/api-gateway.force-update: "true"
     argocd-image-updater.argoproj.io/api-gateway.pull-secret: pullsecret:argocd/ghcr-pull-secret
     argocd-image-updater.argoproj.io/auth-service.update-strategy: digest
+    argocd-image-updater.argoproj.io/auth-service.force-update: "true"
     argocd-image-updater.argoproj.io/auth-service.pull-secret: pullsecret:argocd/ghcr-pull-secret
     argocd-image-updater.argoproj.io/billing-service.update-strategy: digest
+    argocd-image-updater.argoproj.io/billing-service.force-update: "true"
     argocd-image-updater.argoproj.io/billing-service.pull-secret: pullsecret:argocd/ghcr-pull-secret
     argocd-image-updater.argoproj.io/control-plane.update-strategy: digest
+    argocd-image-updater.argoproj.io/control-plane.force-update: "true"
     argocd-image-updater.argoproj.io/control-plane.pull-secret: pullsecret:argocd/ghcr-pull-secret
     argocd-image-updater.argoproj.io/webapp.update-strategy: digest
+    argocd-image-updater.argoproj.io/webapp.force-update: "true"
     argocd-image-updater.argoproj.io/webapp.pull-secret: pullsecret:argocd/ghcr-pull-secret
     argocd-image-updater.argoproj.io/api-gateway.allow-tags: regexp:^dev-latest$
     argocd-image-updater.argoproj.io/auth-service.allow-tags: regexp:^dev-latest$
@@ -42,7 +47,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: yc-platform-infra
+  name: orr-infra
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "0"

@@ -43,6 +43,73 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      - name: Detect changed services
+        id: changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          else
+            base="${{ github.event.before }}"
+          fi
+
+          if [[ -z "$base" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            base="$(git rev-list --max-parents=0 HEAD)"
+          fi
+
+          changed_files="$(git diff --name-only "$base" "${{ github.sha }}")"
+          printf '%s\n' "$changed_files"
+
+          api_gateway=false
+          auth_service=false
+          billing_service=false
+          control_plane=false
+          webapp=false
+          all_services=false
+
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+
+            case "$file" in
+              .github/workflows/build-deploy.yml|OpenRussiaRouter.sln|NuGet.Config|global.json|Directory.Build.props|Directory.Packages.props|src/OpenRussiaRouter.BuildingBlocks/*|src/OpenRussiaRouter.Contracts/*)
+                all_services=true
+                ;;
+              src/OpenRussiaRouter.ApiGateway/*)
+                api_gateway=true
+                ;;
+              src/OpenRussiaRouter.AuthService/*)
+                auth_service=true
+                ;;
+              src/OpenRussiaRouter.BillingService/*)
+                billing_service=true
+                ;;
+              src/OpenRussiaRouter.ControlPlane/*)
+                control_plane=true
+                ;;
+              src/OpenRussiaRouter.WebApp/*)
+                webapp=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          if [[ "$all_services" == "true" ]]; then
+            api_gateway=true
+            auth_service=true
+            billing_service=true
+            control_plane=true
+            webapp=true
+          fi
+
+          {
+            echo "api_gateway=$api_gateway"
+            echo "auth_service=$auth_service"
+            echo "billing_service=$billing_service"
+            echo "control_plane=$control_plane"
+            echo "webapp=$webapp"
+          } >> "$GITHUB_OUTPUT"
+
       - name: Restore
         run: dotnet restore OpenRussiaRouter.sln --configfile NuGet.Config
         shell: bash
@@ -73,7 +140,7 @@ jobs:
           driver: docker-container
 
       - name: Build and push ApiGateway
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.changes.outputs.api_gateway == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -86,7 +153,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push AuthService
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.changes.outputs.auth_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -99,7 +166,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push BillingService
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.changes.outputs.billing_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -112,7 +179,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push ControlPlane
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.changes.outputs.control_plane == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -125,7 +192,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push WebApp
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && steps.changes.outputs.webapp == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .

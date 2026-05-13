@@ -38,35 +38,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect changed services
-        id: changes
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            shared:
-              - 'Directory.Build.props'
-              - 'Directory.Packages.props'
-              - 'NuGet.Config'
-              - 'global.json'
-              - 'OpenRussiaRouter.sln'
-              - 'src/OpenRussiaRouter.BuildingBlocks/**'
-              - 'src/OpenRussiaRouter.Contracts/**'
-              - 'tests/**'
-            api_gateway:
-              - 'src/OpenRussiaRouter.ApiGateway/**'
-              - 'tests/OpenRussiaRouter.ApiGateway.Tests/**'
-            auth_service:
-              - 'src/OpenRussiaRouter.AuthService/**'
-              - 'tests/OpenRussiaRouter.AuthService.Tests/**'
-            billing_service:
-              - 'src/OpenRussiaRouter.BillingService/**'
-              - 'tests/OpenRussiaRouter.BillingService.Tests/**'
-            control_plane:
-              - 'src/OpenRussiaRouter.ControlPlane/**'
-              - 'tests/OpenRussiaRouter.ControlPlane.Tests/**'
-            webapp:
-              - 'src/OpenRussiaRouter.WebApp/**'
-
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -102,7 +73,7 @@ jobs:
           driver: docker-container
 
       - name: Build and push ApiGateway
-        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.api_gateway == 'true')
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -116,7 +87,7 @@ jobs:
           no-cache: true
 
       - name: Build and push AuthService
-        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.auth_service == 'true')
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -130,7 +101,7 @@ jobs:
           no-cache: true
 
       - name: Build and push BillingService
-        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.billing_service == 'true')
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -144,7 +115,7 @@ jobs:
           no-cache: true
 
       - name: Build and push ControlPlane
-        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.control_plane == 'true')
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -158,7 +129,7 @@ jobs:
           no-cache: true
 
       - name: Build and push WebApp
-        if: github.event_name != 'pull_request' && (steps.changes.outputs.shared == 'true' || steps.changes.outputs.webapp == 'true')
+        if: github.event_name != 'pull_request'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -177,22 +148,13 @@ jobs:
           set -euo pipefail
           KUSTOMIZATION="infra/kustomize/overlays/dev/kustomization.yaml"
           TAG="sha-${{ github.sha }}"
-          IMAGES=()
-
-          update_image() {
-            IMAGES+=("${{ env.REGISTRY }}/${{ env.OWNER }}/$1")
-          }
-
-          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.api_gateway }}" == "true" ]]; then update_image api-gateway; fi
-          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.auth_service }}" == "true" ]]; then update_image auth-service; fi
-          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.billing_service }}" == "true" ]]; then update_image billing-service; fi
-          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.control_plane }}" == "true" ]]; then update_image control-plane; fi
-          if [[ "${{ steps.changes.outputs.shared }}" == "true" || "${{ steps.changes.outputs.webapp }}" == "true" ]]; then update_image webapp; fi
-
-          if [[ ${#IMAGES[@]} -eq 0 ]]; then
-            echo "No service image changes detected."
-            exit 0
-          fi
+          IMAGES=(
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway"
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service"
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service"
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane"
+            "${{ env.REGISTRY }}/${{ env.OWNER }}/webapp"
+          )
 
           python - "$KUSTOMIZATION" "$TAG" "${IMAGES[@]}" <<'PY'
           import sys

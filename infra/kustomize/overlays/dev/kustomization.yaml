@@ -6,13 +6,13 @@ resources:
 commonAnnotations:
   orr.dev/version: "dev"
 images:
-  - name: ghcr.io/openrussiarouter/api-gateway
+  - name: ghcr.io/denduka/api-gateway
     newTag: dev-latest
-  - name: ghcr.io/openrussiarouter/auth-service
+  - name: ghcr.io/denduka/auth-service
     newTag: dev-latest
-  - name: ghcr.io/openrussiarouter/billing-service
+  - name: ghcr.io/denduka/billing-service
     newTag: dev-latest
-  - name: ghcr.io/openrussiarouter/control-plane
+  - name: ghcr.io/denduka/control-plane
     newTag: dev-latest
-  - name: ghcr.io/openrussiarouter/webapp
+  - name: ghcr.io/denduka/webapp
     newTag: dev-latest

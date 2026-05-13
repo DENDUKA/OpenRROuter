@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/openrussiarouter/openrussiarouter.git
+    repoURL: https://github.com/DENDUKA/OpenRussiaRouter.git
     targetRevision: main
     path: infra/kustomize/overlays/dev
   destination:

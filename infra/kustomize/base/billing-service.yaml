@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: billing-service
-          image: ghcr.io/openrussiarouter/billing-service:latest
+          image: ghcr.io/denduka/billing-service:latest
           ports:
             - containerPort: 8080
           env:

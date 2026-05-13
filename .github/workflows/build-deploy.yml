@@ -84,7 +84,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
 
       - name: Build and push AuthService
         if: github.event_name != 'pull_request'
@@ -98,7 +97,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
 
       - name: Build and push BillingService
         if: github.event_name != 'pull_request'
@@ -112,7 +110,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
 
       - name: Build and push ControlPlane
         if: github.event_name != 'pull_request'
@@ -126,7 +123,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
 
       - name: Build and push WebApp
         if: github.event_name != 'pull_request'
@@ -140,7 +136,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          no-cache: true
 
       - name: Update Infra Manifests
         if: github.event_name != 'pull_request'

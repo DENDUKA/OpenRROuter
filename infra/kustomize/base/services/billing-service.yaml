@@ -21,6 +21,10 @@ spec:
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
+            - name: Seq__Url
+              value: "http://seq:5341"
+            - name: Seq__ServiceName
+              value: "billing-service"
             - name: ORR_POSTGRES_CONNECTION
               valueFrom:
                 secretKeyRef:

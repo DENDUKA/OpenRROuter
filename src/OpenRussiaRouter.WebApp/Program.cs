@@ -1,6 +1,7 @@
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
+using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
@@ -12,6 +13,8 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.AddSeqLogging("webapp");
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();

@@ -22,6 +22,7 @@ public static class Startup
     public static IServiceCollection ConfigureServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddLogging();
+        services.AddHttpLogging(_ => { });
         services.AddHealthChecks();
 
         services.AddGatewayGrpcClients(configuration);
@@ -39,8 +40,6 @@ public static class Startup
             app.UseExceptionHandler("/error", createScopeForErrors: true);
             app.UseHsts();
         }
-
-        app.UseHttpsRedirection();
 
         app.Use(async (context, next) =>
         {

@@ -21,11 +21,11 @@ spec:
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
-            - name: ORR_AUTH_GRPC_URL
+            - name: GrpcServices__Auth
               value: "http://auth-service:8080"
-            - name: ORR_BILLING_GRPC_URL
+            - name: GrpcServices__Billing
               value: "http://billing-service:8080"
-            - name: ORR_CONTROL_PLANE_GRPC_URL
+            - name: GrpcServices__ControlPlane
               value: "http://control-plane:8080"
           readinessProbe:
             httpGet:

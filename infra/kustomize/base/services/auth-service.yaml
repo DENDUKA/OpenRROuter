@@ -18,11 +18,18 @@ spec:
           image: ghcr.io/denduka/auth-service:latest
           ports:
             - containerPort: 8080
+            - containerPort: 8081
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
-            - name: Kestrel__EndpointDefaults__Protocols
-              value: "Http1AndHttp2"
+            - name: Kestrel__Endpoints__Http__Url
+              value: "http://+:8080"
+            - name: Kestrel__Endpoints__Http__Protocols
+              value: "Http1"
+            - name: Kestrel__Endpoints__Grpc__Url
+              value: "http://+:8081"
+            - name: Kestrel__Endpoints__Grpc__Protocols
+              value: "Http2"
             - name: Seq__Url
               value: "http://seq:5341"
             - name: Seq__ServiceName
@@ -60,6 +67,6 @@ metadata:
 spec:
   ports:
     - port: 8080
-      targetPort: 8080
+      targetPort: 8081
   selector:
     app: auth-service

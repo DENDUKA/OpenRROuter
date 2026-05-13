@@ -1,5 +1,7 @@
 using Grpc.Net.Client;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
@@ -37,7 +39,13 @@ public sealed class GrpcRouterControlPlaneServiceIntegrationTests : IClassFixtur
 
     private global::OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane.RouterControlPlaneClient CreateClient()
     {
-        var httpClient = factory.CreateDefaultClient();
+        var configuredFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["SqlMigrations:Enabled"] = "false"
+                })));
+        var httpClient = configuredFactory.CreateDefaultClient();
         var channel = GrpcChannel.ForAddress(httpClient.BaseAddress!, new GrpcChannelOptions { HttpClient = httpClient });
         return new global::OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane.RouterControlPlaneClient(channel);
     }

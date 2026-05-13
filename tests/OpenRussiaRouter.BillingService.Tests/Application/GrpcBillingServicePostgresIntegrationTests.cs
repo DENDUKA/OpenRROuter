@@ -19,8 +19,6 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             return;
         }
 
-        database.ApplyMigration();
-        database.Truncate();
         await using var factory = CreateFactory(database.ConnectionString);
         var client = CreateClient(factory);
 

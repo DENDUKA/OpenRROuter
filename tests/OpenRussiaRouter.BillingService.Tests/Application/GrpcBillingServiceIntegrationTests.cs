@@ -1,5 +1,7 @@
 using Grpc.Net.Client;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
@@ -67,7 +69,13 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
 
     private global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient CreateClient()
     {
-        var httpClient = factory.CreateDefaultClient();
+        var configuredFactory = factory.WithWebHostBuilder(builder =>
+            builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["SqlMigrations:Enabled"] = "false"
+                })));
+        var httpClient = configuredFactory.CreateDefaultClient();
         var channel = GrpcChannel.ForAddress(httpClient.BaseAddress!, new GrpcChannelOptions { HttpClient = httpClient });
         return new global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient(channel);
     }

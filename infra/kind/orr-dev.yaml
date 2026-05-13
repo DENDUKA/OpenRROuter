@@ -4,6 +4,12 @@ name: orr-dev
 nodes:
   - role: control-plane
     extraPortMappings:
+      - containerPort: 30080
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 30443
+        hostPort: 443
+        protocol: TCP
       - containerPort: 30090
         hostPort: 9090
         protocol: TCP

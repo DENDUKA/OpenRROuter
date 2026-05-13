@@ -1,9 +1,10 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: orr-dev
+  name: yc-platform-services
   namespace: argocd
   annotations:
+    argocd.argoproj.io/sync-wave: "1"
     argocd-image-updater.argoproj.io/image-list: api-gateway=ghcr.io/denduka/api-gateway:dev-latest,auth-service=ghcr.io/denduka/auth-service:dev-latest,billing-service=ghcr.io/denduka/billing-service:dev-latest,control-plane=ghcr.io/denduka/control-plane:dev-latest,webapp=ghcr.io/denduka/webapp:dev-latest
     argocd-image-updater.argoproj.io/api-gateway.update-strategy: digest
     argocd-image-updater.argoproj.io/api-gateway.pull-secret: pullsecret:argocd/ghcr-pull-secret
@@ -26,7 +27,31 @@ spec:
   source:
     repoURL: https://github.com/DENDUKA/OpenRussiaRouter.git
     targetRevision: main
-    path: infra/kustomize/overlays/dev
+    path: infra/kustomize/overlays/dev/services
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: orr-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: yc-platform-infra
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/DENDUKA/OpenRussiaRouter.git
+    targetRevision: main
+    path: infra/kustomize/overlays/dev/infra
   destination:
     server: https://kubernetes.default.svc
     namespace: orr-dev

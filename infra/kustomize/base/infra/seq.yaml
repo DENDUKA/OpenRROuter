@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seq
+  namespace: orr-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seq
+  template:
+    metadata:
+      labels:
+        app: seq
+    spec:
+      containers:
+        - name: seq
+          image: datalust/seq:2025.2
+          ports:
+            - name: ui
+              containerPort: 80
+            - name: ingest
+              containerPort: 5341
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+          volumeMounts:
+            - name: seq-data
+              mountPath: /data
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+      volumes:
+        - name: seq-data
+          persistentVolumeClaim:
+            claimName: seq-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: seq-pvc
+  namespace: orr-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seq
+  namespace: orr-dev
+spec:
+  ports:
+    - name: ui
+      port: 80
+      targetPort: 80
+    - name: ingest
+      port: 5341
+      targetPort: 5341
+  selector:
+    app: seq

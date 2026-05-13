@@ -1,11 +1,11 @@
 apiVersion: argocd-image-updater.argoproj.io/v1alpha1
 kind: ImageUpdater
 metadata:
-  name: orr-dev-image-updater
+  name: yc-platform-services-image-updater
   namespace: argocd
 spec:
   writeBackConfig:
     method: argocd
   applicationRefs:
-    - namePattern: orr-dev
+    - namePattern: yc-platform-services
       useAnnotations: true

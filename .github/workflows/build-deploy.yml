@@ -14,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
       packages: write
 
     services:
@@ -136,49 +136,3 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Update Infra Manifests
-        if: github.event_name != 'pull_request'
-        run: |
-          set -euo pipefail
-          KUSTOMIZATION="infra/kustomize/overlays/dev/kustomization.yaml"
-          TAG="sha-${{ github.sha }}"
-          IMAGES=(
-            "${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway"
-            "${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service"
-            "${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service"
-            "${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane"
-            "${{ env.REGISTRY }}/${{ env.OWNER }}/webapp"
-          )
-
-          python - "$KUSTOMIZATION" "$TAG" "${IMAGES[@]}" <<'PY'
-          import sys
-          from pathlib import Path
-
-          path = Path(sys.argv[1])
-          tag = sys.argv[2]
-          images = set(sys.argv[3:])
-          lines = path.read_text(encoding="utf-8").splitlines()
-
-          current = None
-          for index, line in enumerate(lines):
-              stripped = line.strip()
-              if stripped.startswith("- name: "):
-                  current = stripped.removeprefix("- name: ")
-              elif stripped.startswith("newTag: ") and current in images:
-                  indent = line[: len(line) - len(line.lstrip())]
-                  lines[index] = f"{indent}newTag: {tag}"
-
-          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-          PY
-        shell: bash
-
-      - name: Commit and Push Changes
-        if: github.event_name != 'pull_request'
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git add infra/
-          git diff --staged --quiet && exit 0
-          git commit -m "ci: update image tags to sha-${{ github.sha }}"
-          git push

@@ -25,7 +25,7 @@ spec:
               value: "http://seq:5341"
             - name: Seq__ServiceName
               value: "control-plane"
-            - name: ORR_POSTGRES_CONNECTION
+            - name: ConnectionStrings__ControlPlaneDb
               valueFrom:
                 secretKeyRef:
                   name: postgres-secret

@@ -6,13 +6,9 @@ FROM ${SDK_IMAGE} AS build
 WORKDIR /src
 
 COPY NuGet.Config ./
-COPY src/OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj src/OpenRussiaRouter.AuthService/
-COPY src/OpenRussiaRouter.BuildingBlocks/OpenRussiaRouter.BuildingBlocks.csproj src/OpenRussiaRouter.BuildingBlocks/
-COPY src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj src/OpenRussiaRouter.Contracts/
-
+COPY src/ src/
 RUN dotnet restore src/OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj --configfile NuGet.Config
 
-COPY src/ src/
 WORKDIR /src/src/OpenRussiaRouter.AuthService
 RUN dotnet publish -c Release -o /app/publish --no-restore
 

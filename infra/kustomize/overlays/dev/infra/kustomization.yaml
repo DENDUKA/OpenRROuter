@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: orr-dev
 resources:
   - ../../../base/infra
+patches:
+  - path: seq-nodeport.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "0"

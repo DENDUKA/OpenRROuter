@@ -21,6 +21,8 @@ spec:
           env:
             - name: ASPNETCORE_URLS
               value: "http://+:8080"
+            - name: Kestrel__EndpointDefaults__Protocols
+              value: "Http1AndHttp2"
             - name: Seq__Url
               value: "http://seq:5341"
             - name: Seq__ServiceName

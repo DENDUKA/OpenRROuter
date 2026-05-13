@@ -1,5 +1,6 @@
 using System.Globalization;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -8,7 +9,9 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.ApiGateway.Billing;
 
-public sealed class GrpcBillingGatewayClient(BillingGrpc.BillingServiceClient billingClient) : IBillingGatewayClient
+public sealed class GrpcBillingGatewayClient(
+    BillingGrpc.BillingServiceClient billingClient,
+    ILogger<GrpcBillingGatewayClient> logger) : IBillingGatewayClient
 {
 
     public async Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken cancellationToken)
@@ -44,8 +47,9 @@ public sealed class GrpcBillingGatewayClient(BillingGrpc.BillingServiceClient bi
                 MoneyAmount.Rub(ParseDecimal(response.BalanceRub)),
                 string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode);
         }
-        catch (RpcException) when (!cancellationToken.IsCancellationRequested)
+        catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.LogWarning(ex, "Billing service balance check failed. UserId: {UserId}; ModelId: {ModelId}; RpcStatus: {RpcStatus}", userId, modelId, ex.StatusCode);
             return new GatewayBalanceCheckResult(false, modelId, null, MoneyAmount.Rub(0), ErrorCodes.InternalError);
         }
     }

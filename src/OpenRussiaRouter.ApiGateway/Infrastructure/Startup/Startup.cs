@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.Application.Extensions;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
@@ -12,6 +13,7 @@ using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.ApiGateway.OpenAi;
 using OpenRussiaRouter.ApiGateway.Router;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Infrastructure.Startup;
@@ -37,7 +39,7 @@ public static class Startup
 
         if (!string.Equals(app.Environment.EnvironmentName, "Development", StringComparison.OrdinalIgnoreCase))
         {
-            app.UseExceptionHandler("/error", createScopeForErrors: true);
+            app.UseLoggedExceptionHandler("/error");
             app.UseHsts();
         }
 
@@ -134,8 +136,10 @@ public static class Startup
             context.Response.ContentType = response.ContentType;
             await context.Response.WriteAsync(response.Body);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("OpenRussiaRouter.ApiGateway.ChatCompletions");
+            logger.LogWarning(ex, "Chat completion handling failed. RequestId: {RequestId}", requestId);
             await WriteJsonErrorAsync(context, "internal_error", ErrorCodes.InternalError, "Internal server error", requestId);
         }
     }

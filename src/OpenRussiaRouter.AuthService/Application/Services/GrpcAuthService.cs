@@ -1,4 +1,5 @@
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Errors;
@@ -11,7 +12,8 @@ public sealed class GrpcAuthService(
     IAuthApiKeyValidator apiKeyValidator,
     IAuthRepository repository,
     AuthAccountApplicationService accounts,
-    LoginService loginService) : AuthGrpc.AuthServiceBase
+    LoginService loginService,
+    ILogger<GrpcAuthService>? logger = null) : AuthGrpc.AuthServiceBase
 {
 
     public override Task<ValidateApiKeyResponse> ValidateApiKey(
@@ -76,6 +78,7 @@ public sealed class GrpcAuthService(
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
+            logger?.LogWarning(ex, "CreateInvite failed. Email: {Email}; Role: {Role}", request.Email, request.Role);
             return Task.FromResult(new CreateInviteResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -97,6 +100,7 @@ public sealed class GrpcAuthService(
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
+            logger?.LogWarning(ex, "CompleteInvite failed.");
             return Task.FromResult(new CompleteInviteResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -120,6 +124,7 @@ public sealed class GrpcAuthService(
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
+            logger?.LogWarning(ex, "CreateApiKey failed. UserId: {UserId}; Name: {Name}", request.UserId, request.Name);
             return Task.FromResult(new CreateApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -133,12 +138,14 @@ public sealed class GrpcAuthService(
             accounts.RevokeApiKey(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow);
             return Task.FromResult(new RevokeApiKeyResponse { IsRevoked = true });
         }
-        catch (KeyNotFoundException)
+        catch (KeyNotFoundException ex)
         {
+            logger?.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
             return Task.FromResult(new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
-        catch (ArgumentException)
+        catch (ArgumentException ex)
         {
+            logger?.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
             return Task.FromResult(new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -175,12 +182,14 @@ public sealed class GrpcAuthService(
             accounts.RenameApiKey(request.UserId, request.ApiKeyId, request.Name);
             return Task.FromResult(new RenameApiKeyResponse { IsRenamed = true });
         }
-        catch (KeyNotFoundException)
+        catch (KeyNotFoundException ex)
         {
+            logger?.LogWarning(ex, "RenameApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; Name: {Name}", request.UserId, request.ApiKeyId, request.Name);
             return Task.FromResult(new RenameApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
-        catch (ArgumentException)
+        catch (ArgumentException ex)
         {
+            logger?.LogWarning(ex, "RenameApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; Name: {Name}", request.UserId, request.ApiKeyId, request.Name);
             return Task.FromResult(new RenameApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }

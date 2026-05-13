@@ -1,5 +1,6 @@
 using System.Globalization;
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -10,7 +11,9 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
-public sealed class GrpcBillingService(BillingApplicationService billing) : BillingGrpc.BillingServiceBase
+public sealed class GrpcBillingService(
+    BillingApplicationService billing,
+    ILogger<GrpcBillingService>? logger = null) : BillingGrpc.BillingServiceBase
 {
 
     public override Task<CheckBalanceAndModelResponse> CheckBalanceAndModel(
@@ -84,8 +87,9 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
                 BalanceRub = balance.Amount.ToString(CultureInfo.InvariantCulture)
             });
         }
-        catch (ArgumentException)
+        catch (ArgumentException ex)
         {
+            logger?.LogWarning(ex, "GetBalance failed. UserId: {UserId}", request.UserId);
             return Task.FromResult(new GetBalanceResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -117,6 +121,7 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
         {
+            logger?.LogWarning(ex, "CreateVirtualTopUp failed. AdminId: {AdminId}; UserId: {UserId}; IdempotencyKey: {IdempotencyKey}", request.AdminId, request.UserId, request.IdempotencyKey);
             return Task.FromResult(new CreateVirtualTopUpResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -146,6 +151,7 @@ public sealed class GrpcBillingService(BillingApplicationService billing) : Bill
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
         {
+            logger?.LogWarning(ex, "UpsertModelPrice failed. ModelId: {ModelId}; PriceVersion: {PriceVersion}", request.ModelId, request.PriceVersion);
             return Task.FromResult(new UpsertModelPriceResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }

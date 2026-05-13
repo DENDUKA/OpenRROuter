@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.AuthService.Application.Extensions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.BuildingBlocks.Health;
+using OpenRussiaRouter.BuildingBlocks.Logging;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Startup;
 
@@ -26,6 +27,7 @@ public static class Startup
 
     public static WebApplication ConfigurePipeline(WebApplication app)
     {
+        app.UseLoggedExceptionHandler("/error");
         app.MapGrpcService<GrpcAuthService>();
         app.MapControllers();
         app.MapHealthChecks("/health");

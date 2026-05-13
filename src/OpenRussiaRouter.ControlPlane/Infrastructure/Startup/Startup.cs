@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application;
 using OpenRussiaRouter.ControlPlane.Application.Extensions;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.BuildingBlocks.Logging;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Startup;
 
@@ -32,6 +33,7 @@ public static class Startup
 
     public static WebApplication ConfigurePipeline(WebApplication app)
     {
+        app.UseLoggedExceptionHandler("/error");
         app.MapGrpcService<GrpcRouterControlPlaneService>();
         app.MapControllers();
         app.MapHealthChecks("/health");

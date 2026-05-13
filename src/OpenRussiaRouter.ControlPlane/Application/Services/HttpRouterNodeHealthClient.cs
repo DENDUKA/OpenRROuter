@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Services;
@@ -10,7 +11,8 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 public sealed class HttpRouterNodeHealthClient(
     HttpClient httpClient,
     IRouterNodeTokenResolver tokenResolver,
-    IOptionsMonitor<RouterHealthCheckOptions> options)
+    IOptionsMonitor<RouterHealthCheckOptions> options,
+    ILogger<HttpRouterNodeHealthClient>? logger = null)
     : IRouterNodeHealthClient
 {
 
@@ -47,16 +49,18 @@ public sealed class HttpRouterNodeHealthClient(
                     $"http_{(int)response.StatusCode}");
             }
 
-            var status = await TryReadStatusAsync(response, timeoutCts.Token).ConfigureAwait(false)
+            var status = await TryReadStatusAsync(response, node, timeoutCts.Token).ConfigureAwait(false)
                 ?? RouterNodeStatus.Healthy;
             return new RouterNodeHealthResult(status, latencyMs, null);
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested)
         {
+            logger?.LogWarning(ex, "Router node health check timed out. NodeId: {NodeId}; EndpointUrl: {EndpointUrl}", node.Id, node.EndpointUrl);
             return new RouterNodeHealthResult(RouterNodeStatus.Unhealthy, null, "timeout");
         }
-        catch (HttpRequestException)
+        catch (HttpRequestException ex)
         {
+            logger?.LogWarning(ex, "Router node health check failed. NodeId: {NodeId}; EndpointUrl: {EndpointUrl}", node.Id, node.EndpointUrl);
             return new RouterNodeHealthResult(RouterNodeStatus.Unhealthy, null, "network_error");
         }
     }
@@ -67,8 +71,9 @@ public sealed class HttpRouterNodeHealthClient(
         return new Uri(endpointUrl, path.StartsWith('/') ? path : "/" + path);
     }
 
-    private static async Task<RouterNodeStatus?> TryReadStatusAsync(
+    private async Task<RouterNodeStatus?> TryReadStatusAsync(
         HttpResponseMessage response,
+        RouterNode node,
         CancellationToken cancellationToken)
     {
         if (response.Content.Headers.ContentLength == 0)
@@ -93,8 +98,9 @@ public sealed class HttpRouterNodeHealthClient(
                 _ => null
             };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            logger?.LogWarning(ex, "Router node health response parsing failed. NodeId: {NodeId}; EndpointUrl: {EndpointUrl}", node.Id, node.EndpointUrl);
             return null;
         }
     }

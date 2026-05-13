@@ -1,4 +1,5 @@
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
@@ -6,7 +7,9 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService controlPlane)
+public sealed class GrpcRouterControlPlaneService(
+    RouterControlPlaneService controlPlane,
+    ILogger<GrpcRouterControlPlaneService>? logger = null)
     : ControlGrpc.RouterControlPlaneBase
 {
 
@@ -25,8 +28,9 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
                 TokenSecretName = lease.TokenSecretName
             });
         }
-        catch (InvalidOperationException)
+        catch (InvalidOperationException ex)
         {
+            logger?.LogWarning(ex, "SelectRouterNode failed. RequestId: {RequestId}; ModelId: {ModelId}", request.RequestId, request.ModelId);
             return Task.FromResult(new SelectRouterNodeResponse
             {
                 ErrorCode = ErrorCodes.RouterUnavailable
@@ -63,6 +67,7 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
         }
         catch (Exception ex) when (ex is ArgumentException or UriFormatException)
         {
+            logger?.LogWarning(ex, "RegisterRouterNode failed. Name: {Name}; EndpointUrl: {EndpointUrl}", request.Name, request.EndpointUrl);
             return Task.FromResult(new RegisterRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }
@@ -76,8 +81,9 @@ public sealed class GrpcRouterControlPlaneService(RouterControlPlaneService cont
             controlPlane.DisableNode(request.NodeId);
             return Task.FromResult(new DisableRouterNodeResponse { Disabled = true });
         }
-        catch (KeyNotFoundException)
+        catch (KeyNotFoundException ex)
         {
+            logger?.LogWarning(ex, "DisableRouterNode failed. NodeId: {NodeId}", request.NodeId);
             return Task.FromResult(new DisableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
         }
     }

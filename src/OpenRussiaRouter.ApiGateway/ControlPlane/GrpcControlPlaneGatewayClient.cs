@@ -1,11 +1,14 @@
 using Grpc.Core;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 
 namespace OpenRussiaRouter.ApiGateway.ControlPlane;
 
-public sealed class GrpcControlPlaneGatewayClient(ControlGrpc.RouterControlPlaneClient controlClient)
+public sealed class GrpcControlPlaneGatewayClient(
+    ControlGrpc.RouterControlPlaneClient controlClient,
+    ILogger<GrpcControlPlaneGatewayClient> logger)
     : IControlPlaneGatewayClient
 {
 
@@ -38,8 +41,9 @@ public sealed class GrpcControlPlaneGatewayClient(ControlGrpc.RouterControlPlane
                 endpoint,
                 response.TokenSecretName);
         }
-        catch (RpcException) when (!cancellationToken.IsCancellationRequested)
+        catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {
+            logger.LogWarning(ex, "Control Plane router selection failed. RequestId: {RequestId}; ModelId: {ModelId}; RpcStatus: {RpcStatus}", requestId, modelId, ex.StatusCode);
             return null;
         }
     }
@@ -61,9 +65,9 @@ public sealed class GrpcControlPlaneGatewayClient(ControlGrpc.RouterControlPlane
                 },
                 cancellationToken: cancellationToken);
         }
-        catch (RpcException) when (!cancellationToken.IsCancellationRequested)
+        catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Releasing a lease is best-effort; Control Plane TTL cleanup is the fallback.
+            logger.LogWarning(ex, "Control Plane lease release failed. LeaseId: {LeaseId}; Status: {Status}; RpcStatus: {RpcStatus}", leaseId, status, ex.StatusCode);
         }
     }
 }

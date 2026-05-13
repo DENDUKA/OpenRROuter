@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Errors;
@@ -11,7 +12,8 @@ namespace OpenRussiaRouter.BillingService.Application.Services;
 public sealed class BillingApplicationService(
     IBillingRepository repository,
     IUsageCostCalculator usageCostCalculator,
-    IOptions<BillingPaginationOptions> paginationOptions)
+    IOptions<BillingPaginationOptions> paginationOptions,
+    ILogger<BillingApplicationService>? logger = null)
 {
 
     public LedgerEntry CreateVirtualTopUp(
@@ -89,6 +91,7 @@ public sealed class BillingApplicationService(
         }
         catch (ArgumentOutOfRangeException ex)
         {
+            logger?.LogWarning(ex, "Usage record validation failed. RequestId: {RequestId}; UserId: {UserId}; ModelId: {ModelId}", usageEvent.RequestId, usageEvent.UserId, usageEvent.ModelId);
             AddAnomaly(usageEvent.RequestId, "invalid_token_count", ex.Message, nowUtc);
             return new RecordUsageResult(false, null, MoneyAmount.Rub(0), "invalid_token_count");
         }

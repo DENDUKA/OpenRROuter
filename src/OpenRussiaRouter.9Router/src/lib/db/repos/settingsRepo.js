@@ -24,10 +24,10 @@ const DEFAULT_SETTINGS = {
   oidcScopes: "openid profile email",
   oidcLoginLabel: "Sign in with OIDC",
   enableObservability: true,
-  observabilityMaxRecords: 1000,
+  observabilityMaxRecords: 200,
   observabilityBatchSize: 20,
   observabilityFlushIntervalMs: 5000,
-  observabilityMaxJsonSize: 5,
+  observabilityMaxJsonSize: 2,
   outboundProxyEnabled: false,
   outboundProxyUrl: "",
   outboundNoProxy: "",
@@ -100,5 +100,9 @@ export async function getCloudUrl() {
 }
 
 export async function exportSettings() {
+  return await readRaw();
+}
+
+export async function getRawSettings() {
   return await readRaw();
 }

@@ -28,6 +28,7 @@ public static class Startup
         services.AddHealthChecks();
 
         services.AddGatewayGrpcClients(configuration);
+        services.AddGatewayUsageOutbox(configuration);
         services.AddGatewayRouter();
 
         return services;
@@ -117,20 +118,29 @@ public static class Startup
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
 
             RouterUsageExtractor.TryExtract(response.Body, out var usage);
-            if (usage.InputTokens > 0 || usage.OutputTokens > 0)
+            if (usage.InputTokens == 0 && usage.OutputTokens == 0)
             {
-                var usageEvent = new GatewayUsageEvent(
-                    requestId,
-                    authResult.UserId!,
-                    authResult.ApiKeyId!,
-                    metadata.Model,
-                    lease.NodeId,
-                    usage,
-                    response.StatusCode >= 500 ? "failed" : "completed",
-                    startedAt,
-                    completedAt);
-                _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
+                context.Response.StatusCode = response.StatusCode;
+                context.Response.ContentType = response.ContentType;
+                await context.Response.WriteAsync(response.Body);
+                return;
             }
+
+            var usageEvent = new GatewayUsageEvent(
+                requestId,
+                authResult.UserId!,
+                authResult.ApiKeyId!,
+                metadata.Model,
+                lease.NodeId,
+                usage,
+                response.StatusCode >= 500 ? "failed" : "completed",
+                startedAt,
+                completedAt);
+            var usageOutbox = context.RequestServices.GetRequiredService<IUsageOutboxRepository>();
+
+            // GatewayDb is intentionally on the success path: if durable enqueue fails in production,
+            // we fail the API request instead of returning a billable response that billing can lose.
+            await usageOutbox.EnqueueAsync(usageEvent, context.RequestAborted);
 
             context.Response.StatusCode = response.StatusCode;
             context.Response.ContentType = response.ContentType;

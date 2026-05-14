@@ -4,27 +4,37 @@ import { parseJson, stringifyJson } from "../helpers/jsonCol.js";
 const DEFAULT_MAX_RECORDS = 200;
 const DEFAULT_BATCH_SIZE = 20;
 const DEFAULT_FLUSH_INTERVAL_MS = 5000;
-const DEFAULT_MAX_JSON_SIZE = 5 * 1024;
+const DEFAULT_MAX_JSON_SIZE_KB = 2;
+const DEFAULT_MAX_JSON_SIZE = DEFAULT_MAX_JSON_SIZE_KB * 1024;
 const CONFIG_CACHE_TTL_MS = 5000;
 
 let cachedConfig = null;
 let cachedConfigTs = 0;
 
+function validPositiveInt(val, fallback) {
+  if (typeof val === "string" && !/^\d+$/.test(val.trim())) return fallback;
+  const n = Number(val);
+  return (Number.isFinite(n) && n >= 0) ? n : fallback;
+}
+
 async function getObservabilityConfig() {
   if (cachedConfig && (Date.now() - cachedConfigTs) < CONFIG_CACHE_TTL_MS) return cachedConfig;
   try {
-    const { getSettings } = await import("./settingsRepo.js");
-    const settings = await getSettings();
+    const { getRawSettings } = await import("./settingsRepo.js");
+    const raw = await getRawSettings();
+
     const envEnabled = process.env.OBSERVABILITY_ENABLED !== "false";
-    const enabled = typeof settings.enableObservability === "boolean"
-      ? settings.enableObservability
-      : envEnabled;
+    const envMaxRecords = validPositiveInt(process.env.OBSERVABILITY_MAX_RECORDS, DEFAULT_MAX_RECORDS);
+    const envBatchSize = validPositiveInt(process.env.OBSERVABILITY_BATCH_SIZE, DEFAULT_BATCH_SIZE);
+    const envFlushIntervalMs = validPositiveInt(process.env.OBSERVABILITY_FLUSH_INTERVAL_MS, DEFAULT_FLUSH_INTERVAL_MS);
+    const envMaxJsonSizeKb = validPositiveInt(process.env.OBSERVABILITY_MAX_JSON_SIZE, DEFAULT_MAX_JSON_SIZE_KB);
+
     cachedConfig = {
-      enabled,
-      maxRecords: settings.observabilityMaxRecords || parseInt(process.env.OBSERVABILITY_MAX_RECORDS || String(DEFAULT_MAX_RECORDS), 10),
-      batchSize: settings.observabilityBatchSize || parseInt(process.env.OBSERVABILITY_BATCH_SIZE || String(DEFAULT_BATCH_SIZE), 10),
-      flushIntervalMs: settings.observabilityFlushIntervalMs || parseInt(process.env.OBSERVABILITY_FLUSH_INTERVAL_MS || String(DEFAULT_FLUSH_INTERVAL_MS), 10),
-      maxJsonSize: (settings.observabilityMaxJsonSize || parseInt(process.env.OBSERVABILITY_MAX_JSON_SIZE || "5", 10)) * 1024,
+      enabled: raw.enableObservability ?? envEnabled ?? true,
+      maxRecords: raw.observabilityMaxRecords ?? envMaxRecords ?? DEFAULT_MAX_RECORDS,
+      batchSize: raw.observabilityBatchSize ?? envBatchSize ?? DEFAULT_BATCH_SIZE,
+      flushIntervalMs: raw.observabilityFlushIntervalMs ?? envFlushIntervalMs ?? DEFAULT_FLUSH_INTERVAL_MS,
+      maxJsonSize: (raw.observabilityMaxJsonSize ?? envMaxJsonSizeKb ?? DEFAULT_MAX_JSON_SIZE_KB) * 1024,
     };
   } catch {
     cachedConfig = {

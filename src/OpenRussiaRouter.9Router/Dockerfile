@@ -34,6 +34,8 @@ COPY --from=builder /app/open-sse ./open-sse
 COPY --from=builder /app/src/mitm ./src/mitm
 # Standalone node_modules may omit deps only required by the MITM child process.
 COPY --from=builder /app/node_modules/node-forge ./node_modules/node-forge
+# Maintenance scripts (db:enable-incremental-vacuum, etc.) — not traced by Next.js, copied explicitly.
+COPY --from=builder /app/scripts ./scripts
 
 RUN mkdir -p /app/data && chown -R node:node /app && \
   mkdir -p /app/data-home && chown node:node /app/data-home && \

@@ -86,8 +86,47 @@ export async function initializeApp() {
     startWatchdog();
     startNetworkMonitor();
     autoStartMitm();
+    autoRunDbMaintenance();
   } catch (error) {
     console.error("[InitApp] Error:", error);
+  }
+}
+
+async function autoRunDbMaintenance() {
+  if (process.env.ORR_AUTO_RUN_DB_MAINTENANCE !== "true") return;
+  try {
+    const { getAdapter } = await import("@/lib/db/driver.js");
+    const adapter = await getAdapter();
+    const { getMetaSync } = await import("@/lib/db/helpers/metaStore.js");
+    
+    if (getMetaSync(adapter, "autoVacuumMode") === "incremental") {
+      return;
+    }
+
+    const { join } = await import("path");
+    const { existsSync } = await import("fs");
+
+    // process.cwd() = project root in dev (npm run dev) and /app in standalone Docker (WORKDIR /app).
+    // Dockerfile copies scripts/ to /app/scripts/ explicitly (not traced by Next.js).
+    const scriptPath = join(process.cwd(), "scripts", "enable-incremental-vacuum.js");
+
+    if (!existsSync(scriptPath)) {
+      console.error(`[InitApp] auto-maintenance skipped: script not found at ${scriptPath}`);
+      return;
+    }
+
+    console.log("[InitApp] Auto-running DB maintenance...");
+    const { exec } = await import("child_process");
+    exec(`node "${scriptPath}"`, (err, stdout, stderr) => {
+      if (err) {
+        console.error("[InitApp] auto-maintenance failed:", err.message);
+        if (stderr) console.error(stderr);
+      } else {
+        console.log("[InitApp] auto-maintenance success:\\n", stdout);
+      }
+    });
+  } catch (err) {
+    console.error("[InitApp] auto-maintenance error:", err.message);
   }
 }
 

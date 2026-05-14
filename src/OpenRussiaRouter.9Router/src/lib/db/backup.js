@@ -3,7 +3,6 @@ import path from "node:path";
 import { BACKUPS_DIR, ensureDirs } from "./paths.js";
 import { timestampSlug, getAppVersion } from "./version.js";
 
-const KEEP_BACKUPS = 5;
 
 export function makeBackupDir(label) {
   ensureDirs();
@@ -22,14 +21,24 @@ export function backupFile(srcPath, destDir, destName = null) {
   return dest;
 }
 
-export function pruneOldBackups() {
+// ORR-PATCH BEGIN: configurable local backup retention
+export function pruneOldBackups(maxKeep) {
+  let keep;
+  if (typeof maxKeep === "number" && Number.isFinite(maxKeep)) {
+    keep = Math.floor(maxKeep);
+    if (keep < 0) keep = 1;
+  } else {
+    keep = 1;
+  }
+  // ORR-PATCH END
+
   if (!fs.existsSync(BACKUPS_DIR)) return;
   const entries = fs.readdirSync(BACKUPS_DIR, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => ({ name: e.name, full: path.join(BACKUPS_DIR, e.name), mtime: fs.statSync(path.join(BACKUPS_DIR, e.name)).mtimeMs }))
     .sort((a, b) => b.mtime - a.mtime);
 
-  for (const old of entries.slice(KEEP_BACKUPS)) {
+  for (const old of entries.slice(keep)) {
     try { fs.rmSync(old.full, { recursive: true, force: true }); } catch {}
   }
 }

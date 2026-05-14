@@ -5,6 +5,8 @@ using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Http;
+using OpenRussiaRouter.ApiGateway.Infrastructure.Persistence;
+using OpenRussiaRouter.ApiGateway.Infrastructure.Repository;
 using OpenRussiaRouter.ApiGateway.Router;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -78,6 +80,26 @@ public static class ApiGatewayExtensions
             };
         });
         services.AddScoped<IControlPlaneGatewayClient, GrpcControlPlaneGatewayClient>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddGatewayUsageOutbox(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.Configure<UsageOutboxOptions>(configuration.GetSection("UsageOutbox"));
+
+        var connectionString = configuration.GetConnectionString("GatewayDb");
+        if (!string.IsNullOrWhiteSpace(connectionString))
+        {
+            services.AddSingleton<IGatewayDbConnectionFactory>(_ => new GatewayDbConnectionFactory(connectionString));
+            services.AddSingleton<IUsageOutboxRepository, DapperUsageOutboxRepository>();
+        }
+        else
+        {
+            services.AddSingleton<IUsageOutboxRepository, InMemoryUsageOutboxRepository>();
+        }
+
+        services.AddHostedService<UsageOutboxWorker>();
 
         return services;
     }

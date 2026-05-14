@@ -11,6 +11,17 @@ import { stringifyJson } from "./helpers/jsonCol.js";
 // Marker file: prevents re-importing legacy JSON when user wipes data.sqlite.
 const MIGRATED_MARKER = path.join(DB_DIR, ".migrated-from-json");
 
+function getBackupsKeepCount() {
+  const raw = process.env.BACKUPS_KEEP_COUNT;
+  if (raw === undefined) return 1;
+  const normalized = raw.trim();
+  if (normalized === "") return 1;
+  const n = Number(normalized);
+  if (!Number.isFinite(n)) return 1;
+  const keep = Math.floor(n);
+  return keep < 0 ? 1 : keep;
+}
+
 // Track per-adapter so reusing same adapter skips re-run, but new adapter (after reset) re-runs.
 const _migratedAdapters = new WeakSet();
 
@@ -220,7 +231,7 @@ export async function runMigrationOnce(adapter) {
     });
 
     try { fs.writeFileSync(MIGRATED_MARKER, new Date().toISOString()); } catch {}
-    pruneOldBackups();
+    pruneOldBackups(getBackupsKeepCount());
     console.log(`[DB][migrate] JSON → SQLite in ${Date.now() - t0}ms | legacy JSON kept at DATA_DIR | backup: ${backupDir}`);
     return;
   }
@@ -237,12 +248,12 @@ export async function runMigrationOnce(adapter) {
     const backupDir = makeBackupDir(`upgrade-${oldVer}-to-${newVer}`);
     try { backupFile(DATA_FILE, backupDir); } catch {}
     setMetaSync(adapter, "appVersion", newVer);
-    pruneOldBackups();
+    pruneOldBackups(getBackupsKeepCount());
     console.log(`[DB][migrate] App ${oldVer} → ${newVer} | schema ${migInfo.from} → ${migInfo.to} | backup: ${backupDir}`);
   } else if (migInfo.applied > 0) {
     // Schema upgrade without app version bump — still backup
     const backupDir = makeBackupDir(`schema-${migInfo.from}-to-${migInfo.to}`);
     try { backupFile(DATA_FILE, backupDir); } catch {}
-    pruneOldBackups();
+    pruneOldBackups(getBackupsKeepCount());
   }
 }

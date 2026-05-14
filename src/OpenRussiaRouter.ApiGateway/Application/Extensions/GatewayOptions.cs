@@ -19,3 +19,20 @@ public sealed class GatewayHttpClientOptions
 
     public TimeSpan KeepAlivePingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 }
+
+public sealed class UsageOutboxOptions
+{
+    public bool Enabled { get; set; } = true;
+
+    public int BatchSize { get; set; } = 50;
+
+    public int PollIntervalSeconds { get; set; } = 5;
+
+    public int BaseBackoffSeconds { get; set; } = 2;
+
+    public int MaxBackoffSeconds { get; set; } = 300;
+
+    public int MaxAttempts { get; set; } = 20;
+
+    public int LeaseSeconds { get; set; } = 120;
+}

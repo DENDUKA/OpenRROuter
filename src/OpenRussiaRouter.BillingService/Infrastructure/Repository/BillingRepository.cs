@@ -52,15 +52,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(model);
         using var connection = connectionFactory.CreateConnection();
+        var modelIdColumn = GetModelIdColumn(connection);
         connection.Execute(
-            """
+            $"""
             insert into billing.model_prices
-                (model_id, display_name, router_model_id, price_version, input_per_million_amount,
+                ({modelIdColumn}, display_name, router_model_id, price_version, input_per_million_amount,
                  output_per_million_amount, cache_per_million_amount, currency, enabled)
             values
                 (@ModelId, @DisplayName, @RouterModelId, @PriceVersion, @InputPerMillionAmount,
                  @OutputPerMillionAmount, @CachePerMillionAmount, @Currency, @Enabled)
-            on conflict (model_id) do update set
+            on conflict ({modelIdColumn}) do update set
                 display_name = excluded.display_name,
                 router_model_id = excluded.router_model_id,
                 price_version = excluded.price_version,
@@ -87,8 +88,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public ModelPrice? GetEnabledModel(string modelId)
     {
         using var connection = connectionFactory.CreateConnection();
+        var modelIdColumn = GetModelIdColumn(connection);
         return connection.QuerySingleOrDefault<ModelPriceEntity>(
-            ModelPriceSelectSql + " where model_id = @ModelId and enabled = true;",
+            ModelPriceSelectSql(modelIdColumn) + $" where {modelIdColumn} = @ModelId and enabled = true;",
             new { ModelId = modelId }) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
@@ -97,11 +99,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
+        var modelIdColumn = GetModelIdColumn(connection);
         var items = connection.Query<ModelPriceEntity>(
-                ModelPriceSelectSql + """
+                ModelPriceSelectSql(modelIdColumn) + $"""
                  where enabled = true
-                   and (@AfterModelId is null or model_id > @AfterModelId)
-                 order by model_id
+                   and (@AfterModelId is null or {modelIdColumn} > @AfterModelId)
+                 order by {modelIdColumn}
                  limit @Limit;
                  """,
                 new { Limit = limit + 1, AfterModelId = afterModelId })
@@ -120,10 +123,11 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
+        var modelIdColumn = GetModelIdColumn(connection);
         var items = connection.Query<ModelPriceEntity>(
-                ModelPriceSelectSql + """
-                 where (@AfterModelId is null or model_id > @AfterModelId)
-                   order by model_id
+                ModelPriceSelectSql(modelIdColumn) + $"""
+                 where (@AfterModelId is null or {modelIdColumn} > @AfterModelId)
+                   order by {modelIdColumn}
                    limit @Limit;
                  """,
                 new { Limit = limit + 1, AfterModelId = afterModelId })
@@ -265,9 +269,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         where idempotency_key = @IdempotencyKey;
         """;
 
-    private const string ModelPriceSelectSql = """
+    private static string ModelPriceSelectSql(string modelIdColumn) => $$"""
         select
-            model_id as ModelId,
+            {{modelIdColumn}} as ModelId,
             display_name as DisplayName,
             router_model_id as RouterModelId,
             price_version as PriceVersion,
@@ -278,6 +282,21 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             enabled as Enabled
         from billing.model_prices
         """;
+
+    private static string GetModelIdColumn(System.Data.IDbConnection connection)
+    {
+        const string sql = """
+            select exists (
+                select 1
+                from information_schema.columns
+                where table_schema = 'billing'
+                  and table_name = 'model_prices'
+                  and column_name = 'model_id'
+            );
+            """;
+
+        return connection.ExecuteScalar<bool>(sql) ? "model_id" : "id";
+    }
 
     private const string UsageSelectSql = """
         select

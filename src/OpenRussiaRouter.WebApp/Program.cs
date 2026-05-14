@@ -19,8 +19,6 @@ builder.AddSeqLogging("webapp");
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddServerSideBlazor();
-
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<ISessionStorage, SessionStorage>();
 

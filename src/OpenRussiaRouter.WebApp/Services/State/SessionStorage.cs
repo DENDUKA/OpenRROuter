@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using System.Security.Cryptography;
 
 namespace OpenRussiaRouter.WebApp.Services.State;
 
@@ -13,8 +14,16 @@ public sealed class SessionStorage(ProtectedLocalStorage localStorage) : ISessio
 
     public async Task<UserSession?> LoadSessionAsync(CancellationToken cancellationToken = default)
     {
-        var result = await localStorage.GetAsync<UserSession>(SessionKey);
-        return result.Success ? result.Value : null;
+        try
+        {
+            var result = await localStorage.GetAsync<UserSession>(SessionKey);
+            return result.Success ? result.Value : null;
+        }
+        catch (CryptographicException)
+        {
+            await ClearSessionAsync(cancellationToken);
+            return null;
+        }
     }
 
     public async Task ClearSessionAsync(CancellationToken cancellationToken = default)

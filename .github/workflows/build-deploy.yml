@@ -139,65 +139,65 @@ jobs:
         with:
           driver: docker-container
 
-      - name: Build and push ApiGateway
-        if: github.event_name != 'pull_request' && steps.changes.outputs.api_gateway == 'true'
+      - name: Build ApiGateway image
+        if: steps.changes.outputs.api_gateway == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/OpenRussiaRouter.ApiGateway/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/api-gateway:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push AuthService
-        if: github.event_name != 'pull_request' && steps.changes.outputs.auth_service == 'true'
+      - name: Build AuthService image
+        if: steps.changes.outputs.auth_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/OpenRussiaRouter.AuthService/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/auth-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push BillingService
-        if: github.event_name != 'pull_request' && steps.changes.outputs.billing_service == 'true'
+      - name: Build BillingService image
+        if: steps.changes.outputs.billing_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/OpenRussiaRouter.BillingService/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/billing-service:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push ControlPlane
-        if: github.event_name != 'pull_request' && steps.changes.outputs.control_plane == 'true'
+      - name: Build ControlPlane image
+        if: steps.changes.outputs.control_plane == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/OpenRussiaRouter.ControlPlane/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/control-plane:dev-latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push WebApp
-        if: github.event_name != 'pull_request' && steps.changes.outputs.webapp == 'true'
+      - name: Build WebApp image
+        if: steps.changes.outputs.webapp == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./src/OpenRussiaRouter.WebApp/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:sha-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ env.OWNER }}/webapp:dev-latest

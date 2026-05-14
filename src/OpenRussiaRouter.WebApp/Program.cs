@@ -17,7 +17,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSeqLogging("webapp");
 
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = true;
+    });
 
 builder.Services.AddScoped<AuthState>();
 builder.Services.AddScoped<ISessionStorage, SessionStorage>();

@@ -6,6 +6,12 @@ public static class RepositoryMigrationPath
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(service);
 
+        var appRelativePath = Path.Combine(AppContext.BaseDirectory, "db", "migrations", service);
+        if (Directory.Exists(appRelativePath))
+        {
+            return appRelativePath;
+        }
+
         return Path.Combine(FindRepositoryRoot(), "db", "migrations", service);
     }
 

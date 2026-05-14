@@ -41,44 +41,33 @@
                             <ValidationMessage For="@(() => EditForm.Id)" />
                         </div>
                         <div class="form-group">
-                            <label for="displayName" class="form-label">Display Name</label>
+                            <label for="displayName" class="form-label">Model Name</label>
                             <InputText id="displayName" class="form-control" @bind-Value="EditForm.DisplayName" />
                             <ValidationMessage For="@(() => EditForm.DisplayName)" />
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="upstreamModelId" class="form-label">Upstream Model ID</label>
-                            <InputText id="upstreamModelId" class="form-control" @bind-Value="EditForm.UpstreamModelId" />
-                            <ValidationMessage For="@(() => EditForm.UpstreamModelId)" />
-                        </div>
-                        <div class="form-group">
-                            <label for="priceVersion" class="form-label">Price Version</label>
-                            <InputText id="priceVersion" class="form-control" @bind-Value="EditForm.PriceVersion" />
-                            <ValidationMessage For="@(() => EditForm.PriceVersion)" />
-                        </div>
-                    </div>
-                    <div class="form-row three-col">
-                        <div class="form-group">
-                            <label for="inputPrice" class="form-label">Input Price per 1M (RUB)</label>
+                            <label for="inputPrice" class="form-label">Input</label>
                             <InputNumber id="inputPrice" class="form-control" @bind-Value="EditForm.InputPrice" />
                             <ValidationMessage For="@(() => EditForm.InputPrice)" />
                         </div>
                         <div class="form-group">
-                            <label for="outputPrice" class="form-label">Output Price per 1M (RUB)</label>
+                            <label for="outputPrice" class="form-label">Output</label>
                             <InputNumber id="outputPrice" class="form-control" @bind-Value="EditForm.OutputPrice" />
                             <ValidationMessage For="@(() => EditForm.OutputPrice)" />
                         </div>
-                        <div class="form-group">
-                            <label for="cachePrice" class="form-label">Cache Price per 1M (RUB)</label>
-                            <InputNumber id="cachePrice" class="form-control" @bind-Value="EditForm.CachePrice" />
-                            <ValidationMessage For="@(() => EditForm.CachePrice)" />
-                        </div>
                     </div>
-                    <div class="form-group">
-                        <div class="form-check">
-                            <InputCheckbox id="enabled" class="form-check-input" @bind-Value="EditForm.Enabled" />
-                            <label for="enabled" class="form-check-label">Enabled</label>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="context" class="form-label">Context</label>
+                            <InputNumber id="context" class="form-control" @bind-Value="EditForm.Context" />
+                            <ValidationMessage For="@(() => EditForm.Context)" />
+                        </div>
+                        <div class="form-group">
+                            <label for="released" class="form-label">Released</label>
+                            <InputText id="released" class="form-control" @bind-Value="EditForm.Released" />
+                            <ValidationMessage For="@(() => EditForm.Released)" />
                         </div>
                     </div>
                     <div class="btn-row">
@@ -197,10 +186,6 @@
         margin-bottom: var(--spacing-lg);
     }
 
-    .form-row.three-col {
-        grid-template-columns: 1fr 1fr 1fr;
-    }
-
     .form-group {
         margin-bottom: 0;
     }
@@ -224,7 +209,7 @@
 
     @@media (max-width: 640px) {
         .form-row,
-        .form-row.three-col {
+        .form-row {
             grid-template-columns: 1fr;
         }
     }
@@ -272,12 +257,10 @@
         {
             Id = "",
             DisplayName = "",
-            UpstreamModelId = "",
-            PriceVersion = "v1",
             InputPrice = 0m,
             OutputPrice = 0m,
-            CachePrice = 0m,
-            Enabled = true
+            Context = 0,
+            Released = ""
         };
         ShowEditPanel = true;
     }
@@ -292,12 +275,10 @@
         {
             Id = model.Id,
             DisplayName = model.DisplayName,
-            UpstreamModelId = model.UpstreamModelId,
-            PriceVersion = model.PriceVersion,
             InputPrice = model.InputPrice,
             OutputPrice = model.OutputPrice,
-            CachePrice = model.CachePrice,
-            Enabled = model.Enabled
+            Context = 0,
+            Released = ""
         };
         ShowEditPanel = true;
     }
@@ -324,12 +305,12 @@
             var model = new ModelInfo(
                 EditForm.Id.Trim(),
                 EditForm.DisplayName.Trim(),
-                EditForm.UpstreamModelId.Trim(),
-                EditForm.PriceVersion.Trim(),
+                EditingModel?.UpstreamModelId ?? EditForm.Id.Trim(),
+                EditingModel?.PriceVersion ?? "v1",
                 EditForm.InputPrice,
                 EditForm.OutputPrice,
-                EditForm.CachePrice,
-                EditForm.Enabled);
+                EditingModel?.CachePrice ?? 0m,
+                EditingModel?.Enabled ?? true);
             await BillingClient.UpsertModelAsync(model);
             ShowEditPanel = false;
             EditingModel = null;
@@ -355,21 +336,15 @@
         [Required]
         public string DisplayName { get; set; } = "";
 
-        [Required]
-        public string UpstreamModelId { get; set; } = "";
-
-        [Required]
-        public string PriceVersion { get; set; } = "v1";
-
         [Range(0, 1000000)]
         public decimal InputPrice { get; set; }
 
         [Range(0, 1000000)]
         public decimal OutputPrice { get; set; }
 
-        [Range(0, 1000000)]
-        public decimal CachePrice { get; set; }
+        [Range(0, int.MaxValue)]
+        public int Context { get; set; }
 
-        public bool Enabled { get; set; } = true;
+        public string Released { get; set; } = "";
     }
 }

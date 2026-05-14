@@ -18,6 +18,13 @@
         </div>
     }
 
+    @if (!string.IsNullOrEmpty(SuccessMessage))
+    {
+        <div class="alert alert-success" role="status">
+            @SuccessMessage
+        </div>
+    }
+
     @if (ShowEditPanel)
     {
         <div class="panel">
@@ -82,7 +89,7 @@
                             }
                             Save
                         </button>
-                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@IsSaving">Cancel</button>
                     </div>
                 </EditForm>
             </div>
@@ -92,7 +99,7 @@
     <div class="panel">
         <div class="panel-header d-flex justify-content-between align-items-center">
             <span><span class="panel-marker">[+]</span> Public Models</span>
-            <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel">
+            <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel" disabled="@IsSaving">
                 Add Model
             </button>
         </div>
@@ -136,7 +143,7 @@
                                     </span>
                                 </td>
                                 <td>
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(model)">Edit</button>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(model)" disabled="@IsSaving">Edit</button>
                                 </td>
                             </tr>
                         }
@@ -229,6 +236,7 @@
     private bool IsNewModel { get; set; }
     private bool IsSaving { get; set; }
     private string? ErrorMessage { get; set; }
+    private string? SuccessMessage { get; set; }
     private ModelInfo? EditingModel { get; set; }
     private EditFormModel EditForm { get; set; } = new();
 
@@ -256,6 +264,8 @@
 
     private void ShowAddPanel()
     {
+        ErrorMessage = null;
+        SuccessMessage = null;
         EditingModel = null;
         IsNewModel = true;
         EditForm = new EditFormModel
@@ -274,6 +284,8 @@
 
     private void StartEdit(ModelInfo model)
     {
+        ErrorMessage = null;
+        SuccessMessage = null;
         EditingModel = model;
         IsNewModel = false;
         EditForm = new EditFormModel
@@ -292,21 +304,28 @@
 
     private void CancelEdit()
     {
+        ErrorMessage = null;
         EditingModel = null;
         ShowEditPanel = false;
     }
 
     private async Task HandleSave()
     {
+        if (IsSaving)
+        {
+            return;
+        }
+
         IsSaving = true;
         ErrorMessage = null;
+        SuccessMessage = null;
         try
         {
             var model = new ModelInfo(
-                EditForm.Id,
-                EditForm.DisplayName,
-                EditForm.UpstreamModelId,
-                EditForm.PriceVersion,
+                EditForm.Id.Trim(),
+                EditForm.DisplayName.Trim(),
+                EditForm.UpstreamModelId.Trim(),
+                EditForm.PriceVersion.Trim(),
                 EditForm.InputPrice,
                 EditForm.OutputPrice,
                 EditForm.CachePrice,
@@ -315,6 +334,7 @@
             ShowEditPanel = false;
             EditingModel = null;
             await LoadModels();
+            SuccessMessage = IsNewModel ? "Model added." : "Model prices updated.";
         }
         catch (Exception ex)
         {

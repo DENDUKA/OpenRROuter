@@ -40,6 +40,10 @@ public sealed class BillingApplicationService(
     public void UpsertModel(ModelPrice model)
     {
         ArgumentNullException.ThrowIfNull(model);
+        _ = RequireValue(model.ModelId, nameof(model.ModelId));
+        _ = RequireValue(model.DisplayName, nameof(model.DisplayName));
+        _ = RequireValue(model.RouterModelId, nameof(model.RouterModelId));
+        _ = RequireValue(model.PriceVersion, nameof(model.PriceVersion));
         model.Price.EnsureValid();
         repository.UpsertModel(model);
     }

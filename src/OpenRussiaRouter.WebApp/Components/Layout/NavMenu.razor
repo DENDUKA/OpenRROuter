@@ -5,6 +5,8 @@
     <a href="" class="nav-wordmark">OPENCODE</a>
 
     <div class="nav-links">
+        <NavLink class="nav-link" href="models">Models</NavLink>
+
         @if (AuthState.IsAuthenticated)
         {
             @if (AuthState.CurrentSession?.IsAdmin == true)

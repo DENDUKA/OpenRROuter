@@ -1,78 +1,33 @@
 .page {
     display: flex;
+    flex-direction: column;
     min-height: 100vh;
-}
-
-.sidebar {
-    width: 250px;
-    background-color: var(--color-canvas);
-    border-right: 1px solid var(--color-hairline);
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    overflow-y: auto;
 }
 
 main {
     flex: 1;
-    margin-left: 250px;
-    padding: var(--spacing-section) var(--spacing-xxl);
+    padding: var(--spacing-4xl) var(--spacing-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+    width: 100%;
 }
 
-.top-row {
-    height: 56px;
-    background-color: var(--color-canvas);
-    border-bottom: 1px solid var(--color-hairline);
-    justify-content: flex-end;
-    display: flex;
-    align-items: center;
+.content {
+    max-width: 960px;
 }
 
-.top-row a {
-    white-space: nowrap;
-    margin-left: 1.5rem;
-    text-decoration: none;
-    color: var(--color-ink);
-}
-
-.top-row a:hover {
-    text-decoration: underline;
-}
-
-@media (max-width: 768.98px) {
-    .page {
-        flex-direction: column;
-    }
-
-    .sidebar {
-        display: none;
-        width: 100%;
-        position: relative;
-        height: auto;
-    }
-
+@media (max-width: 768px) {
     main {
-        margin-left: 0;
         padding: var(--spacing-xl) var(--spacing-lg);
-    }
-
-    .top-row {
-        justify-content: space-between;
-    }
-
-    .top-row a {
-        margin-left: 0;
     }
 }
 
 #blazor-error-ui {
-    background: var(--color-surface-card);
+    background: var(--color-canvas-card);
     bottom: 0;
-    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
     display: none;
     left: 0;
-    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    padding: 0.6rem 1.25rem;
     position: fixed;
     width: 100%;
     z-index: 1000;
@@ -88,7 +43,7 @@ main {
 }
 
 .blazor-error-boundary {
-    background: var(--color-surface-card);
+    background: var(--color-canvas-card);
     padding: 1rem 1rem 1rem 3.7rem;
     color: var(--color-danger);
     font-family: inherit;

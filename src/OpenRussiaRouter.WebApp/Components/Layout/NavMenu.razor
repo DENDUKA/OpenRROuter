@@ -2,111 +2,34 @@
 @inject NavigationManager Navigation
 
 <div class="nav-header">
-    <span class="nav-wordmark">OPENCODE</span>
-</div>
+    <a href="" class="nav-wordmark">OPENCODE</a>
 
-<input type="checkbox" title="Navigation menu" class="nav-toggler" />
-
-<div class="nav-scrollable" onclick="document.querySelector('.nav-toggler').click()">
-    <nav class="nav-menu">
-        <div class="nav-section-label">[+] Pages</div>
-
-        <div class="nav-item">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span aria-hidden="true">[+]</span> Home
-            </NavLink>
-        </div>
-
+    <div class="nav-links">
         @if (AuthState.IsAuthenticated)
         {
             @if (AuthState.CurrentSession?.IsAdmin == true)
             {
-                <div class="nav-section-label">[-] Admin</div>
-
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="admin" Match="NavLinkMatch.All">
-                        <span aria-hidden="true">[+]</span> Dashboard
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="admin/users">
-                        <span aria-hidden="true">[+]</span> Users
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="admin/nodes">
-                        <span aria-hidden="true">[+]</span> Router Nodes
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="admin/models">
-                        <span aria-hidden="true">[+]</span> Models
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="admin/anomalies">
-                        <span aria-hidden="true">[+]</span> Anomalies
-                    </NavLink>
-                </div>
+                <NavLink class="nav-link" href="admin" Match="NavLinkMatch.All">Dashboard</NavLink>
+                <NavLink class="nav-link" href="admin/users">Users</NavLink>
+                <NavLink class="nav-link" href="admin/nodes">Nodes</NavLink>
+                <NavLink class="nav-link" href="admin/models">Models</NavLink>
+                <NavLink class="nav-link" href="admin/anomalies">Anomalies</NavLink>
             }
             else
             {
-                <div class="nav-section-label">[-] Cabinet</div>
-
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="cabinet" Match="NavLinkMatch.All">
-                        <span aria-hidden="true">[+]</span> Account
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="cabinet/keys">
-                        <span aria-hidden="true">[+]</span> API Keys
-                    </NavLink>
-                </div>
-                <div class="nav-item">
-                    <NavLink class="nav-link" href="cabinet/usage">
-                        <span aria-hidden="true">[+]</span> Usage
-                    </NavLink>
-                </div>
+                <NavLink class="nav-link" href="cabinet" Match="NavLinkMatch.All">Account</NavLink>
+                <NavLink class="nav-link" href="cabinet/keys">API Keys</NavLink>
+                <NavLink class="nav-link" href="cabinet/usage">Usage</NavLink>
             }
 
             <div class="nav-divider"></div>
 
-            <div class="nav-item">
-                <NavLink class="nav-link" href="logout">
-                    <span aria-hidden="true">[x]</span> Logout
-                </NavLink>
-            </div>
+            <NavLink class="btn btn-sm btn-outline-on-dark" href="logout">Logout</NavLink>
         }
         else
         {
-            <div class="nav-section-label">[-] Auth</div>
-
-            <div class="nav-item">
-                <NavLink class="nav-link" href="login">
-                    <span aria-hidden="true">[+]</span> Login
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="invite/demo">
-                    <span aria-hidden="true">[+]</span> Register
-                </NavLink>
-            </div>
+            <NavLink class="nav-link" href="login" Match="NavLinkMatch.All">Login</NavLink>
+            <NavLink class="btn btn-sm btn-primary" href="invite/demo">Register</NavLink>
         }
-
-        <div class="nav-divider"></div>
-
-        <div class="nav-section-label">[*] Links</div>
-
-        <div class="nav-item">
-            <a class="nav-link" href="https://github.com" target="_blank">
-                <span aria-hidden="true">[^]</span> GitHub
-            </a>
-        </div>
-        <div class="nav-item">
-            <a class="nav-link" href="/docs">
-                <span aria-hidden="true">[?]</span> Docs
-            </a>
-        </div>
-    </nav>
+    </div>
 </div>

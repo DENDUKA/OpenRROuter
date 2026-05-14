@@ -43,7 +43,11 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
     public void ApplyMigration()
     {
         using var connection = new NpgsqlConnection(ConnectionString);
-        connection.Execute(File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", "billing", "001_initial.sql")));
+        foreach (var migration in Directory.EnumerateFiles(Path.Combine(FindRepositoryRoot(), "db", "migrations", "billing"), "*.sql")
+                     .Order(StringComparer.OrdinalIgnoreCase))
+        {
+            connection.Execute(File.ReadAllText(migration));
+        }
     }
 
     public void Truncate()

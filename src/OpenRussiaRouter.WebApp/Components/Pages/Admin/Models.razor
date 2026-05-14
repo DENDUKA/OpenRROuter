@@ -5,140 +5,223 @@
 
 <PageTitle>Models - OpenRussiaRouter Admin</PageTitle>
 
-<h1>Models</h1>
+<div class="page-header">
+    <div class="header-label">[*] Admin</div>
+    <h1>Models</h1>
+</div>
 
-<div class="row mt-4">
-    <div class="col-md-10">
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <div class="alert alert-danger" role="alert">
-                @ErrorMessage
+<div class="content">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (ShowEditPanel)
+    {
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-marker">[+]</span> @(IsNewModel ? "Add Model" : $"Edit Model: {EditingModel!.Id}")
             </div>
-        }
-
-        @if (ShowEditPanel)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">@(IsNewModel ? "Add Model" : $"Edit Model: {EditingModel!.Id}")</h5>
-                </div>
-                <div class="card-body">
-                    <EditForm Model="@EditForm" OnValidSubmit="HandleSave">
-                        <DataAnnotationsValidator />
-                        <div class="mb-3">
+            <div class="panel-body">
+                <EditForm Model="@EditForm" OnValidSubmit="HandleSave">
+                    <DataAnnotationsValidator />
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="modelId" class="form-label">Model ID</label>
                             <InputText id="modelId" class="form-control" @bind-Value="EditForm.Id" disabled="@(!IsNewModel)" />
                             <ValidationMessage For="@(() => EditForm.Id)" />
                         </div>
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label for="displayName" class="form-label">Display Name</label>
                             <InputText id="displayName" class="form-control" @bind-Value="EditForm.DisplayName" />
                             <ValidationMessage For="@(() => EditForm.DisplayName)" />
                         </div>
-                        <div class="mb-3">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="upstreamModelId" class="form-label">Upstream Model ID</label>
                             <InputText id="upstreamModelId" class="form-control" @bind-Value="EditForm.UpstreamModelId" />
                             <ValidationMessage For="@(() => EditForm.UpstreamModelId)" />
                         </div>
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label for="priceVersion" class="form-label">Price Version</label>
                             <InputText id="priceVersion" class="form-control" @bind-Value="EditForm.PriceVersion" />
                             <ValidationMessage For="@(() => EditForm.PriceVersion)" />
                         </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="inputPrice" class="form-label">Input Price per 1M (RUB)</label>
-                                <InputNumber id="inputPrice" class="form-control" @bind-Value="EditForm.InputPrice" />
-                                <ValidationMessage For="@(() => EditForm.InputPrice)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="outputPrice" class="form-label">Output Price per 1M (RUB)</label>
-                                <InputNumber id="outputPrice" class="form-control" @bind-Value="EditForm.OutputPrice" />
-                                <ValidationMessage For="@(() => EditForm.OutputPrice)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="cachePrice" class="form-label">Cache Price per 1M (RUB)</label>
-                                <InputNumber id="cachePrice" class="form-control" @bind-Value="EditForm.CachePrice" />
-                                <ValidationMessage For="@(() => EditForm.CachePrice)" />
-                            </div>
+                    </div>
+                    <div class="form-row three-col">
+                        <div class="form-group">
+                            <label for="inputPrice" class="form-label">Input Price per 1M (RUB)</label>
+                            <InputNumber id="inputPrice" class="form-control" @bind-Value="EditForm.InputPrice" />
+                            <ValidationMessage For="@(() => EditForm.InputPrice)" />
                         </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <InputCheckbox id="enabled" class="form-check-input" @bind-Value="EditForm.Enabled" />
-                                <label for="enabled" class="form-check-label">Enabled</label>
-                            </div>
+                        <div class="form-group">
+                            <label for="outputPrice" class="form-label">Output Price per 1M (RUB)</label>
+                            <InputNumber id="outputPrice" class="form-control" @bind-Value="EditForm.OutputPrice" />
+                            <ValidationMessage For="@(() => EditForm.OutputPrice)" />
                         </div>
+                        <div class="form-group">
+                            <label for="cachePrice" class="form-label">Cache Price per 1M (RUB)</label>
+                            <InputNumber id="cachePrice" class="form-control" @bind-Value="EditForm.CachePrice" />
+                            <ValidationMessage For="@(() => EditForm.CachePrice)" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            <InputCheckbox id="enabled" class="form-check-input" @bind-Value="EditForm.Enabled" />
+                            <label for="enabled" class="form-check-label">Enabled</label>
+                        </div>
+                    </div>
+                    <div class="btn-row">
                         <button type="submit" class="btn btn-primary" disabled="@IsSaving">
                             @if (IsSaving)
                             {
-                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span class="spinner-border-sm me-2"></span>
                             }
                             Save
                         </button>
-                        <button type="button" class="btn btn-secondary ms-2" @onclick="CancelEdit">Cancel</button>
-                    </EditForm>
-                </div>
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                    </div>
+                </EditForm>
             </div>
-        }
+        </div>
+    }
 
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Public Models</span>
-                <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel">
-                    <span class="bi bi-plus"></span> Add Model
-                </button>
-            </div>
-            <div class="card-body">
-                @if (ModelList is null)
-                {
-                    <p>Loading...</p>
-                }
-                else if (ModelList.Count == 0)
-                {
-                    <p class="text-muted">No models configured.</p>
-                }
-                else
-                {
-                    <table class="table">
-                        <thead>
+    <div class="panel">
+        <div class="panel-header d-flex justify-content-between align-items-center">
+            <span><span class="panel-marker">[+]</span> Public Models</span>
+            <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel">
+                Add Model
+            </button>
+        </div>
+        <div class="panel-body">
+            @if (ModelList is null)
+            {
+                <p>Loading...</p>
+            }
+            else if (ModelList.Count == 0)
+            {
+                <p class="text-muted">No models configured.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Display Name</th>
+                            <th>Upstream</th>
+                            <th>Price Version</th>
+                            <th>Input / Output / Cache per 1M</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var model in ModelList)
+                        {
                             <tr>
-                                <th>ID</th>
-                                <th>Display Name</th>
-                                <th>Upstream</th>
-                                <th>Price Version</th>
-                                <th>Input / Output / Cache per 1M</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                                <td><code>@model.Id</code></td>
+                                <td>@model.DisplayName</td>
+                                <td><code>@model.UpstreamModelId</code></td>
+                                <td>@model.PriceVersion</td>
+                                <td>
+                                    @model.InputPrice.ToString("N2") / @model.OutputPrice.ToString("N2") / @model.CachePrice.ToString("N2") RUB
+                                </td>
+                                <td>
+                                    <span class="badge @(model.Enabled ? "badge-success" : "badge-secondary")">
+                                        @(model.Enabled ? "Enabled" : "Disabled")
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(model)">Edit</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var model in ModelList)
-                            {
-                                <tr>
-                                    <td><code>@model.Id</code></td>
-                                    <td>@model.DisplayName</td>
-                                    <td><code>@model.UpstreamModelId</code></td>
-                                    <td>@model.PriceVersion</td>
-                                    <td>
-                                        @model.InputPrice.ToString("N2") / @model.OutputPrice.ToString("N2") / @model.CachePrice.ToString("N2") RUB
-                                    </td>
-                                    <td>
-                                        <span class="badge @(model.Enabled ? "bg-success" : "bg-secondary")">
-                                            @(model.Enabled ? "Enabled" : "Disabled")
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartEdit(model)">Edit</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </div>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
 </div>
+
+<style>
+    .page-header {
+        margin-bottom: var(--spacing-section);
+    }
+
+    .header-label {
+        font-size: 14px;
+        color: var(--color-mute);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .content {
+        max-width: 960px;
+    }
+
+    .panel {
+        border: 1px solid var(--color-hairline);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .panel-header {
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .panel-body {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .panel-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .form-row.three-col {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-content-between {
+        justify-content: space-between;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+
+    @@media (max-width: 640px) {
+        .form-row,
+        .form-row.three-col {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 @code {
     private IReadOnlyList<ModelInfo>? ModelList { get; set; }

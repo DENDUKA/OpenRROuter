@@ -1,83 +1,73 @@
 .page {
-    position: relative;
     display: flex;
-    flex-direction: column;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: var(--color-canvas);
+    border-right: 1px solid var(--color-hairline);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    overflow-y: auto;
 }
 
 main {
     flex: 1;
-}
-
-.sidebar {
-    background-image: linear-gradient(180deg, rgb(5, 39, 103) 0%, #3a0647 70%);
+    margin-left: 250px;
+    padding: var(--spacing-section) var(--spacing-xxl);
 }
 
 .top-row {
-    background-color: #f7f7f7;
-    border-bottom: 1px solid #d6d5d5;
+    height: 56px;
+    background-color: var(--color-canvas);
+    border-bottom: 1px solid var(--color-hairline);
     justify-content: flex-end;
-    height: 3.5rem;
     display: flex;
     align-items: center;
 }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
-        white-space: nowrap;
-        margin-left: 1.5rem;
-        text-decoration: none;
+.top-row a {
+    white-space: nowrap;
+    margin-left: 1.5rem;
+    text-decoration: none;
+    color: var(--color-ink);
+}
+
+.top-row a:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 768.98px) {
+    .page {
+        flex-direction: column;
     }
 
-    .top-row ::deep a:hover, .top-row ::deep .btn-link:hover {
-        text-decoration: underline;
+    .sidebar {
+        display: none;
+        width: 100%;
+        position: relative;
+        height: auto;
     }
 
-    .top-row ::deep a:first-child {
-        overflow: hidden;
-        text-overflow: ellipsis;
+    main {
+        margin-left: 0;
+        padding: var(--spacing-xl) var(--spacing-lg);
     }
 
-@media (max-width: 640.98px) {
     .top-row {
         justify-content: space-between;
     }
 
-    .top-row ::deep a, .top-row ::deep .btn-link {
+    .top-row a {
         margin-left: 0;
     }
 }
 
-@media (min-width: 641px) {
-    .page {
-        flex-direction: row;
-    }
-
-    .sidebar {
-        width: 250px;
-        height: 100vh;
-        position: sticky;
-        top: 0;
-    }
-
-    .top-row {
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-
-    .top-row.auth ::deep a:first-child {
-        flex: 1;
-        text-align: right;
-        width: 0;
-    }
-
-    .top-row, article {
-        padding-left: 2rem !important;
-        padding-right: 1.5rem !important;
-    }
-}
-
 #blazor-error-ui {
-    background: lightyellow;
+    background: var(--color-surface-card);
     bottom: 0;
     box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
     display: none;
@@ -86,11 +76,24 @@ main {
     position: fixed;
     width: 100%;
     z-index: 1000;
+    font-family: inherit;
+    font-size: 14px;
 }
 
-    #blazor-error-ui .dismiss {
-        cursor: pointer;
-        position: absolute;
-        right: 0.75rem;
-        top: 0.5rem;
-    }
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+}
+
+.blazor-error-boundary {
+    background: var(--color-surface-card);
+    padding: 1rem 1rem 1rem 3.7rem;
+    color: var(--color-danger);
+    font-family: inherit;
+}
+
+.blazor-error-boundary::after {
+    content: "An error has occurred.";
+}

@@ -6,138 +6,228 @@
 
 <PageTitle>Users - OpenRussiaRouter Admin</PageTitle>
 
-<h1>Users</h1>
+<div class="page-header">
+    <div class="header-label">[*] Admin</div>
+    <h1>Users</h1>
+</div>
 
-<div class="row mt-4">
-    <div class="col-md-8">
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <div class="alert alert-danger" role="alert">
-                @ErrorMessage
+<div class="content">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (ShowCreateInvitePanel)
+    {
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-marker">[+]</span> Create Invite
             </div>
-        }
-
-        @if (ShowCreateInvitePanel)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Create Invite</h5>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(NewInviteToken))
-                    {
-                        <div class="alert alert-success">
-                            <strong>Invite created!</strong>
-                            <p class="mb-1">Share this link with the user:</p>
-                            <code class="d-block p-2 bg-light border rounded">@Navigation.BaseUri.TrimEnd('/')/invite/@NewInviteToken</code>
-                        </div>
-                        <button class="btn btn-primary" @onclick="CloseInvitePanel">Done</button>
-                    }
-                    else
-                    {
-                        <EditForm Model="@InviteForm" OnValidSubmit="HandleCreateInvite">
-                            <DataAnnotationsValidator />
-                            <div class="mb-3">
+            <div class="panel-body">
+                @if (!string.IsNullOrEmpty(NewInviteToken))
+                {
+                    <div class="alert alert-success">
+                        <strong>Invite created!</strong>
+                        <p>Share this link with the user:</p>
+                        <code class="key-display">@Navigation.BaseUri.TrimEnd('/')/invite/@NewInviteToken</code>
+                    </div>
+                    <button class="btn btn-primary" @onclick="CloseInvitePanel">Done</button>
+                }
+                else
+                {
+                    <EditForm Model="@InviteForm" OnValidSubmit="HandleCreateInvite">
+                        <DataAnnotationsValidator />
+                        <div class="form-row">
+                            <div class="form-group">
                                 <label for="inviteEmail" class="form-label">Email</label>
                                 <InputText id="inviteEmail" class="form-control" @bind-Value="InviteForm.Email" />
                                 <ValidationMessage For="@(() => InviteForm.Email)" />
                             </div>
-                            <div class="mb-3">
+                            <div class="form-group">
                                 <label for="inviteRole" class="form-label">Role</label>
-                                <InputSelect id="inviteRole" class="form-select" @bind-Value="InviteForm.Role">
+                                <InputSelect id="inviteRole" class="form-control" @bind-Value="InviteForm.Role">
                                     <option value="User">User</option>
                                     <option value="Admin">Admin</option>
                                 </InputSelect>
                             </div>
+                        </div>
+                        <div class="btn-row">
                             <button type="submit" class="btn btn-primary" disabled="@IsCreating">
                                 @if (IsCreating)
                                 {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                    <span class="spinner-border-sm me-2"></span>
                                 }
                                 Create Invite
                             </button>
-                            <button type="button" class="btn btn-secondary ms-2" @onclick="CloseInvitePanel">Cancel</button>
-                        </EditForm>
-                    }
-                </div>
-            </div>
-        }
-
-        @if (ShowTopUpPanel && SelectedUserItem is not null)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Virtual Top-Up for @SelectedUserItem.Email</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="topUpAmount" class="form-label">Amount (RUB)</label>
-                        <InputNumber id="topUpAmount" class="form-control" @bind-Value="TopUpForm.Amount" />
-                    </div>
-                    <div class="mb-3">
-                        <label for="topUpReason" class="form-label">Reason</label>
-                        <InputText id="topUpReason" class="form-control" @bind-Value="TopUpForm.Reason" />
-                    </div>
-                    <button class="btn btn-primary" @onclick="ConfirmTopUp" disabled="@IsTopingUp">Top Up</button>
-                    <button class="btn btn-secondary ms-2" @onclick="CancelTopUp">Cancel</button>
-                </div>
-            </div>
-        }
-
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>All Users</span>
-                <button class="btn btn-sm btn-primary" @onclick="ShowCreateInvitePanel_Click">
-                    <span class="bi bi-plus"></span> Create Invite
-                </button>
-            </div>
-            <div class="card-body">
-                @if (UserList is null)
-                {
-                    <p>Loading...</p>
-                }
-                else if (UserList.Count == 0)
-                {
-                    <p class="text-muted">No users yet.</p>
-                }
-                else
-                {
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Created</th>
-                                <th>Balance</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var user in UserList)
-                            {
-                                <tr>
-                                    <td>@user.Email</td>
-                                    <td>@user.Role</td>
-                                    <td>
-                                        <span class="badge @(user.Status == "Active" ? "bg-success" : "bg-secondary")">
-                                            @user.Status
-                                        </span>
-                                    </td>
-                                    <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
-                                    <td>@UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartTopUp(user)">Top Up</button>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                            <button type="button" class="btn btn-secondary" @onclick="CloseInvitePanel">Cancel</button>
+                        </div>
+                    </EditForm>
                 }
             </div>
         </div>
+    }
+
+    @if (ShowTopUpPanel && SelectedUserItem is not null)
+    {
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-marker">[+]</span> Virtual Top-Up for @SelectedUserItem.Email
+            </div>
+            <div class="panel-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="topUpAmount" class="form-label">Amount (RUB)</label>
+                        <InputNumber id="topUpAmount" class="form-control" @bind-Value="TopUpForm.Amount" />
+                    </div>
+                    <div class="form-group">
+                        <label for="topUpReason" class="form-label">Reason</label>
+                        <InputText id="topUpReason" class="form-control" @bind-Value="TopUpForm.Reason" />
+                    </div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn btn-primary" @onclick="ConfirmTopUp" disabled="@IsTopingUp">Top Up</button>
+                    <button class="btn btn-secondary" @onclick="CancelTopUp">Cancel</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="panel">
+        <div class="panel-header d-flex justify-content-between align-items-center">
+            <span><span class="panel-marker">[+]</span> All Users</span>
+            <button class="btn btn-sm btn-primary" @onclick="ShowCreateInvitePanel_Click">
+                Create Invite
+            </button>
+        </div>
+        <div class="panel-body">
+            @if (UserList is null)
+            {
+                <p>Loading...</p>
+            }
+            else if (UserList.Count == 0)
+            {
+                <p class="text-muted">No users yet.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Balance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in UserList)
+                        {
+                            <tr>
+                                <td>@user.Email</td>
+                                <td>@user.Role</td>
+                                <td>
+                                    <span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">
+                                        @user.Status
+                                    </span>
+                                </td>
+                                <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
+                                <td>@UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartTopUp(user)">Top Up</button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
     </div>
 </div>
+
+<style>
+    .page-header {
+        margin-bottom: var(--spacing-section);
+    }
+
+    .header-label {
+        font-size: 14px;
+        color: var(--color-mute);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .content {
+        max-width: 960px;
+    }
+
+    .panel {
+        border: 1px solid var(--color-hairline);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .panel-header {
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .panel-body {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .panel-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+    }
+
+    .key-display {
+        font-family: inherit;
+        background-color: var(--color-surface-card);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-sm);
+        margin-top: var(--spacing-md);
+        word-break: break-all;
+        display: block;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-content-between {
+        justify-content: space-between;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+
+    @@media (max-width: 640px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 @code {
     private IReadOnlyList<UserInfo>? UserList { get; set; }

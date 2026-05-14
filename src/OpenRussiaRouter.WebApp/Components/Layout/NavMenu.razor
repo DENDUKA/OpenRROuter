@@ -1,19 +1,19 @@
 ﻿@inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">OpenRussiaRouter</a>
-    </div>
+<div class="nav-header">
+    <span class="nav-wordmark">OPENCODE</span>
 </div>
 
-<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+<input type="checkbox" title="Navigation menu" class="nav-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
+<div class="nav-scrollable" onclick="document.querySelector('.nav-toggler').click()">
+    <nav class="nav-menu">
+        <div class="nav-section-label">[+] Pages</div>
+
+        <div class="nav-item">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
+                <span aria-hidden="true">[+]</span> Home
             </NavLink>
         </div>
 
@@ -21,63 +21,92 @@
         {
             @if (AuthState.CurrentSession?.IsAdmin == true)
             {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="admin">
-                        <span class="bi bi-shield-lock-fill-nav-menu" aria-hidden="true"></span> Admin
+                <div class="nav-section-label">[-] Admin</div>
+
+                <div class="nav-item">
+                    <NavLink class="nav-link" href="admin" Match="NavLinkMatch.All">
+                        <span aria-hidden="true">[+]</span> Dashboard
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/users">
-                        <span class="bi bi-people-fill-nav-menu" aria-hidden="true"></span> Users
+                        <span aria-hidden="true">[+]</span> Users
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/nodes">
-                        <span class="bi bi-diagram-3-fill-nav-menu" aria-hidden="true"></span> Router Nodes
+                        <span aria-hidden="true">[+]</span> Router Nodes
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/models">
-                        <span class="bi bi-cpu-fill-nav-menu" aria-hidden="true"></span> Models
+                        <span aria-hidden="true">[+]</span> Models
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="admin/anomalies">
-                        <span class="bi bi-exclamation-triangle-fill-nav-menu" aria-hidden="true"></span> Anomalies
+                        <span aria-hidden="true">[+]</span> Anomalies
                     </NavLink>
                 </div>
             }
             else
             {
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="cabinet">
-                        <span class="bi bi-person-fill-nav-menu" aria-hidden="true"></span> Cabinet
+                <div class="nav-section-label">[-] Cabinet</div>
+
+                <div class="nav-item">
+                    <NavLink class="nav-link" href="cabinet" Match="NavLinkMatch.All">
+                        <span aria-hidden="true">[+]</span> Account
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="cabinet/keys">
-                        <span class="bi bi-key-fill-nav-menu" aria-hidden="true"></span> API Keys
+                        <span aria-hidden="true">[+]</span> API Keys
                     </NavLink>
                 </div>
-                <div class="nav-item px-3">
+                <div class="nav-item">
                     <NavLink class="nav-link" href="cabinet/usage">
-                        <span class="bi bi-graph-up-nav-menu" aria-hidden="true"></span> Usage
+                        <span aria-hidden="true">[+]</span> Usage
                     </NavLink>
                 </div>
             }
-            <div class="nav-item px-3">
+
+            <div class="nav-divider"></div>
+
+            <div class="nav-item">
                 <NavLink class="nav-link" href="logout">
-                    <span class="bi bi-box-arrow-right-nav-menu" aria-hidden="true"></span> Logout
+                    <span aria-hidden="true">[x]</span> Logout
                 </NavLink>
             </div>
         }
         else
         {
-            <div class="nav-item px-3">
+            <div class="nav-section-label">[-] Auth</div>
+
+            <div class="nav-item">
                 <NavLink class="nav-link" href="login">
-                    <span class="bi bi-box-arrow-in-right-nav-menu" aria-hidden="true"></span> Login
+                    <span aria-hidden="true">[+]</span> Login
+                </NavLink>
+            </div>
+            <div class="nav-item">
+                <NavLink class="nav-link" href="invite/demo">
+                    <span aria-hidden="true">[+]</span> Register
                 </NavLink>
             </div>
         }
+
+        <div class="nav-divider"></div>
+
+        <div class="nav-section-label">[*] Links</div>
+
+        <div class="nav-item">
+            <a class="nav-link" href="https://github.com" target="_blank">
+                <span aria-hidden="true">[^]</span> GitHub
+            </a>
+        </div>
+        <div class="nav-item">
+            <a class="nav-link" href="/docs">
+                <span aria-hidden="true">[?]</span> Docs
+            </a>
+        </div>
     </nav>
 </div>

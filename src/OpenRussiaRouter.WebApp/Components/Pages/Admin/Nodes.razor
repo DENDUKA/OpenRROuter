@@ -3,107 +3,185 @@
 @inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<PageTitle>Router NodeList - OpenRussiaRouter Admin</PageTitle>
+<PageTitle>Router Nodes - OpenRussiaRouter Admin</PageTitle>
 
-<h1>Router NodeList</h1>
+<div class="page-header">
+    <div class="header-label">[*] Admin</div>
+    <h1>Router Nodes</h1>
+</div>
 
-<div class="row mt-4">
-    <div class="col-md-10">
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <div class="alert alert-danger" role="alert">
-                @ErrorMessage
+<div class="content">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (ShowAddModal)
+    {
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-marker">[+]</span> Add Router Node
             </div>
-        }
-
-        @if (ShowAddModal)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Add Router Node</h5>
-                </div>
-                <div class="card-body">
-                    <EditForm Model="@AddForm" OnValidSubmit="HandleAddNode">
-                        <div class="mb-3">
+            <div class="panel-body">
+                <EditForm Model="@AddForm" OnValidSubmit="HandleAddNode">
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="nodeName" class="form-label">Name</label>
                             <InputText id="nodeName" class="form-control" @bind-Value="AddForm.Name" />
                         </div>
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label for="nodeUrl" class="form-label">Endpoint URL</label>
                             <InputText id="nodeUrl" class="form-control" @bind-Value="AddForm.EndpointUrl" placeholder="https://..." />
                         </div>
-                        <div class="mb-3">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="tokenName" class="form-label">Token Secret Name</label>
                             <InputText id="tokenName" class="form-control" @bind-Value="AddForm.TokenSecretName" />
                         </div>
-                        <div class="mb-3">
+                        <div class="form-group">
                             <label for="capacity" class="form-label">Capacity Weight</label>
                             <InputNumber id="capacity" class="form-control" @bind-Value="AddForm.CapacityWeight" />
                         </div>
+                    </div>
+                    <div class="btn-row">
                         <button type="submit" class="btn btn-primary" disabled="@IsAdding">Add Node</button>
-                        <button type="button" class="btn btn-secondary ms-2" @onclick="CloseAddModal">Cancel</button>
-                    </EditForm>
-                </div>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAddModal">Cancel</button>
+                    </div>
+                </EditForm>
             </div>
-        }
+        </div>
+    }
 
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Router NodeList</span>
-                <button class="btn btn-sm btn-primary" @onclick="ShowAddModal_Click">
-                    <span class="bi bi-plus"></span> Add Node
-                </button>
-            </div>
-            <div class="card-body">
-                @if (NodeList is null)
-                {
-                    <p>Loading...</p>
-                }
-                else if (NodeList.Count == 0)
-                {
-                    <p class="text-muted">No router nodes configured.</p>
-                }
-                else
-                {
-                    <table class="table">
-                        <thead>
+    <div class="panel">
+        <div class="panel-header d-flex justify-content-between align-items-center">
+            <span><span class="panel-marker">[+]</span> Router NodeList</span>
+            <button class="btn btn-sm btn-primary" @onclick="ShowAddModal_Click">
+                Add Node
+            </button>
+        </div>
+        <div class="panel-body">
+            @if (NodeList is null)
+            {
+                <p>Loading...</p>
+            }
+            else if (NodeList.Count == 0)
+            {
+                <p class="text-muted">No router nodes configured.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Endpoint</th>
+                            <th>Status</th>
+                            <th>In-Flight</th>
+                            <th>Last Checked</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var node in NodeList)
+                        {
                             <tr>
-                                <th>Name</th>
-                                <th>Endpoint</th>
-                                <th>Status</th>
-                                <th>In-Flight</th>
-                                <th>Last Checked</th>
-                                <th>Actions</th>
+                                <td>@node.Name</td>
+                                <td><small>@node.EndpointUrl</small></td>
+                                <td>
+                                    <span class="badge @GetStatusBadgeClass(node.Status)">
+                                        @node.Status
+                                    </span>
+                                </td>
+                                <td>@node.InFlightRequests</td>
+                                <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
+                                <td>
+                                    @if (node.Status != "disabled")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DisableNode(node)">Disable</button>
+                                    }
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var node in NodeList)
-                            {
-                                <tr>
-                                    <td>@node.Name</td>
-                                    <td><small>@node.EndpointUrl</small></td>
-                                    <td>
-                                        <span class="badge @(GetStatusBadgeClass(node.Status))">
-                                            @node.Status
-                                        </span>
-                                    </td>
-                                    <td>@node.InFlightRequests</td>
-                                    <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
-                                    <td>
-                                        @if (node.Status != "disabled")
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DisableNode(node)">Disable</button>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                }
-            </div>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
 </div>
+
+<style>
+    .page-header {
+        margin-bottom: var(--spacing-section);
+    }
+
+    .header-label {
+        font-size: 14px;
+        color: var(--color-mute);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .content {
+        max-width: 960px;
+    }
+
+    .panel {
+        border: 1px solid var(--color-hairline);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .panel-header {
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .panel-body {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .panel-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .form-group {
+        margin-bottom: 0;
+    }
+
+    .btn-row {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-content-between {
+        justify-content: space-between;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+
+    @@media (max-width: 640px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
 
 @code {
     private IReadOnlyList<RouterNodeInfo>? NodeList { get; set; }
@@ -180,11 +258,11 @@
 
     private static string GetStatusBadgeClass(string status) => status switch
     {
-        "healthy" => "bg-success",
-        "degraded" => "bg-warning",
-        "unhealthy" => "bg-danger",
-        "disabled" => "bg-secondary",
-        _ => "bg-secondary"
+        "healthy" => "badge-success",
+        "degraded" => "badge-warning",
+        "unhealthy" => "badge-danger",
+        "disabled" => "badge-secondary",
+        _ => "badge-secondary"
     };
 
     private class AddNodeForm

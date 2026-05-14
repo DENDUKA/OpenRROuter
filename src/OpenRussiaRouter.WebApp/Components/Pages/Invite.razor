@@ -5,54 +5,85 @@
 
 <PageTitle>Complete Registration - OpenRussiaRouter</PageTitle>
 
-<div class="row justify-content-center">
-    <div class="col-md-4">
-        <div class="card mt-5">
-            <div class="card-header">
-                <h4 class="mb-0">Complete Registration</h4>
-            </div>
-            <div class="card-body">
-                @if (!string.IsNullOrEmpty(ErrorMessage))
-                {
-                    <div class="alert alert-danger" role="alert">
-                        @ErrorMessage
-                    </div>
-                }
-
-                @if (IsSuccess)
-                {
-                    <div class="alert alert-success" role="alert">
-                        <p class="mb-2">Registration complete!</p>
-                        <p>Redirecting to login...</p>
-                    </div>
-                }
-                else
-                {
-                    <EditForm Model="@Model" OnValidSubmit="HandleComplete">
-                        <DataAnnotationsValidator />
-                        <div class="mb-3">
-                            <label for="password" class="form-label">Password</label>
-                            <InputText id="password" type="password" class="form-control" @bind-Value="Model.Password" />
-                            <ValidationMessage For="@(() => Model.Password)" />
-                        </div>
-                        <div class="mb-3">
-                            <label for="confirmPassword" class="form-label">Confirm Password</label>
-                            <InputText id="confirmPassword" type="password" class="form-control" @bind-Value="Model.ConfirmPassword" />
-                            <ValidationMessage For="@(() => Model.ConfirmPassword)" />
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" disabled="@IsLoading">
-                            @if (IsLoading)
-                            {
-                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-                            }
-                            Complete Registration
-                        </button>
-                    </EditForm>
-                }
-            </div>
-        </div>
+<div class="auth-container">
+    <div class="auth-header">
+        <div class="auth-wordmark">OPENCODE</div>
+        <div class="auth-title">Complete Registration</div>
     </div>
+
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (IsSuccess)
+    {
+        <div class="alert alert-success" role="alert">
+            <p class="mb-1">Registration complete!</p>
+            <p>Redirecting to login...</p>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="@Model" OnValidSubmit="HandleComplete">
+            <DataAnnotationsValidator />
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="Model.Password" />
+                <ValidationMessage For="@(() => Model.Password)" />
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword" class="form-label">Confirm Password</label>
+                <InputText id="confirmPassword" type="password" class="form-control" @bind-Value="Model.ConfirmPassword" />
+                <ValidationMessage For="@(() => Model.ConfirmPassword)" />
+            </div>
+            <button type="submit" class="btn btn-primary w-100" disabled="@IsLoading">
+                @if (IsLoading)
+                {
+                    <span class="spinner-border-sm me-2" role="status"></span>
+                }
+                Complete Registration
+            </button>
+        </EditForm>
+    }
 </div>
+
+<style>
+    .auth-container {
+        max-width: 400px;
+        margin: 0 auto;
+        padding: var(--spacing-section) 0;
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .auth-wordmark {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: var(--color-ink);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .auth-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--color-ink);
+    }
+
+    .form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .mb-1 {
+        margin-bottom: var(--spacing-sm) !important;
+    }
+</style>
 
 @code {
     [Microsoft.AspNetCore.Components.Parameter]

@@ -1,32 +1,218 @@
 ﻿@page "/"
 
-<PageTitle>Home - OpenRussiaRouter</PageTitle>
+<PageTitle>OpenRussiaRouter</PageTitle>
 
-<div class="container mt-5">
-    <div class="row">
-        <div class="col-md-8 mx-auto text-center">
-            <h1 class="display-4 mb-4">OpenRussiaRouter</h1>
-            <p class="lead mb-4">B2B platform for LLM access via OpenAI-compatible API</p>
-
-            <div class="d-flex gap-3 justify-content-center">
-                <a href="/login" class="btn btn-primary btn-lg">Login</a>
-                <a href="/invite/demo" class="btn btn-outline-secondary btn-lg">Register</a>
-            </div>
-
-            <div class="row mt-5">
-                <div class="col-md-4">
-                    <h5>API Access</h5>
-                    <p class="text-muted">OpenAI-compatible API with balance in rubles</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>API Keys</h5>
-                    <p class="text-muted">Create and manage your API keys</p>
-                </div>
-                <div class="col-md-4">
-                    <h5>Usage Tracking</h5>
-                    <p class="text-muted">Monitor token usage and costs</p>
-                </div>
-            </div>
-        </div>
+<div class="hero-tui">
+    <div class="hero-wordmark">
+O P E N C O D E
+    </div>
+    <div class="hero-prompt">
+| Build  Claude Opus 4.5  OpenRussiaRouter Zen
+    </div>
+    <div class="hero-hints">
+[tab] switch agent  [ctrl-p] commands
     </div>
 </div>
+
+<div class="page-content">
+    <section class="section">
+        <div class="section-label">[*] Platform</div>
+        <h1 class="display-xl">The open source AI coding agent</h1>
+        <p class="body-lead">B2B platform for LLM access via OpenAI-compatible API. Balance in rubles, routed through OpenRussiaRouter nodes.</p>
+        <div class="cta-row">
+            <a href="/login" class="btn btn-primary">Login</a>
+            <a href="/invite/demo" class="btn btn-secondary">Register</a>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-label">[+] Features</div>
+        <div class="feature-list">
+            <div class="list-row">
+                <span class="list-marker">[+]</span>
+                <span class="list-label">API Access</span>
+                <span class="list-desc">OpenAI-compatible API with balance in rubles</span>
+            </div>
+            <div class="list-row">
+                <span class="list-marker">[+]</span>
+                <span class="list-label">API Keys</span>
+                <span class="list-desc">Create and manage your API keys</span>
+            </div>
+            <div class="list-row">
+                <span class="list-marker">[+]</span>
+                <span class="list-label">Usage Tracking</span>
+                <span class="list-desc">Monitor token usage and costs</span>
+            </div>
+            <div class="list-row">
+                <span class="list-marker">[+]</span>
+                <span class="list-label">Router Nodes</span>
+                <span class="list-desc">Intelligent request routing across nodes</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-label">[+] Stats</div>
+        <div class="stats-grid">
+            <div class="stat-tile">
+                <div class="stat-value">150K</div>
+                <div class="stat-caption">Fig 1. GitHub Stars</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">850</div>
+                <div class="stat-caption">Fig 2. Contributors</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">6.5M</div>
+                <div class="stat-caption">Fig 3. Monthly Devs</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .hero-tui {
+        background-color: var(--color-surface-dark);
+        color: var(--color-on-dark);
+        padding: 64px 32px;
+        margin: 0 0 var(--spacing-section) 0;
+        text-align: center;
+    }
+
+    .hero-wordmark {
+        font-size: 24px;
+        font-weight: 700;
+        letter-spacing: 4px;
+        margin-bottom: var(--spacing-xl);
+        color: var(--color-on-dark);
+    }
+
+    .hero-prompt {
+        background-color: var(--color-surface-dark-elevated);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-sm);
+        font-size: 16px;
+        display: inline-block;
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .hero-hints {
+        color: var(--color-ash);
+        font-size: 14px;
+    }
+
+    .page-content {
+        max-width: 960px;
+    }
+
+    .display-xl {
+        font-size: 38px;
+        font-weight: 700;
+        line-height: 1.5;
+        margin: 0 0 var(--spacing-lg) 0;
+    }
+
+    .body-lead {
+        font-size: 16px;
+        color: var(--color-body);
+        margin: 0 0 var(--spacing-xl) 0;
+        max-width: 600px;
+    }
+
+    .cta-row {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .section {
+        padding: var(--spacing-section) 0;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+
+    .section:last-child {
+        border-bottom: none;
+    }
+
+    .section-label {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--color-ink);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .feature-list {
+        margin-top: var(--spacing-lg);
+    }
+
+    .list-row {
+        display: flex;
+        align-items: baseline;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+
+    .list-row:last-child {
+        border-bottom: none;
+    }
+
+    .list-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+        min-width: 24px;
+    }
+
+    .list-label {
+        font-weight: 500;
+        margin-right: var(--spacing-md);
+        min-width: 120px;
+    }
+
+    .list-desc {
+        color: var(--color-body);
+    }
+
+    .stats-grid {
+        display: flex;
+        gap: var(--spacing-xl);
+        margin-top: var(--spacing-lg);
+    }
+
+    .stat-tile {
+        padding: var(--spacing-lg);
+        border: 1px solid var(--color-hairline);
+    }
+
+    .stat-value {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .stat-caption {
+        font-size: 14px;
+        color: var(--color-mute);
+    }
+
+    @@media (max-width: 640px) {
+        .hero-tui {
+            padding: var(--spacing-xl) var(--spacing-lg);
+        }
+
+        .display-xl {
+            font-size: 28px;
+        }
+
+        .stats-grid {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+
+        .cta-row {
+            flex-direction: column;
+        }
+
+        .cta-row .btn {
+            width: 100%;
+        }
+    }
+</style>

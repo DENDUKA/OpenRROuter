@@ -5,44 +5,118 @@
 
 <PageTitle>User Cabinet - OpenRussiaRouter</PageTitle>
 
-<h1>User Cabinet</h1>
+<div class="page-header">
+    <div class="header-label">[*] Cabinet</div>
+    <h1>Account</h1>
+</div>
 
-<div class="row mt-4">
-    <div class="col-md-4">
-        <div class="card">
-            <div class="card-header">Account</div>
-            <div class="card-body">
-                <p><strong>User ID:</strong> @AuthState.CurrentSession?.UserId</p>
-                <p><strong>Role:</strong> @AuthState.CurrentSession?.Role</p>
+<div class="content-grid">
+    <div class="info-card">
+        <div class="card-label">[-] Account</div>
+        <div class="card-content">
+            <div class="info-row">
+                <span class="info-label">User ID</span>
+                <span class="info-value">@AuthState.CurrentSession?.UserId</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Role</span>
+                <span class="info-value">@AuthState.CurrentSession?.Role</span>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>API Keys</span>
-                <button class="btn btn-sm btn-primary">Create Key</button>
-            </div>
-            <div class="card-body">
-                <p class="text-muted">No API keys yet.</p>
-            </div>
+<div class="page-section">
+    <div class="section-header">
+        <span class="section-marker">[+]</span> API Keys
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">No API keys yet.</p>
+            <a href="/cabinet/keys" class="btn btn-primary">Create Key</a>
         </div>
     </div>
 </div>
 
-<div class="row mt-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">Usage</div>
-            <div class="card-body">
-                <p class="text-muted">No usage yet.</p>
-            </div>
+<div class="page-section">
+    <div class="section-header">
+        <span class="section-marker">[+]</span> Usage
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <p class="text-muted">No usage yet.</p>
+            <a href="/cabinet/usage" class="btn btn-secondary">View Usage</a>
         </div>
     </div>
 </div>
+
+<style>
+    .page-header {
+        margin-bottom: var(--spacing-section);
+    }
+
+    .header-label {
+        font-size: 14px;
+        color: var(--color-mute);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .content-grid {
+        display: grid;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-section);
+    }
+
+    .info-card {
+        border: 1px solid var(--color-hairline);
+        background-color: var(--color-canvas);
+    }
+
+    .card-label {
+        font-size: 14px;
+        font-weight: 700;
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+
+    .card-content {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .info-row {
+        display: flex;
+        padding: var(--spacing-sm) 0;
+    }
+
+    .info-label {
+        width: 120px;
+        color: var(--color-mute);
+    }
+
+    .info-value {
+        color: var(--color-ink);
+        font-weight: 500;
+    }
+
+    .page-section {
+        margin-bottom: var(--spacing-xl);
+    }
+
+    .section-header {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .section-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+    }
+
+    .card-body {
+        padding: var(--spacing-lg) 0;
+    }
+</style>
 
 @code {
     protected override async Task OnInitializedAsync()

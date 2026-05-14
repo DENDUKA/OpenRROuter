@@ -5,170 +5,234 @@
 
 <PageTitle>API Keys - OpenRussiaRouter</PageTitle>
 
-<h1>API Keys</h1>
+<div class="page-header">
+    <div class="header-label">[*] Cabinet</div>
+    <h1>API Keys</h1>
+</div>
 
-<div class="row mt-4">
-    <div class="col-md-8">
-        @if (!string.IsNullOrEmpty(ErrorMessage))
-        {
-            <div class="alert alert-danger" role="alert">
-                @ErrorMessage
+<div class="content">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <div class="alert alert-danger" role="alert">
+            @ErrorMessage
+        </div>
+    }
+
+    @if (ShowCreatePanel)
+    {
+        <div class="panel">
+            <div class="panel-header">
+                <span class="panel-marker">[+]</span> New API Key
             </div>
-        }
-
-        @if (ShowCreatePanel)
-        {
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">New API Key</h5>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(NewKey))
-                    {
-                        <div class="alert alert-success">
-                            <strong>Save your API key now - it won't be shown again!</strong>
-                            <div class="mt-2">
-                                <code class="d-block p-2 bg-light border rounded">@NewKey</code>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary" @onclick="CloseCreatePanel">Done</button>
-                    }
-                    else
-                    {
-                        <EditForm Model="@CreateModel" OnValidSubmit="HandleCreate">
-                            <DataAnnotationsValidator />
-                            <div class="mb-3">
-                                <label for="keyName" class="form-label">Key Name</label>
-                                <InputText id="keyName" class="form-control" @bind-Value="CreateModel.Name" />
-                                <ValidationMessage For="@(() => CreateModel.Name)" />
-                            </div>
-                            <button type="submit" class="btn btn-primary" disabled="@IsCreating">
-                                @if (IsCreating)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                }
-                                Create
-                            </button>
-                            <button type="button" class="btn btn-secondary ms-2" @onclick="CloseCreatePanel">Cancel</button>
-                        </EditForm>
-                    }
-                </div>
-            </div>
-        }
-
-        @if (ShowRevokeConfirm)
-        {
-            <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">Revoke API Key</h5>
-                        </div>
-                        <div class="modal-body">
-                            <p>Are you sure you want to revoke <strong>@KeyToRevoke?.Name</strong>?</p>
-                            <p class="text-muted">This action cannot be undone.</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button class="btn btn-danger" @onclick="ConfirmRevoke" disabled="@IsRevoking">
-                                @if (IsRevoking)
-                                {
-                                    <span class="spinner-border spinner-border-sm"></span>
-                                }
-                                Revoke
-                            </button>
-                            <button class="btn btn-secondary" @onclick="CancelRevoke">Cancel</button>
-                        </div>
+            <div class="panel-body">
+                @if (!string.IsNullOrEmpty(NewKey))
+                {
+                    <div class="alert alert-success">
+                        <strong>Save your API key now - it won't be shown again!</strong>
+                        <div class="key-display">@NewKey</div>
                     </div>
-                </div>
-            </div>
-        }
-
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <span>Your API Keys</span>
-                <button class="btn btn-sm btn-primary" @onclick="ShowCreatePanel_Click">
-                    <span class="bi bi-plus"></span> Create Key
-                </button>
-            </div>
-            <div class="card-body">
-                @if (KeyList is null)
-                {
-                    <p>Loading...</p>
-                }
-                else if (KeyList.Count == 0)
-                {
-                    <p class="text-muted">No API keys yet. Create one to get started.</p>
+                    <button class="btn btn-primary" @onclick="CloseCreatePanel">Done</button>
                 }
                 else
                 {
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Prefix</th>
-                                <th>Created</th>
-                                <th>Last Used</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var key in KeyList)
-                            {
-                                <tr>
-                                    <td>@key.Name</td>
-                                    <td><code>@key.Prefix***</code></td>
-                                    <td>@key.CreatedAt.ToLocalTime().ToString("g")</td>
-                                    <td>@(key.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
-                                    <td>
-                                        @if (key.IsActive)
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Revoked</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (key.IsActive)
-                                        {
-                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartRename(key)">Rename</button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => StartRevoke(key)">Revoke</button>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <EditForm Model="@CreateModel" OnValidSubmit="HandleCreate">
+                        <DataAnnotationsValidator />
+                        <div class="form-group">
+                            <label for="keyName" class="form-label">Key Name</label>
+                            <InputText id="keyName" class="form-control" @bind-Value="CreateModel.Name" />
+                            <ValidationMessage For="@(() => CreateModel.Name)" />
+                        </div>
+                        <div class="btn-row">
+                            <button type="submit" class="btn btn-primary" disabled="@IsCreating">
+                                @if (IsCreating)
+                                {
+                                    <span class="spinner-border-sm me-2"></span>
+                                }
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreatePanel">Cancel</button>
+                        </div>
+                    </EditForm>
                 }
             </div>
+        </div>
+    }
+
+    @if (ShowRevokeConfirm)
+    {
+        <div class="modal">
+            <div class="modal-dialog">
+                <div class="modal-header">
+                    <div class="modal-title">Revoke API Key</div>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to revoke <strong>@KeyToRevoke?.Name</strong>?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @onclick="ConfirmRevoke" disabled="@IsRevoking">
+                        @if (IsRevoking)
+                        {
+                            <span class="spinner-border-sm"></span>
+                        }
+                        Revoke
+                    </button>
+                    <button class="btn btn-secondary" @onclick="CancelRevoke">Cancel</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="panel">
+        <div class="panel-header d-flex justify-content-between align-items-center">
+            <span><span class="panel-marker">[+]</span> Your API Keys</span>
+            <button class="btn btn-sm btn-primary" @onclick="ShowCreatePanel_Click">
+                Create Key
+            </button>
+        </div>
+        <div class="panel-body">
+            @if (KeyList is null)
+            {
+                <p>Loading...</p>
+            }
+            else if (KeyList.Count == 0)
+            {
+                <p class="text-muted">No API keys yet. Create one to get started.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Prefix</th>
+                            <th>Created</th>
+                            <th>Last Used</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in KeyList)
+                        {
+                            <tr>
+                                <td>@key.Name</td>
+                                <td><code>@key.Prefix***</code></td>
+                                <td>@key.CreatedAt.ToLocalTime().ToString("g")</td>
+                                <td>@(key.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                                <td>
+                                    @if (key.IsActive)
+                                    {
+                                        <span class="badge badge-success">Active</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-secondary">Revoked</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (key.IsActive)
+                                    {
+                                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => StartRename(key)">Rename</button>
+                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => StartRevoke(key)">Revoke</button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
         </div>
     </div>
 </div>
 
 @if (ShowRenameModal)
 {
-    <div class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+    <div class="modal">
         <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Rename API Key</h5>
+            <div class="modal-header">
+                <div class="modal-title">Rename API Key</div>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newName" class="form-label">New Name</label>
+                    <InputText id="newName" class="form-control" @bind-Value="RenameModel.Name" />
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newName" class="form-label">New Name</label>
-                        <InputText id="newName" class="form-control" @bind-Value="RenameModel.Name" />
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-primary" @onclick="ConfirmRename" disabled="@IsRenaming">Save</button>
-                    <button class="btn btn-secondary" @onclick="CancelRename">Cancel</button>
-                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="ConfirmRename" disabled="@IsRenaming">Save</button>
+                <button class="btn btn-secondary" @onclick="CancelRename">Cancel</button>
             </div>
         </div>
     </div>
 }
+
+<style>
+    .page-header {
+        margin-bottom: var(--spacing-section);
+    }
+
+    .header-label {
+        font-size: 14px;
+        color: var(--color-mute);
+        margin-bottom: var(--spacing-sm);
+    }
+
+    .content {
+        max-width: 800px;
+    }
+
+    .panel {
+        border: 1px solid var(--color-hairline);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .panel-header {
+        padding: var(--spacing-md) 0;
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .panel-body {
+        padding: var(--spacing-lg) 0;
+    }
+
+    .panel-marker {
+        color: var(--color-mute);
+        margin-right: var(--spacing-sm);
+    }
+
+    .key-display {
+        font-family: inherit;
+        background-color: var(--color-surface-card);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-sm);
+        margin-top: var(--spacing-md);
+        word-break: break-all;
+    }
+
+    .form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .btn-row {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+
+    .d-flex {
+        display: flex;
+    }
+
+    .justify-content-between {
+        justify-content: space-between;
+    }
+
+    .align-items-center {
+        align-items: center;
+    }
+</style>
 
 @code {
     private IReadOnlyList<ApiKeyInfo>? KeyList { get; set; }

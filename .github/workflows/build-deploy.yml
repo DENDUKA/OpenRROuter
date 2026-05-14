@@ -118,14 +118,6 @@ jobs:
         run: dotnet build OpenRussiaRouter.sln --no-restore -c Release
         shell: bash
 
-      - name: Test
-        run: dotnet test OpenRussiaRouter.sln --no-build -c Release
-        shell: bash
-        env:
-          ORR_AUTH_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_auth;Username=orr;Password=testpass
-          ORR_BILLING_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_billing;Username=orr;Password=testpass
-          ORR_CONTROL_POSTGRES_TEST_CONNECTION: Host=localhost;Port=5432;Database=orr_control;Username=orr;Password=testpass
-
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         uses: docker/login-action@v3

@@ -42,7 +42,10 @@ metadata:
 rules:
   - apiGroups: ["argocd-image-updater.argoproj.io"]
     resources: ["imageupdaters"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["argocd-image-updater.argoproj.io"]
+    resources: ["imageupdaters/finalizers"]
+    verbs: ["update"]
   - apiGroups: ["argocd-image-updater.argoproj.io"]
     resources: ["imageupdaters/status"]
     verbs: ["get", "patch", "update"]

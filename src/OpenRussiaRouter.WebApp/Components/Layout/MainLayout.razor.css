@@ -1,24 +1,28 @@
-.page {
-    display: flex;
-    flex-direction: column;
+.app-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr);
     min-height: 100vh;
+    background: var(--color-canvas);
 }
 
-main {
-    flex: 1;
-    padding: var(--spacing-4xl) var(--spacing-xl);
-    max-width: 1200px;
-    margin: 0 auto;
+.main-pane {
+    min-width: 0;
+    padding: 32px;
     width: 100%;
 }
 
 .content {
-    max-width: 960px;
+    max-width: 1220px;
+    margin: 0 auto;
 }
 
 @media (max-width: 768px) {
-    main {
-        padding: var(--spacing-xl) var(--spacing-lg);
+    .app-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .main-pane {
+        padding: 20px 16px;
     }
 }
 

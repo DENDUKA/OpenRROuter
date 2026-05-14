@@ -1,37 +1,52 @@
 ﻿@inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<div class="nav-header">
-    <a href="" class="nav-wordmark">OPENCODE</a>
+<aside class="sidebar">
+    <a href="" class="sidebar-logo">
+        <span class="logo-mark">9R</span>
+        <span>OpenRussiaRouter</span>
+    </a>
 
-    <div class="nav-links">
-        <NavLink class="nav-link" href="models">Models</NavLink>
+    <nav class="sidebar-nav" aria-label="Main navigation">
+        <div class="nav-section">
+            <div class="nav-section-title">Product</div>
+            <NavLink class="nav-item" href="" Match="NavLinkMatch.All"><span class="nav-icon">⌂</span>Home</NavLink>
+            <NavLink class="nav-item" href="models"><span class="nav-icon">◇</span>Models</NavLink>
+        </div>
 
         @if (AuthState.IsAuthenticated)
         {
             @if (AuthState.CurrentSession?.IsAdmin == true)
             {
-                <NavLink class="nav-link" href="admin" Match="NavLinkMatch.All">Dashboard</NavLink>
-                <NavLink class="nav-link" href="admin/users">Users</NavLink>
-                <NavLink class="nav-link" href="admin/nodes">Nodes</NavLink>
-                <NavLink class="nav-link" href="admin/models">Models</NavLink>
-                <NavLink class="nav-link" href="admin/anomalies">Anomalies</NavLink>
+                <div class="nav-section">
+                    <div class="nav-section-title">Admin</div>
+                    <NavLink class="nav-item" href="admin" Match="NavLinkMatch.All"><span class="nav-icon">□</span>Dashboard</NavLink>
+                    <NavLink class="nav-item" href="admin/users"><span class="nav-icon">◌</span>Users</NavLink>
+                    <NavLink class="nav-item" href="admin/nodes"><span class="nav-icon">⌁</span>Nodes</NavLink>
+                    <NavLink class="nav-item" href="admin/models"><span class="nav-icon">◇</span>Models</NavLink>
+                    <NavLink class="nav-item" href="admin/anomalies"><span class="nav-icon">!</span>Anomalies</NavLink>
+                </div>
             }
             else
             {
-                <NavLink class="nav-link" href="cabinet" Match="NavLinkMatch.All">Account</NavLink>
-                <NavLink class="nav-link" href="cabinet/keys">API Keys</NavLink>
-                <NavLink class="nav-link" href="cabinet/usage">Usage</NavLink>
+                <div class="nav-section">
+                    <div class="nav-section-title">Account</div>
+                    <NavLink class="nav-item" href="cabinet" Match="NavLinkMatch.All"><span class="nav-icon">○</span>Account</NavLink>
+                    <NavLink class="nav-item" href="cabinet/keys"><span class="nav-icon">⌐</span>API Keys</NavLink>
+                    <NavLink class="nav-item" href="cabinet/usage"><span class="nav-icon">↗</span>Usage</NavLink>
+                </div>
             }
 
-            <div class="nav-divider"></div>
-
-            <NavLink class="btn btn-sm btn-outline-on-dark" href="logout">Logout</NavLink>
+            <div class="nav-section nav-section-bottom">
+                <NavLink class="nav-item" href="logout"><span class="nav-icon">←</span>Logout</NavLink>
+            </div>
         }
         else
         {
-            <NavLink class="nav-link" href="login" Match="NavLinkMatch.All">Login</NavLink>
-            <NavLink class="btn btn-sm btn-primary" href="invite/demo">Register</NavLink>
+            <div class="nav-section nav-section-bottom">
+                <NavLink class="nav-item" href="login" Match="NavLinkMatch.All"><span class="nav-icon">→</span>Login</NavLink>
+                <NavLink class="nav-cta" href="invite/demo">Get API Key</NavLink>
+            </div>
         }
-    </div>
-</div>
+    </nav>
+</aside>

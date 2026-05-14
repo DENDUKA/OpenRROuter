@@ -1,0 +1,245 @@
+@page "/models/{Provider}/{Slug}"
+
+<PageTitle>@DisplayName - OpenRussiaRouter</PageTitle>
+
+<div class="model-detail-page">
+    <section class="model-hero">
+        <div class="model-provider-icon" aria-hidden="true">@Initials</div>
+        <h1 class="model-title">@ProviderTitle: @DisplayName</h1>
+        <div class="model-slug-line"><a href="/models">Models</a> / <code>@ModelId</code></div>
+        <p class="model-desc">Use this model through the OpenRussiaRouter OpenAI-compatible API. Requests are routed through available nodes with account-level usage tracking.</p>
+
+        <div class="hero-actions">
+            <a class="btn btn-primary" href="/cabinet/keys">Get API Key</a>
+            <a class="btn btn-secondary" href="/models">Compare</a>
+        </div>
+
+        <div class="metrics-grid" aria-label="Model metrics">
+            <div class="metric">
+                <div class="metric-label">Modalities</div>
+                <div class="metric-value">Text</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Input Price</div>
+                <div class="metric-value">Route</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Output Price</div>
+                <div class="metric-value">Route</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Context</div>
+                <div class="metric-value">128K</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Status</div>
+                <div class="metric-value">Available</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Provider</div>
+                <div class="metric-value">@ProviderTitle</div>
+            </div>
+        </div>
+    </section>
+
+    <nav class="tabs" aria-label="Model sections">
+        <a class="tab active" href="#overview">Overview</a>
+        <a class="tab" href="#providers">Providers</a>
+        <a class="tab" href="#pricing">Pricing</a>
+        <a class="tab" href="#api">API</a>
+    </nav>
+
+    <section id="overview" class="model-section">
+        <h2>Overview</h2>
+        <p>@DisplayName is available via OpenRussiaRouter using the model id <code>@ModelId</code>.</p>
+    </section>
+
+    <section id="providers" class="model-section">
+        <h2>Providers for @DisplayName</h2>
+        <div class="table-wrap table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Provider</th>
+                        <th>Status</th>
+                        <th class="num">Latency</th>
+                        <th>Policy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>@ProviderTitle</td>
+                        <td><span class="badge badge-success">Available</span></td>
+                        <td class="num">Auto</td>
+                        <td>Routed by OpenRussiaRouter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="pricing" class="model-section">
+        <h2>Pricing</h2>
+        <p>Final pricing is resolved by the active route and account billing rules.</p>
+    </section>
+
+    <section id="api" class="model-section">
+        <h2>API</h2>
+        <pre><code>POST /v1/chat/completions
+Authorization: Bearer &lt;OPENRUSSIAROUTER_API_KEY&gt;
+
+{
+  "model": "@ModelId",
+  "messages": [{ "role": "user", "content": "Hello" }]
+}</code></pre>
+    </section>
+</div>
+
+<style>
+    .model-detail-page {
+        max-width: 1040px;
+    }
+
+    .model-hero {
+        padding: 32px 0 24px;
+    }
+
+    .model-provider-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 18px;
+        border: 1px solid var(--color-hairline);
+        border-radius: 10px;
+        background: var(--color-canvas-card);
+        color: var(--color-body);
+        font-family: var(--font-mono);
+        font-size: 12px;
+    }
+
+    .model-title {
+        max-width: 820px;
+        margin-bottom: 8px;
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: .98;
+    }
+
+    .model-slug-line {
+        color: var(--color-body);
+        font-size: 15px;
+    }
+
+    .model-desc {
+        max-width: 760px;
+        margin-top: 20px;
+        color: var(--color-body);
+        font-size: 15px;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+    }
+
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 18px;
+        margin: 30px 0 0;
+    }
+
+    .metric-label {
+        margin-bottom: 4px;
+        color: var(--color-body-mid);
+        font-size: 12px;
+    }
+
+    .metric-value {
+        color: var(--color-ink);
+        font-size: 16px;
+        font-weight: 500;
+        font-variant-numeric: tabular-nums;
+        overflow-wrap: anywhere;
+    }
+
+    .tabs {
+        display: flex;
+        gap: 2px;
+        border-bottom: 1px solid var(--color-hairline);
+        overflow-x: auto;
+    }
+
+    .tab {
+        height: 42px;
+        display: inline-flex;
+        align-items: center;
+        padding: 0 14px;
+        border-bottom: 1px solid transparent;
+        color: var(--color-body);
+        white-space: nowrap;
+    }
+
+    .tab:hover,
+    .tab.active {
+        color: var(--color-ink);
+        text-decoration: none;
+    }
+
+    .tab.active {
+        border-bottom-color: var(--color-ink);
+    }
+
+    .model-section {
+        padding: 32px 0;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+
+    pre {
+        overflow-x: auto;
+        margin: 0;
+        padding: 18px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-md);
+        background: var(--color-canvas-card);
+    }
+
+    pre code {
+        padding: 0;
+        background: transparent;
+        color: var(--color-body);
+        font-size: 13px;
+    }
+
+    @@media (max-width: 900px) {
+        .metrics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public string Provider { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Slug { get; set; } = string.Empty;
+
+    private string ModelId => $"{Provider}/{Slug}";
+
+    private string ProviderTitle => ToTitle(Provider);
+
+    private string DisplayName => ToTitle(Slug.Replace('-', ' '));
+
+    private string Initials => string.Concat(ProviderTitle.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => char.ToUpperInvariant(part[0])));
+
+    private static string ToTitle(string value)
+    {
+        return string.Join(' ', value.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(part => char.ToUpperInvariant(part[0]) + part[1..]));
+    }
+}

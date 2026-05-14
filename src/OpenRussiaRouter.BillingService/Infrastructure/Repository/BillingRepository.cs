@@ -96,17 +96,29 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 : null;
     }
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
+public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
         var modelIdColumn = GetModelIdColumn(connection);
+        var afterCondition = afterModelId != null ? $"and {modelIdColumn} > @AfterModelId" : "";
         var items = connection.Query<ModelPriceEntity>(
-                ModelPriceSelectSql(modelIdColumn) + $"""
-                 where enabled = true
-                   and (@AfterModelId is null or {modelIdColumn} > @AfterModelId)
-                 order by {modelIdColumn}
-                 limit @Limit;
-                 """,
+                $"""
+                select
+                    {modelIdColumn} as ModelId,
+                    display_name as DisplayName,
+                    router_model_id as RouterModelId,
+                    price_version as PriceVersion,
+                    input_per_million_amount as InputPerMillionAmount,
+                    output_per_million_amount as OutputPerMillionAmount,
+                    cache_per_million_amount as CachePerMillionAmount,
+                    currency as Currency,
+                    enabled as Enabled
+                from billing.model_prices
+                where enabled = true
+                {afterCondition}
+                order by {modelIdColumn}
+                limit @Limit;
+                """,
                 new { Limit = limit + 1, AfterModelId = afterModelId })
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
@@ -120,16 +132,28 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
+public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
         var modelIdColumn = GetModelIdColumn(connection);
+        var afterCondition = afterModelId != null ? $"where {modelIdColumn} > @AfterModelId" : "";
         var items = connection.Query<ModelPriceEntity>(
-                ModelPriceSelectSql(modelIdColumn) + $"""
-                 where (@AfterModelId is null or {modelIdColumn} > @AfterModelId)
-                   order by {modelIdColumn}
-                   limit @Limit;
-                 """,
+                $"""
+                select
+                    {modelIdColumn} as ModelId,
+                    display_name as DisplayName,
+                    router_model_id as RouterModelId,
+                    price_version as PriceVersion,
+                    input_per_million_amount as InputPerMillionAmount,
+                    output_per_million_amount as OutputPerMillionAmount,
+                    cache_per_million_amount as CachePerMillionAmount,
+                    currency as Currency,
+                    enabled as Enabled
+                from billing.model_prices
+                {afterCondition}
+                order by {modelIdColumn}
+                limit @Limit;
+                """,
                 new { Limit = limit + 1, AfterModelId = afterModelId })
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();

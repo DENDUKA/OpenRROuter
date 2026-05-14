@@ -2,11 +2,12 @@
 @inject ControlPlaneClient ControlPlaneClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
 
 <PageTitle>Router Nodes - OpenRussiaRouter Admin</PageTitle>
 
 <div class="page-header">
-    <div class="header-label">[*] Admin</div>
+    <div class="header-label">Admin</div>
     <h1>Router Nodes</h1>
 </div>
 
@@ -22,7 +23,7 @@
     {
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-marker">[+]</span> Add Router Node
+                Add Router Node
             </div>
             <div class="panel-body">
                 <EditForm Model="@AddForm" OnValidSubmit="HandleAddNode">
@@ -57,7 +58,7 @@
 
     <div class="panel">
         <div class="panel-header d-flex justify-content-between align-items-center">
-            <span><span class="panel-marker">[+]</span> Router NodeList</span>
+            <span>Router Node List</span>
             <button class="btn btn-sm btn-primary" @onclick="ShowAddModal_Click">
                 Add Node
             </button>
@@ -192,6 +193,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+        }
+
         if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
         {
             Navigation.NavigateTo("/login");

@@ -2,11 +2,12 @@
 @inject BillingClient BillingClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
 
 <PageTitle>Billing Anomalies - OpenRussiaRouter Admin</PageTitle>
 
 <div class="page-header">
-    <div class="header-label">[*] Admin</div>
+    <div class="header-label">Admin</div>
     <h1>Billing Anomalies</h1>
 </div>
 
@@ -20,7 +21,7 @@
 
     <div class="panel">
         <div class="panel-header">
-            <span class="panel-marker">[+]</span> All Anomalies
+            All Anomalies
         </div>
         <div class="panel-body">
             @if (AnomalyList is null)
@@ -101,6 +102,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+        }
+
         if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
         {
             Navigation.NavigateTo("/login");

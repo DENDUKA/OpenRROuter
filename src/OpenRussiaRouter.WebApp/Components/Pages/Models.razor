@@ -4,7 +4,7 @@
 
 <PageTitle>Models - OpenRussiaRouter</PageTitle>
 
-<div class="models-page" id="main-content">
+<div class="models-page">
     <section class="models-hero" aria-labelledby="models-title">
         <div>
             <div class="eyebrow">Filter Filter</div>
@@ -16,12 +16,13 @@
 
     <section class="models-shell" aria-label="Model catalog">
         <div class="filter-row" aria-label="Filters">
+            <label class="sr-only" for="model-search">Search models</label>
             <input id="model-search" class="search" type="search" placeholder="Search models" @bind="SearchText" @bind:event="oninput" />
 
             <div class="filter-group" role="group" aria-label="Model categories">
                 @foreach (var category in Categories)
                 {
-                    <button type="button" class="filter-pill @(SelectedCategory == category ? "active" : null)" @onclick="() => SelectedCategory = category">
+                    <button type="button" class="filter-pill @(SelectedCategory == category ? "active" : null)" aria-pressed="@(SelectedCategory == category ? "true" : "false")" @onclick="() => SelectedCategory = category">
                         @category
                     </button>
                 }
@@ -69,11 +70,11 @@
                     <table class="table model-table">
                         <thead>
                             <tr>
-                                <th>Model</th>
-                                <th>Provider</th>
-                                <th>Capability</th>
-                                <th>Status</th>
-                                <th class="num">Context</th>
+                                <th scope="col">Model</th>
+                                <th scope="col">Provider</th>
+                                <th scope="col">Capability</th>
+                                <th scope="col">Status</th>
+                                <th scope="col" class="num">Context</th>
                             </tr>
                         </thead>
                         <tbody>

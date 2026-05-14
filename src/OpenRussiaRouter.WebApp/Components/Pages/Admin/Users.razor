@@ -3,11 +3,12 @@
 @inject BillingClient BillingClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
 
 <PageTitle>Users - OpenRussiaRouter Admin</PageTitle>
 
 <div class="page-header">
-    <div class="header-label">[*] Admin</div>
+    <div class="header-label">Admin</div>
     <h1>Users</h1>
 </div>
 
@@ -23,7 +24,7 @@
     {
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-marker">[+]</span> Create Invite
+                Create Invite
             </div>
             <div class="panel-body">
                 @if (!string.IsNullOrEmpty(NewInviteToken))
@@ -73,7 +74,7 @@
     {
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-marker">[+]</span> Virtual Top-Up for @SelectedUserItem.Email
+                Virtual Top-Up for @SelectedUserItem.Email
             </div>
             <div class="panel-body">
                 <div class="form-row">
@@ -96,7 +97,7 @@
 
     <div class="panel">
         <div class="panel-header d-flex justify-content-between align-items-center">
-            <span><span class="panel-marker">[+]</span> All Users</span>
+            <span>All Users</span>
             <button class="btn btn-sm btn-primary" @onclick="ShowCreateInvitePanel_Click">
                 Create Invite
             </button>
@@ -244,6 +245,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+        }
+
         if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
         {
             Navigation.NavigateTo("/login");

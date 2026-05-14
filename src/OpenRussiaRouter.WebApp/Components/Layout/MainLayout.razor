@@ -1,17 +1,43 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthState AuthState
 
 <div class="app-shell">
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <NavMenu />
 
-    <main class="main-pane">
-        <article class="content">
-            @Body
-        </article>
-    </main>
+    <div class="workspace">
+        <header class="topbar">
+            <nav class="topbar-nav" aria-label="Product navigation">
+                <NavLink class="topbar-link" href="models">Models</NavLink>
+                <a class="topbar-link" href="/compare">Compare</a>
+                <a class="topbar-link" href="/pricing">Pricing</a>
+                <a class="topbar-link" href="/docs">Docs</a>
+            </nav>
+
+            <div class="topbar-actions">
+                @if (AuthState.IsAuthenticated)
+                {
+                    <NavLink class="topbar-link" href="cabinet" Match="NavLinkMatch.All">Account</NavLink>
+                    <NavLink class="btn btn-sm btn-secondary" href="logout">Logout</NavLink>
+                }
+                else
+                {
+                    <NavLink class="topbar-link" href="login" Match="NavLinkMatch.All">Login</NavLink>
+                    <NavLink class="btn btn-sm btn-primary" href="invite/demo">Get API Key</NavLink>
+                }
+            </div>
+        </header>
+
+        <main class="main-pane" id="main-content" tabindex="-1">
+            <article class="content">
+                @Body
+            </article>
+        </main>
+    </div>
 </div>
 
 <div id="blazor-error-ui">
     An unhandled error has occurred.
     <a href="" class="reload">Reload</a>
-    <a class="dismiss">✕</a>
+    <button type="button" class="dismiss" aria-label="Dismiss error">×</button>
 </div>

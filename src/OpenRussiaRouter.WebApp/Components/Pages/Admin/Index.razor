@@ -6,12 +6,12 @@
 <PageTitle>Admin Dashboard - OpenRussiaRouter</PageTitle>
 
 <div class="page-header">
-    <div class="header-label">[*] Admin</div>
+    <div class="header-label">Admin</div>
     <h1>Dashboard</h1>
 </div>
 
 <div class="info-card">
-    <div class="card-label">[-] Admin Account</div>
+        <div class="card-label">Admin Account</div>
     <div class="card-content">
         <div class="info-row">
             <span class="info-label">User ID</span>
@@ -26,22 +26,22 @@
 
 <div class="nav-grid">
     <a href="/admin/users" class="nav-card">
-        <div class="nav-card-label">[-] Users</div>
+        <div class="nav-card-label">Users</div>
         <div class="nav-card-desc">Manage application users and roles.</div>
         <div class="nav-card-action">Open Users</div>
     </a>
     <a href="/admin/nodes" class="nav-card">
-        <div class="nav-card-label">[-] Router Nodes</div>
+        <div class="nav-card-label">Router Nodes</div>
         <div class="nav-card-desc">Manage OpenRussiaRouter nodes.</div>
         <div class="nav-card-action">Open Router Nodes</div>
     </a>
     <a href="/admin/models" class="nav-card">
-        <div class="nav-card-label">[-] Models</div>
+        <div class="nav-card-label">Models</div>
         <div class="nav-card-desc">Manage model catalog and routing metadata.</div>
         <div class="nav-card-action">Open Models</div>
     </a>
     <a href="/admin/anomalies" class="nav-card">
-        <div class="nav-card-label">[-] Anomalies</div>
+        <div class="nav-card-label">Anomalies</div>
         <div class="nav-card-desc">Review suspicious usage and operational anomalies.</div>
         <div class="nav-card-action">Open Anomalies</div>
     </a>
@@ -135,17 +135,15 @@
 @code {
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+        }
+
         if (!AuthState.IsAuthenticated)
         {
-            var session = await SessionStorage.LoadSessionAsync();
-            if (session is null)
-            {
-                Navigation.NavigateTo("/login");
-            }
-            else
-            {
-                AuthState.SetSession(session);
-            }
+            Navigation.NavigateTo("/login");
         }
     }
 }

@@ -2,11 +2,12 @@
 @inject AuthClient AuthClient
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
 
 <PageTitle>API Keys - OpenRussiaRouter</PageTitle>
 
 <div class="page-header">
-    <div class="header-label">[*] Cabinet</div>
+    <div class="header-label">Cabinet</div>
     <h1>API Keys</h1>
 </div>
 
@@ -22,7 +23,7 @@
     {
         <div class="panel">
             <div class="panel-header">
-                <span class="panel-marker">[+]</span> New API Key
+                New API Key
             </div>
             <div class="panel-body">
                 @if (!string.IsNullOrEmpty(NewKey))
@@ -85,7 +86,7 @@
 
     <div class="panel">
         <div class="panel-header d-flex justify-content-between align-items-center">
-            <span><span class="panel-marker">[+]</span> Your API Keys</span>
+            <span>Your API Keys</span>
             <button class="btn btn-sm btn-primary" @onclick="ShowCreatePanel_Click">
                 Create Key
             </button>
@@ -251,6 +252,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null)
+        {
+            AuthState.SetSession(session);
+        }
+
         if (!AuthState.IsAuthenticated)
         {
             Navigation.NavigateTo("/login");

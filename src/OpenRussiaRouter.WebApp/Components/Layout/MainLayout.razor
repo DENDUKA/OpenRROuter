@@ -3,12 +3,9 @@
 @inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<div class="app-shell @(_hideNav ? "app-shell--full" : "")">
+<div class="app-shell">
     <a class="skip-link" href="#main-content">Skip to content</a>
-    @if (!_hideNav)
-    {
-        <NavMenu />
-    }
+    <NavMenu LogoOnly="@_hideNav" />
 
     <div class="workspace">
         <header class="topbar">

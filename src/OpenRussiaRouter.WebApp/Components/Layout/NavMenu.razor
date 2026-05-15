@@ -7,6 +7,8 @@
         <span>OpenRussiaRouter</span>
     </a>
 
+    @if (!LogoOnly)
+    {
     <nav class="sidebar-nav" aria-label="Main navigation">
         <div class="nav-section">
             <div class="nav-section-title">Product</div>
@@ -37,7 +39,12 @@
                 </div>
             }
 
-            
+
         }
     </nav>
+    }
 </aside>
+
+@code {
+    [Parameter] public bool LogoOnly { get; set; }
+}

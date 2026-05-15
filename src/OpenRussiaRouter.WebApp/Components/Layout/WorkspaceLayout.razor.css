@@ -1,19 +1,23 @@
 .ws-shell {
     display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
-    min-height: calc(100vh - 56px);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    min-height: calc(100vh - var(--topbar-height));
+    margin: -32px;
 }
 
 /* ── Left sidebar ── */
 
 .ws-sidebar {
-    border-right: 1px solid var(--color-hairline);
-    background: var(--color-canvas);
-    padding: 16px 8px;
-    position: sticky;
-    top: 56px;
-    height: calc(100vh - 56px);
+    position: fixed;
+    left: 0;
+    top: var(--topbar-height);
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--topbar-height));
     overflow-y: auto;
+    border-right: 1px solid var(--color-hairline);
+    padding: 20px 8px;
+    background: var(--color-canvas);
+    z-index: 40;
 }
 
 .ws-sidebar-header {
@@ -61,8 +65,8 @@
 /* ── Content area ── */
 
 .ws-content {
+    grid-column: 2;
     padding: 32px;
-    background: var(--color-canvas);
     min-width: 0;
 }
 
@@ -172,10 +176,12 @@
 @media (max-width: 768px) {
     .ws-shell {
         grid-template-columns: 1fr;
+        margin: -20px -16px;
     }
 
     .ws-sidebar {
         position: static;
+        width: auto;
         height: auto;
         border-right: none;
         border-bottom: 1px solid var(--color-hairline);
@@ -196,6 +202,7 @@
     }
 
     .ws-content {
+        grid-column: 1;
         padding: 20px 16px;
     }
 }

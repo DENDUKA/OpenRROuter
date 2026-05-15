@@ -182,8 +182,16 @@
 </style>
 
 @code {
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        if (!AuthState.IsSessionLoaded)
+        {
+            var tcs = new TaskCompletionSource();
+            AuthState.SessionLoaded += () => tcs.TrySetResult();
+            if (!AuthState.IsSessionLoaded)
+                await tcs.Task;
+        }
+
         if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
             Navigation.NavigateTo("/login");
     }

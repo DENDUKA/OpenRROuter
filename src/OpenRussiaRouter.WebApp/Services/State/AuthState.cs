@@ -6,8 +6,10 @@ public sealed class AuthState : IAuthState
 
     public UserSession? CurrentSession => _session;
     public bool IsAuthenticated => _session is not null;
+    public bool IsSessionLoaded { get; private set; }
 
     public event Action? SessionChanged;
+    public event Action? SessionLoaded;
 
     public void SetSession(UserSession session)
     {
@@ -19,5 +21,11 @@ public sealed class AuthState : IAuthState
     {
         _session = null;
         SessionChanged?.Invoke();
+    }
+
+    public void MarkSessionLoaded()
+    {
+        IsSessionLoaded = true;
+        SessionLoaded?.Invoke();
     }
 }

@@ -128,6 +128,7 @@
     {
         var session = await SessionStorage.LoadSessionAsync();
         if (session is not null) AuthState.SetSession(session);
+        AuthState.MarkSessionLoaded();
 
         _hideNav = IsNavHidden();
         AuthState.SessionChanged += OnSessionChanged;

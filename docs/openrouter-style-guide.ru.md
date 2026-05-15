@@ -207,18 +207,26 @@ OpenRouter sidebar ощущается как product navigation:
 
 ## Кнопки
 
-OpenRouter buttons:
+OpenRouter использует строгую иерархию из четырёх уровней кнопок. Принцип: форма важна для глобальных CTA, иконки — для строчных действий в таблицах.
 
-- Primary: white bg, black text.
-- Secondary: transparent/dark bg, border.
-- Radius pill.
-- Small height.
+### Уровни кнопок
+
+| Вариант | Класс | Использование |
+|---|---|---|
+| **Primary** | `.btn .btn-primary` | Главное действие формы/модала: Create, Save, Done |
+| **Primary sm** | `.btn .btn-sm .btn-primary` | Кнопка создания в заголовке панели: Create Key, Add Model |
+| **Secondary** | `.btn .btn-secondary` | Отмена, второстепенное: Cancel, Back |
+| **Danger** | `.btn .btn-danger` | Деструктивное подтверждение в модале: Revoke, Delete |
+| **Icon** | `.btn-icon` | Редактирование строки таблицы (иконка карандаша) |
+| **Icon danger** | `.btn-icon .btn-icon-danger` | Удаление/отзыв строки таблицы (иконка корзины) |
+
+### Анатомия базовой кнопки
 
 ```css
 .btn {
-  height: 34px;
+  min-height: 44px;       /* форм-фактор: 44px обычная, 36px sm */
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: 999px;   /* pill — всегда для .btn */
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
@@ -226,19 +234,140 @@ OpenRouter buttons:
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
 }
 
-.btn:hover {
+/* Primary: solid white, dark text */
+.btn-primary {
+  background: var(--text);           /* #f5f5f5 */
+  color: var(--bg);                  /* #0a0a0a */
+  border-color: var(--text);
+}
+.btn-primary:hover {
+  background: #ffffff;
+  border-color: #ffffff;
+}
+
+/* Secondary: ghost с рамкой */
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border-color: var(--border);       /* #26272b */
+}
+.btn-secondary:hover {
   background: var(--surface-2);
   border-color: #3f4045;
 }
 
-.btn-primary {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
+/* Danger: красный цвет, прозрачный фон */
+.btn-danger {
+  color: var(--red);                 /* #ef4444 */
+  border-color: rgba(239, 68, 68, .45);
+  background: transparent;
+}
+.btn-danger:hover {
+  background: rgba(239, 68, 68, .1);
+  border-color: rgba(239, 68, 68, .65);
+}
+
+/* Small modifier */
+.btn-sm {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
 }
 ```
+
+### Icon-only кнопка (строки таблиц)
+
+OpenRouter использует иконки без текста для row-level действий edit/delete. Кнопка квадратная, без рамки, прозрачная. Иконка серая в покое, белая при hover. Деструктивная иконка становится красной при hover.
+
+```css
+.btn-icon {
+  width: 28px;
+  min-height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);            /* #71717a — серая иконка */
+  border-radius: 8px;                /* radius-sm, НЕ pill */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color .15s ease, background .15s ease;
+}
+
+.btn-icon:hover {
+  color: var(--text);                /* #f5f5f5 */
+  background: var(--surface-3);     /* #1f2023 */
+}
+
+/* Деструктивный hover: иконка красная */
+.btn-icon-danger:hover {
+  color: var(--red);                 /* #ef4444 */
+  background: rgba(239, 68, 68, .1);
+}
+```
+
+### Иконки для действий
+
+Inline SVG, stroke-based, 14×14, `stroke="currentColor"`:
+
+- **Edit / Rename** — карандаш (`M11 4H4a2 2 0 0 0-2 2v14... / M18.5 2.5...`)
+- **Delete / Revoke** — корзина (`polyline 3 6 5 6 21 6 / path d="M19 6v14..."`)
+- **Disable / Off** — перечёркнутый круг (`circle cx=12 cy=12 r=10 / line x1=4.93 y1=4.93 x2=19.07 y2=19.07`)
+- **Top Up / Add** — плюс (`line x1=12 y1=5 x2=12 y2=19 / line x1=5 y1=12 x2=19 y2=12`)
+
+### Применение в контексте
+
+```html
+<!-- Заголовок панели: btn-sm btn-primary -->
+<div class="panel-header d-flex justify-content-between align-items-center">
+  <span>API Keys</span>
+  <button class="btn btn-sm btn-primary">Create Key</button>
+</div>
+
+<!-- Строка таблицы: icon buttons -->
+<td class="actions-cell">
+  <button class="btn-icon" title="Rename" aria-label="Rename">
+    <!-- pencil svg 14×14 -->
+  </button>
+  <button class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke">
+    <!-- trash svg 14×14 -->
+  </button>
+</td>
+
+<!-- Форма/модал: full-size primary + secondary -->
+<div class="btn-row">
+  <button class="btn btn-primary">Save</button>
+  <button class="btn btn-secondary">Cancel</button>
+</div>
+
+<!-- Деструктивный модал: danger + secondary -->
+<div class="btn-row">
+  <button class="btn btn-danger">Revoke</button>
+  <button class="btn btn-secondary">Cancel</button>
+</div>
+```
+
+### Спиннер загрузки
+
+Все асинхронные кнопки добавляют спиннер и `disabled` во время операции:
+
+```html
+<button class="btn btn-primary" disabled="@IsSaving">
+  @if (IsSaving) { <span class="spinner-border-sm me-2"></span> }
+  Save
+</button>
+```
+
+### Что НЕ делать
+
+- Не использовать текстовые `btn-sm` кнопки (Rename, Edit, Delete) в строках таблиц — только иконки
+- Не смешивать `btn-outline-primary` / `btn-outline-danger` — их нет в дизайн-системе
+- Не делать pill-форму у icon-button — только `border-radius: 8px`
+- `btn-primary` solid только для главного действия; в panel header — `btn-sm btn-primary`
 
 ## Таблицы `/models`
 

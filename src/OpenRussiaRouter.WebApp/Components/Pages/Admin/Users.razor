@@ -137,8 +137,13 @@
                                 </td>
                                 <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
                                 <td>@UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartTopUp(user)">Top Up</button>
+                                <td class="actions-cell">
+                                    <button class="btn-icon" title="Top Up" aria-label="Top Up" @onclick="() => StartTopUp(user)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="12" y1="5" x2="12" y2="19"/>
+                                            <line x1="5" y1="12" x2="19" y2="12"/>
+                                        </svg>
+                                    </button>
                                 </td>
                             </tr>
                         }
@@ -209,6 +214,12 @@
     .btn-row {
         display: flex;
         gap: var(--spacing-md);
+    }
+
+    .actions-cell {
+        display: flex;
+        align-items: center;
+        gap: 2px;
     }
 
     .d-flex {

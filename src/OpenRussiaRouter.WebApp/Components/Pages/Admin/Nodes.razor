@@ -98,10 +98,15 @@
                                 </td>
                                 <td>@node.InFlightRequests</td>
                                 <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
-                                <td>
+                                <td class="actions-cell">
                                     @if (node.Status != "disabled")
                                     {
-                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DisableNode(node)">Disable</button>
+                                        <button class="btn-icon btn-icon-danger" title="Disable" aria-label="Disable" @onclick="() => DisableNode(node)">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                                            </svg>
+                                        </button>
                                     }
                                 </td>
                             </tr>
@@ -163,6 +168,12 @@
     .btn-row {
         display: flex;
         gap: var(--spacing-md);
+    }
+
+    .actions-cell {
+        display: flex;
+        align-items: center;
+        gap: 2px;
     }
 
     .d-flex {

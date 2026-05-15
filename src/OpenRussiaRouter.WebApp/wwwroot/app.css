@@ -154,23 +154,19 @@ p {
     border-color: #ffffff;
 }
 
-.btn-secondary,
-.btn-outline-on-dark,
-.btn-outline-primary {
+.btn-secondary {
     background: transparent;
     color: var(--color-ink);
     border-color: var(--color-border);
 }
 
-.btn-danger,
-.btn-outline-danger {
+.btn-danger {
     color: var(--color-danger);
     border-color: rgba(239, 68, 68, .45);
     background: transparent;
 }
 
-.btn-danger:hover,
-.btn-outline-danger:hover {
+.btn-danger:hover {
     background: rgba(239, 68, 68, .1);
     border-color: rgba(239, 68, 68, .65);
 }
@@ -188,6 +184,38 @@ textarea:disabled {
     min-height: 36px;
     padding: 0 12px;
     font-size: 13px;
+}
+
+/* Icon-only button for table row actions (edit, delete, disable) */
+.btn-icon {
+    width: 28px;
+    min-height: 28px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-mute);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color .15s ease, background .15s ease;
+}
+
+.btn-icon:hover {
+    color: var(--color-ink);
+    background: var(--color-canvas-mid);
+}
+
+.btn-icon-danger:hover {
+    color: var(--color-danger);
+    background: rgba(239, 68, 68, .1);
+}
+
+.btn-icon:disabled {
+    opacity: .48;
+    cursor: not-allowed;
 }
 
 .btn-link {

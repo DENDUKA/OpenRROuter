@@ -6,12 +6,15 @@ FROM ${SDK_IMAGE} AS build
 WORKDIR /src
 
 COPY NuGet.Config ./
-COPY src/ src/
-COPY db/ db/
+COPY src/OpenRussiaRouter.BuildingBlocks/OpenRussiaRouter.BuildingBlocks.csproj src/OpenRussiaRouter.BuildingBlocks/
+COPY src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj src/OpenRussiaRouter.Contracts/
+COPY src/OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj src/OpenRussiaRouter.AuthService/
 RUN dotnet restore src/OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj --configfile NuGet.Config
 
-WORKDIR /src/src/OpenRussiaRouter.AuthService
-RUN dotnet publish -c Release -o /app/publish --no-restore
+COPY src/ src/
+COPY db/ db/
+RUN dotnet publish src/OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj \
+    -c Release -o /app/publish --no-restore
 
 FROM ${RUNTIME_IMAGE} AS runtime
 WORKDIR /app
@@ -20,5 +23,4 @@ COPY --from=build /src/db ./db
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-
 ENTRYPOINT ["dotnet", "OpenRussiaRouter.AuthService.dll"]

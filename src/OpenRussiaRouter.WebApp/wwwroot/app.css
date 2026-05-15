@@ -586,23 +586,23 @@ code.d-block {
     transform: translateY(0);
 }
 
-.modal {
+.modal-backdrop {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, .72);
-    display: flex;
-    align-items: center;
-    justify-content: center;
     z-index: 1000;
-    padding: 16px;
     pointer-events: none;
 }
 
 .modal-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1001;
     padding: var(--spacing-xl);
     max-width: 480px;
-    width: 100%;
-    pointer-events: auto;
+    width: calc(100% - 32px);
 }
 
 .modal-header { margin-bottom: var(--spacing-lg); }

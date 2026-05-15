@@ -12,3 +12,4 @@ NuGet/
 TestResults/
 /.vs
 /.kilo
+/.claude/worktrees

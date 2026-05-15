@@ -162,7 +162,7 @@
     gap: 10px;
     padding: 8px 10px;
     border-radius: var(--radius-sm);
-    color: var(--color-body);
+    color: var(--color-ink);
     font-size: 14px;
     text-decoration: none !important;
     cursor: pointer;

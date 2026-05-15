@@ -11,7 +11,6 @@
             <h1 id="models-title">Models</h1>
             <p class="models-lead">Browse available OpenAI-compatible models routed through OpenRussiaRouter.</p>
         </div>
-        <a class="btn btn-primary compare-button" href="#compare">Compare</a>
     </section>
 
     <section class="models-shell" aria-label="Model catalog">
@@ -102,13 +101,6 @@
             }
     </section>
 
-    <section class="compare-panel" id="compare" aria-labelledby="compare-title">
-        <div>
-            <div class="eyebrow">Compare</div>
-            <h2 id="compare-title">Pick the right model for each request.</h2>
-        </div>
-        <p>Use model IDs from this catalog with the OpenAI-compatible endpoint. Pricing and routing are handled by OpenRussiaRouter.</p>
-    </section>
 </div>
 
 <style>
@@ -137,12 +129,6 @@
         color: var(--color-body);
         max-width: 620px;
         font-size: 18px;
-        line-height: 28px;
-    }
-
-    .compare-button {
-        flex: 0 0 auto;
-        min-height: 44px;
         line-height: 28px;
     }
 
@@ -315,24 +301,6 @@
         margin-top: var(--spacing-xl);
     }
 
-    .compare-panel {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
-        gap: var(--spacing-2xl);
-        border-top: 1px solid var(--color-hairline);
-        padding-top: var(--spacing-3xl);
-    }
-
-    .compare-panel h2 {
-        font-size: 36px;
-        line-height: 40px;
-    }
-
-    .compare-panel p {
-        color: var(--color-body);
-        margin-top: var(--spacing-xl);
-    }
-
     @@keyframes skeleton-pulse {
         0% { background-position: 200% 0; }
         100% { background-position: -200% 0; }
@@ -347,18 +315,13 @@
 
     @@media (max-width: 820px) {
         .models-hero,
-        .models-toolbar,
-        .compare-panel {
+        .models-toolbar {
             display: grid;
             grid-template-columns: 1fr;
         }
 
         .table-scroll {
             overflow-x: auto;
-        }
-
-        .compare-button {
-            width: 100%;
         }
     }
 

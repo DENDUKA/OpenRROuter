@@ -3,8 +3,26 @@ name: Build Images
 on:
   push:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'OpenRussiaRouter.sln'
+      - 'NuGet.Config'
+      - 'global.json'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - '.github/workflows/build-deploy.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'OpenRussiaRouter.sln'
+      - 'NuGet.Config'
+      - 'global.json'
+      - 'Directory.Build.props'
+      - 'Directory.Packages.props'
+      - '.github/workflows/build-deploy.yml'
 
 concurrency:
   group: build-${{ github.ref }}
@@ -17,7 +35,7 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    timeout-minutes: 15
     permissions:
       contents: read
 
@@ -87,11 +105,11 @@ jobs:
             case "$file" in
               .github/workflows/build-deploy.yml|OpenRussiaRouter.sln|NuGet.Config|global.json|Directory.Build.props|Directory.Packages.props|src/OpenRussiaRouter.BuildingBlocks/*|src/OpenRussiaRouter.Contracts/*)
                 all_services=true ;;
-              src/OpenRussiaRouter.ApiGateway/*)  api_gateway=true ;;
-              src/OpenRussiaRouter.AuthService/*)  auth_service=true ;;
+              src/OpenRussiaRouter.ApiGateway/*)   api_gateway=true ;;
+              src/OpenRussiaRouter.AuthService/*)   auth_service=true ;;
               src/OpenRussiaRouter.BillingService/*) billing_service=true ;;
-              src/OpenRussiaRouter.ControlPlane/*) control_plane=true ;;
-              src/OpenRussiaRouter.WebApp/*)       webapp=true ;;
+              src/OpenRussiaRouter.ControlPlane/*)  control_plane=true ;;
+              src/OpenRussiaRouter.WebApp/*)        webapp=true ;;
             esac
           done <<< "$changed_files"
 
@@ -117,6 +135,7 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
       packages: write
@@ -147,8 +166,13 @@ jobs:
         id: check
         shell: bash
         run: |
-          changed="${{ needs.test.outputs[matrix.output_key] }}"
-          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+          case "${{ matrix.output_key }}" in
+            api_gateway)     echo "changed=${{ needs.test.outputs.api_gateway }}" >> "$GITHUB_OUTPUT" ;;
+            auth_service)    echo "changed=${{ needs.test.outputs.auth_service }}" >> "$GITHUB_OUTPUT" ;;
+            billing_service) echo "changed=${{ needs.test.outputs.billing_service }}" >> "$GITHUB_OUTPUT" ;;
+            control_plane)   echo "changed=${{ needs.test.outputs.control_plane }}" >> "$GITHUB_OUTPUT" ;;
+            webapp)          echo "changed=${{ needs.test.outputs.webapp }}" >> "$GITHUB_OUTPUT" ;;
+          esac
 
       - name: Login to GHCR
         if: steps.check.outputs.changed == 'true'

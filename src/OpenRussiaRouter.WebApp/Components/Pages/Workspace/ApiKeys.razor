@@ -1,3 +1,234 @@
 @page "/workspace/apikeys"
-@inject NavigationManager Navigation
-@code { protected override void OnInitialized() => Navigation.NavigateTo("/workspace?tab=keys", replace: true); }
+@layout WorkspaceLayout
+@inject AuthClient AuthClient
+@inject AuthState AuthState
+
+<PageTitle>API Keys - OpenRussiaRouter</PageTitle>
+
+<div class="ws-section-header">
+    <h2>API Keys</h2>
+    <p class="ws-section-desc">Manage API keys for programmatic access. Keys are shown only once at creation.</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@if (_showCreate)
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">New API Key</div>
+        <div class="ws-panel-body">
+            @if (!string.IsNullOrEmpty(_newKeyValue))
+            {
+                <div class="alert alert-success">
+                    <strong>Save your key — it won't be shown again!</strong>
+                    <div class="ws-key-preview" data-testid="new-key-value">@_newKeyValue</div>
+                </div>
+                <button class="btn btn-primary" data-testid="btn-done-create" @onclick="CloseCreate">Done</button>
+            }
+            else
+            {
+                <EditForm Model="@_createModel" OnValidSubmit="HandleCreate">
+                    <DataAnnotationsValidator />
+                    <div class="mb-3">
+                        <label class="form-label" for="kn">Key Name</label>
+                        <InputText id="kn" class="form-control" data-testid="input-key-name" @bind-Value="_createModel.Name" />
+                        <ValidationMessage For="@(() => _createModel.Name)" />
+                    </div>
+                    <div class="ws-btn-row">
+                        <button type="submit" class="btn btn-primary" data-testid="btn-submit-create" disabled="@_isCreating">
+                            @if (_isCreating) { <span class="spinner me-2"></span> }
+                            Create
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCreate">Cancel</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+}
+
+<div class="ws-panel">
+    <div class="ws-panel-header ws-panel-header--split">
+        <span>Your API Keys</span>
+        <button class="btn btn-sm btn-primary" data-testid="btn-create-key" @onclick="OpenCreate">Create Key</button>
+    </div>
+    <div class="ws-panel-body">
+        @if (_keys is null)
+        {
+            <p class="text-muted">Loading…</p>
+        }
+        else if (_keys.Count == 0)
+        {
+            <p class="text-muted">No API keys yet. Create one to get started.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Prefix</th>
+                        <th>Created</th>
+                        <th>Last Used</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var k in _keys)
+                    {
+                        <tr data-testid="key-row" data-key-name="@k.Name">
+                            <td data-testid="key-name">@k.Name</td>
+                            <td><code>@k.Prefix***</code></td>
+                            <td>@k.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(k.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td>
+                                <span class="badge @(k.IsActive ? "badge-success" : "badge-secondary")" data-testid="key-status">
+                                    @(k.IsActive ? "Active" : "Revoked")
+                                </span>
+                            </td>
+                            <td class="ws-actions-cell">
+                                @if (k.IsActive)
+                                {
+                                    <button class="btn-icon" title="Rename" aria-label="Rename" data-testid="btn-rename" @onclick="() => StartRename(k)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke" data-testid="btn-revoke" @onclick="() => StartRevoke(k)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                        </svg>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@if (_showRevokeConfirm)
+{
+    <div class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Revoke API Key</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to revoke <strong>@_keyToRevoke?.Name</strong>?</p>
+                <p class="mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" data-testid="btn-confirm-revoke" @onclick="ConfirmRevoke" disabled="@_isRevoking">
+                    @if (_isRevoking) { <span class="spinner me-2"></span> }
+                    Revoke
+                </button>
+                <button class="btn btn-secondary" @onclick="() => _showRevokeConfirm = false">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showRename)
+{
+    <div class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Rename API Key</h2>
+            </div>
+            <EditForm Model="_renameModel" OnValidSubmit="ConfirmRename">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="nn">New Name</label>
+                        <InputText id="nn" class="form-control" data-testid="input-rename" @bind-Value="_renameModel.Name" />
+                        <ValidationMessage For="@(() => _renameModel.Name)" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-rename" disabled="@_isRenaming">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="() => _showRename = false">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+}
+
+@code {
+    private IReadOnlyList<ApiKeyInfo>? _keys;
+    private bool _showCreate, _showRevokeConfirm, _showRename;
+    private bool _isCreating, _isRevoking, _isRenaming;
+    private string? _newKeyValue, _error;
+    private ApiKeyInfo? _keyToRevoke, _keyToRename;
+    private CreateModel _createModel = new();
+    private RenameModel _renameModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState.CurrentSession is null) return;
+        await LoadKeys();
+    }
+
+    private async Task LoadKeys()
+    {
+        try { _keys = await AuthClient.ListApiKeysAsync(AuthState.CurrentSession!.UserId); }
+        catch { _error = "Failed to load API keys."; }
+    }
+
+    private void OpenCreate() { _createModel = new(); _newKeyValue = null; _showCreate = true; }
+    private void CloseCreate() { _showCreate = false; _newKeyValue = null; _createModel = new(); }
+
+    private async Task HandleCreate()
+    {
+        _isCreating = true; _error = null;
+        try
+        {
+            var r = await AuthClient.CreateApiKeyAsync(AuthState.CurrentSession!.UserId, _createModel.Name);
+            _newKeyValue = r.RawKey;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to create API key."; }
+        finally { _isCreating = false; }
+    }
+
+    private void StartRevoke(ApiKeyInfo k) { _keyToRevoke = k; _showRevokeConfirm = true; }
+
+    private async Task ConfirmRevoke()
+    {
+        _isRevoking = true;
+        try
+        {
+            await AuthClient.RevokeApiKeyAsync(AuthState.CurrentSession!.UserId, _keyToRevoke!.Id);
+            _keyToRevoke = null; _showRevokeConfirm = false;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to revoke."; }
+        finally { _isRevoking = false; }
+    }
+
+    private void StartRename(ApiKeyInfo k) { _keyToRename = k; _renameModel = new() { Name = k.Name }; _showRename = true; }
+
+    private async Task ConfirmRename()
+    {
+        _isRenaming = true;
+        try
+        {
+            await AuthClient.RenameApiKeyAsync(AuthState.CurrentSession!.UserId, _keyToRename!.Id, _renameModel.Name);
+            _keyToRename = null; _showRename = false;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to rename."; }
+        finally { _isRenaming = false; }
+    }
+
+    private class CreateModel { [Required][MinLength(1)] public string Name { get; set; } = ""; }
+    private class RenameModel { [Required][MinLength(1)] public string Name { get; set; } = ""; }
+}

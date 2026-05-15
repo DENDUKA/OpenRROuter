@@ -1,5 +1,6 @@
 bin/
 obj/
+e2e.local.json
 .dotnet/
 .nuget/
 .appdata/

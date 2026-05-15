@@ -381,6 +381,7 @@ textarea.form-control {
 .badge-success { color: var(--color-success); border-color: rgba(34, 197, 94, .32); }
 .badge-warning { color: var(--color-warning); border-color: rgba(234, 179, 8, .32); }
 .badge-danger { color: var(--color-danger); border-color: rgba(239, 68, 68, .32); }
+.badge-secondary { color: var(--color-body-mid); border-color: var(--color-border); }
 
 code,
 .text-mono,
@@ -456,6 +457,7 @@ code.d-block {
 .col-md-10 { width: calc(10 / 12 * 100%); }
 .col-md-12 { width: 100%; }
 .justify-content-center { justify-content: center; }
+.justify-content-between { justify-content: space-between; }
 .d-flex { display: flex; }
 .gap-3 { gap: var(--spacing-lg); }
 .align-items-center { align-items: center; }

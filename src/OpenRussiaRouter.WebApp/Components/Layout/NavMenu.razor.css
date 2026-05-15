@@ -1,11 +1,14 @@
 .sidebar {
-    position: sticky;
-    top: 56px; /* below the topbar */
+    position: fixed;
+    left: 0;
+    top: 56px;
+    width: 240px;
     height: calc(100vh - 56px);
     overflow-y: auto;
     background: var(--color-canvas);
     border-right: 1px solid var(--color-hairline);
     padding: 16px 12px;
+    z-index: 40;
 }
 
 .sidebar-nav {

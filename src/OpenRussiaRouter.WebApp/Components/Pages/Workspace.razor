@@ -314,13 +314,16 @@
 
     /* ── Left sidebar ── */
     .ws-left {
-        position: sticky;
+        position: fixed;
+        left: 0;
         top: 56px;
+        width: 200px;
         height: calc(100vh - 56px);
         overflow-y: auto;
         border-right: 1px solid var(--color-hairline);
         padding: 20px 8px;
         background: var(--color-canvas);
+        z-index: 40;
     }
 
     .ws-left-title {

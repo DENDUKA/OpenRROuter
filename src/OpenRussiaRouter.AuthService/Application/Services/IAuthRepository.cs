@@ -26,4 +26,6 @@ UserAccount? GetUser(string userId);
     bool RenameApiKey(string userId, string apiKeyId, string name);
 
     bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc);
+
+    IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes();
 }

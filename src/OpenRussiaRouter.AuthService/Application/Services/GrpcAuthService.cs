@@ -215,6 +215,20 @@ public sealed class GrpcAuthService(
         });
     }
 
+    public override Task<ListActiveApiKeyHashesResponse> ListActiveApiKeyHashes(
+        ListActiveApiKeyHashesRequest request,
+        ServerCallContext context)
+    {
+        var hashes = repository.ListActiveApiKeyHashes();
+        var response = new ListActiveApiKeyHashesResponse();
+        response.Keys.AddRange(hashes.Select(h => new ApiKeyHashEntry
+        {
+            Prefix = h.Prefix,
+            SecretHash = h.SecretHash
+        }));
+        return Task.FromResult(response);
+    }
+
     private static UserRole ParseRole(string role)
     {
         return Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed)

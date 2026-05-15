@@ -164,6 +164,19 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             new { UserId = userId, ApiKeyId = apiKeyId, RevokedAtUtc = revokedAtUtc }) == 1;
     }
 
+    public IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes()
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return connection.Query<(string Prefix, string SecretHash)>(
+            """
+            select prefix as Prefix, secret_hash as SecretHash
+            from auth.api_keys
+            where revoked_at_utc is null
+            order by created_at_utc desc
+            limit 10000;
+            """).ToArray();
+    }
+
     private static object ToParameters(UserAccount user)
     {
         return new

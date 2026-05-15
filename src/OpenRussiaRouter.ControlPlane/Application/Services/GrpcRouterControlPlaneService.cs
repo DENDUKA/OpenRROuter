@@ -9,6 +9,7 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
+    IRouterKeySyncService keySyncService,
     ILogger<GrpcRouterControlPlaneService>? logger = null)
     : ControlGrpc.RouterControlPlaneBase
 {
@@ -58,6 +59,8 @@ public sealed class GrpcRouterControlPlaneService(
                 request.TokenSecretName,
                 request.CapacityWeight,
                 DateTimeOffset.UtcNow);
+
+            _ = keySyncService.SyncToNodeAsync(node.Id, CancellationToken.None);
 
             return Task.FromResult(new RegisterRouterNodeResponse
             {

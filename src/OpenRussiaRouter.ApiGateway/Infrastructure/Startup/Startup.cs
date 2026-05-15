@@ -15,6 +15,7 @@ using OpenRussiaRouter.ApiGateway.Router;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
+using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.ApiGateway.Infrastructure.Startup;
 
@@ -69,6 +70,12 @@ public static class Startup
             var body = await ChatCompletionRequestReader.ReadBodyAsync(context.Request.Body, context.RequestAborted);
             var metadata = body.Metadata;
 
+            if (metadata.Stream)
+            {
+                await ExecuteStreamingAsync(context, body, requestId);
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(metadata.Model))
             {
                 context.Response.StatusCode = 400;
@@ -111,7 +118,7 @@ public static class Startup
 
             var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
             var startedAt = DateTimeOffset.UtcNow;
-            var response = await routerProxy.SendChatCompletionAsync(lease, body.Json, requestId, context.RequestAborted);
+            var response = await routerProxy.SendChatCompletionAsync(lease, body.Json, requestId, apiKey, context.RequestAborted);
 
             var completedAt = DateTimeOffset.UtcNow;
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
@@ -147,15 +154,134 @@ public static class Startup
     private static async Task HandleStreamingChatCompletionsAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
+        var body = await ChatCompletionRequestReader.ReadBodyAsync(context.Request.Body, context.RequestAborted);
+        await ExecuteStreamingAsync(context, body, requestId);
+    }
 
-        if (!BearerTokenReader.TryRead(context.Request, out _))
+    // GATEWAY-003 + GATEWAY-004: full SSE streaming with one retry before first chunk
+    private static async Task ExecuteStreamingAsync(HttpContext context, ChatCompletionRequestBody body, string requestId)
+    {
+        try
         {
-            await WriteJsonErrorAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
-            return;
-        }
+            var metadata = body.Metadata;
 
-        context.Response.ContentType = "text/event-stream";
-        await context.Response.WriteAsync("data: [DONE]\n\n");
+            if (string.IsNullOrWhiteSpace(metadata.Model))
+            {
+                context.Response.StatusCode = 400;
+                await WriteJsonErrorAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
+                return;
+            }
+
+            if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
+            {
+                context.Response.StatusCode = 401;
+                await WriteJsonErrorAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
+                return;
+            }
+
+            var authenticator = context.RequestServices.GetRequiredService<IApiKeyAuthenticator>();
+            var authResult = await authenticator.AuthenticateAsync(apiKey, context.RequestAborted);
+            if (!authResult.Succeeded)
+            {
+                context.Response.StatusCode = 401;
+                await WriteJsonErrorAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
+                return;
+            }
+
+            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
+            var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, metadata.Model, context.RequestAborted);
+            if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
+            {
+                var statusCode = balanceResult.ErrorCode == ErrorCodes.InsufficientBalance ? 402 : 400;
+                context.Response.StatusCode = statusCode;
+                await WriteJsonErrorAsync(context, "billing_error", balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, "Balance check failed", requestId);
+                return;
+            }
+
+            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
+            var lease = await controlPlane.SelectRouterNodeAsync(metadata.Model, requestId, context.RequestAborted);
+            if (lease is null)
+            {
+                context.Response.StatusCode = 503;
+                await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+                return;
+            }
+
+            var patchedJson = SseRequestPatcher.InjectStreamOptions(body.Json);
+            var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
+
+            var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, apiKey, context.RequestAborted);
+
+            // GATEWAY-004: single retry on a different node before any bytes reach the client
+            if (!session.IsSuccess)
+            {
+                await session.DisposeAsync();
+                await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
+
+                var fallbackLease = await controlPlane.SelectRouterNodeAsync(metadata.Model, requestId, context.RequestAborted);
+                if (fallbackLease is null)
+                {
+                    context.Response.StatusCode = 503;
+                    await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+                    return;
+                }
+
+                session = await routerProxy.BeginStreamChatCompletionAsync(fallbackLease, patchedJson, requestId, apiKey, context.RequestAborted);
+                lease = fallbackLease;
+
+                if (!session.IsSuccess)
+                {
+                    await session.DisposeAsync();
+                    await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
+                    context.Response.StatusCode = 503;
+                    await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "Router nodes unavailable", requestId);
+                    return;
+                }
+            }
+
+            // Commit SSE response — no error returns possible after this point
+            context.Response.ContentType = "text/event-stream";
+            context.Response.Headers["Cache-Control"] = "no-cache";
+            context.Response.Headers["X-Accel-Buffering"] = "no";
+
+            var startedAt = DateTimeOffset.UtcNow;
+            TokenUsage usage;
+            await using (session)
+            {
+                usage = await session.CopyToAsync(context.Response.Body, context.RequestAborted);
+            }
+            var completedAt = DateTimeOffset.UtcNow;
+
+            await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
+
+            if (usage.InputTokens > 0 || usage.OutputTokens > 0)
+            {
+                var usageEvent = new GatewayUsageEvent(
+                    requestId,
+                    authResult.UserId!,
+                    authResult.ApiKeyId!,
+                    metadata.Model,
+                    lease.NodeId,
+                    usage,
+                    "completed",
+                    startedAt,
+                    completedAt);
+                _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected — normal for SSE, nothing to do
+        }
+        catch (Exception ex)
+        {
+            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("OpenRussiaRouter.ApiGateway.ChatCompletionsStream");
+            logger.LogWarning(ex, "Streaming chat completion failed. RequestId: {RequestId}", requestId);
+
+            if (!context.Response.HasStarted)
+                await WriteJsonErrorAsync(context, "internal_error", ErrorCodes.InternalError, "Internal server error", requestId);
+        }
     }
 
     private static async Task HandleListModelsAsync(HttpContext context)

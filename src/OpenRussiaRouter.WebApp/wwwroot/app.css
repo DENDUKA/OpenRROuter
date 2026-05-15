@@ -595,12 +595,14 @@ code.d-block {
     justify-content: center;
     z-index: 1000;
     padding: 16px;
+    pointer-events: none;
 }
 
 .modal-dialog {
     padding: var(--spacing-xl);
     max-width: 480px;
     width: 100%;
+    pointer-events: auto;
 }
 
 .modal-header { margin-bottom: var(--spacing-lg); }

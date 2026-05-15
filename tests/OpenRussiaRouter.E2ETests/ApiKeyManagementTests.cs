@@ -35,6 +35,10 @@ public sealed class ApiKeyManagementTests : IClassFixture<PlaywrightFixture>
         var page = await context.NewPageAsync();
         var baseUrl = TestConfiguration.BaseUrl;
 
+        var run = Guid.NewGuid().ToString("N")[..8];
+        var keyName = $"E2E Key {run}";
+        var renamedKeyName = $"E2E Renamed {run}";
+
         // Step 1: Login
         var loginPage = new LoginPage(page, baseUrl);
         await loginPage.NavigateAsync();
@@ -45,27 +49,27 @@ public sealed class ApiKeyManagementTests : IClassFixture<PlaywrightFixture>
         await keysPage.NavigateAsync();
 
         // Step 3: Create a key — raw key must be shown once
-        var rawKey = await keysPage.CreateKeyAsync("E2E Test Key");
+        var rawKey = await keysPage.CreateKeyAsync(keyName);
         Assert.NotEmpty(rawKey);
         Assert.StartsWith("orr_", rawKey);
 
         // Step 4: Key appears in list as Active
-        var statusAfterCreate = await keysPage.GetKeyStatusAsync("E2E Test Key");
+        var statusAfterCreate = await keysPage.GetKeyStatusAsync(keyName);
         Assert.Equal("Active", statusAfterCreate);
 
         // Step 5: Rename — new name appears, old name gone
-        await keysPage.RenameKeyAsync("E2E Test Key", "E2E Renamed Key");
-        var statusAfterRename = await keysPage.GetKeyStatusAsync("E2E Renamed Key");
+        await keysPage.RenameKeyAsync(keyName, renamedKeyName);
+        var statusAfterRename = await keysPage.GetKeyStatusAsync(renamedKeyName);
         Assert.Equal("Active", statusAfterRename);
-        Assert.Equal(0, await keysPage.GetKeyRow("E2E Test Key").CountAsync());
+        Assert.Equal(0, await keysPage.GetKeyRow(keyName).CountAsync());
 
         // Step 6: Revoke — status changes to Revoked
-        await keysPage.RevokeKeyAsync("E2E Renamed Key");
-        var statusAfterRevoke = await keysPage.GetKeyStatusAsync("E2E Renamed Key");
+        await keysPage.RevokeKeyAsync(renamedKeyName);
+        var statusAfterRevoke = await keysPage.GetKeyStatusAsync(renamedKeyName);
         Assert.Equal("Revoked", statusAfterRevoke);
 
         // Step 7: Action buttons disappear for revoked key
-        var revokedRow = keysPage.GetKeyRow("E2E Renamed Key");
+        var revokedRow = keysPage.GetKeyRow(renamedKeyName);
         Assert.Equal(0, await revokedRow.Locator("[data-testid='btn-rename']").CountAsync());
         Assert.Equal(0, await revokedRow.Locator("[data-testid='btn-revoke']").CountAsync());
     }

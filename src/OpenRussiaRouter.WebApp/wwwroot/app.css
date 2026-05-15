@@ -473,6 +473,22 @@ code.d-block {
 .ms-2 { margin-left: var(--spacing-md) !important; }
 .ms-3 { margin-left: var(--spacing-lg) !important; }
 
+/* User dropdown — global overrides needed because NavLink renders its own <a>
+   and doesn't inherit Blazor CSS isolation scope from the parent component */
+.user-dropdown .dropdown-item,
+.user-dropdown .dropdown-item:hover,
+.user-dropdown .dropdown-item.active {
+    color: var(--color-ink);
+    text-decoration: none;
+}
+
+.user-dropdown .dropdown-item--danger,
+.user-dropdown .dropdown-item--danger:hover,
+.user-dropdown .dropdown-item--danger.active {
+    color: var(--color-danger);
+    text-decoration: none;
+}
+
 .section {
     padding: var(--spacing-3xl) 0;
     border-bottom: 1px solid var(--color-hairline);

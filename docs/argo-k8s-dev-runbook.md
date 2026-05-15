@@ -80,17 +80,22 @@ Expected HTTP status:
 200
 ```
 
-## 5. Get Argo CD admin password
+## 5. Set fixed Argo CD admin password
+
+Get the auto-generated initial password, then replace it with the fixed dev password:
 
 ```powershell
 $encoded = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}'
-[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encoded))
+$initialPassword = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($encoded))
+
+argocd login localhost:9090 --insecure --username admin --password $initialPassword
+argocd account update-password --current-password $initialPassword --new-password password
 ```
 
 Login:
 
 - User: `admin`
-- Password: output from command above.
+- Password: `password`
 
 ## 6. Configure Argo CD Git repository auth
 

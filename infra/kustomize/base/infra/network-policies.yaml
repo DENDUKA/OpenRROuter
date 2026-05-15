@@ -257,7 +257,8 @@ spec:
           protocol: TCP
 
 ---
-# seq accepts log ingestion from any pod in the namespace.
+# seq accepts log ingestion from any pod in the namespace,
+# and UI access (port 80) from NodePort / host network.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -274,4 +275,7 @@ spec:
         - podSelector: {}
       ports:
         - port: 5341
+          protocol: TCP
+    - ports:
+        - port: 80
           protocol: TCP

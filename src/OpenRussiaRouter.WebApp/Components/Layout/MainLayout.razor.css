@@ -196,8 +196,10 @@
     margin: 4px 0;
 }
 
-.dropdown-item--danger {
-    color: var(--color-danger);
+.dropdown-item--danger,
+.dropdown-item--danger.active,
+.dropdown-item--danger:hover {
+    color: var(--color-danger) !important;
 }
 
 .dropdown-item--danger svg {
@@ -206,7 +208,6 @@
 
 .dropdown-item--danger:hover {
     background: rgba(239, 68, 68, 0.1);
-    color: var(--color-danger);
 }
 
 @media (max-width: 768px) {

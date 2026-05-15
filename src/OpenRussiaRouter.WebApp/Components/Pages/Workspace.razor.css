@@ -1,0 +1,210 @@
+/* ── Workspace shell: sidebar + content ── */
+
+.ws-shell {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    min-height: calc(100vh - 56px - 64px);
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+/* ── Left sidebar ── */
+
+.ws-sidebar {
+    border-right: 1px solid var(--color-hairline);
+    background: var(--color-canvas);
+    padding: 16px 8px;
+}
+
+.ws-sidebar-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--color-body-mid);
+    padding: 0 10px 10px;
+}
+
+.ws-nav-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 8px;
+    width: 100%;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-body);
+    font-size: 14px;
+    font-family: inherit;
+    text-align: left;
+    transition: background 100ms ease, color 100ms ease;
+}
+
+.ws-nav-item:hover {
+    background: var(--color-canvas-soft);
+    color: var(--color-ink);
+}
+
+.ws-nav-item--active {
+    background: var(--color-canvas-soft);
+    color: var(--color-ink);
+}
+
+.ws-nav-item svg {
+    flex-shrink: 0;
+    opacity: 0.6;
+}
+
+.ws-nav-item:hover svg,
+.ws-nav-item--active svg {
+    opacity: 1;
+}
+
+/* ── Content area ── */
+
+.ws-content {
+    padding: 32px;
+    background: var(--color-canvas);
+    min-width: 0;
+}
+
+.ws-section-header {
+    margin-bottom: 24px;
+}
+
+.ws-section-header h2 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--color-ink);
+}
+
+.ws-section-desc {
+    margin: 0;
+    font-size: 13px;
+    color: var(--color-body);
+}
+
+/* ── Panels ── */
+
+.ws-panel {
+    border: 1px solid var(--color-hairline);
+    border-radius: var(--radius-lg);
+    background: var(--color-canvas-card);
+    margin-bottom: var(--spacing-lg);
+}
+
+.ws-panel-header {
+    padding: 14px var(--spacing-lg);
+    border-bottom: 1px solid var(--color-hairline);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--color-ink);
+}
+
+.ws-panel-header--split {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ws-panel-body {
+    padding: var(--spacing-lg);
+}
+
+/* ── Credits ── */
+
+.ws-balance-amount {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--color-ink);
+}
+
+.ws-balance-currency {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-body);
+}
+
+/* ── Settings info rows ── */
+
+.ws-info-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--color-hairline);
+}
+
+.ws-info-row:last-child {
+    border-bottom: none;
+}
+
+.ws-info-label {
+    width: 140px;
+    flex-shrink: 0;
+    font-size: 13px;
+    color: var(--color-body);
+}
+
+.ws-info-value {
+    font-size: 14px;
+    color: var(--color-ink);
+}
+
+/* ── API Keys helpers ── */
+
+.ws-key-display {
+    font-family: var(--font-mono);
+    background-color: var(--color-canvas-mid);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-sm);
+    margin-top: var(--spacing-md);
+    word-break: break-all;
+    font-size: 13px;
+}
+
+.ws-btn-row {
+    display: flex;
+    gap: var(--spacing-md);
+}
+
+.ws-actions-cell {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 768px) {
+    .ws-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .ws-sidebar {
+        border-right: none;
+        border-bottom: 1px solid var(--color-hairline);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 12px 8px;
+    }
+
+    .ws-sidebar-header {
+        display: none;
+    }
+
+    .ws-nav-item {
+        width: auto;
+        flex: 0 0 auto;
+        padding: 0 12px;
+    }
+
+    .ws-content {
+        padding: 20px 16px;
+    }
+}

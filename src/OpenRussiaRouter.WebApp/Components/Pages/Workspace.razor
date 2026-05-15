@@ -1,0 +1,474 @@
+@page "/workspace"
+@inject AuthState AuthState
+@inject AuthClient AuthClient
+@inject BillingClient BillingClient
+@inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
+
+<PageTitle>Workspace - OpenRussiaRouter</PageTitle>
+
+<div class="ws-shell">
+    <nav class="ws-sidebar" aria-label="Workspace navigation">
+        <div class="ws-sidebar-header">Account</div>
+
+        <button class="ws-nav-item @(_tab == "keys" ? "ws-nav-item--active" : "")"
+                @onclick='() => SetTab("keys")' aria-current="@(_tab == "keys" ? "page" : null)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="7.5" cy="15.5" r="3.5"/>
+                <path d="m10 13 9-9"/>
+                <path d="m15 4 5 5"/>
+                <path d="m14 9 2 2"/>
+            </svg>
+            API Keys
+        </button>
+
+        <button class="ws-nav-item @(_tab == "credits" ? "ws-nav-item--active" : "")"
+                @onclick='() => SetTab("credits")' aria-current="@(_tab == "credits" ? "page" : null)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="5" width="20" height="14" rx="2"/>
+                <path d="M2 10h20"/>
+            </svg>
+            Credits
+        </button>
+
+        <button class="ws-nav-item @(_tab == "settings" ? "ws-nav-item--active" : "")"
+                @onclick='() => SetTab("settings")' aria-current="@(_tab == "settings" ? "page" : null)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+            Settings
+        </button>
+
+        <button class="ws-nav-item @(_tab == "activity" ? "ws-nav-item--active" : "")"
+                @onclick='() => SetTab("activity")' aria-current="@(_tab == "activity" ? "page" : null)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M3 3v18h18"/>
+                <path d="m7 15 4-4 3 3 5-7"/>
+            </svg>
+            Activity
+        </button>
+    </nav>
+
+    <div class="ws-content">
+
+        @if (_tab == "keys")
+        {
+            <div class="ws-section-header">
+                <h2>API Keys</h2>
+                <p class="ws-section-desc">Manage API keys for programmatic access. Keys are shown only once at creation.</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_keysError))
+            {
+                <div class="alert alert-danger" role="alert">@_keysError</div>
+            }
+
+            @if (_showCreateKeyPanel)
+            {
+                <div class="ws-panel">
+                    <div class="ws-panel-header">New API Key</div>
+                    <div class="ws-panel-body">
+                        @if (!string.IsNullOrEmpty(_newKeyValue))
+                        {
+                            <div class="alert alert-success">
+                                <strong>Save your API key — it won't be shown again!</strong>
+                                <div class="ws-key-display">@_newKeyValue</div>
+                            </div>
+                            <button class="btn btn-primary" @onclick="CloseCreateKey">Done</button>
+                        }
+                        else
+                        {
+                            <EditForm Model="@_createKeyModel" OnValidSubmit="HandleCreateKey">
+                                <DataAnnotationsValidator />
+                                <div class="form-group">
+                                    <label for="keyName" class="form-label">Key Name</label>
+                                    <InputText id="keyName" class="form-control" @bind-Value="_createKeyModel.Name" />
+                                    <ValidationMessage For="@(() => _createKeyModel.Name)" />
+                                </div>
+                                <div class="ws-btn-row">
+                                    <button type="submit" class="btn btn-primary" disabled="@_isCreatingKey">
+                                        @if (_isCreatingKey) { <span class="spinner-border-sm me-2"></span> }
+                                        Create
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" @onclick="CloseCreateKey">Cancel</button>
+                                </div>
+                            </EditForm>
+                        }
+                    </div>
+                </div>
+            }
+
+            @if (_showRevokeConfirm)
+            {
+                <div class="modal">
+                    <div class="modal-dialog">
+                        <div class="modal-header"><div class="modal-title">Revoke API Key</div></div>
+                        <div class="modal-body">
+                            <p>Are you sure you want to revoke <strong>@_keyToRevoke?.Name</strong>?</p>
+                            <p class="text-muted">This action cannot be undone.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-danger" @onclick="ConfirmRevoke" disabled="@_isRevoking">
+                                @if (_isRevoking) { <span class="spinner-border-sm"></span> }
+                                Revoke
+                            </button>
+                            <button class="btn btn-secondary" @onclick="() => _showRevokeConfirm = false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            @if (_showRenameModal)
+            {
+                <div class="modal">
+                    <div class="modal-dialog">
+                        <div class="modal-header"><div class="modal-title">Rename API Key</div></div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="newName" class="form-label">New Name</label>
+                                <InputText id="newName" class="form-control" @bind-Value="_renameModel.Name" />
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-primary" @onclick="ConfirmRename" disabled="@_isRenaming">Save</button>
+                            <button class="btn btn-secondary" @onclick="() => _showRenameModal = false">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="ws-panel">
+                <div class="ws-panel-header ws-panel-header--split">
+                    <span>Your API Keys</span>
+                    <button class="btn btn-sm btn-primary" @onclick="OpenCreateKey">Create Key</button>
+                </div>
+                <div class="ws-panel-body">
+                    @if (_keys is null)
+                    {
+                        <p class="text-muted">Loading...</p>
+                    }
+                    else if (_keys.Count == 0)
+                    {
+                        <p class="text-muted">No API keys yet. Create one to get started.</p>
+                    }
+                    else
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Prefix</th>
+                                    <th>Created</th>
+                                    <th>Last Used</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var key in _keys)
+                                {
+                                    <tr>
+                                        <td>@key.Name</td>
+                                        <td><code>@key.Prefix***</code></td>
+                                        <td>@key.CreatedAt.ToLocalTime().ToString("g")</td>
+                                        <td>@(key.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                                        <td>
+                                            @if (key.IsActive)
+                                            {
+                                                <span class="badge badge-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Revoked</span>
+                                            }
+                                        </td>
+                                        <td class="ws-actions-cell">
+                                            @if (key.IsActive)
+                                            {
+                                                <button class="btn-icon" title="Rename" aria-label="Rename" @onclick="() => StartRename(key)">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                                    </svg>
+                                                </button>
+                                                <button class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke" @onclick="() => StartRevoke(key)">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polyline points="3 6 5 6 21 6"/>
+                                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                                    </svg>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_tab == "credits")
+        {
+            <div class="ws-section-header">
+                <h2>Credits</h2>
+                <p class="ws-section-desc">Your current RUB balance used for API request billing.</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_creditsError))
+            {
+                <div class="alert alert-danger" role="alert">@_creditsError</div>
+            }
+
+            <div class="ws-panel">
+                <div class="ws-panel-header">Current Balance</div>
+                <div class="ws-panel-body">
+                    @if (_balance is null)
+                    {
+                        <p class="text-muted">Loading...</p>
+                    }
+                    else
+                    {
+                        <div class="ws-balance-amount">@_balance.Amount.ToString("N2") <span class="ws-balance-currency">RUB</span></div>
+                    }
+                </div>
+            </div>
+        }
+
+        @if (_tab == "settings")
+        {
+            <div class="ws-section-header">
+                <h2>Settings</h2>
+                <p class="ws-section-desc">Account information.</p>
+            </div>
+
+            <div class="ws-panel">
+                <div class="ws-panel-header">Account</div>
+                <div class="ws-panel-body">
+                    <div class="ws-info-row">
+                        <span class="ws-info-label">Display Name</span>
+                        <span class="ws-info-value">@(AuthState.CurrentSession?.DisplayName ?? "—")</span>
+                    </div>
+                    <div class="ws-info-row">
+                        <span class="ws-info-label">User ID</span>
+                        <span class="ws-info-value"><code>@(AuthState.CurrentSession?.UserId.ToString() ?? "—")</code></span>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (_tab == "activity")
+        {
+            <div class="ws-section-header">
+                <h2>Activity</h2>
+                <p class="ws-section-desc">Recent API usage and token consumption.</p>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_activityError))
+            {
+                <div class="alert alert-danger" role="alert">@_activityError</div>
+            }
+
+            <div class="ws-panel">
+                <div class="ws-panel-header">Recent Usage</div>
+                <div class="ws-panel-body">
+                    @if (_usage is null)
+                    {
+                        <p class="text-muted">Loading...</p>
+                    }
+                    else if (_usage.Count == 0)
+                    {
+                        <p class="text-muted">No usage records yet.</p>
+                    }
+                    else
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Model</th>
+                                    <th>Input</th>
+                                    <th>Output</th>
+                                    <th>Cache</th>
+                                    <th>Cost (RUB)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in _usage)
+                                {
+                                    <tr>
+                                        <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
+                                        <td><code>@r.ModelId</code></td>
+                                        <td>@r.InputTokens.ToString("N0")</td>
+                                        <td>@r.OutputTokens.ToString("N0")</td>
+                                        <td>@r.CacheTokens.ToString("N0")</td>
+                                        <td>@r.CostRub.ToString("N4")</td>
+                                        <td>
+                                            <span class="badge @(r.Status == "completed" ? "badge-success" : "badge-warning")">
+                                                @r.Status
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        }
+
+    </div>
+</div>
+
+@code {
+    private string _tab = "keys";
+
+    // ── API Keys state ──
+    private IReadOnlyList<ApiKeyInfo>? _keys;
+    private bool _showCreateKeyPanel;
+    private bool _showRevokeConfirm;
+    private bool _showRenameModal;
+    private bool _isCreatingKey;
+    private bool _isRevoking;
+    private bool _isRenaming;
+    private string? _newKeyValue;
+    private string? _keysError;
+    private ApiKeyInfo? _keyToRevoke;
+    private ApiKeyInfo? _keyToRename;
+    private CreateKeyModel _createKeyModel = new();
+    private RenameKeyModel _renameModel = new();
+
+    // ── Credits state ──
+    private BalanceInfo? _balance;
+    private bool _creditsLoaded;
+    private string? _creditsError;
+
+    // ── Activity state ──
+    private IReadOnlyList<UsageInfo>? _usage;
+    private bool _activityLoaded;
+    private string? _activityError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null) AuthState.SetSession(session);
+        if (!AuthState.IsAuthenticated) { Navigation.NavigateTo("/login"); return; }
+        await LoadKeys();
+    }
+
+    private async Task SetTab(string tab)
+    {
+        _tab = tab;
+        if (tab == "credits" && !_creditsLoaded) await LoadCredits();
+        if (tab == "activity" && !_activityLoaded) await LoadActivity();
+    }
+
+    // ── API Keys ──
+
+    private async Task LoadKeys()
+    {
+        if (AuthState.CurrentSession is null) return;
+        try { _keys = await AuthClient.ListApiKeysAsync(AuthState.CurrentSession.UserId); }
+        catch { _keysError = "Failed to load API keys."; }
+    }
+
+    private void OpenCreateKey()
+    {
+        _createKeyModel = new CreateKeyModel();
+        _newKeyValue = null;
+        _showCreateKeyPanel = true;
+    }
+
+    private void CloseCreateKey()
+    {
+        _showCreateKeyPanel = false;
+        _newKeyValue = null;
+        _createKeyModel = new CreateKeyModel();
+    }
+
+    private async Task HandleCreateKey()
+    {
+        if (AuthState.CurrentSession is null) return;
+        _isCreatingKey = true;
+        _keysError = null;
+        try
+        {
+            var result = await AuthClient.CreateApiKeyAsync(AuthState.CurrentSession.UserId, _createKeyModel.Name);
+            _newKeyValue = result.RawKey;
+            await LoadKeys();
+        }
+        catch { _keysError = "Failed to create API key."; }
+        finally { _isCreatingKey = false; }
+    }
+
+    private void StartRevoke(ApiKeyInfo key) { _keyToRevoke = key; _showRevokeConfirm = true; }
+
+    private async Task ConfirmRevoke()
+    {
+        if (AuthState.CurrentSession is null || _keyToRevoke is null) return;
+        _isRevoking = true;
+        try
+        {
+            await AuthClient.RevokeApiKeyAsync(AuthState.CurrentSession.UserId, _keyToRevoke.Id);
+            _keyToRevoke = null;
+            _showRevokeConfirm = false;
+            await LoadKeys();
+        }
+        catch { _keysError = "Failed to revoke API key."; }
+        finally { _isRevoking = false; }
+    }
+
+    private void StartRename(ApiKeyInfo key)
+    {
+        _keyToRename = key;
+        _renameModel = new RenameKeyModel { Name = key.Name };
+        _showRenameModal = true;
+    }
+
+    private async Task ConfirmRename()
+    {
+        if (AuthState.CurrentSession is null || _keyToRename is null) return;
+        _isRenaming = true;
+        try
+        {
+            await AuthClient.RenameApiKeyAsync(AuthState.CurrentSession.UserId, _keyToRename.Id, _renameModel.Name);
+            _keyToRename = null;
+            _showRenameModal = false;
+            await LoadKeys();
+        }
+        catch { _keysError = "Failed to rename API key."; }
+        finally { _isRenaming = false; }
+    }
+
+    // ── Credits ──
+
+    private async Task LoadCredits()
+    {
+        if (AuthState.CurrentSession is null) return;
+        _creditsLoaded = true;
+        try { _balance = await BillingClient.GetBalanceAsync(AuthState.CurrentSession.UserId); }
+        catch { _creditsError = "Failed to load balance."; }
+    }
+
+    // ── Activity ──
+
+    private async Task LoadActivity()
+    {
+        if (AuthState.CurrentSession is null) return;
+        _activityLoaded = true;
+        try { _usage = await BillingClient.ListUsageAsync(AuthState.CurrentSession.UserId); }
+        catch { _activityError = "Failed to load usage data."; }
+    }
+
+    private class CreateKeyModel
+    {
+        [Required][MinLength(1)] public string Name { get; set; } = "";
+    }
+
+    private class RenameKeyModel
+    {
+        [Required][MinLength(1)] public string Name { get; set; } = "";
+    }
+}

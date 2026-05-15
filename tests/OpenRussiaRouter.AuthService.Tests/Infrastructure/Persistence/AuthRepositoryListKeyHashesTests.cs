@@ -19,6 +19,11 @@ public sealed class AuthRepositoryListKeyHashesTests
         using var connection = new NpgsqlConnection(database.ConnectionString);
 
         var now = DateTimeOffset.UtcNow;
+        connection.Execute(
+            """
+            insert into auth.users (id, email, role, status, password_hash, created_at_utc)
+            values ('user-1', 'user1@example.com', 'user', 'active', 'x', @Now);
+            """, new { Now = now });
         // Insert one active and one revoked key directly
         connection.Execute(
             """
@@ -68,6 +73,11 @@ public sealed class AuthRepositoryListKeyHashesTests
         using var connection = new NpgsqlConnection(database.ConnectionString);
 
         var now = DateTimeOffset.UtcNow;
+        connection.Execute(
+            """
+            insert into auth.users (id, email, role, status, password_hash, created_at_utc)
+            values ('user-1', 'user1@example.com', 'user', 'active', 'x', @Now);
+            """, new { Now = now });
         for (var i = 1; i <= 5; i++)
         {
             connection.Execute(

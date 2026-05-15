@@ -7,17 +7,19 @@ public sealed class PlaywrightFixture : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        if (!TestConfiguration.IsConfigured) return;
+
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         Browser = await Playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
-            Headless = false,
+            Headless = Environment.GetEnvironmentVariable("CI") is not null,
             SlowMo = 150
         });
     }
 
     public async Task DisposeAsync()
     {
-        await Browser.CloseAsync();
-        Playwright.Dispose();
+        if (Browser is not null) await Browser.CloseAsync();
+        Playwright?.Dispose();
     }
 }

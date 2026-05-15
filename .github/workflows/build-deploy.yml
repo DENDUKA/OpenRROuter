@@ -71,6 +71,10 @@ jobs:
         run: dotnet build OpenRussiaRouter.sln --no-restore -c Release
         shell: bash
 
+      - name: Install Playwright browsers
+        shell: bash
+        run: pwsh tests/OpenRussiaRouter.E2ETests/bin/Release/net8.0/playwright.ps1 install chromium --with-deps
+
       - name: Test
         run: dotnet test OpenRussiaRouter.sln --no-build -c Release --logger "GitHubActions" -nr:false -m:1
         shell: bash

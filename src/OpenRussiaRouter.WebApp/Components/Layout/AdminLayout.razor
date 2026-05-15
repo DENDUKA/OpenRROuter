@@ -57,17 +57,17 @@
 <style>
     .adm-shell {
         display: grid;
-        grid-template-columns: 200px minmax(0, 1fr);
-        min-height: calc(100vh - 56px);
+        grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+        min-height: calc(100vh - var(--topbar-height));
         margin: -32px;
     }
 
     .adm-sidebar {
         position: fixed;
         left: 0;
-        top: 56px;
-        width: 200px;
-        height: calc(100vh - 56px);
+        top: var(--topbar-height);
+        width: var(--sidebar-width);
+        height: calc(100vh - var(--topbar-height));
         overflow-y: auto;
         border-right: 1px solid var(--color-hairline);
         padding: 20px 8px;

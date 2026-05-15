@@ -2,8 +2,8 @@
 
 .app-shell {
     display: grid;
-    grid-template-columns: 240px minmax(0, 1fr);
-    grid-template-rows: 56px minmax(0, 1fr);
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    grid-template-rows: var(--topbar-height) minmax(0, 1fr);
     min-height: 100vh;
     background: var(--color-canvas);
 }
@@ -20,7 +20,7 @@
     position: sticky;
     top: 0;
     z-index: 50;
-    height: 56px;
+    height: var(--topbar-height);
     display: flex;
     align-items: center;
     border-bottom: 1px solid var(--color-hairline);
@@ -29,7 +29,7 @@
 }
 
 .topbar-brand {
-    width: 240px;
+    width: var(--sidebar-width);
     flex-shrink: 0;
     height: 100%;
     display: flex;

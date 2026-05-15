@@ -3,9 +3,12 @@
 @inject AuthState AuthState
 @inject NavigationManager Navigation
 
-<div class="app-shell">
+<div class="app-shell @(_hideNav ? "app-shell--full" : "")">
     <a class="skip-link" href="#main-content">Skip to content</a>
-    <NavMenu />
+    @if (!_hideNav)
+    {
+        <NavMenu />
+    }
 
     <div class="workspace">
         <header class="topbar">
@@ -98,6 +101,7 @@
 
 @code {
     private bool _menuOpen;
+    private bool _hideNav;
 
     private string _displayName => AuthState.CurrentSession?.DisplayName ?? "User";
     private string _avatarLetter => _displayName.Length > 0 ? _displayName[0].ToString().ToUpper() : "U";
@@ -105,8 +109,11 @@
     private void ToggleMenu() => _menuOpen = !_menuOpen;
     private void CloseMenu() => _menuOpen = false;
 
+    private bool IsNavHidden() => Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("workspace", StringComparison.OrdinalIgnoreCase);
+
     protected override void OnInitialized()
     {
+        _hideNav = IsNavHidden();
         AuthState.SessionChanged += OnSessionChanged;
         Navigation.LocationChanged += OnLocationChanged;
     }
@@ -120,6 +127,7 @@
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         _menuOpen = false;
+        _hideNav = IsNavHidden();
         InvokeAsync(StateHasChanged);
     }
 

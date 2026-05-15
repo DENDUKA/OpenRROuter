@@ -5,6 +5,10 @@
     background: var(--color-canvas);
 }
 
+.app-shell--full {
+    grid-template-columns: 1fr;
+}
+
 .workspace {
     min-width: 0;
 }

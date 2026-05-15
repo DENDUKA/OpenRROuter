@@ -1,0 +1,257 @@
+@page "/workspace/apikeys"
+@layout WorkspaceLayout
+@inject AuthState AuthState
+@inject AuthClient AuthClient
+
+<PageTitle>API Keys - OpenRussiaRouter</PageTitle>
+
+<div class="ws-section-header">
+    <h2>API Keys</h2>
+    <p class="ws-section-desc">Manage API keys for programmatic access. Keys are shown only once at creation.</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+
+@if (_showCreatePanel)
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">New API Key</div>
+        <div class="ws-panel-body">
+            @if (!string.IsNullOrEmpty(_newKeyValue))
+            {
+                <div class="alert alert-success">
+                    <strong>Save your API key — it won't be shown again!</strong>
+                    <div class="key-display">@_newKeyValue</div>
+                </div>
+                <button class="btn btn-primary" @onclick="CloseCreate">Done</button>
+            }
+            else
+            {
+                <EditForm Model="@_createModel" OnValidSubmit="HandleCreate">
+                    <DataAnnotationsValidator />
+                    <div class="form-group">
+                        <label for="keyName" class="form-label">Key Name</label>
+                        <InputText id="keyName" class="form-control" @bind-Value="_createModel.Name" />
+                        <ValidationMessage For="@(() => _createModel.Name)" />
+                    </div>
+                    <div class="ws-btn-row">
+                        <button type="submit" class="btn btn-primary" disabled="@_isCreating">
+                            @if (_isCreating) { <span class="spinner-border-sm me-2"></span> }
+                            Create
+                        </button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseCreate">Cancel</button>
+                    </div>
+                </EditForm>
+            }
+        </div>
+    </div>
+}
+
+@if (_showRevokeConfirm)
+{
+    <div class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header"><div class="modal-title">Revoke API Key</div></div>
+            <div class="modal-body">
+                <p>Are you sure you want to revoke <strong>@_keyToRevoke?.Name</strong>?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" @onclick="ConfirmRevoke" disabled="@_isRevoking">
+                    @if (_isRevoking) { <span class="spinner-border-sm"></span> }
+                    Revoke
+                </button>
+                <button class="btn btn-secondary" @onclick="() => _showRevokeConfirm = false">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_showRenameModal)
+{
+    <div class="modal">
+        <div class="modal-dialog">
+            <div class="modal-header"><div class="modal-title">Rename API Key</div></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="newName" class="form-label">New Name</label>
+                    <InputText id="newName" class="form-control" @bind-Value="_renameModel.Name" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" @onclick="ConfirmRename" disabled="@_isRenaming">Save</button>
+                <button class="btn btn-secondary" @onclick="() => _showRenameModal = false">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="ws-panel">
+    <div class="ws-panel-header ws-panel-header--split">
+        <span>Your API Keys</span>
+        <button class="btn btn-sm btn-primary" @onclick="OpenCreate">Create Key</button>
+    </div>
+    <div class="ws-panel-body">
+        @if (_keys is null)
+        {
+            <p class="text-muted">Loading...</p>
+        }
+        else if (_keys.Count == 0)
+        {
+            <p class="text-muted">No API keys yet. Create one to get started.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Prefix</th>
+                        <th>Created</th>
+                        <th>Last Used</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var key in _keys)
+                    {
+                        <tr>
+                            <td>@key.Name</td>
+                            <td><code>@key.Prefix***</code></td>
+                            <td>@key.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(key.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td>
+                                @if (key.IsActive)
+                                {
+                                    <span class="badge badge-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Revoked</span>
+                                }
+                            </td>
+                            <td class="ws-actions-cell">
+                                @if (key.IsActive)
+                                {
+                                    <button class="btn-icon" title="Rename" aria-label="Rename" @onclick="() => StartRename(key)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </button>
+                                    <button class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke" @onclick="() => StartRevoke(key)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"/>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                        </svg>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+<style>
+    .key-display {
+        font-family: var(--font-mono);
+        background: var(--color-canvas-mid);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-sm);
+        margin-top: var(--spacing-md);
+        word-break: break-all;
+        font-size: 13px;
+    }
+
+    .form-group {
+        margin-bottom: var(--spacing-lg);
+    }
+</style>
+
+@code {
+    private IReadOnlyList<ApiKeyInfo>? _keys;
+    private bool _showCreatePanel;
+    private bool _showRevokeConfirm;
+    private bool _showRenameModal;
+    private bool _isCreating;
+    private bool _isRevoking;
+    private bool _isRenaming;
+    private string? _newKeyValue;
+    private string? _error;
+    private ApiKeyInfo? _keyToRevoke;
+    private ApiKeyInfo? _keyToRename;
+    private CreateKeyModel _createModel = new();
+    private RenameKeyModel _renameModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState.CurrentSession is null) return;
+        await LoadKeys();
+    }
+
+    private async Task LoadKeys()
+    {
+        if (AuthState.CurrentSession is null) return;
+        try { _keys = await AuthClient.ListApiKeysAsync(AuthState.CurrentSession.UserId); }
+        catch { _error = "Failed to load API keys."; }
+    }
+
+    private void OpenCreate() { _createModel = new(); _newKeyValue = null; _showCreatePanel = true; }
+    private void CloseCreate() { _showCreatePanel = false; _newKeyValue = null; _createModel = new(); }
+
+    private async Task HandleCreate()
+    {
+        if (AuthState.CurrentSession is null) return;
+        _isCreating = true; _error = null;
+        try
+        {
+            var result = await AuthClient.CreateApiKeyAsync(AuthState.CurrentSession.UserId, _createModel.Name);
+            _newKeyValue = result.RawKey;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to create API key."; }
+        finally { _isCreating = false; }
+    }
+
+    private void StartRevoke(ApiKeyInfo key) { _keyToRevoke = key; _showRevokeConfirm = true; }
+
+    private async Task ConfirmRevoke()
+    {
+        if (AuthState.CurrentSession is null || _keyToRevoke is null) return;
+        _isRevoking = true;
+        try
+        {
+            await AuthClient.RevokeApiKeyAsync(AuthState.CurrentSession.UserId, _keyToRevoke.Id);
+            _keyToRevoke = null; _showRevokeConfirm = false;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to revoke API key."; }
+        finally { _isRevoking = false; }
+    }
+
+    private void StartRename(ApiKeyInfo key) { _keyToRename = key; _renameModel = new() { Name = key.Name }; _showRenameModal = true; }
+
+    private async Task ConfirmRename()
+    {
+        if (AuthState.CurrentSession is null || _keyToRename is null) return;
+        _isRenaming = true;
+        try
+        {
+            await AuthClient.RenameApiKeyAsync(AuthState.CurrentSession.UserId, _keyToRename.Id, _renameModel.Name);
+            _keyToRename = null; _showRenameModal = false;
+            await LoadKeys();
+        }
+        catch { _error = "Failed to rename API key."; }
+        finally { _isRenaming = false; }
+    }
+
+    private class CreateKeyModel { [Required][MinLength(1)] public string Name { get; set; } = ""; }
+    private class RenameKeyModel { [Required][MinLength(1)] public string Name { get; set; } = ""; }
+}

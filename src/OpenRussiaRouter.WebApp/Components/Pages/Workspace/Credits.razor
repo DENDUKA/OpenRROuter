@@ -1,0 +1,58 @@
+@page "/workspace/credits"
+@layout WorkspaceLayout
+@inject AuthState AuthState
+@inject BillingClient BillingClient
+
+<PageTitle>Credits - OpenRussiaRouter</PageTitle>
+
+<div class="ws-section-header">
+    <h2>Credits</h2>
+    <p class="ws-section-desc">Your current RUB balance used for API request billing.</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Current Balance</div>
+    <div class="ws-panel-body">
+        @if (_balance is null)
+        {
+            <p class="text-muted">Loading...</p>
+        }
+        else
+        {
+            <div class="balance-amount">
+                @_balance.Amount.ToString("N2") <span class="balance-currency">RUB</span>
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .balance-amount {
+        font-size: 28px;
+        font-weight: 600;
+        color: var(--color-ink);
+    }
+
+    .balance-currency {
+        font-size: 16px;
+        font-weight: 400;
+        color: var(--color-body);
+    }
+</style>
+
+@code {
+    private BalanceInfo? _balance;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState.CurrentSession is null) return;
+        try { _balance = await BillingClient.GetBalanceAsync(AuthState.CurrentSession.UserId); }
+        catch { _error = "Failed to load balance."; }
+    }
+}

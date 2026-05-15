@@ -11,26 +11,12 @@
 
         @if (AuthState.IsAuthenticated)
         {
-            @if (AuthState.CurrentSession?.IsAdmin == true)
-            {
-                <div class="nav-section">
-                    <div class="nav-section-title">Admin</div>
-                    <NavLink class="nav-item" href="admin" Match="NavLinkMatch.All"><span class="nav-icon nav-icon-dashboard" aria-hidden="true"></span>Dashboard</NavLink>
-                    <NavLink class="nav-item" href="admin/users"><span class="nav-icon nav-icon-users" aria-hidden="true"></span>Users</NavLink>
-                    <NavLink class="nav-item" href="admin/nodes"><span class="nav-icon nav-icon-nodes" aria-hidden="true"></span>Nodes</NavLink>
-                    <NavLink class="nav-item" href="admin/models"><span class="nav-icon nav-icon-models" aria-hidden="true"></span>Models</NavLink>
-                    <NavLink class="nav-item" href="admin/anomalies"><span class="nav-icon nav-icon-alert" aria-hidden="true"></span>Anomalies</NavLink>
-                </div>
-            }
-            else
-            {
-                <div class="nav-section">
-                    <div class="nav-section-title">Account</div>
-                    <NavLink class="nav-item" href="cabinet" Match="NavLinkMatch.All"><span class="nav-icon nav-icon-account" aria-hidden="true"></span>Account</NavLink>
-                    <NavLink class="nav-item" href="cabinet/keys"><span class="nav-icon nav-icon-key" aria-hidden="true"></span>API Keys</NavLink>
-                    <NavLink class="nav-item" href="cabinet/usage"><span class="nav-icon nav-icon-usage" aria-hidden="true"></span>Usage</NavLink>
-                </div>
-            }
+            <div class="nav-section">
+                <div class="nav-section-title">Account</div>
+                <NavLink class="nav-item" href="cabinet" Match="NavLinkMatch.All"><span class="nav-icon nav-icon-account" aria-hidden="true"></span>Account</NavLink>
+                <NavLink class="nav-item" href="cabinet/keys"><span class="nav-icon nav-icon-key" aria-hidden="true"></span>API Keys</NavLink>
+                <NavLink class="nav-item" href="cabinet/usage"><span class="nav-icon nav-icon-usage" aria-hidden="true"></span>Usage</NavLink>
+            </div>
         }
     </nav>
 </aside>

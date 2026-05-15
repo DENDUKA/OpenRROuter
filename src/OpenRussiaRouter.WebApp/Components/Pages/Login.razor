@@ -73,6 +73,10 @@
 </style>
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
     private LoginModel Model { get; set; } = new();
     private bool IsLoading { get; set; }
     private string? ErrorMessage { get; set; }
@@ -127,14 +131,12 @@
 
     private void NavigateByRole(string role)
     {
-        if (role == "Admin")
+        if (!string.IsNullOrEmpty(ReturnUrl) && ReturnUrl.StartsWith('/'))
         {
-            Navigation.NavigateTo("/admin");
+            Navigation.NavigateTo(ReturnUrl);
+            return;
         }
-        else
-        {
-            Navigation.NavigateTo("/cabinet");
-        }
+        Navigation.NavigateTo(role == "Admin" ? "/admin" : "/cabinet");
     }
 
     private class LoginModel

@@ -17,6 +17,10 @@
             <NavLink class="topbar-link" href="models">Models</NavLink>
             <a class="topbar-link" href="/pricing">Pricing</a>
             <a class="topbar-link" href="/docs">Docs</a>
+            @if (AuthState.CurrentSession?.IsAdmin == true)
+            {
+                <NavLink class="topbar-link" href="admin">Admin</NavLink>
+            }
         </nav>
 
         <div class="topbar-actions">
@@ -113,7 +117,12 @@
     private void ToggleMenu() => _menuOpen = !_menuOpen;
     private void CloseMenu() => _menuOpen = false;
 
-    private bool IsNavHidden() => Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("workspace", StringComparison.OrdinalIgnoreCase);
+    private bool IsNavHidden()
+    {
+        var path = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return path.StartsWith("workspace", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("admin", StringComparison.OrdinalIgnoreCase);
+    }
 
     protected override async Task OnInitializedAsync()
     {

@@ -1,368 +1,179 @@
 @page "/admin/models"
+@layout AdminLayout
 @inject BillingClient BillingClient
 @inject AuthState AuthState
-@inject NavigationManager Navigation
-@inject ISessionStorage SessionStorage
 
-<PageTitle>Models - OpenRussiaRouter Admin</PageTitle>
+<PageTitle>Models - Admin</PageTitle>
 
-<div class="page-header">
-    <div class="header-label">Admin</div>
-    <h1>Models</h1>
+<div class="adm-section-head">
+    <h2>Models</h2>
+    <p>Manage model catalog and routing metadata.</p>
 </div>
 
-<div class="content">
-    @if (!string.IsNullOrEmpty(ErrorMessage))
-    {
-        <div class="alert alert-danger" role="alert">
-            @ErrorMessage
-        </div>
-    }
+@if (!string.IsNullOrEmpty(_error))
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
 
-    @if (!string.IsNullOrEmpty(SuccessMessage))
-    {
-        <div class="alert alert-success" role="status">
-            @SuccessMessage
-        </div>
-    }
+@if (!string.IsNullOrEmpty(_success))
+{
+    <div class="alert alert-success" role="status">@_success</div>
+}
 
-    @if (ShowEditPanel)
-    {
-        <div class="panel">
-            <div class="panel-header">
-                @(IsNewModel ? "Add Model" : $"Edit Model: {EditingModel!.Id}")
-            </div>
-            <div class="panel-body">
-                <EditForm Model="@EditForm" OnValidSubmit="HandleSave">
-                    <DataAnnotationsValidator />
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="modelId" class="form-label">Model ID</label>
-                            <InputText id="modelId" class="form-control" @bind-Value="EditForm.Id" disabled="@(!IsNewModel)" />
-                            <ValidationMessage For="@(() => EditForm.Id)" />
-                        </div>
-                        <div class="form-group">
-                            <label for="displayName" class="form-label">Model Name</label>
-                            <InputText id="displayName" class="form-control" @bind-Value="EditForm.DisplayName" />
-                            <ValidationMessage For="@(() => EditForm.DisplayName)" />
-                        </div>
+@if (_showEdit)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">@(_isNew ? "Add Model" : $"Edit Model: {_editing!.Id}")</div>
+        <div class="adm-card-body">
+            <EditForm Model="@_form" OnValidSubmit="HandleSave">
+                <DataAnnotationsValidator />
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label for="modelId" class="form-label">Model ID</label>
+                        <InputText id="modelId" class="form-control" @bind-Value="_form.Id" disabled="@(!_isNew)" />
+                        <ValidationMessage For="@(() => _form.Id)" />
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="inputPrice" class="form-label">Input</label>
-                            <InputNumber id="inputPrice" class="form-control" @bind-Value="EditForm.InputPrice" />
-                            <ValidationMessage For="@(() => EditForm.InputPrice)" />
-                        </div>
-                        <div class="form-group">
-                            <label for="outputPrice" class="form-label">Output</label>
-                            <InputNumber id="outputPrice" class="form-control" @bind-Value="EditForm.OutputPrice" />
-                            <ValidationMessage For="@(() => EditForm.OutputPrice)" />
-                        </div>
+                    <div class="form-group">
+                        <label for="displayName" class="form-label">Model Name</label>
+                        <InputText id="displayName" class="form-control" @bind-Value="_form.DisplayName" />
+                        <ValidationMessage For="@(() => _form.DisplayName)" />
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="context" class="form-label">Context</label>
-                            <InputNumber id="context" class="form-control" @bind-Value="EditForm.Context" />
-                            <ValidationMessage For="@(() => EditForm.Context)" />
-                        </div>
-                        <div class="form-group">
-                            <label for="released" class="form-label">Released</label>
-                            <InputText id="released" class="form-control" @bind-Value="EditForm.Released" />
-                            <ValidationMessage For="@(() => EditForm.Released)" />
-                        </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label for="inputPrice" class="form-label">Input Price (RUB/1M)</label>
+                        <InputNumber id="inputPrice" class="form-control" @bind-Value="_form.InputPrice" />
+                        <ValidationMessage For="@(() => _form.InputPrice)" />
                     </div>
-                    <div class="btn-row">
-                        <button type="submit" class="btn btn-primary" disabled="@IsSaving">
-                            @if (IsSaving)
-                            {
-                                <span class="spinner-border-sm me-2"></span>
-                            }
-                            Save
-                        </button>
-                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@IsSaving">Cancel</button>
+                    <div class="form-group">
+                        <label for="outputPrice" class="form-label">Output Price (RUB/1M)</label>
+                        <InputNumber id="outputPrice" class="form-control" @bind-Value="_form.OutputPrice" />
+                        <ValidationMessage For="@(() => _form.OutputPrice)" />
                     </div>
-                </EditForm>
-            </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary" disabled="@_isSaving">
+                        @if (_isSaving) { <span class="spinner-border-sm me-2"></span> }
+                        Save
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit" disabled="@_isSaving">Cancel</button>
+                </div>
+            </EditForm>
         </div>
-    }
+    </div>
+}
 
-    <div class="panel">
-        <div class="panel-header d-flex justify-content-between align-items-center">
-            <span>Public Models</span>
-            <button class="btn btn-sm btn-primary" @onclick="ShowAddPanel" disabled="@IsSaving">
-                Add Model
-            </button>
-        </div>
-        <div class="panel-body">
-            @if (ModelList is null)
-            {
-                <p>Loading...</p>
-            }
-            else if (ModelList.Count == 0)
-            {
-                <p class="text-muted">No models configured.</p>
-            }
-            else
-            {
-                <table class="table">
-                    <thead>
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Public Models</span>
+        <button class="btn btn-sm btn-primary" @onclick="ShowAdd" disabled="@_isSaving">Add Model</button>
+    </div>
+    <div class="adm-card-body">
+        @if (_models is null)
+        {
+            <p class="text-muted">Loading…</p>
+        }
+        else if (_models.Count == 0)
+        {
+            <p class="text-muted">No models configured.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>ID</th><th>Display Name</th><th>Upstream</th>
+                    <th>Input / Output / Cache per 1M</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var model in _models)
+                    {
                         <tr>
-                            <th>ID</th>
-                            <th>Display Name</th>
-                            <th>Upstream</th>
-                            <th>Price Version</th>
-                            <th>Input / Output / Cache per 1M</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <td><code>@model.Id</code></td>
+                            <td>@model.DisplayName</td>
+                            <td><code>@model.UpstreamModelId</code></td>
+                            <td>@model.InputPrice.ToString("N2") / @model.OutputPrice.ToString("N2") / @model.CachePrice.ToString("N2") RUB</td>
+                            <td>
+                                <span class="badge @(model.Enabled ? "badge-success" : "badge-secondary")">
+                                    @(model.Enabled ? "Enabled" : "Disabled")
+                                </span>
+                            </td>
+                            <td class="adm-actions-cell">
+                                <button class="btn-icon" title="Edit" aria-label="Edit" @onclick="() => StartEdit(model)" disabled="@_isSaving">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </button>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var model in ModelList)
-                        {
-                            <tr>
-                                <td><code>@model.Id</code></td>
-                                <td>@model.DisplayName</td>
-                                <td><code>@model.UpstreamModelId</code></td>
-                                <td>@model.PriceVersion</td>
-                                <td>
-                                    @model.InputPrice.ToString("N2") / @model.OutputPrice.ToString("N2") / @model.CachePrice.ToString("N2") RUB
-                                </td>
-                                <td>
-                                    <span class="badge @(model.Enabled ? "badge-success" : "badge-secondary")">
-                                        @(model.Enabled ? "Enabled" : "Disabled")
-                                    </span>
-                                </td>
-                                <td class="actions-cell">
-                                    <button class="btn-icon" title="Edit" aria-label="Edit" @onclick="() => StartEdit(model)" disabled="@IsSaving">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
-                                    </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-        </div>
+                    }
+                </tbody>
+            </table>
+        }
     </div>
 </div>
 
-<style>
-    .page-header {
-        margin-bottom: var(--spacing-section);
-    }
-
-    .header-label {
-        font-size: 14px;
-        color: var(--color-mute);
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .content {
-        max-width: 960px;
-    }
-
-    .panel {
-        border: 1px solid var(--color-hairline);
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .panel-header {
-        padding: var(--spacing-md) 0;
-        border-bottom: 1px solid var(--color-hairline);
-        font-size: 16px;
-        font-weight: 700;
-    }
-
-    .panel-body {
-        padding: var(--spacing-lg) 0;
-    }
-
-    .panel-marker {
-        color: var(--color-mute);
-        margin-right: var(--spacing-sm);
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--spacing-lg);
-        margin-bottom: var(--spacing-lg);
-    }
-
-    .form-group {
-        margin-bottom: 0;
-    }
-
-    .btn-row {
-        display: flex;
-        gap: var(--spacing-md);
-    }
-
-    .actions-cell {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-    }
-
-    .d-flex {
-        display: flex;
-    }
-
-    .justify-content-between {
-        justify-content: space-between;
-    }
-
-    .align-items-center {
-        align-items: center;
-    }
-
-    @@media (max-width: 640px) {
-        .form-row,
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
 @code {
-    private IReadOnlyList<ModelInfo>? ModelList { get; set; }
-    private bool ShowEditPanel { get; set; }
-    private bool IsNewModel { get; set; }
-    private bool IsSaving { get; set; }
-    private string? ErrorMessage { get; set; }
-    private string? SuccessMessage { get; set; }
-    private ModelInfo? EditingModel { get; set; }
-    private EditFormModel EditForm { get; set; } = new();
+    private IReadOnlyList<ModelInfo>? _models;
+    private bool _showEdit, _isNew, _isSaving;
+    private string? _error, _success;
+    private ModelInfo? _editing;
+    private ModelForm _form = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        var session = await SessionStorage.LoadSessionAsync();
-        if (session is not null)
-        {
-            AuthState.SetSession(session);
-        }
-
-        if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
-        {
-            Navigation.NavigateTo("/login");
-            return;
-        }
-        await LoadModels();
-    }
+    protected override async Task OnInitializedAsync() => await LoadModels();
 
     private async Task LoadModels()
     {
-        try
-        {
-            ModelList = await BillingClient.ListModelsAsync();
-        }
-        catch
-        {
-            ErrorMessage = "Failed to load models.";
-        }
+        try { _models = await BillingClient.ListModelsAsync(); }
+        catch { _error = "Failed to load models."; }
     }
 
-    private void ShowAddPanel()
+    private void ShowAdd()
     {
-        ErrorMessage = null;
-        SuccessMessage = null;
-        EditingModel = null;
-        IsNewModel = true;
-        EditForm = new EditFormModel
-        {
-            Id = "",
-            DisplayName = "",
-            InputPrice = 0m,
-            OutputPrice = 0m,
-            Context = 0,
-            Released = ""
-        };
-        ShowEditPanel = true;
+        _error = null; _success = null; _editing = null; _isNew = true;
+        _form = new() { Id = "", DisplayName = "", InputPrice = 0m, OutputPrice = 0m };
+        _showEdit = true;
     }
 
     private void StartEdit(ModelInfo model)
     {
-        ErrorMessage = null;
-        SuccessMessage = null;
-        EditingModel = model;
-        IsNewModel = false;
-        EditForm = new EditFormModel
-        {
-            Id = model.Id,
-            DisplayName = model.DisplayName,
-            InputPrice = model.InputPrice,
-            OutputPrice = model.OutputPrice,
-            Context = 0,
-            Released = ""
-        };
-        ShowEditPanel = true;
+        _error = null; _success = null; _editing = model; _isNew = false;
+        _form = new() { Id = model.Id, DisplayName = model.DisplayName, InputPrice = model.InputPrice, OutputPrice = model.OutputPrice };
+        _showEdit = true;
     }
 
-    private void CancelEdit()
-    {
-        ErrorMessage = null;
-        EditingModel = null;
-        ShowEditPanel = false;
-    }
+    private void CancelEdit() { _editing = null; _showEdit = false; _error = null; }
 
     private async Task HandleSave()
     {
-        if (IsSaving)
-        {
-            return;
-        }
-
-        IsSaving = true;
-        ErrorMessage = null;
-        SuccessMessage = null;
+        if (_isSaving) return;
+        _isSaving = true; _error = null; _success = null;
+        var wasNew = _isNew;
         try
         {
-            var model = new ModelInfo(
-                EditForm.Id.Trim(),
-                EditForm.DisplayName.Trim(),
-                EditingModel?.UpstreamModelId ?? EditForm.Id.Trim(),
-                EditingModel?.PriceVersion ?? "v1",
-                EditForm.InputPrice,
-                EditForm.OutputPrice,
-                EditingModel?.CachePrice ?? 0m,
-                EditingModel?.Enabled ?? true);
-            await BillingClient.UpsertModelAsync(model);
-            ShowEditPanel = false;
-            EditingModel = null;
+            var m = new ModelInfo(
+                _form.Id.Trim(), _form.DisplayName.Trim(),
+                _editing?.UpstreamModelId ?? _form.Id.Trim(),
+                _editing?.PriceVersion ?? "v1",
+                _form.InputPrice, _form.OutputPrice,
+                _editing?.CachePrice ?? 0m,
+                _editing?.Enabled ?? true);
+            await BillingClient.UpsertModelAsync(m);
+            _showEdit = false; _editing = null;
             await LoadModels();
-            SuccessMessage = IsNewModel ? "Model added." : "Model prices updated.";
+            _success = wasNew ? "Model added." : "Model updated.";
         }
-        catch (Exception ex)
-        {
-            ErrorMessage = $"Failed to save model: {ex.Message}";
-        }
-        finally
-        {
-            IsSaving = false;
-        }
+        catch (Exception ex) { _error = $"Failed to save model: {ex.Message}"; }
+        finally { _isSaving = false; }
     }
 
-    private class EditFormModel
+    private class ModelForm
     {
         [Required]
         [RegularExpression(@"^[a-zA-Z0-9_\-\.]+$", ErrorMessage = "ID must be alphanumeric with dashes/underscores")]
         public string Id { get; set; } = "";
-
-        [Required]
-        public string DisplayName { get; set; } = "";
-
-        [Range(0, 1000000)]
-        public decimal InputPrice { get; set; }
-
-        [Range(0, 1000000)]
-        public decimal OutputPrice { get; set; }
-
-        [Range(0, int.MaxValue)]
-        public int Context { get; set; }
-
-        public string Released { get; set; } = "";
+        [Required] public string DisplayName { get; set; } = "";
+        [Range(0, 1000000)] public decimal InputPrice { get; set; }
+        [Range(0, 1000000)] public decimal OutputPrice { get; set; }
     }
 }

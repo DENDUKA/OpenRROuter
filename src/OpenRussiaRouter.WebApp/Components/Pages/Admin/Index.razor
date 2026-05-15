@@ -1,149 +1,24 @@
 @page "/admin"
+@layout AdminLayout
 @inject AuthState AuthState
-@inject NavigationManager Navigation
-@inject ISessionStorage SessionStorage
 
-<PageTitle>Admin Dashboard - OpenRussiaRouter</PageTitle>
+<PageTitle>Dashboard - Admin</PageTitle>
 
-<div class="page-header">
-    <div class="header-label">Admin</div>
-    <h1>Dashboard</h1>
+<div class="adm-section-head">
+    <h2>Dashboard</h2>
+    <p>Admin account overview.</p>
 </div>
 
-<div class="info-card">
-        <div class="card-label">Admin Account</div>
-    <div class="card-content">
-        <div class="info-row">
-            <span class="info-label">User ID</span>
-            <span class="info-value">@AuthState.CurrentSession?.UserId</span>
+<div class="adm-card">
+    <div class="adm-card-header">Admin Account</div>
+    <div class="adm-card-body">
+        <div class="adm-info-row">
+            <span class="adm-info-label">User ID</span>
+            <span><code>@(AuthState.CurrentSession?.UserId.ToString() ?? "—")</code></span>
         </div>
-        <div class="info-row">
-            <span class="info-label">Role</span>
-            <span class="info-value">@AuthState.CurrentSession?.Role</span>
+        <div class="adm-info-row">
+            <span class="adm-info-label">Role</span>
+            <span>@(AuthState.CurrentSession?.Role ?? "—")</span>
         </div>
     </div>
 </div>
-
-<div class="nav-grid">
-    <a href="/admin/users" class="nav-card">
-        <div class="nav-card-label">Users</div>
-        <div class="nav-card-desc">Manage application users and roles.</div>
-        <div class="nav-card-action">Open Users</div>
-    </a>
-    <a href="/admin/nodes" class="nav-card">
-        <div class="nav-card-label">Router Nodes</div>
-        <div class="nav-card-desc">Manage OpenRussiaRouter nodes.</div>
-        <div class="nav-card-action">Open Router Nodes</div>
-    </a>
-    <a href="/admin/models" class="nav-card">
-        <div class="nav-card-label">Models</div>
-        <div class="nav-card-desc">Manage model catalog and routing metadata.</div>
-        <div class="nav-card-action">Open Models</div>
-    </a>
-    <a href="/admin/anomalies" class="nav-card">
-        <div class="nav-card-label">Anomalies</div>
-        <div class="nav-card-desc">Review suspicious usage and operational anomalies.</div>
-        <div class="nav-card-action">Open Anomalies</div>
-    </a>
-</div>
-
-<style>
-    .page-header {
-        margin-bottom: var(--spacing-section);
-    }
-
-    .header-label {
-        font-size: 14px;
-        color: var(--color-mute);
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .info-card {
-        border: 1px solid var(--color-hairline);
-        margin-bottom: var(--spacing-section);
-        background-color: var(--color-canvas);
-    }
-
-    .card-label {
-        font-size: 14px;
-        font-weight: 700;
-        padding: var(--spacing-md) 0;
-        border-bottom: 1px solid var(--color-hairline);
-    }
-
-    .card-content {
-        padding: var(--spacing-lg) 0;
-    }
-
-    .info-row {
-        display: flex;
-        padding: var(--spacing-sm) 0;
-    }
-
-    .info-label {
-        width: 120px;
-        color: var(--color-mute);
-    }
-
-    .info-value {
-        color: var(--color-ink);
-        font-weight: 500;
-    }
-
-    .nav-grid {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--spacing-lg);
-    }
-
-    .nav-card {
-        border: 1px solid var(--color-hairline);
-        padding: var(--spacing-lg);
-        text-decoration: none;
-        color: var(--color-ink);
-        display: block;
-    }
-
-    .nav-card:hover {
-        background-color: var(--color-surface-soft);
-    }
-
-    .nav-card-label {
-        font-size: 16px;
-        font-weight: 700;
-        margin-bottom: var(--spacing-sm);
-    }
-
-    .nav-card-desc {
-        font-size: 14px;
-        color: var(--color-body);
-        margin-bottom: var(--spacing-md);
-    }
-
-    .nav-card-action {
-        font-size: 14px;
-        color: var(--color-mute);
-    }
-
-    @@media (max-width: 640px) {
-        .nav-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-</style>
-
-@code {
-    protected override async Task OnInitializedAsync()
-    {
-        var session = await SessionStorage.LoadSessionAsync();
-        if (session is not null)
-        {
-            AuthState.SetSession(session);
-        }
-
-        if (!AuthState.IsAuthenticated)
-        {
-            Navigation.NavigateTo("/login");
-        }
-    }
-}

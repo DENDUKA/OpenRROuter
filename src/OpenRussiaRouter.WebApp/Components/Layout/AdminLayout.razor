@@ -1,0 +1,186 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@inject AuthState AuthState
+@inject NavigationManager Navigation
+
+<div class="adm-shell">
+    <nav class="adm-sidebar" aria-label="Admin sections">
+        <div class="adm-sidebar-title">Admin</div>
+
+        <NavLink class="adm-link" href="/admin" Match="NavLinkMatch.All">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+            </svg>
+            Dashboard
+        </NavLink>
+
+        <NavLink class="adm-link" href="/admin/users">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+            Users
+        </NavLink>
+
+        <NavLink class="adm-link" href="/admin/nodes">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
+                <path d="M12 8v3M5 16V12l7-1.5L19 12v4"/>
+            </svg>
+            Nodes
+        </NavLink>
+
+        <NavLink class="adm-link" href="/admin/models">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
+            Models
+        </NavLink>
+
+        <NavLink class="adm-link" href="/admin/anomalies">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            Anomalies
+        </NavLink>
+    </nav>
+
+    <div class="adm-content">
+        @Body
+    </div>
+</div>
+
+<style>
+    .adm-shell {
+        display: grid;
+        grid-template-columns: 200px minmax(0, 1fr);
+        min-height: calc(100vh - 56px);
+        margin: -32px;
+    }
+
+    .adm-sidebar {
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        overflow-y: auto;
+        border-right: 1px solid var(--color-hairline);
+        padding: 20px 8px;
+        background: var(--color-canvas);
+    }
+
+    .adm-sidebar-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--color-body-mid);
+        padding: 0 10px 10px;
+    }
+
+    .adm-link {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 0 10px;
+        border-radius: 8px;
+        color: var(--color-body);
+        font-size: 14px;
+        text-decoration: none;
+        transition: background 100ms ease, color 100ms ease;
+    }
+
+    .adm-link:hover { background: var(--color-canvas-soft); color: var(--color-ink); text-decoration: none; }
+    .adm-link.active { background: var(--color-canvas-soft); color: var(--color-ink); }
+    .adm-link svg { flex-shrink: 0; opacity: 0.6; }
+    .adm-link:hover svg, .adm-link.active svg { opacity: 1; }
+
+    .adm-content { padding: 32px; min-width: 0; }
+
+    /* ── Shared content styles used across all admin pages ── */
+
+    .adm-section-head { margin-bottom: 24px; }
+    .adm-section-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 500; }
+    .adm-section-head p { margin: 0; font-size: 13px; color: var(--color-body); }
+
+    .adm-card {
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas-card);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .adm-card-header {
+        padding: 14px var(--spacing-lg);
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .adm-card-header--split { display: flex; align-items: center; justify-content: space-between; }
+    .adm-card-body { padding: var(--spacing-lg); }
+
+    .adm-info-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--color-hairline);
+        font-size: 14px;
+    }
+
+    .adm-info-row:last-child { border-bottom: none; }
+    .adm-info-label { width: 140px; flex-shrink: 0; color: var(--color-body); font-size: 13px; }
+
+    .adm-form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .adm-btn-row { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); }
+    .adm-actions-cell { display: flex; align-items: center; gap: 2px; }
+
+    .adm-key-preview {
+        font-family: var(--font-mono);
+        background: var(--color-canvas-mid);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-radius: var(--radius-sm);
+        margin-top: var(--spacing-md);
+        word-break: break-all;
+        font-size: 13px;
+        display: block;
+    }
+
+    @@media (max-width: 768px) {
+        .adm-shell { grid-template-columns: 1fr; margin: -20px -16px; }
+
+        .adm-sidebar {
+            position: static;
+            height: auto;
+            border-right: none;
+            border-bottom: 1px solid var(--color-hairline);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 12px 8px;
+        }
+
+        .adm-sidebar-title { display: none; }
+        .adm-link { width: auto; flex: 0 0 auto; padding: 0 12px; }
+        .adm-content { padding: 20px 16px; }
+        .adm-form-row { grid-template-columns: 1fr; }
+    }
+</style>
+
+@code {
+    protected override void OnInitialized()
+    {
+        if (!AuthState.IsAuthenticated || AuthState.CurrentSession?.IsAdmin != true)
+            Navigation.NavigateTo("/login");
+    }
+}

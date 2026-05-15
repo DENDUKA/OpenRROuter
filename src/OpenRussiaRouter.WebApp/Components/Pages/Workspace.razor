@@ -5,6 +5,7 @@
 @inject AuthState AuthState
 @inject AuthClient AuthClient
 @inject BillingClient BillingClient
+@inject ISessionStorage SessionStorage
 
 <PageTitle>Workspace - OpenRussiaRouter</PageTitle>
 
@@ -479,7 +480,18 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (!AuthState.IsAuthenticated) { Navigation.NavigateTo("/login"); return; }
+        if (!AuthState.IsAuthenticated)
+        {
+            var session = await SessionStorage.LoadSessionAsync();
+            if (session is not null) AuthState.SetSession(session);
+        }
+
+        if (!AuthState.IsAuthenticated)
+        {
+            var returnUrl = "/" + Navigation.ToBaseRelativePath(Navigation.Uri);
+            Navigation.NavigateTo($"/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            return;
+        }
         ReadTab();
         Navigation.LocationChanged += OnLocationChanged;
         await LoadForTab();

@@ -2,7 +2,6 @@
 @layout MainLayout
 @inject AuthState AuthState
 @inject NavigationManager Navigation
-@inject ISessionStorage SessionStorage
 
 <div class="ws-shell">
     <nav class="ws-sidebar" aria-label="Workspace navigation">
@@ -49,10 +48,8 @@
 </div>
 
 @code {
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        var session = await SessionStorage.LoadSessionAsync();
-        if (session is not null) AuthState.SetSession(session);
         if (!AuthState.IsAuthenticated) Navigation.NavigateTo("/login");
     }
 }

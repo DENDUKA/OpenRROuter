@@ -2,6 +2,7 @@
 @implements IDisposable
 @inject AuthState AuthState
 @inject NavigationManager Navigation
+@inject ISessionStorage SessionStorage
 
 <div class="app-shell @(_hideNav ? "app-shell--no-sidebar" : "")">
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -115,8 +116,11 @@
 
     private bool IsNavHidden() => Navigation.ToBaseRelativePath(Navigation.Uri).StartsWith("workspace", StringComparison.OrdinalIgnoreCase);
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        var session = await SessionStorage.LoadSessionAsync();
+        if (session is not null) AuthState.SetSession(session);
+
         _hideNav = IsNavHidden();
         AuthState.SessionChanged += OnSessionChanged;
         Navigation.LocationChanged += OnLocationChanged;

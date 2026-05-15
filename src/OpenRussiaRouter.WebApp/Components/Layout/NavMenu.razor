@@ -1,14 +1,7 @@
-﻿@inject AuthState AuthState
+@inject AuthState AuthState
 @inject NavigationManager Navigation
 
 <aside class="sidebar">
-    <a href="" class="sidebar-logo">
-        <span class="logo-mark">9R</span>
-        <span>OpenRussiaRouter</span>
-    </a>
-
-    @if (!LogoOnly)
-    {
     <nav class="sidebar-nav" aria-label="Main navigation">
         <div class="nav-section">
             <div class="nav-section-title">Product</div>
@@ -38,13 +31,6 @@
                     <NavLink class="nav-item" href="cabinet/usage"><span class="nav-icon nav-icon-usage" aria-hidden="true"></span>Usage</NavLink>
                 </div>
             }
-
-
         }
     </nav>
-    }
 </aside>
-
-@code {
-    [Parameter] public bool LogoOnly { get; set; }
-}

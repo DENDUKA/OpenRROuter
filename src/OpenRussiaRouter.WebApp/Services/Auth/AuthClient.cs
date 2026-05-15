@@ -12,7 +12,7 @@ public sealed class AuthClient(AuthGrpc.AuthServiceClient client)
         {
             throw new AuthException(response.ErrorCode);
         }
-        return new LoginResponse(response.SessionToken, response.UserId, response.Role);
+        return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
     }
 
     public async Task<InviteCompletionResponse> CompleteInviteAsync(string rawToken, string password, CancellationToken cancellationToken = default)

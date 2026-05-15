@@ -99,7 +99,8 @@
             {
                 SessionToken = response.SessionToken,
                 UserId = response.UserId,
-                Role = response.Role
+                Role = response.Role,
+                Email = response.Email
             };
             await SessionStorage.SaveSessionAsync(session);
             AuthState.SetSession(session);

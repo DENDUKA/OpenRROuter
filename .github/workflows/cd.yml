@@ -6,116 +6,12 @@ on:
     types: [completed]
     branches: [main]
 
-env:
-  REGISTRY: ghcr.io/denduka
-  KUSTOMIZE_VERSION: v5.4.3
-
 jobs:
-  update-manifests:
+  notify:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    permissions:
-      contents: write
-
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Detect changed services
-        id: changes
-        env:
-          BUILD_SHA: ${{ github.event.workflow_run.head_sha }}
-        shell: bash
+      - name: Images published
         run: |
-          set -euo pipefail
-
-          base="$(git rev-list --parents -n1 "$BUILD_SHA" 2>/dev/null | awk '{print $2}')"
-
-          if [[ -z "$base" ]]; then
-            echo "api_gateway=true" >> "$GITHUB_OUTPUT"
-            echo "auth_service=true" >> "$GITHUB_OUTPUT"
-            echo "billing_service=true" >> "$GITHUB_OUTPUT"
-            echo "control_plane=true" >> "$GITHUB_OUTPUT"
-            echo "webapp=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          changed_files="$(git diff --name-only "$base" "$BUILD_SHA")"
-
-          api_gateway=false auth_service=false billing_service=false
-          control_plane=false webapp=false all_services=false
-
-          while IFS= read -r file; do
-            [[ -z "$file" ]] && continue
-            case "$file" in
-              .github/workflows/build-deploy.yml|OpenRussiaRouter.sln|NuGet.Config|global.json|Directory.Build.props|Directory.Packages.props|src/OpenRussiaRouter.BuildingBlocks/*|src/OpenRussiaRouter.Contracts/*)
-                all_services=true ;;
-              src/OpenRussiaRouter.ApiGateway/*)  api_gateway=true ;;
-              src/OpenRussiaRouter.AuthService/*)  auth_service=true ;;
-              src/OpenRussiaRouter.BillingService/*) billing_service=true ;;
-              src/OpenRussiaRouter.ControlPlane/*) control_plane=true ;;
-              src/OpenRussiaRouter.WebApp/*)       webapp=true ;;
-            esac
-          done <<< "$changed_files"
-
-          if [[ "$all_services" == "true" ]]; then
-            api_gateway=true; auth_service=true; billing_service=true
-            control_plane=true; webapp=true
-          fi
-
-          { echo "api_gateway=$api_gateway"
-            echo "auth_service=$auth_service"
-            echo "billing_service=$billing_service"
-            echo "control_plane=$control_plane"
-            echo "webapp=$webapp"; } >> "$GITHUB_OUTPUT"
-
-      - name: Install kustomize
-        shell: bash
-        run: |
-          curl -sfLo kustomize.tar.gz \
-            "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz"
-          tar xzf kustomize.tar.gz
-          sudo mv kustomize /usr/local/bin/
-          kustomize version
-
-      - name: Update image tags
-        env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          cd infra/kustomize/overlays/dev/services
-
-          if [[ "${{ steps.changes.outputs.api_gateway }}" == "true" ]]; then
-            kustomize edit set image "$REGISTRY/api-gateway:sha-$SHA"
-          fi
-          if [[ "${{ steps.changes.outputs.auth_service }}" == "true" ]]; then
-            kustomize edit set image "$REGISTRY/auth-service:sha-$SHA"
-          fi
-          if [[ "${{ steps.changes.outputs.billing_service }}" == "true" ]]; then
-            kustomize edit set image "$REGISTRY/billing-service:sha-$SHA"
-          fi
-          if [[ "${{ steps.changes.outputs.control_plane }}" == "true" ]]; then
-            kustomize edit set image "$REGISTRY/control-plane:sha-$SHA"
-          fi
-          if [[ "${{ steps.changes.outputs.webapp }}" == "true" ]]; then
-            kustomize edit set image "$REGISTRY/webapp:sha-$SHA"
-          fi
-
-      - name: Commit and push
-        env:
-          SHA: ${{ github.event.workflow_run.head_sha }}
-        shell: bash
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add infra/kustomize/overlays/dev/services/kustomization.yaml
-          if git diff --staged --quiet; then
-            echo "No image tag changes, skipping commit."
-            exit 0
-          fi
-          git commit -m "chore: pin images to sha-${SHA:0:7} [skip ci]"
-          git push origin main
+          echo "Build ${{ github.event.workflow_run.head_sha }} completed."
+          echo "ArgoCD Image Updater will detect new digests within 2 minutes."

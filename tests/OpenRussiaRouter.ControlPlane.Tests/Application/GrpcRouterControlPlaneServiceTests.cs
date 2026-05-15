@@ -7,11 +7,13 @@ namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
 public sealed class GrpcRouterControlPlaneServiceTests
 {
+    private static readonly IRouterKeySyncService NoOpKeySync = new NoOpRouterKeySyncService();
+
     [Fact]
     public async Task SelectRouterNode_HealthyNode_ReturnsLease()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -27,7 +29,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task SelectRouterNode_NoHealthyNodes_ReturnsRouterUnavailable()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()));
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -40,7 +42,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task ReleaseRouterNode_ExistingLease_ReturnsAcceptedAndReleasesLoad()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
         var lease = control.SelectRouterNode("req-1", DateTimeOffset.UtcNow);
 
         var response = await service.ReleaseRouterNode(
@@ -56,7 +58,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task RegisterAndListRouterNode_ValidRequest_ReturnsNodeSummary()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var service = new GrpcRouterControlPlaneService(control);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
 
         var registered = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -79,7 +81,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
         var nodeId = Assert.Single(control.ListRouterNodes()).Id;
 
         var disabled = await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
@@ -92,7 +94,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()));
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -117,6 +119,13 @@ public sealed class GrpcRouterControlPlaneServiceTests
             DateTimeOffset.UtcNow);
         control.ApplyHealth(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
         return control;
+    }
+
+    private sealed class NoOpRouterKeySyncService : IRouterKeySyncService
+    {
+        public Task SyncAllAsync(CancellationToken ct) => Task.CompletedTask;
+        public Task SyncToNodeAsync(string nodeId, CancellationToken ct) => Task.CompletedTask;
+        public Task RevokeKeyAsync(string prefix, CancellationToken ct) => Task.CompletedTask;
     }
 }
 

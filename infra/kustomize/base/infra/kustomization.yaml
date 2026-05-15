@@ -6,3 +6,5 @@ resources:
   - postgres.yaml
   - postgres-secret.yaml
   - seq.yaml
+  - migration-job.yaml
+  - network-policies.yaml

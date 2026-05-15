@@ -21,7 +21,7 @@ public sealed class YarpRouterProxyClientTests
             new Uri("https://router.example/internal"),
             "secret-a");
 
-        var response = await client.SendChatCompletionAsync(lease, """{"model":"gpt-test"}""", "req-1", CancellationToken.None);
+        var response = await client.SendChatCompletionAsync(lease, """{"model":"gpt-test"}""", "req-1", "sk-test_secret", CancellationToken.None);
 
         Assert.Equal(200, response.StatusCode);
         Assert.Equal("""{"ok":true}""", response.Body);

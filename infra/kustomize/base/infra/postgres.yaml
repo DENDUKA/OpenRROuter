@@ -21,8 +21,8 @@ spec:
           env:
             - name: POSTGRES_USER
               value: orr
-            - name: POSTGRES_MULTIPLE_DATABASES
-              value: orr_auth,orr_billing,orr_control
+            - name: POSTGRES_DB
+              value: postgres
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

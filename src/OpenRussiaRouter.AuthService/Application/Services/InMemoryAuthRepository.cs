@@ -118,4 +118,15 @@ public sealed class InMemoryAuthRepository : IAuthRepository
             return true;
         }
     }
+
+    public IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes()
+    {
+        lock (gate)
+        {
+            return apiKeys
+                .Where(k => k.RevokedAtUtc is null)
+                .Select(k => (k.Prefix, k.SecretHash))
+                .ToArray();
+        }
+    }
 }

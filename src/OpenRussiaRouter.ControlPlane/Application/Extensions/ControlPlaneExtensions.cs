@@ -1,7 +1,11 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Background;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
+using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Extensions;
 
@@ -32,6 +36,32 @@ public static class ControlPlaneExtensions
         services.AddHttpClient<IRouterNodeHealthClient, HttpRouterNodeHealthClient>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddControlPlaneKeySyncServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        var authGrpcUrl = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
+        services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
+        {
+            options.Address = new Uri(authGrpcUrl);
+        })
+        .ConfigureChannel(options =>
+        {
+            options.HttpHandler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+            };
+        });
+
+        services.AddHttpClient<RouterNodeKeySyncClient>();
+        services.AddScoped<IRouterKeySyncService, RouterKeySyncService>();
+        services.AddHostedService<KeySyncWorker>();
 
         return services;
     }

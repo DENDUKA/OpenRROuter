@@ -13,7 +13,8 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
     : IRouterProxyClient
 {
     private const string NodeTokenHeader = "X-ORR-Node-Token";
-    private static readonly HttpMessageInvoker HttpClient = new(new SocketsHttpHandler
+
+    private static readonly HttpMessageInvoker ForwardingHttpClient = new(new SocketsHttpHandler
     {
         UseProxy = false,
         AllowAutoRedirect = false,
@@ -21,6 +22,16 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         UseCookies = false,
         EnableMultipleHttp2Connections = true,
         ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
+        ConnectTimeout = TimeSpan.FromSeconds(15)
+    });
+
+    private static readonly HttpClient StreamingHttpClient = new(new SocketsHttpHandler
+    {
+        UseProxy = false,
+        AllowAutoRedirect = false,
+        AutomaticDecompression = DecompressionMethods.None,
+        UseCookies = false,
+        EnableMultipleHttp2Connections = true,
         ConnectTimeout = TimeSpan.FromSeconds(15)
     });
 
@@ -33,6 +44,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         GatewayRouterLease lease,
         string requestJson,
         string requestId,
+        string userApiKey,
         CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(lease);
@@ -43,6 +55,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
         context.Request.Path = "/v1/chat/completions";
         context.Request.Headers[NodeTokenHeader] = tokenProvider.Resolve(lease.TokenSecretName);
+        context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
         context.Request.Headers[CorrelationIds.HeaderName] = requestId;
         context.Request.ContentType = "application/json";
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestJson));
@@ -53,7 +66,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         context.Response.Body = responseBody;
 
         var destinationPrefix = BuildDestinationPrefix(lease.EndpointUrl);
-        var error = await forwarder.SendAsync(context, destinationPrefix, HttpClient, RequestConfig).ConfigureAwait(false);
+        var error = await forwarder.SendAsync(context, destinationPrefix, ForwardingHttpClient, RequestConfig).ConfigureAwait(false);
         if (error != ForwarderError.None)
         {
             var errorFeature = context.GetForwarderErrorFeature();
@@ -66,6 +79,29 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         var contentType = context.Response.ContentType ?? "application/json";
 
         return new RouterProxyResponse(context.Response.StatusCode, contentType, body);
+    }
+
+    public async Task<RouterStreamSession> BeginStreamChatCompletionAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var requestUri = new Uri(lease.EndpointUrl, "/v1/chat/completions");
+        var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        request.Headers.TryAddWithoutValidation(NodeTokenHeader, tokenProvider.Resolve(lease.TokenSecretName));
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
+        request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);
+        request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        var response = await StreamingHttpClient
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        return new RouterStreamSession(response);
     }
 
     private static string BuildDestinationPrefix(Uri baseEndpoint)

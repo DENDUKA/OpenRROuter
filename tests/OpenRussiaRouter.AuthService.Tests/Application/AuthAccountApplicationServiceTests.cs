@@ -172,5 +172,13 @@ public sealed class AuthAccountApplicationServiceTests
             key.Revoke(revokedAtUtc);
             return true;
         }
+
+        public IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes()
+        {
+            return ApiKeys
+                .Where(k => k.RevokedAtUtc is null)
+                .Select(k => (k.Prefix, k.SecretHash))
+                .ToArray();
+        }
     }
 }

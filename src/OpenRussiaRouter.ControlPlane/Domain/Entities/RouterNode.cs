@@ -17,7 +17,7 @@ public sealed class RouterNode
         Id = Preconditions.RequireValue(id, nameof(id));
         Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = Preconditions.RequireValue(tokenSecretName, nameof(tokenSecretName));
+        TokenSecretName = tokenSecretName?.Trim() ?? string.Empty;
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
         CreatedAtUtc = createdAtUtc;
     }
@@ -50,7 +50,7 @@ public sealed class RouterNode
     {
         Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = Preconditions.RequireValue(tokenSecretName, nameof(tokenSecretName));
+        TokenSecretName = tokenSecretName?.Trim() ?? string.Empty;
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
     }
 

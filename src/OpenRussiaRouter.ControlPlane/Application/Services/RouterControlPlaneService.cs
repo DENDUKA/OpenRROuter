@@ -41,6 +41,12 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         repository.UpsertNode(node);
     }
 
+    public void DeleteNode(string nodeId)
+    {
+        if (!repository.RemoveNode(nodeId))
+            throw new KeyNotFoundException("Router node was not found.");
+    }
+
     public void ApplyHealth(
         string nodeId,
         RouterNodeStatus status,

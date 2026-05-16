@@ -7,6 +7,8 @@ public interface IControlPlaneRepository
 
     void UpsertNode(RouterNode node);
 
+    bool RemoveNode(string nodeId);
+
     RouterNode? GetNode(string nodeId);
 
     (IReadOnlyCollection<RouterNode> Items, bool HasMore) ListNodes(int limit, string? afterName = null);

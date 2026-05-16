@@ -14,6 +14,18 @@ public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
         _nodes[node.Id] = node;
     }
 
+    public bool RemoveNode(string nodeId)
+    {
+        if (!_nodes.TryRemove(nodeId, out _))
+            return false;
+
+        var nodeLeases = _leases.Values.Where(l => l.NodeId == nodeId).ToArray();
+        foreach (var lease in nodeLeases)
+            _leases.TryRemove(lease.Id, out _);
+
+        return true;
+    }
+
     public RouterNode? GetNode(string nodeId) => _nodes.GetValueOrDefault(nodeId);
 
     public (IReadOnlyCollection<RouterNode> Items, bool HasMore) ListNodes(int limit, string? afterName = null)

@@ -10,6 +10,7 @@ service RouterControlPlane {
   rpc RegisterRouterNode (RegisterRouterNodeRequest) returns (RegisterRouterNodeResponse);
   rpc DisableRouterNode (DisableRouterNodeRequest) returns (DisableRouterNodeResponse);
   rpc EnableRouterNode (EnableRouterNodeRequest) returns (EnableRouterNodeResponse);
+  rpc DeleteRouterNode (DeleteRouterNodeRequest) returns (DeleteRouterNodeResponse);
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
 }
 
@@ -63,6 +64,15 @@ message EnableRouterNodeRequest {
 
 message EnableRouterNodeResponse {
   bool enabled = 1;
+  string error_code = 2;
+}
+
+message DeleteRouterNodeRequest {
+  string node_id = 1;
+}
+
+message DeleteRouterNodeResponse {
+  bool deleted = 1;
   string error_code = 2;
 }
 

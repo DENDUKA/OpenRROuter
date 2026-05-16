@@ -37,6 +37,16 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             ToParameters(node));
     }
 
+    public bool RemoveNode(string nodeId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        // leases have FK with ON DELETE CASCADE, so deleting the node removes them too
+        var affected = connection.Execute(
+            "delete from control.router_nodes where id = @NodeId;",
+            new { NodeId = nodeId });
+        return affected > 0;
+    }
+
     public RouterNode? GetNode(string nodeId)
     {
         using var connection = connectionFactory.CreateConnection();

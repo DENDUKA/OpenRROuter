@@ -91,6 +91,22 @@ public sealed class GrpcRouterControlPlaneService(
         }
     }
 
+    public override Task<DeleteRouterNodeResponse> DeleteRouterNode(
+        DeleteRouterNodeRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            controlPlane.DeleteNode(request.NodeId);
+            return Task.FromResult(new DeleteRouterNodeResponse { Deleted = true });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            logger?.LogWarning(ex, "DeleteRouterNode failed. NodeId: {NodeId}", request.NodeId);
+            return Task.FromResult(new DeleteRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+        }
+    }
+
     public override Task<EnableRouterNodeResponse> EnableRouterNode(
         EnableRouterNodeRequest request,
         ServerCallContext context)

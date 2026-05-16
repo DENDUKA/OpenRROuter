@@ -70,6 +70,21 @@ public class NodesModel : PageModelBase
         }
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(string nodeId)
+    {
+        try
+        {
+            await _controlPlaneClient.DeleteRouterNodeAsync(nodeId);
+            return RedirectToPage();
+        }
+        catch
+        {
+            ErrorMessage = "Failed to delete router node.";
+            await OnGetAsync();
+            return Page();
+        }
+    }
+
     public async Task<IActionResult> OnPostEnableAsync(string nodeId)
     {
         try

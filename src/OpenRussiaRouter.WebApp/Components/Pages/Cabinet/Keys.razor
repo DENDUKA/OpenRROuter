@@ -122,46 +122,48 @@
 
 @if (ShowRevokeConfirm)
 {
-    <div class="modal-backdrop"></div>
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h2 class="modal-title">Revoke API Key</h2>
-        </div>
-        <div class="modal-body">
-            <p>Are you sure you want to revoke <strong>@KeyToRevoke?.Name</strong>?</p>
-            <p class="mb-0">This action cannot be undone.</p>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-danger" data-testid="btn-confirm-revoke" @onclick="ConfirmRevoke" disabled="@IsRevoking">
-                @if (IsRevoking) { <span class="spinner me-2"></span> }
-                Revoke
-            </button>
-            <button class="btn btn-secondary" @onclick="CancelRevoke">Cancel</button>
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Revoke API Key</h2>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to revoke <strong>@KeyToRevoke?.Name</strong>?</p>
+                <p class="mb-0">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" data-testid="btn-confirm-revoke" @onclick="ConfirmRevoke" disabled="@IsRevoking">
+                    @if (IsRevoking) { <span class="spinner me-2"></span> }
+                    Revoke
+                </button>
+                <button class="btn btn-secondary" @onclick="CancelRevoke">Cancel</button>
+            </div>
         </div>
     </div>
 }
 
 @if (ShowRenameModal)
 {
-    <div class="modal-backdrop"></div>
-    <div class="modal-dialog">
-        <div class="modal-header">
-            <h2 class="modal-title">Rename API Key</h2>
-        </div>
-        <EditForm Model="RenameModel" OnValidSubmit="ConfirmRename">
-            <DataAnnotationsValidator />
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label for="newName" class="form-label">New Name</label>
-                    <InputText id="newName" class="form-control" data-testid="input-rename" @bind-Value="RenameModel.Name" />
-                    <ValidationMessage For="@(() => RenameModel.Name)" />
+    <div class="modal" role="dialog" aria-modal="true">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <h2 class="modal-title">Rename API Key</h2>
+            </div>
+            <EditForm Model="RenameModel" OnValidSubmit="ConfirmRename">
+                <DataAnnotationsValidator />
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newName" class="form-label">New Name</label>
+                        <InputText id="newName" class="form-control" data-testid="input-rename" @bind-Value="RenameModel.Name" />
+                        <ValidationMessage For="@(() => RenameModel.Name)" />
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="submit" class="btn btn-primary" data-testid="btn-save-rename" disabled="@IsRenaming">Save</button>
-                <button type="button" class="btn btn-secondary" @onclick="CancelRename">Cancel</button>
-            </div>
-        </EditForm>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-rename" disabled="@IsRenaming">Save</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelRename">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
     </div>
 }
 

@@ -18,6 +18,8 @@
     padding: 20px 8px;
     background: var(--color-canvas);
     z-index: 40;
+    display: flex;
+    flex-direction: column;
 }
 
 .ws-sidebar-header {

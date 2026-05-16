@@ -6,7 +6,7 @@ sealed class ApiKeysPage(IPage page, string baseUrl)
 {
     public async Task NavigateAsync()
     {
-        await page.GotoAsync($"{baseUrl}/cabinet/keys");
+        await page.GotoAsync($"{baseUrl}/workspace/apikeys");
         await page.WaitForSelectorAsync("[data-testid='btn-create-key']");
     }
 

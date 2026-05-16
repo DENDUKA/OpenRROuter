@@ -478,6 +478,32 @@ code.d-block {
 .ms-2 { margin-left: var(--spacing-md) !important; }
 .ms-3 { margin-left: var(--spacing-lg) !important; }
 
+/* Workspace sidebar nav items — global overrides needed because NavLink renders its own <a>
+   and doesn't inherit Blazor CSS isolation scope from the parent component */
+.ws-nav-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 8px;
+    color: var(--color-body);
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 100ms ease, color 100ms ease;
+}
+
+.ws-nav-item:hover {
+    background: var(--color-canvas-soft);
+    color: var(--color-ink);
+    text-decoration: none;
+}
+
+.ws-nav-item.active {
+    background: var(--color-canvas-soft);
+    color: var(--color-ink);
+}
+
 /* User dropdown — global overrides needed because NavLink renders its own <a>
    and doesn't inherit Blazor CSS isolation scope from the parent component */
 .user-dropdown .dropdown-item,

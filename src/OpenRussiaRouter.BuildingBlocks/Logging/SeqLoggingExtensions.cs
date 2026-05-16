@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Events;
 
 namespace OpenRussiaRouter.BuildingBlocks.Logging;
 
@@ -34,6 +35,7 @@ public static class SeqLoggingExtensions
                 .ReadFrom.Services(services)
                 .Enrich.FromLogContext()
                 .Enrich.WithProperty("Service", serviceName)
+                .Filter.ByExcluding(IsHealthCheckLog)
                 .WriteTo.Console();
 
             if (!string.IsNullOrWhiteSpace(seqUrl))
@@ -84,6 +86,11 @@ public static class SeqLoggingExtensions
 
         return app;
     }
+
+    private static bool IsHealthCheckLog(LogEvent logEvent) =>
+        logEvent.Properties.TryGetValue("RequestPath", out var requestPath) &&
+        requestPath is ScalarValue { Value: string path } &&
+        path.StartsWith("/health", StringComparison.OrdinalIgnoreCase);
 
     private static void LogUnhandledException(HttpContext context, Exception exception)
     {

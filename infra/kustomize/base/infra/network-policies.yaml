@@ -64,8 +64,8 @@ spec:
               kubernetes.io/metadata.name: orr-dev
 
 ---
-# api-gateway and control-plane need to reach external 9Router nodes
-# (health checks, key sync, and proxying LLM requests).
+# api-gateway, control-plane and webapp need to reach external 9Router nodes
+# (health checks, key sync, proxying LLM requests, and admin model fetching).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -79,6 +79,7 @@ spec:
         values:
           - api-gateway
           - control-plane
+          - webapp
   policyTypes:
     - Egress
   egress:

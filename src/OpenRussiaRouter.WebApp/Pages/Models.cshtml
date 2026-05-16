@@ -1,0 +1,158 @@
+@page
+@model ModelsModel
+@{ ViewData["Title"] = "Models"; }
+
+<div class="models-page">
+    <section class="models-hero" aria-labelledby="models-title">
+        <div>
+            <div class="eyebrow">Filter Filter</div>
+            <h1 id="models-title">Models</h1>
+            <p class="models-lead">Browse available OpenAI-compatible models routed through OpenRussiaRouter.</p>
+        </div>
+    </section>
+
+    <section class="models-shell" aria-label="Model catalog">
+        <div class="filter-row" aria-label="Filters">
+            <label class="sr-only" for="model-search">Search models</label>
+            <input id="model-search" class="search" type="search" placeholder="Search models" oninput="filterModels()" />
+
+            <div class="filter-group" role="group" aria-label="Model categories">
+                @foreach (var cat in ModelsModel.Categories)
+                {
+                    <button type="button" class="filter-pill @(cat == "All" ? "active" : "")"
+                            aria-pressed="@(cat == "All" ? "true" : "false")"
+                            onclick="setCategory('@cat', this)">@cat</button>
+                }
+            </div>
+        </div>
+
+        <div class="models-toolbar">
+            <div>
+                <div class="toolbar-label">All models</div>
+                <div class="toolbar-count" id="model-count">@Model.Models.Count model@(Model.Models.Count == 1 ? "" : "s") available</div>
+            </div>
+            <div class="toolbar-note">OpenAI-compatible API</div>
+        </div>
+
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="catalog-state error" role="alert">
+                <strong>Could not load models.</strong>
+                <span>@Model.ErrorMessage</span>
+            </div>
+        }
+        else if (Model.Models.Count == 0)
+        {
+            <div class="catalog-state">
+                <strong>No models configured.</strong>
+            </div>
+        }
+        else
+        {
+            <div class="table-wrap table-scroll">
+                <table class="table model-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Model</th>
+                            <th scope="col">Provider</th>
+                            <th scope="col">Capability</th>
+                            <th scope="col">Status</th>
+                            <th scope="col" class="num">Context</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var m in Model.Models)
+                        {
+                            var provider = ModelsModel.GetProvider(m);
+                            var capability = ModelsModel.GetCapability(m);
+                            var initials = ModelsModel.GetInitials(m.DisplayName);
+                            var detailUrl = m.Id.Contains('/')
+                                ? $"/models/{m.Id}"
+                                : $"/models/model/{Uri.EscapeDataString(m.Id)}";
+                            <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
+                                data-provider="@provider.ToLower()" data-capability="@capability.ToLower()"
+                                onclick="location.href='@detailUrl'" tabindex="0" role="link"
+                                onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
+                                <td>
+                                    <div class="model-cell">
+                                        <div class="model-icon" aria-hidden="true">@initials</div>
+                                        <div>
+                                            <div class="model-name">@m.DisplayName</div>
+                                            <code class="model-slug">@m.Id</code>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>@provider</td>
+                                <td><span class="badge">@capability</span></td>
+                                <td><span class="badge badge-success">Available</span></td>
+                                <td class="num">128K</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+</div>
+
+<style>
+    .models-page { width: 100%; }
+    .models-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-xl); padding-bottom: var(--spacing-2xl); border-bottom: 1px solid var(--color-hairline); }
+    .models-lead { color: var(--color-body); max-width: 620px; font-size: 18px; line-height: 28px; }
+    .models-shell { padding: var(--spacing-xl) 0 var(--spacing-3xl); }
+    .filter-group { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-xl); }
+    .search { width: min(360px, 100%); border-radius: var(--radius-pill); }
+    .filter-pill { height: 32px; border: 1px solid var(--color-hairline); border-radius: var(--radius-pill); background: transparent; color: var(--color-body); cursor: pointer; font: inherit; padding: 0 var(--spacing-md); transition: border-color .15s ease, color .15s ease, background-color .15s ease; }
+    .filter-pill:hover, .filter-pill:focus-visible { border-color: rgba(255,255,255,.45); color: var(--color-ink); outline: none; }
+    .filter-pill.active { background: var(--color-canvas-card); border-color: var(--color-border); color: var(--color-ink); }
+    .models-toolbar { display: flex; justify-content: space-between; gap: var(--spacing-lg); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-hairline); margin-bottom: var(--spacing-lg); }
+    .toolbar-label { font-size: 18px; color: var(--color-ink); }
+    .toolbar-count, .toolbar-note { color: var(--color-mute); font-size: 14px; }
+    .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 280px; }
+    .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); }
+    .model-name { color: var(--color-ink); font-weight: 500; }
+    .model-table tbody tr { cursor: pointer; }
+    .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
+    .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
+    .catalog-state strong { color: var(--color-ink); }
+    .catalog-state.error { border-color: rgba(255,59,48,.45); }
+    @@media (max-width: 820px) { .models-hero, .models-toolbar { display: grid; grid-template-columns: 1fr; } .table-scroll { overflow-x: auto; } }
+    @@media (max-width: 520px) { .toolbar-note { display: none; } }
+</style>
+
+<script>
+    let activeCategory = 'All';
+
+    function setCategory(cat, btn) {
+        activeCategory = cat;
+        document.querySelectorAll('.filter-pill').forEach(b => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+        });
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
+        applyFilter();
+    }
+
+    function filterModels() { applyFilter(); }
+
+    function applyFilter() {
+        const q = (document.getElementById('model-search').value || '').toLowerCase();
+        const rows = document.querySelectorAll('.model-table tbody tr');
+        let visible = 0;
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            const id = row.dataset.id || '';
+            const provider = row.dataset.provider || '';
+            const textMatch = !q || name.includes(q) || id.includes(q);
+            const catMatch = activeCategory === 'All' || provider.includes(activeCategory.toLowerCase())
+                || name.includes(activeCategory.toLowerCase()) || id.includes(activeCategory.toLowerCase());
+            const show = textMatch && catMatch;
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const countEl = document.getElementById('model-count');
+        if (countEl) countEl.textContent = visible + ' model' + (visible === 1 ? '' : 's') + ' available';
+    }
+</script>

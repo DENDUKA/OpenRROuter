@@ -1,0 +1,130 @@
+@page
+@model Workspace.ApiKeysModel
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "API Keys"; }
+
+<div class="ws-section-header">
+    <h2>API Keys</h2>
+    <p class="ws-section-desc">Manage API keys for programmatic access. Keys are shown only once at creation.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+@if (Model.NewKeyValue != null)
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">New API Key Created</div>
+        <div class="ws-panel-body">
+            <div class="alert alert-success">
+                <strong>Save your key — it won't be shown again!</strong>
+                <div class="ws-key-preview" data-testid="new-key-value">@Model.NewKeyValue</div>
+            </div>
+            <a class="btn btn-primary" href="/workspace/apikeys" data-testid="btn-done-create">Done</a>
+        </div>
+    </div>
+}
+
+@if (Model.Action == "create" && Model.NewKeyValue == null)
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">New API Key</div>
+        <div class="ws-panel-body">
+            <form method="post" asp-page-handler="Create">
+                <div class="mb-3">
+                    <label asp-for="Create.Name" class="form-label" for="kn">Key Name</label>
+                    <input asp-for="Create.Name" id="kn" class="form-control" data-testid="input-key-name" />
+                    <span asp-validation-for="Create.Name" class="validation-message"></span>
+                </div>
+                <div class="ws-btn-row">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-create">Create</button>
+                    <a class="btn btn-secondary" href="/workspace/apikeys">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.Action == "rename" && Model.ActionKeyId != null)
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">Rename API Key</div>
+        <div class="ws-panel-body">
+            <form method="post" asp-page-handler="Rename">
+                <input type="hidden" name="keyId" value="@Model.ActionKeyId" />
+                <div class="mb-3">
+                    <label asp-for="Rename.Name" class="form-label">New Name</label>
+                    <input asp-for="Rename.Name" class="form-control" data-testid="input-rename" />
+                    <span asp-validation-for="Rename.Name" class="validation-message"></span>
+                </div>
+                <div class="ws-btn-row">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-rename">Save</button>
+                    <a class="btn btn-secondary" href="/workspace/apikeys">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="ws-panel">
+    <div class="ws-panel-header ws-panel-header--split">
+        <span>Your API Keys</span>
+        <a class="btn btn-sm btn-primary" href="?action=create" data-testid="btn-create-key">Create Key</a>
+    </div>
+    <div class="ws-panel-body">
+        @if (Model.Keys.Count == 0)
+        {
+            <p class="text-muted">No API keys yet. Create one to get started.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th>Status</th><th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var k in Model.Keys)
+                    {
+                        <tr data-testid="key-row" data-key-name="@k.Name">
+                            <td data-testid="key-name">@k.Name</td>
+                            <td><code>@k.Prefix***</code></td>
+                            <td>@k.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@(k.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td>
+                                <span class="badge @(k.IsActive ? "badge-success" : "badge-secondary")" data-testid="key-status">
+                                    @(k.IsActive ? "Active" : "Revoked")
+                                </span>
+                            </td>
+                            <td class="ws-actions-cell">
+                                @if (k.IsActive)
+                                {
+                                    <a class="btn-icon" title="Rename" aria-label="Rename" data-testid="btn-rename"
+                                       href="?action=rename&keyId=@k.Id">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </a>
+                                    <form method="post" asp-page-handler="Revoke" style="display:inline">
+                                        <input type="hidden" name="keyId" value="@k.Id" />
+                                        <button type="submit" class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke"
+                                                data-testid="btn-revoke"
+                                                onclick="return confirm('Revoke key &quot;@k.Name&quot;? This cannot be undone.')">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                <polyline points="3 6 5 6 21 6"/>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

@@ -6,24 +6,29 @@ using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
-using OpenRussiaRouter.WebApp.Components;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
-using OpenRussiaRouter.WebApp.Services.State;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("webapp");
 
-builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents(options =>
+builder.Services.AddRazorPages();
+
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
     {
-        options.DetailedErrors = true;
+        options.LoginPath = "/Login";
+        options.AccessDeniedPath = "/Login";
+        options.Cookie.HttpOnly = true;
+        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+        options.SlidingExpiration = true;
     });
 
-builder.Services.AddScoped<AuthState>();
-builder.Services.AddScoped<ISessionStorage, SessionStorage>();
+builder.Services.AddAuthorization();
 
 var authGrpcUrl = builder.Configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
 builder.Services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
@@ -81,12 +86,13 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
-app.UseAntiforgery();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode();
+app.MapRazorPages();
 
 app.Run();
 

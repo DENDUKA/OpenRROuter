@@ -1,0 +1,102 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = null; }
+
+<div class="page-content">
+    <section class="home-hero">
+        <div class="provider-strip" aria-hidden="true">
+            <span>AI</span><span>GPT</span><span>CL</span><span>GM</span><span>LL</span><span>OR</span>
+        </div>
+        <h1 class="display-xl">Unified interface for LLMs in Russia</h1>
+        <p class="body-lead">OpenAI-compatible API with ruble billing, routed through OpenRussiaRouter nodes.</p>
+        <div class="cta-row">
+            <a href="/invite/demo" class="btn btn-primary">Get API Key</a>
+            <a href="/models" class="btn btn-secondary">Explore Models</a>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-head">
+            <div>
+                <div class="section-label">Platform</div>
+                <h2>One API for models and routing</h2>
+            </div>
+            <a href="/models" class="btn btn-secondary">View all</a>
+        </div>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="card-icon card-icon-models" aria-hidden="true"></div>
+                <h3>API Access</h3>
+                <p>OpenAI-compatible endpoint with balance in rubles.</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon card-icon-key" aria-hidden="true"></div>
+                <h3>API Keys</h3>
+                <p>Create, rotate, and manage access keys from your workspace.</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon card-icon-usage" aria-hidden="true"></div>
+                <h3>Usage Tracking</h3>
+                <p>Monitor tokens, requests, and estimated costs.</p>
+            </div>
+            <div class="feature-card">
+                <div class="card-icon card-icon-nodes" aria-hidden="true"></div>
+                <h3>Router Nodes</h3>
+                <p>Route requests across available backend nodes.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section">
+        <div class="section-label">Network</div>
+        <div class="stats-grid">
+            <div class="stat-tile">
+                <div class="stat-value">400+</div>
+                <div class="stat-caption">Models ready for routing</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">OpenAI</div>
+                <div class="stat-caption">Compatible API surface</div>
+            </div>
+            <div class="stat-tile">
+                <div class="stat-value">RUB</div>
+                <div class="stat-caption">Balance and accounting</div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .page-content { max-width: 1100px; }
+    .home-hero { padding: 56px 0 64px; border-bottom: 1px solid var(--color-hairline); }
+    .provider-strip { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+    .provider-strip span { width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--color-hairline); border-radius: 9px; background: var(--color-canvas-card); color: var(--color-body); font-family: var(--font-mono); font-size: 11px; }
+    .display-xl { max-width: 780px; font-size: clamp(44px, 7vw, 84px); font-weight: 400; line-height: .96; letter-spacing: -0.06em; margin: 0 0 var(--spacing-lg) 0; }
+    .body-lead { font-size: 18px; line-height: 28px; color: var(--color-body); margin: 0 0 var(--spacing-xl) 0; max-width: 600px; }
+    .cta-row { display: flex; gap: var(--spacing-md); }
+    .section { padding: 48px 0; border-bottom: 1px solid var(--color-hairline); }
+    .section:last-child { border-bottom: none; }
+    .section-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
+    .section-label { margin-bottom: 10px; }
+    .feature-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .feature-card { min-height: 170px; padding: 20px; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: var(--color-canvas-soft); }
+    .feature-card:hover { border-color: var(--color-border); background: var(--color-canvas-card); }
+    .card-icon { width: 34px; height: 34px; margin-bottom: 18px; border: 1px solid var(--color-hairline); border-radius: 9px; color: var(--color-body); position: relative; }
+    .card-icon::before { content: ""; position: absolute; inset: 8px; background: currentColor; mask: var(--icon) center / contain no-repeat; -webkit-mask: var(--icon) center / contain no-repeat; }
+    .card-icon-models { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='6' height='6' rx='1'/%3E%3Crect x='14' y='4' width='6' height='6' rx='1'/%3E%3Crect x='4' y='14' width='6' height='6' rx='1'/%3E%3Crect x='14' y='14' width='6' height='6' rx='1'/%3E%3C/svg%3E"); }
+    .card-icon-key { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='3.5'/%3E%3Cpath d='m10 13 9-9'/%3E%3Cpath d='m15 4 5 5'/%3E%3Cpath d='m14 9 2 2'/%3E%3C/svg%3E"); }
+    .card-icon-usage { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='m7 15 4-4 3 3 5-7'/%3E%3C/svg%3E"); }
+    .card-icon-nodes { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='5' r='3'/%3E%3Ccircle cx='5' cy='19' r='3'/%3E%3Ccircle cx='19' cy='19' r='3'/%3E%3Cpath d='M10.4 7.6 6.6 16.4'/%3E%3Cpath d='m13.6 7.6 3.8 8.8'/%3E%3Cpath d='M8 19h8'/%3E%3C/svg%3E"); }
+    .feature-card h3 { margin-bottom: 8px; }
+    .feature-card p { margin-bottom: 0; }
+    .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: var(--spacing-lg); }
+    .stat-tile { padding: 20px; border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: var(--color-canvas-soft); }
+    .stat-value { font-size: 26px; font-weight: 400; margin-bottom: var(--spacing-xs); }
+    .stat-caption { font-size: 14px; color: var(--color-mute); }
+    @@media (max-width: 640px) {
+        .home-hero { padding: 32px 0 40px; }
+        .feature-grid, .stats-grid { grid-template-columns: 1fr; }
+        .cta-row { flex-direction: column; }
+        .cta-row .btn { width: 100%; }
+    }
+</style>

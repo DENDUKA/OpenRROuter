@@ -1,0 +1,26 @@
+@page
+@model Workspace.SettingsModel
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Settings"; }
+
+<div class="ws-section-header">
+    <h2>Settings</h2>
+    <p class="ws-section-desc">Account information.</p>
+</div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Account</div>
+    <div class="ws-panel-body">
+        <div class="ws-info-row">
+            <span class="ws-info-label">Display Name</span>
+            <span>@(Model.CurrentUser?.DisplayName ?? "—")</span>
+        </div>
+        <div class="ws-info-row">
+            <span class="ws-info-label">User ID</span>
+            <code>@(Model.CurrentUser?.UserId ?? "—")</code>
+        </div>
+        <div class="ws-info-row">
+            <span class="ws-info-label">Role</span>
+            <span>@(Model.CurrentUser?.Role ?? "—")</span>
+        </div>
+    </div>
+</div>

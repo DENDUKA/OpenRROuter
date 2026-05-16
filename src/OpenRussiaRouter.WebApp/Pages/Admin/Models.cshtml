@@ -1,0 +1,111 @@
+@page
+@model Admin.ModelsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Models - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Models</h2>
+    <p>Manage model catalog and routing metadata.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+@if (Model.Action == "add" || Model.Action == "edit")
+{
+    <div class="adm-card">
+        <div class="adm-card-header">@(Model.Action == "add" ? "Add Model" : $"Edit Model: {Model.EditModelId}")</div>
+        <div class="adm-card-body">
+            <form method="post" asp-page-handler="Save">
+                <input type="hidden" name="isNew" value="@(Model.Action == "add" ? "true" : "false")" />
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Id" class="form-label">Model ID</label>
+                        @if (Model.Action == "edit")
+                        {
+                            <input asp-for="Form.Id" class="form-control" readonly />
+                        }
+                        else
+                        {
+                            <input asp-for="Form.Id" class="form-control" />
+                        }
+                        <span asp-validation-for="Form.Id" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.DisplayName" class="form-label">Model Name</label>
+                        <input asp-for="Form.DisplayName" class="form-control" />
+                        <span asp-validation-for="Form.DisplayName" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.InputPrice" class="form-label">Input Price (RUB/1M)</label>
+                        <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.01" />
+                        <span asp-validation-for="Form.InputPrice" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.OutputPrice" class="form-label">Output Price (RUB/1M)</label>
+                        <input asp-for="Form.OutputPrice" class="form-control" type="number" step="0.01" />
+                        <span asp-validation-for="Form.OutputPrice" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-secondary" href="/admin/models">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Public Models</span>
+        <a class="btn btn-sm btn-primary" href="?action=add">Add Model</a>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Models.Count == 0)
+        {
+            <p class="text-muted">No models configured.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>ID</th><th>Display Name</th><th>Upstream</th>
+                    <th>Input / Output / Cache per 1M</th><th>Status</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var m in Model.Models)
+                    {
+                        <tr>
+                            <td><code>@m.Id</code></td>
+                            <td>@m.DisplayName</td>
+                            <td><code>@m.UpstreamModelId</code></td>
+                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") RUB</td>
+                            <td>
+                                <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
+                                    @(m.Enabled ? "Enabled" : "Disabled")
+                                </span>
+                            </td>
+                            <td class="adm-actions-cell">
+                                <a class="btn-icon" title="Edit" aria-label="Edit"
+                                   href="?action=edit&modelId=@Uri.EscapeDataString(m.Id)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

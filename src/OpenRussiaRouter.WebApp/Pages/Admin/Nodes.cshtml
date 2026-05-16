@@ -1,0 +1,96 @@
+@page
+@model Admin.NodesModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Router Nodes - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Router Nodes</h2>
+    <p>Manage OpenRussiaRouter nodes.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (Model.Action == "add")
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Add Router Node</div>
+        <div class="adm-card-body">
+            <form method="post" asp-page-handler="Add">
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Name" class="form-label">Name</label>
+                        <input asp-for="Form.Name" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.EndpointUrl" class="form-label">Endpoint URL</label>
+                        <input asp-for="Form.EndpointUrl" class="form-control" placeholder="https://..." />
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.TokenSecretName" class="form-label">Token Secret Name</label>
+                        <input asp-for="Form.TokenSecretName" class="form-control" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.CapacityWeight" class="form-label">Capacity Weight</label>
+                        <input asp-for="Form.CapacityWeight" class="form-control" type="number" />
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Add Node</button>
+                    <a class="btn btn-secondary" href="/admin/nodes">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Router Node List</span>
+        <a class="btn btn-sm btn-primary" href="?action=add">Add Node</a>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Nodes.Count == 0)
+        {
+            <p class="text-muted">No router nodes configured.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>Name</th><th>Endpoint</th><th>Status</th><th>In-Flight</th><th>Last Checked</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var node in Model.Nodes)
+                    {
+                        <tr>
+                            <td>@node.Name</td>
+                            <td><small>@node.EndpointUrl</small></td>
+                            <td><span class="badge @Admin.NodesModel.GetStatusBadge(node.Status)">@node.Status</span></td>
+                            <td>@node.InFlightRequests</td>
+                            <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td class="adm-actions-cell">
+                                @if (node.Status != "disabled")
+                                {
+                                    <form method="post" asp-page-handler="Disable" style="display:inline">
+                                        <input type="hidden" name="nodeId" value="@node.NodeId" />
+                                        <button type="submit" class="btn-icon btn-icon-danger" title="Disable" aria-label="Disable"
+                                                onclick="return confirm('Disable node @node.Name?')">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <circle cx="12" cy="12" r="10"/>
+                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

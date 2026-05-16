@@ -1,0 +1,22 @@
+@page
+@model Admin.IndexModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Dashboard - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Dashboard</h2>
+    <p>Admin account overview.</p>
+</div>
+
+<div class="adm-card">
+    <div class="adm-card-header">Admin Account</div>
+    <div class="adm-card-body">
+        <div class="adm-info-row">
+            <span class="adm-info-label">User ID</span>
+            <span><code>@(Model.CurrentUser?.UserId ?? "—")</code></span>
+        </div>
+        <div class="adm-info-row">
+            <span class="adm-info-label">Role</span>
+            <span>@(Model.CurrentUser?.Role ?? "—")</span>
+        </div>
+    </div>
+</div>

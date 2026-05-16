@@ -1,0 +1,29 @@
+@page
+@model Workspace.CreditsModel
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Credits"; }
+
+<div class="ws-section-header">
+    <h2>Credits</h2>
+    <p class="ws-section-desc">Your current RUB balance used for API request billing.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Current Balance</div>
+    <div class="ws-panel-body">
+        @if (Model.Balance == null)
+        {
+            <p class="text-muted">Unable to load balance.</p>
+        }
+        else
+        {
+            <div class="ws-balance-amount">
+                @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">RUB</span>
+            </div>
+        }
+    </div>
+</div>

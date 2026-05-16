@@ -1,0 +1,125 @@
+@page
+@model Admin.UsersModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Users - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Users</h2>
+    <p>Manage application users and roles.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+@if (Model.Action == "invite")
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Create Invite</div>
+        <div class="adm-card-body">
+            @if (Model.NewInviteLink != null)
+            {
+                <div class="alert alert-success">
+                    <strong>Invite created!</strong>
+                    <p>Share this link with the user:</p>
+                    <code class="adm-key-preview">@Model.NewInviteLink</code>
+                </div>
+                <a class="btn btn-primary" href="/admin/users">Done</a>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="CreateInvite">
+                    <div class="adm-form-row">
+                        <div class="form-group">
+                            <label asp-for="Invite.Email" class="form-label">Email</label>
+                            <input asp-for="Invite.Email" class="form-control" type="email" />
+                            <span asp-validation-for="Invite.Email" class="validation-message"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Invite.Role" class="form-label">Role</label>
+                            <select asp-for="Invite.Role" class="form-control">
+                                <option value="User">User</option>
+                                <option value="Admin">Admin</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="adm-btn-row">
+                        <button type="submit" class="btn btn-primary">Create Invite</button>
+                        <a class="btn btn-secondary" href="/admin/users">Cancel</a>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+@if (Model.Action == "topup" && Model.TopUpUserId != null)
+{
+    var targetUser = Model.Users.FirstOrDefault(u => u.Id == Model.TopUpUserId);
+    <div class="adm-card">
+        <div class="adm-card-header">Virtual Top-Up for @targetUser?.Email</div>
+        <div class="adm-card-body">
+            <form method="post" asp-page-handler="TopUp">
+                <input type="hidden" name="userId" value="@Model.TopUpUserId" />
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="TopUp.Amount" class="form-label">Amount (RUB)</label>
+                        <input asp-for="TopUp.Amount" class="form-control" type="number" step="0.01" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="TopUp.Reason" class="form-label">Reason</label>
+                        <input asp-for="TopUp.Reason" class="form-control" />
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Top Up</button>
+                    <a class="btn btn-secondary" href="/admin/users">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>All Users</span>
+        <a class="btn btn-sm btn-primary" href="?action=invite">Create Invite</a>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Users.Count == 0)
+        {
+            <p class="text-muted">No users yet.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>Email</th><th>Role</th><th>Status</th><th>Created</th><th>Balance</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var user in Model.Users)
+                    {
+                        <tr>
+                            <td>@user.Email</td>
+                            <td>@user.Role</td>
+                            <td><span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">@user.Status</span></td>
+                            <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
+                            <td>@Model.UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
+                            <td class="adm-actions-cell">
+                                <a class="btn-icon" title="Top Up" aria-label="Top Up" href="?action=topup&userId=@user.Id">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

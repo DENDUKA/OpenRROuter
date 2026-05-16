@@ -27,7 +27,7 @@ public sealed class HttpRouterNodeHealthClientTests
     }
 
     [Fact]
-    public async Task CheckAsync_MissingToken_ReturnsUnhealthyWithoutRequest()
+    public async Task CheckAsync_MissingToken_MakesRequestWithoutTokenHeader()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK));
         var client = CreateClient(handler, new StaticTokenResolver(null));
@@ -35,9 +35,12 @@ public sealed class HttpRouterNodeHealthClientTests
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
-        Assert.Equal(RouterNodeStatus.Unhealthy, result.Status);
-        Assert.Equal("node_token_missing", result.ErrorCode);
-        Assert.Null(handler.LastRequest);
+        // Request is made even without a token
+        Assert.NotNull(handler.LastRequest);
+        Assert.False(handler.LastRequest!.Headers.Contains("X-ORR-Node-Token"));
+        // 200 OK with no status body defaults to Healthy
+        Assert.Equal(RouterNodeStatus.Healthy, result.Status);
+        Assert.Null(result.ErrorCode);
     }
 
     [Fact]

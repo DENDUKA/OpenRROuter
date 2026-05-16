@@ -22,11 +22,22 @@ public sealed class ConfigurationRouterNodeTokenProviderTests
     }
 
     [Fact]
-    public void Resolve_MissingToken_Throws()
+    public void Resolve_MissingToken_ReturnsEmpty()
     {
         var provider = new ConfigurationRouterNodeTokenProvider(new ConfigurationBuilder().Build());
 
-        Assert.Throws<InvalidOperationException>(() => provider.Resolve("node-a"));
+        var result = provider.Resolve("node-a");
+
+        Assert.Equal(string.Empty, result);
+    }
+
+    [Fact]
+    public void Resolve_EmptySecretName_ReturnsEmpty()
+    {
+        var provider = new ConfigurationRouterNodeTokenProvider(new ConfigurationBuilder().Build());
+
+        Assert.Equal(string.Empty, provider.Resolve(""));
+        Assert.Equal(string.Empty, provider.Resolve("   "));
     }
 }
 

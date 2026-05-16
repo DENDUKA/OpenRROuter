@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
@@ -11,6 +12,7 @@ public class NodesModel : PageModelBase
     private readonly ControlPlaneClient _controlPlaneClient;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<NodesModel> _logger;
 
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -27,11 +29,13 @@ public class NodesModel : PageModelBase
     public NodesModel(
         ControlPlaneClient controlPlaneClient,
         IHttpClientFactory httpClientFactory,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        ILogger<NodesModel> logger)
     {
         _controlPlaneClient = controlPlaneClient;
         _httpClient = httpClientFactory.CreateClient("ApiGateway");
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
@@ -47,9 +51,10 @@ public class NodesModel : PageModelBase
             await _controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.TokenSecretName, Form.CapacityWeight);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
-            ErrorMessage = "Failed to add router node.";
+            _logger.LogError(ex, "OnPostAddAsync failed. Name={Name} Endpoint={Endpoint}", Form.Name, Form.EndpointUrl);
+            ErrorMessage = $"Failed to add router node: {ex.GetType().Name}: {ex.Message}";
             await OnGetAsync();
             return Page();
         }

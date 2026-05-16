@@ -769,7 +769,7 @@ code.d-block {
 
 .sidebar-nav { display: grid; gap: 10px; }
 .nav-section { display: grid; gap: 3px; margin: 8px 0 16px; }
-.nav-section-title { padding: 0 10px 7px; color: var(--color-body-mid); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.nav-section-title { padding: 0 10px 8px; color: var(--color-body-mid); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
 
 .nav-item {
     min-height: 44px;
@@ -781,6 +781,7 @@ code.d-block {
     color: var(--color-body);
     font-size: 14px;
     text-decoration: none;
+    transition: background 100ms ease, color 100ms ease;
 }
 
 .nav-item:hover, .nav-item.active { color: var(--color-ink); background: var(--color-canvas-soft); text-decoration: none; }
@@ -807,14 +808,32 @@ code.d-block {
     height: calc(100vh - var(--topbar-height));
     overflow-y: auto;
     border-right: 1px solid var(--color-hairline);
-    padding: 20px 8px;
+    padding: 16px 12px;
     background: var(--color-canvas);
     z-index: 40;
     display: flex;
     flex-direction: column;
+    gap: 2px;
 }
 
-.ws-sidebar-header { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-body-mid); padding: 0 10px 10px; }
+.ws-sidebar-header { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-body-mid); padding: 0 10px 8px; }
+
+.ws-nav-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 8px;
+    color: var(--color-body);
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 100ms ease, color 100ms ease;
+}
+
+.ws-nav-item:hover, .ws-nav-item.active { background: var(--color-canvas-soft); color: var(--color-ink); text-decoration: none; }
+.ws-nav-item svg { flex-shrink: 0; opacity: 0.6; }
+.ws-nav-item:hover svg, .ws-nav-item.active svg { opacity: 1; }
 
 .ws-content { grid-column: 2; padding: 32px; min-width: 0; }
 
@@ -854,12 +873,15 @@ code.d-block {
     height: calc(100vh - var(--topbar-height));
     overflow-y: auto;
     border-right: 1px solid var(--color-hairline);
-    padding: 20px 8px;
+    padding: 16px 12px;
     background: var(--color-canvas);
     z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
 }
 
-.adm-sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-body-mid); padding: 0 10px 10px; }
+.adm-sidebar-title { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-body-mid); padding: 0 10px 8px; }
 
 .adm-link {
     min-height: 44px;

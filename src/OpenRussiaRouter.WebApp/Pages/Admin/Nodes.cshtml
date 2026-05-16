@@ -9,7 +9,7 @@
 
 @if (Model.ErrorMessage != null)
 {
-    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+    <div class="alert alert-danger" role="alert" data-testid="error-message">@Model.ErrorMessage</div>
 }
 
 @if (Model.Action == "add")
@@ -17,29 +17,29 @@
     <div class="adm-card">
         <div class="adm-card-header">Add Router Node</div>
         <div class="adm-card-body">
-            <form method="post" asp-page-handler="Add">
+            <form method="post" asp-page-handler="Add" data-testid="form-add-node">
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.Name" class="form-label">Name</label>
-                        <input asp-for="Form.Name" class="form-control" />
+                        <input asp-for="Form.Name" class="form-control" data-testid="input-name" />
                     </div>
                     <div class="form-group">
                         <label asp-for="Form.EndpointUrl" class="form-label">Endpoint URL</label>
-                        <input asp-for="Form.EndpointUrl" class="form-control" placeholder="https://..." />
+                        <input asp-for="Form.EndpointUrl" class="form-control" placeholder="https://..." data-testid="input-endpoint-url" />
                     </div>
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.TokenSecretName" class="form-label">Token Secret Name <small class="text-muted">(optional)</small></label>
-                        <input asp-for="Form.TokenSecretName" class="form-control" placeholder="Leave empty if node requires no token" />
+                        <input asp-for="Form.TokenSecretName" class="form-control" placeholder="Leave empty if node requires no token" data-testid="input-token-secret-name" />
                     </div>
                     <div class="form-group">
                         <label asp-for="Form.CapacityWeight" class="form-label">Capacity Weight</label>
-                        <input asp-for="Form.CapacityWeight" class="form-control" type="number" />
+                        <input asp-for="Form.CapacityWeight" class="form-control" type="number" data-testid="input-capacity-weight" />
                     </div>
                 </div>
                 <div class="adm-btn-row">
-                    <button type="submit" class="btn btn-primary">Add Node</button>
+                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-add">Add Node</button>
                     <a class="btn btn-secondary" href="/admin/nodes">Cancel</a>
                 </div>
             </form>
@@ -50,12 +50,12 @@
 <div class="adm-card">
     <div class="adm-card-header adm-card-header--split">
         <span>Router Node List</span>
-        <a class="btn btn-sm btn-primary" href="?action=add">Add Node</a>
+        <a class="btn btn-sm btn-primary" href="?action=add" data-testid="btn-add-node">Add Node</a>
     </div>
     <div class="adm-card-body">
         @if (Model.Nodes.Count == 0)
         {
-            <p class="text-muted">No router nodes configured.</p>
+            <p class="text-muted" data-testid="empty-list">No router nodes configured.</p>
         }
         else
         {
@@ -66,16 +66,16 @@
                 <tbody>
                     @foreach (var node in Model.Nodes)
                     {
-                        <tr>
+                        <tr data-testid="node-row" data-node-name="@node.Name" data-node-id="@node.NodeId">
                             <td>@node.Name</td>
                             <td><small>@node.EndpointUrl</small></td>
-                            <td><span class="badge @Admin.NodesModel.GetStatusBadge(node.Status)">@node.Status</span></td>
+                            <td><span class="badge @Admin.NodesModel.GetStatusBadge(node.Status)" data-testid="node-status">@node.Status</span></td>
                             <td>@node.InFlightRequests</td>
                             <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
                             <td class="adm-actions-cell">
                                 <form method="post" asp-page-handler="FetchModels" style="display:inline">
                                     <input type="hidden" name="FetchModelsNodeId" value="@node.NodeId" />
-                                    <button type="submit" class="btn-icon" title="List models" aria-label="List models">
+                                    <button type="submit" class="btn-icon" title="List models" aria-label="List models" data-testid="btn-models">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                              fill="none" stroke="currentColor" stroke-width="2"
                                              stroke-linecap="round" stroke-linejoin="round">
@@ -93,6 +93,7 @@
                                     <form method="post" asp-page-handler="Enable" style="display:inline">
                                         <input type="hidden" name="nodeId" value="@node.NodeId" />
                                         <button type="submit" class="btn-icon btn-icon-success" title="Enable" aria-label="Enable"
+                                                data-testid="btn-enable"
                                                 onclick="return confirm('Enable node @node.Name?')">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                                  fill="none" stroke="currentColor" stroke-width="2"
@@ -107,6 +108,7 @@
                                     <form method="post" asp-page-handler="Disable" style="display:inline">
                                         <input type="hidden" name="nodeId" value="@node.NodeId" />
                                         <button type="submit" class="btn-icon btn-icon-danger" title="Disable" aria-label="Disable"
+                                                data-testid="btn-disable"
                                                 onclick="return confirm('Disable node @node.Name?')">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                                 <circle cx="12" cy="12" r="10"/>
@@ -118,6 +120,7 @@
                                 <form method="post" asp-page-handler="Delete" style="display:inline">
                                     <input type="hidden" name="nodeId" value="@node.NodeId" />
                                     <button type="submit" class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete"
+                                            data-testid="btn-delete"
                                             onclick="return confirm('Permanently delete node @node.Name? This cannot be undone.')">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                                              fill="none" stroke="currentColor" stroke-width="2"
@@ -140,7 +143,7 @@
 
 @if (Model.NodeModels.Count > 0)
 {
-    <div class="adm-card">
+    <div class="adm-card" data-testid="models-card">
         <div class="adm-card-header">Models on @Model.NodeModelsName (@Model.NodeModels.Count)</div>
         <div class="adm-card-body">
             <table class="table">
@@ -148,7 +151,7 @@
                 <tbody>
                     @foreach (var modelId in Model.NodeModels)
                     {
-                        <tr>
+                        <tr data-testid="model-row" data-model-id="@modelId">
                             <td><code>@modelId</code></td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-secondary"
@@ -169,7 +172,7 @@
     <div class="adm-card-body">
         @if (Model.TestResult != null)
         {
-            <div class="alert @(Model.TestResult.Success ? "alert-success" : "alert-danger")" role="alert">
+            <div class="alert @(Model.TestResult.Success ? "alert-success" : "alert-danger")" role="alert" data-testid="test-result">
                 <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Model.TestResult.Body</pre>
             </div>
         }
@@ -178,20 +181,20 @@
                 <div class="form-group">
                     <label asp-for="TestInput.ApiKey" class="form-label">API Key</label>
                     <input asp-for="TestInput.ApiKey" class="form-control" type="password"
-                           placeholder="ORR Bearer token" autocomplete="off" />
+                           placeholder="ORR Bearer token" autocomplete="off" data-testid="input-api-key" />
                 </div>
                 <div class="form-group">
                     <label asp-for="TestInput.Model" class="form-label">Model</label>
-                    <input asp-for="TestInput.Model" class="form-control" />
+                    <input asp-for="TestInput.Model" class="form-control" data-testid="input-model" />
                 </div>
             </div>
             <div class="form-group">
                 <label asp-for="TestInput.Message" class="form-label">Message</label>
                 <textarea asp-for="TestInput.Message" class="form-control" rows="3"
-                          placeholder="Hello! How are you?"></textarea>
+                          placeholder="Hello! How are you?" data-testid="input-message"></textarea>
             </div>
             <div class="adm-btn-row">
-                <button type="submit" class="btn btn-primary">Send Request</button>
+                <button type="submit" class="btn btn-primary" data-testid="btn-send-test">Send Request</button>
             </div>
         </form>
     </div>

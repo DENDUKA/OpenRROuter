@@ -81,7 +81,7 @@ public class ModelsModel : PageModelBase
     public class ModelFormInput
     {
         [Required]
-        [RegularExpression(@"^[a-zA-Z0-9_\-\.]+$", ErrorMessage = "ID must be alphanumeric with dashes/underscores")]
+        [RegularExpression(@"^[a-zA-Z0-9_\-\./]+$", ErrorMessage = "ID must be alphanumeric with dashes, underscores, dots or slashes")]
         public string Id { get; set; } = "";
 
         [Required] public string DisplayName { get; set; } = "";

@@ -33,13 +33,13 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
         await client.DeleteRouterNodeAsync(new OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.DeleteRouterNodeRequest { NodeId = nodeId }, cancellationToken: cancellationToken);
     }
 
-    public async Task RegisterRouterNodeAsync(string name, string endpointUrl, string tokenSecretName, int capacityWeight, CancellationToken cancellationToken = default)
+    public async Task RegisterRouterNodeAsync(string name, string endpointUrl, string? tokenSecretName, int capacityWeight, CancellationToken cancellationToken = default)
     {
         await client.RegisterRouterNodeAsync(new OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RegisterRouterNodeRequest
         {
-            Name = name,
-            EndpointUrl = endpointUrl,
-            TokenSecretName = tokenSecretName,
+            Name = name ?? string.Empty,
+            EndpointUrl = endpointUrl ?? string.Empty,
+            TokenSecretName = tokenSecretName ?? string.Empty,
             CapacityWeight = capacityWeight
         }, cancellationToken: cancellationToken);
     }

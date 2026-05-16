@@ -1,3 +1,4 @@
+using System.Net;
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -80,7 +81,13 @@ builder.Services.AddScoped<ControlPlaneClient>();
 
 builder.Services.AddHttpClient("ApiGateway", client =>
 {
-    client.Timeout = TimeSpan.FromSeconds(60);
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestVersion = HttpVersion.Version11;
+    client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    ConnectTimeout = TimeSpan.FromSeconds(10),
+    PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30),
 });
 
 var app = builder.Build();

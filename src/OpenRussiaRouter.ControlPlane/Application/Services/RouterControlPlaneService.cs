@@ -34,6 +34,13 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         repository.UpsertNode(node);
     }
 
+    public void EnableNode(string nodeId)
+    {
+        var node = GetRequiredNode(nodeId);
+        node.Enable();
+        repository.UpsertNode(node);
+    }
+
     public void ApplyHealth(
         string nodeId,
         RouterNodeStatus status,

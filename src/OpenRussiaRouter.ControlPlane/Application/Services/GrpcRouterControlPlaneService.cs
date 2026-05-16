@@ -91,6 +91,22 @@ public sealed class GrpcRouterControlPlaneService(
         }
     }
 
+    public override Task<EnableRouterNodeResponse> EnableRouterNode(
+        EnableRouterNodeRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            controlPlane.EnableNode(request.NodeId);
+            return Task.FromResult(new EnableRouterNodeResponse { Enabled = true });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            logger?.LogWarning(ex, "EnableRouterNode failed. NodeId: {NodeId}", request.NodeId);
+            return Task.FromResult(new EnableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+        }
+    }
+
     public override Task<ListRouterNodesResponse> ListRouterNodes(
         ListRouterNodesRequest request,
         ServerCallContext context)

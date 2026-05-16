@@ -21,10 +21,6 @@ public sealed class HttpRouterNodeHealthClient(
         ArgumentNullException.ThrowIfNull(node);
 
         var token = tokenResolver.Resolve(node.TokenSecretName);
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return new RouterNodeHealthResult(RouterNodeStatus.Unhealthy, null, "node_token_missing");
-        }
 
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(options.CurrentValue.Timeout);
@@ -33,7 +29,10 @@ public sealed class HttpRouterNodeHealthClient(
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildHealthUri(node.EndpointUrl, options.CurrentValue.HealthPath));
-            request.Headers.TryAddWithoutValidation(options.CurrentValue.NodeTokenHeader, token);
+            if (!string.IsNullOrWhiteSpace(token))
+            {
+                request.Headers.TryAddWithoutValidation(options.CurrentValue.NodeTokenHeader, token);
+            }
 
             using var response = await httpClient.SendAsync(
                 request,

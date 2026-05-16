@@ -216,6 +216,11 @@ textarea:disabled {
     background: rgba(239, 68, 68, .1);
 }
 
+.btn-icon-success:hover {
+    color: #16a34a;
+    background: rgba(22, 163, 74, .1);
+}
+
 .btn-icon:disabled {
     opacity: .48;
     cursor: not-allowed;

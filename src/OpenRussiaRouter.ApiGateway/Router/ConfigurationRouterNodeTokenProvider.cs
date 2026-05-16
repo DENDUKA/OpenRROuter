@@ -9,16 +9,8 @@ public sealed class ConfigurationRouterNodeTokenProvider(IConfiguration configur
     public string Resolve(string tokenSecretName)
     {
         if (string.IsNullOrWhiteSpace(tokenSecretName))
-        {
-            throw new ArgumentException("Token secret name cannot be empty.", nameof(tokenSecretName));
-        }
+            return string.Empty;
 
-        var token = configuration[$"RouterNodeTokens:{tokenSecretName}"];
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            throw new InvalidOperationException($"Router node token '{tokenSecretName}' is not configured.");
-        }
-
-        return token;
+        return configuration[$"RouterNodeTokens:{tokenSecretName}"] ?? string.Empty;
     }
 }

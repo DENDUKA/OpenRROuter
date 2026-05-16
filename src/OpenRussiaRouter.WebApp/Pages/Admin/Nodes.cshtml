@@ -30,8 +30,8 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="Form.TokenSecretName" class="form-label">Token Secret Name</label>
-                        <input asp-for="Form.TokenSecretName" class="form-control" />
+                        <label asp-for="Form.TokenSecretName" class="form-label">Token Secret Name <small class="text-muted">(optional)</small></label>
+                        <input asp-for="Form.TokenSecretName" class="form-control" placeholder="Leave empty if node requires no token" />
                     </div>
                     <div class="form-group">
                         <label asp-for="Form.CapacityWeight" class="form-label">Capacity Weight</label>
@@ -73,6 +73,35 @@
                             <td>@node.InFlightRequests</td>
                             <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
                             <td class="adm-actions-cell">
+                                <form method="post" asp-page-handler="FetchModels" style="display:inline">
+                                    <input type="hidden" name="FetchModelsNodeId" value="@node.NodeId" />
+                                    <button type="submit" class="btn-icon" title="List models" aria-label="List models">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                             fill="none" stroke="currentColor" stroke-width="2"
+                                             stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="8" y1="6" x2="21" y2="6"/>
+                                            <line x1="8" y1="12" x2="21" y2="12"/>
+                                            <line x1="8" y1="18" x2="21" y2="18"/>
+                                            <line x1="3" y1="6" x2="3.01" y2="6"/>
+                                            <line x1="3" y1="12" x2="3.01" y2="12"/>
+                                            <line x1="3" y1="18" x2="3.01" y2="18"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                                @if (node.Status == "disabled")
+                                {
+                                    <form method="post" asp-page-handler="Enable" style="display:inline">
+                                        <input type="hidden" name="nodeId" value="@node.NodeId" />
+                                        <button type="submit" class="btn-icon btn-icon-success" title="Enable" aria-label="Enable"
+                                                onclick="return confirm('Enable node @node.Name?')">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                                 fill="none" stroke="currentColor" stroke-width="2"
+                                                 stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="20 6 9 17 4 12"/>
+                                            </svg>
+                                        </button>
+                                    </form>
+                                }
                                 @if (node.Status != "disabled")
                                 {
                                     <form method="post" asp-page-handler="Disable" style="display:inline">
@@ -92,5 +121,64 @@
                 </tbody>
             </table>
         }
+    </div>
+</div>
+
+@if (Model.NodeModels.Count > 0)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Models on @Model.NodeModelsName (@Model.NodeModels.Count)</div>
+        <div class="adm-card-body">
+            <table class="table">
+                <thead><tr><th>Model ID</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var modelId in Model.NodeModels)
+                    {
+                        <tr>
+                            <td><code>@modelId</code></td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-secondary"
+                                        onclick="document.getElementById('TestInput_Model').value='@modelId';document.getElementById('TestInput_Model').closest('form').scrollIntoView({behavior:'smooth'})">
+                                    Use in test
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header">Test Request</div>
+    <div class="adm-card-body">
+        @if (Model.TestResult != null)
+        {
+            <div class="alert @(Model.TestResult.Success ? "alert-success" : "alert-danger")" role="alert">
+                <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Model.TestResult.Body</pre>
+            </div>
+        }
+        <form method="post" asp-page-handler="Test">
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label asp-for="TestInput.ApiKey" class="form-label">API Key</label>
+                    <input asp-for="TestInput.ApiKey" class="form-control" type="password"
+                           placeholder="ORR Bearer token" autocomplete="off" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="TestInput.Model" class="form-label">Model</label>
+                    <input asp-for="TestInput.Model" class="form-control" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="TestInput.Message" class="form-label">Message</label>
+                <textarea asp-for="TestInput.Message" class="form-control" rows="3"
+                          placeholder="Hello! How are you?"></textarea>
+            </div>
+            <div class="adm-btn-row">
+                <button type="submit" class="btn btn-primary">Send Request</button>
+            </div>
+        </form>
     </div>
 </div>

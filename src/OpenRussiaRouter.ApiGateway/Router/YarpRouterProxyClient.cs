@@ -54,7 +54,9 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         context.Request.Scheme = lease.EndpointUrl.Scheme;
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
         context.Request.Path = "/v1/chat/completions";
-        context.Request.Headers[NodeTokenHeader] = tokenProvider.Resolve(lease.TokenSecretName);
+        var nodeToken = tokenProvider.Resolve(lease.TokenSecretName);
+        if (!string.IsNullOrWhiteSpace(nodeToken))
+            context.Request.Headers[NodeTokenHeader] = nodeToken;
         context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
         context.Request.Headers[CorrelationIds.HeaderName] = requestId;
         context.Request.ContentType = "application/json";
@@ -92,7 +94,9 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
 
         var requestUri = new Uri(lease.EndpointUrl, "/v1/chat/completions");
         var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        request.Headers.TryAddWithoutValidation(NodeTokenHeader, tokenProvider.Resolve(lease.TokenSecretName));
+        var nodeToken = tokenProvider.Resolve(lease.TokenSecretName);
+        if (!string.IsNullOrWhiteSpace(nodeToken))
+            request.Headers.TryAddWithoutValidation(NodeTokenHeader, nodeToken);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
         request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);
         request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");

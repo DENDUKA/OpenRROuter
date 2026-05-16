@@ -78,6 +78,11 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
 });
 builder.Services.AddScoped<ControlPlaneClient>();
 
+builder.Services.AddHttpClient("ApiGateway", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())

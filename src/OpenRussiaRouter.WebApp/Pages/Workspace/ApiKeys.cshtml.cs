@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Auth;
@@ -31,10 +30,9 @@ public class ApiKeysModel : PageModelBase
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
-        // Clear validation errors from the Rename form (not submitted in this handler)
-        ModelState.Remove("Rename.Name");
-        if (!ModelState.IsValid)
+        if (string.IsNullOrWhiteSpace(Create.Name))
         {
+            ModelState.AddModelError("Create.Name", "Key name is required.");
             await OnGetAsync();
             return Page();
         }
@@ -54,10 +52,9 @@ public class ApiKeysModel : PageModelBase
 
     public async Task<IActionResult> OnPostRenameAsync(string keyId)
     {
-        // Clear validation errors from the Create form (not submitted in this handler)
-        ModelState.Remove("Create.Name");
-        if (!ModelState.IsValid)
+        if (string.IsNullOrWhiteSpace(Rename.Name))
         {
+            ModelState.AddModelError("Rename.Name", "New name is required.");
             await OnGetAsync();
             return Page();
         }
@@ -91,13 +88,11 @@ public class ApiKeysModel : PageModelBase
 
     public class CreateKeyInput
     {
-        [Required, MinLength(1)]
         public string Name { get; set; } = "";
     }
 
     public class RenameKeyInput
     {
-        [Required, MinLength(1)]
         public string Name { get; set; } = "";
     }
 }

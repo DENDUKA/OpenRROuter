@@ -7,8 +7,9 @@ namespace OpenRussiaRouter.E2ETests;
 
 public sealed class NodeManagementTests(PlaywrightFixture fixture) : IClassFixture<PlaywrightFixture>
 {
-    // Real 9router node used for E2E — responds to /v1/models without auth
-    private const string TestNodeEndpoint = "https://ai.web-point.top/";
+    // Mock LLM node deployed in the dev k8s cluster — no auth, deterministic responses.
+    // Reachable by control-plane and api-gateway pods as http://mock-llm-node/
+    private const string TestNodeEndpoint = "http://mock-llm-node/";
 
     [Fact]
     public async Task NodeLifecycle_AddDisableEnableDelete_FullFlow()

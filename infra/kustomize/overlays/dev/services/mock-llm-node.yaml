@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mock-llm-config
+  namespace: orr-dev
+data:
+  default.conf: |
+    server {
+        listen 80;
+
+        location = /v1/models {
+            add_header Content-Type "application/json; charset=utf-8";
+            return 200 '{"object":"list","data":[{"id":"minimax/MiniMax-M2.7","object":"model","owned_by":"minimax"}]}';
+        }
+
+        location = /v1/chat/completions {
+            add_header Content-Type "application/json; charset=utf-8";
+            return 200 '{"id":"mock-id","object":"chat.completion","model":"minimax/MiniMax-M2.7","choices":[{"index":0,"message":{"role":"assistant","content":"pong"},"finish_reason":"stop"}],"usage":{"prompt_tokens":10,"completion_tokens":1,"total_tokens":11}}';
+        }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-llm-node
+  namespace: orr-dev
+  labels:
+    app: mock-llm-node
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-llm-node
+  template:
+    metadata:
+      labels:
+        app: mock-llm-node
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+      volumes:
+        - name: config
+          configMap:
+            name: mock-llm-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-llm-node
+  namespace: orr-dev
+spec:
+  selector:
+    app: mock-llm-node
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-mock-llm-node
+  namespace: orr-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: mock-llm-node
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: orr-dev

@@ -35,12 +35,17 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
 
     public async Task RegisterRouterNodeAsync(string name, string endpointUrl, string? tokenSecretName, int capacityWeight, CancellationToken cancellationToken = default)
     {
-        await client.RegisterRouterNodeAsync(new OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RegisterRouterNodeRequest
+        var response = await client.RegisterRouterNodeAsync(new OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RegisterRouterNodeRequest
         {
             Name = name ?? string.Empty,
             EndpointUrl = endpointUrl ?? string.Empty,
             TokenSecretName = tokenSecretName ?? string.Empty,
             CapacityWeight = capacityWeight
         }, cancellationToken: cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+        {
+            throw new InvalidOperationException($"RegisterRouterNode failed: {response.ErrorCode}");
+        }
     }
 }

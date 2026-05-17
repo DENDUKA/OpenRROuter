@@ -5,6 +5,7 @@ resources:
   - ../../../base/services
   - webapp-localhost-ingress.yaml
   - api-gateway-localhost-ingress.yaml
+  - mock-llm-node.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"

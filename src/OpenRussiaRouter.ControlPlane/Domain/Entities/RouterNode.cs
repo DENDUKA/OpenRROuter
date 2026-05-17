@@ -96,9 +96,11 @@ public sealed class RouterNode
     private static Uri ValidateEndpoint(Uri endpointUrl)
     {
         ArgumentNullException.ThrowIfNull(endpointUrl);
-        if (!string.Equals(endpointUrl.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        var scheme = endpointUrl.Scheme;
+        if (!string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Router node endpoint must use HTTPS.", nameof(endpointUrl));
+            throw new ArgumentException("Router node endpoint must use HTTP or HTTPS.", nameof(endpointUrl));
         }
 
         return endpointUrl;

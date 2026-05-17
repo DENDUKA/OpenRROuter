@@ -57,7 +57,12 @@ public sealed class BillingApplicationService(
             return new BalanceCheckResult(false, modelId, null, balance, ErrorCodes.ModelUnavailable);
         }
 
-        if (balance.Amount <= 0)
+        // Free models (all prices are zero) are accessible regardless of balance.
+        var isFreeModel = model.Price.InputPerMillion.Amount == 0
+                       && model.Price.OutputPerMillion.Amount == 0
+                       && model.Price.CachePerMillion.Amount == 0;
+
+        if (!isFreeModel && balance.Amount <= 0)
         {
             return new BalanceCheckResult(false, modelId, model.PriceVersion, balance, ErrorCodes.InsufficientBalance);
         }

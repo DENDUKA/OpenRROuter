@@ -43,13 +43,21 @@ sealed class ApiKeysPage(IPage page, string baseUrl)
     public async Task RevokeKeyAsync(string name)
     {
         var row = page.Locator($"[data-testid='key-row'][data-key-name='{name}']");
+
+        // The revoke button has onclick="return confirm(...)" — accept the JS dialog.
+        void AcceptDialog(object? sender, IDialog dialog)
+        {
+            page.Dialog -= AcceptDialog;
+            _ = dialog.AcceptAsync();
+        }
+        page.Dialog += AcceptDialog;
+
         await row.Locator("[data-testid='btn-revoke']").ClickAsync();
 
-        await page.WaitForSelectorAsync("[data-testid='btn-confirm-revoke']");
-        await page.ClickAsync("[data-testid='btn-confirm-revoke']");
-
-        await page.WaitForSelectorAsync("[data-testid='btn-confirm-revoke']",
-            new() { State = WaitForSelectorState.Hidden });
+        // Wait for the page to reload after the POST/redirect, key status turns "Revoked".
+        await page.WaitForSelectorAsync(
+            $"[data-testid='key-row'][data-key-name='{name}'] .badge-secondary",
+            new() { Timeout = 15_000 });
     }
 
     public async Task<string> GetKeyStatusAsync(string name)

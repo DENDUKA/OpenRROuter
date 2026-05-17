@@ -31,6 +31,8 @@ public class ApiKeysModel : PageModelBase
 
     public async Task<IActionResult> OnPostCreateAsync()
     {
+        // Clear validation errors from the Rename form (not submitted in this handler)
+        ModelState.Remove("Rename.Name");
         if (!ModelState.IsValid)
         {
             await OnGetAsync();
@@ -52,6 +54,8 @@ public class ApiKeysModel : PageModelBase
 
     public async Task<IActionResult> OnPostRenameAsync(string keyId)
     {
+        // Clear validation errors from the Create form (not submitted in this handler)
+        ModelState.Remove("Create.Name");
         if (!ModelState.IsValid)
         {
             await OnGetAsync();

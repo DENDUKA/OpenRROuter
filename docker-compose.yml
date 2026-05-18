@@ -39,6 +39,7 @@ services:
     command: >
       sh -c "
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/auth/001_initial.sql &&
+        psql -h postgres -U postgres -d openrussiarouter -f /migrations/auth/002_seed_default_admin.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/001_initial.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/002_model_prices_model_id_compat.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/003_model_prices_model_id_repair.sql &&
@@ -61,7 +62,7 @@ services:
       ConnectionStrings__AuthDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres};Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleTimeout=300"
       Seq__Url: "http://seq:80"
       AuthOptions__InitialAdminEmail: "${INITIAL_ADMIN_EMAIL:-admin@example.com}"
-      AuthOptions__InitialAdminPassword: "${INITIAL_ADMIN_PASSWORD:-changeme}"
+      AuthOptions__InitialAdminPassword: "${INITIAL_ADMIN_PASSWORD:-StrongPassword123!}"
 
   billing-service:
     build:

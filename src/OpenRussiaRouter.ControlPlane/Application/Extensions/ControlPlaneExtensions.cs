@@ -34,6 +34,7 @@ public static class ControlPlaneExtensions
         services.AddSingleton<RouterControlPlaneService>();
         services.AddSingleton<IRouterNodeTokenResolver, ConfigurationRouterNodeTokenResolver>();
         services.AddHttpClient<IRouterNodeHealthClient, HttpRouterNodeHealthClient>();
+        services.AddHttpClient<IRouterNodeProviderClient, RouterNodeProviderClient>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
 

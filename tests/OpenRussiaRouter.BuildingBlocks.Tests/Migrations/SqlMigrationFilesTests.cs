@@ -17,6 +17,16 @@ public sealed class SqlMigrationFilesTests
         Assert.DoesNotContain("dbcontext", sql, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void AuthSeedAdminMigration_ExistsAndDoesNotStoreRawPassword()
+    {
+        var sql = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", "auth", "002_seed_default_admin.sql"));
+
+        Assert.Contains("admin@example.com", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("pbkdf2-sha256.210000.", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("StrongPassword123!", sql, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

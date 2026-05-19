@@ -90,3 +90,28 @@ gRPC service URLs and DB connection strings live in `appsettings.json` per servi
 ### Database Migrations
 
 SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `004_*.sql`).
+
+### 9Router Integration & Two Types of Tokens
+
+Интеграция с 9Router использует **два разных типа токенов** — не путать:
+
+#### 1. Токен ноды (Control Token)
+
+Задаётся в настройках ноды при регистрации (поле **Control Token Secret** в Admin → Nodes).
+
+- Это `ROUTER_CONTROL_TOKEN` из конфига 9Router
+- Используется ControlPlane для аутентификации к admin API 9Router (`/api/integrations/*`)
+- Позволяет пушить/отзывать пользовательские ключи на ноду
+- Хранится в `control.router_nodes.token_secret_name` как **имя секрета**
+- Реальное значение резолвится из конфига ControlPlane: `RouterHealthChecks:NodeTokens:{tokenSecretName}`
+- В Kubernetes задаётся через Secret → env var `RouterHealthChecks__NodeTokens__{tokenSecretName}`
+
+#### 2. Пользовательские API-ключи
+
+Создаются пользователями в WebApp (Workspace → API Keys).
+
+- Формат: `sk-or-<random>` (требование 9Router)
+- Хранятся в AuthService (хеш в `auth.api_keys`)
+- При создании автоматически пушатся на все активные ноды через ControlPlane → `POST /api/integrations/keys`
+- Используются для аутентификации при вызове LLM-моделей через 9Router proxy
+- Видны в дашборде 9Router (`/dashboard/endpoint`)

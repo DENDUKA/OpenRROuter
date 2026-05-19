@@ -41,11 +41,11 @@ spec:
                   key: control-connection
             - name: RouterHealthChecks__HealthPath
               value: "/v1/models"
-            - name: RouterHealthChecks__NodeTokens__router-control-token
+            - name: RouterHealthChecks__NodeTokens__92ef59dfa1d788af4ae25324d44e434f13b7095b0524bbe924c124a6e33600f1
               valueFrom:
                 secretKeyRef:
                   name: router-nodes-secret
-                  key: router-control-token
+                  key: 92ef59dfa1d788af4ae25324d44e434f13b7095b0524bbe924c124a6e33600f1
           readinessProbe:
             httpGet:
               path: /health

@@ -209,12 +209,14 @@ public sealed class GrpcRouterControlPlaneService(
         PushUserIntegrationKeyRequest request,
         ServerCallContext context)
     {
-        var nodes = controlPlane.ListNodesForHealthChecks()
-            .Where(n => n.Enabled)
-            .ToArray();
-        var pushedCount = 0;
+        var all = controlPlane.ListNodesForHealthChecks();
 
-        foreach (var node in nodes)
+        IEnumerable<RouterNode> targets = string.IsNullOrWhiteSpace(request.NodeId)
+            ? all.Where(n => n.Enabled)
+            : all.Where(n => n.Id == request.NodeId);
+
+        var pushedCount = 0;
+        foreach (var node in targets)
         {
             try
             {

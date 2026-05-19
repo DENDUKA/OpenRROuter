@@ -83,13 +83,15 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
 
     public async Task PushUserIntegrationKeyAsync(
         string name, string rawKey, string machineId,
+        string? nodeId = null,
         CancellationToken cancellationToken = default)
     {
         await client.PushUserIntegrationKeyAsync(new PushUserIntegrationKeyRequest
         {
             Name = name,
             RawKey = rawKey,
-            MachineId = machineId
+            MachineId = machineId,
+            NodeId = nodeId ?? string.Empty
         }, cancellationToken: cancellationToken);
     }
 

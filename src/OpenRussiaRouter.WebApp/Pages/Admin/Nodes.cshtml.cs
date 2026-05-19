@@ -184,25 +184,14 @@ public class NodesModel : PageModelBase
             return Page();
         }
 
-        var nodeToken = ResolveNodeToken(node.TokenSecretName);
-        if (string.IsNullOrWhiteSpace(nodeToken))
-        {
-            TestResult = new TestFormResult(false, "Токен управления нодой не настроен.");
-            return Page();
-        }
-
         var tempKeyName = $"Node Test {DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
         var tempKey = await _authClient.CreateApiKeyAsync(userId, tempKeyName, HttpContext.RequestAborted);
 
         try
         {
-            var integrationPayload = System.Text.Json.JsonSerializer.Serialize(
-                new { Name = tempKeyName, Key = tempKey.RawKey });
-            using var pushReq = new HttpRequestMessage(
-                HttpMethod.Post, $"{node.EndpointUrl.TrimEnd('/')}/api/integrations/keys");
-            pushReq.Headers.TryAddWithoutValidation("Authorization", $"Bearer {nodeToken}");
-            pushReq.Content = new StringContent(integrationPayload, System.Text.Encoding.UTF8, "application/json");
-            await _httpClient.SendAsync(pushReq, HttpContext.RequestAborted);
+            await _controlPlaneClient.PushUserIntegrationKeyAsync(
+                tempKeyName, tempKey.RawKey, userId, nodeId: node.NodeId,
+                cancellationToken: HttpContext.RequestAborted);
 
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
             {

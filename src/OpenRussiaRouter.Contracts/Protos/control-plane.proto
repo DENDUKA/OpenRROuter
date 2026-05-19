@@ -136,6 +136,7 @@ message PushUserIntegrationKeyRequest {
   string name = 1;
   string raw_key = 2;
   string machine_id = 3;
+  string node_id = 4; // если задан — пуш только на эту ноду; если пусто — на все
 }
 
 message PushUserIntegrationKeyResponse {

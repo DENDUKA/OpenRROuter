@@ -27,7 +27,7 @@ spec:
           image: quay.io/argoprojlabs/argocd-image-updater:v1.2.0
           imagePullPolicy: Always
           args:
-            - --metrics-bind-address=:8443
+            - --metrics-bind-address=:8080
             - run
           env:
             - name: ARGOCD_NAMESPACE
@@ -67,7 +67,7 @@ spec:
                   key: git.email
                   optional: true
           ports:
-            - containerPort: 8443
+            - containerPort: 8080
               name: metrics
             - containerPort: 8081
               name: health

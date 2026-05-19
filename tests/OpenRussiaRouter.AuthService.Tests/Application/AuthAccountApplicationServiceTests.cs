@@ -180,5 +180,14 @@ public sealed class AuthAccountApplicationServiceTests
                 .Select(k => (k.Prefix, k.SecretHash))
                 .ToArray();
         }
+
+        public string? GetFirstActiveApiKeyRaw(string userId)
+        {
+            return ApiKeys
+                .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
+                .OrderByDescending(k => k.CreatedAtUtc)
+                .Select(k => k.RawKey)
+                .FirstOrDefault();
+        }
     }
 }

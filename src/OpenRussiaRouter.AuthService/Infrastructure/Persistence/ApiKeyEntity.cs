@@ -14,6 +14,8 @@ public sealed class ApiKeyEntity
 
     public string SecretHash { get; set; } = string.Empty;
 
+    public string? RawKey { get; set; }
+
     public DateTimeOffset CreatedAtUtc { get; set; }
 
     public DateTimeOffset? LastUsedAtUtc { get; set; }

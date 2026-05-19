@@ -109,9 +109,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         connection.Execute(
             """
             insert into auth.api_keys
-                (id, user_id, name, prefix, secret_hash, created_at_utc, last_used_at_utc, revoked_at_utc)
+                (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, revoked_at_utc)
             values
-                (@Id, @UserId, @Name, @Prefix, @SecretHash, @CreatedAtUtc, @LastUsedAtUtc, @RevokedAtUtc);
+                (@Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @RevokedAtUtc);
             """,
             ToParameters(apiKey));
     }
@@ -214,6 +214,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             apiKey.Name,
             apiKey.Prefix,
             apiKey.SecretHash,
+            apiKey.RawKey,
             apiKey.CreatedAtUtc,
             apiKey.LastUsedAtUtc,
             apiKey.RevokedAtUtc
@@ -244,6 +245,22 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         from auth.invites
         """;
 
+    public string? GetFirstActiveApiKeyRaw(string userId)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return connection.QuerySingleOrDefault<string?>(
+            """
+            select raw_key
+            from auth.api_keys
+            where user_id = @UserId
+              and revoked_at_utc is null
+              and raw_key is not null
+            order by created_at_utc desc
+            limit 1;
+            """,
+            new { UserId = userId });
+    }
+
     private const string ApiKeySelectSql = """
         select
             id as Id,
@@ -251,6 +268,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             name as Name,
             prefix as Prefix,
             secret_hash as SecretHash,
+            raw_key as RawKey,
             created_at_utc as CreatedAtUtc,
             last_used_at_utc as LastUsedAtUtc,
             revoked_at_utc as RevokedAtUtc

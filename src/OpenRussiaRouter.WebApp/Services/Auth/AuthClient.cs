@@ -65,6 +65,13 @@ public sealed class AuthClient(AuthGrpc.AuthServiceClient client)
         }
     }
 
+    public async Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetFirstActiveApiKeyRawAsync(
+            new GetFirstActiveApiKeyRawRequest { UserId = userId }, cancellationToken: cancellationToken);
+        return string.IsNullOrEmpty(response.RawKey) ? null : response.RawKey;
+    }
+
     public async Task<IReadOnlyList<UserInfo>> ListUsersAsync(CancellationToken cancellationToken = default)
     {
         var response = await client.ListUsersAsync(new ListUsersRequest(), cancellationToken: cancellationToken);

@@ -129,4 +129,16 @@ public sealed class InMemoryAuthRepository : IAuthRepository
                 .ToArray();
         }
     }
+
+    public string? GetFirstActiveApiKeyRaw(string userId)
+    {
+        lock (gate)
+        {
+            return apiKeys
+                .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
+                .OrderByDescending(k => k.CreatedAtUtc)
+                .Select(k => k.RawKey)
+                .FirstOrDefault();
+        }
+    }
 }

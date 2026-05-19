@@ -15,6 +15,7 @@ service AuthService {
   rpc RenameApiKey (RenameApiKeyRequest) returns (RenameApiKeyResponse);
   rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
   rpc ListActiveApiKeyHashes (ListActiveApiKeyHashesRequest) returns (ListActiveApiKeyHashesResponse);
+  rpc GetFirstActiveApiKeyRaw (GetFirstActiveApiKeyRawRequest) returns (GetFirstActiveApiKeyRawResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -149,4 +150,12 @@ message ApiKeyHashEntry {
 
 message ListActiveApiKeyHashesResponse {
   repeated ApiKeyHashEntry keys = 1;
+}
+
+message GetFirstActiveApiKeyRawRequest {
+  string user_id = 1;
+}
+
+message GetFirstActiveApiKeyRawResponse {
+  string raw_key = 1;
 }

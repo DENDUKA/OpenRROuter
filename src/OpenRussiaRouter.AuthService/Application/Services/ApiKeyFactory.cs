@@ -18,7 +18,8 @@ public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher, ISecretGenera
             name,
             prefix,
             secretHasher.Hash(rawKey),
-            createdAtUtc);
+            createdAtUtc,
+            rawKey);
 
         return new CreatedApiKey(apiKey, rawKey);
     }

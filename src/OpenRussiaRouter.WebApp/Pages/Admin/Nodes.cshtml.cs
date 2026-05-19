@@ -184,13 +184,19 @@ public class NodesModel : PageModelBase
             return Page();
         }
 
-        var tempKeyName = $"Node Test {DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
-        var tempKey = await _authClient.CreateApiKeyAsync(userId, tempKeyName, HttpContext.RequestAborted);
+        var rawKey = await _authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+
+        if (string.IsNullOrWhiteSpace(rawKey))
+        {
+            TestResult = new TestFormResult(false,
+                "Нет активных API-ключей с сохранённым значением. Пересоздайте ключ в разделе Рабочее пространство → API Ключи.");
+            return Page();
+        }
 
         try
         {
             await _controlPlaneClient.PushUserIntegrationKeyAsync(
-                tempKeyName, tempKey.RawKey, userId, nodeId: node.NodeId,
+                $"user:{userId}", rawKey, userId, nodeId: node.NodeId,
                 cancellationToken: HttpContext.RequestAborted);
 
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
@@ -201,7 +207,7 @@ public class NodesModel : PageModelBase
 
             var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
-            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {tempKey.RawKey}");
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
 
             using var resp = await _httpClient.SendAsync(req, HttpContext.RequestAborted);
@@ -211,11 +217,6 @@ public class NodesModel : PageModelBase
         catch (Exception ex)
         {
             TestResult = new TestFormResult(false, ex.Message);
-        }
-        finally
-        {
-            try { await _authClient.RevokeApiKeyAsync(userId, tempKey.ApiKeyId); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Не удалось отозвать временный тестовый ключ {KeyId}", tempKey.ApiKeyId); }
         }
 
         return Page();

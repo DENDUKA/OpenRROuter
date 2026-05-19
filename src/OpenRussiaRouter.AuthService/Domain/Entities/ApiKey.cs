@@ -5,7 +5,7 @@ namespace OpenRussiaRouter.AuthService.Domain.Entities;
 public sealed class ApiKey
 {
 
-    public ApiKey(string id, string userId, string name, string prefix, string secretHash, DateTimeOffset createdAtUtc)
+    public ApiKey(string id, string userId, string name, string prefix, string secretHash, DateTimeOffset createdAtUtc, string? rawKey = null)
     {
         Id = Preconditions.RequireValue(id, nameof(id));
         UserId = Preconditions.RequireValue(userId, nameof(userId));
@@ -13,6 +13,7 @@ public sealed class ApiKey
         Prefix = Preconditions.RequireValue(prefix, nameof(prefix));
         SecretHash = Preconditions.RequireValue(secretHash, nameof(secretHash));
         CreatedAtUtc = createdAtUtc;
+        RawKey = rawKey;
     }
 
     public string Id { get; }
@@ -24,6 +25,8 @@ public sealed class ApiKey
     public string Prefix { get; }
 
     public string SecretHash { get; }
+
+    public string? RawKey { get; }
 
     public DateTimeOffset CreatedAtUtc { get; }
 

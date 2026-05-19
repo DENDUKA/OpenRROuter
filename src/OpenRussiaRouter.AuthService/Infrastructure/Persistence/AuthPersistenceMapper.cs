@@ -78,6 +78,7 @@ public static class AuthPersistenceMapper
             Name = apiKey.Name,
             Prefix = apiKey.Prefix,
             SecretHash = apiKey.SecretHash,
+            RawKey = apiKey.RawKey,
             CreatedAtUtc = apiKey.CreatedAtUtc,
             LastUsedAtUtc = apiKey.LastUsedAtUtc,
             RevokedAtUtc = apiKey.RevokedAtUtc
@@ -93,7 +94,8 @@ public static class AuthPersistenceMapper
             entity.Name,
             entity.Prefix,
             entity.SecretHash,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            entity.RawKey);
 
         if (entity.LastUsedAtUtc.HasValue)
         {

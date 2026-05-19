@@ -28,4 +28,6 @@ UserAccount? GetUser(string userId);
     bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc);
 
     IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes();
+
+    string? GetFirstActiveApiKeyRaw(string userId);
 }

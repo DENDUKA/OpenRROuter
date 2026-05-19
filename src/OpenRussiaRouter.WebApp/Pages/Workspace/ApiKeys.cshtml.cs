@@ -9,7 +9,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 [Authorize]
 public class ApiKeysModel : PageModelBase
 {
-    private readonly AuthClient _authClient;
+private readonly AuthClient _authClient;
     private readonly ControlPlaneClient _controlPlaneClient;
 
     public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];

@@ -229,6 +229,17 @@ public sealed class GrpcAuthService(
         return Task.FromResult(response);
     }
 
+    public override Task<GetFirstActiveApiKeyRawResponse> GetFirstActiveApiKeyRaw(
+        GetFirstActiveApiKeyRawRequest request,
+        ServerCallContext context)
+    {
+        var rawKey = repository.GetFirstActiveApiKeyRaw(request.UserId);
+        return Task.FromResult(new GetFirstActiveApiKeyRawResponse
+        {
+            RawKey = rawKey ?? string.Empty
+        });
+    }
+
     private static UserRole ParseRole(string role)
     {
         return Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed)

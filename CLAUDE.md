@@ -104,7 +104,13 @@ SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatical
 - Позволяет пушить/отзывать пользовательские ключи на ноду
 - Хранится в `control.router_nodes.token_secret_name` как **имя секрета**
 - Реальное значение резолвится из конфига ControlPlane: `RouterHealthChecks:NodeTokens:{tokenSecretName}`
-- В Kubernetes задаётся через Secret → env var `RouterHealthChecks__NodeTokens__{tokenSecretName}`
+- В Kubernetes задаётся вручную на кластере — каждая нода имеет свой токен:
+  ```bash
+  kubectl set env deployment/control-plane \
+    "RouterHealthChecks__NodeTokens__{tokenSecretName}={tokenValue}" \
+    -n orr-dev
+  ```
+  Не хранится в репозитории.
 
 #### 2. Пользовательские API-ключи
 

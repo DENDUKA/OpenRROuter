@@ -7,11 +7,11 @@ data:
   interval: 2m
   log.level: info
   registries.conf: |
-    [[registry]]
-    name = "GitHub Container Registry"
-    prefix = "ghcr.io"
-    api_url = "https://ghcr.io"
-    insecure = false
+    registries:
+      - name: "GitHub Container Registry"
+        prefix: "ghcr.io"
+        api_url: "https://ghcr.io"
+        insecure: false
 ---
 apiVersion: v1
 kind: ConfigMap

@@ -27,7 +27,6 @@ public static class Startup
         var connectionString = configuration.GetConnectionString("ControlPlaneDb");
         services.AddControlPlaneInfrastructure(connectionString);
         services.AddControlPlaneApplicationServices();
-        services.AddControlPlaneKeySyncServices(configuration);
 
         return services;
     }

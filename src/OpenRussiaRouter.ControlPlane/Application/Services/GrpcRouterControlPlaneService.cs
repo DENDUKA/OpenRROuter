@@ -205,6 +205,33 @@ public sealed class GrpcRouterControlPlaneService(
         return response;
     }
 
+    public override async Task<PushUserIntegrationKeyResponse> PushUserIntegrationKey(
+        PushUserIntegrationKeyRequest request,
+        ServerCallContext context)
+    {
+        var nodes = controlPlane.ListNodesForHealthChecks()
+            .Where(n => n.Enabled)
+            .ToArray();
+        var pushedCount = 0;
+
+        foreach (var node in nodes)
+        {
+            try
+            {
+                await providerClient.CreateIntegrationKeyAsync(
+                    node, request.Name, request.RawKey, context.CancellationToken)
+                    .ConfigureAwait(false);
+                pushedCount++;
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Не удалось запушить integration key на ноду {NodeId}", node.Id);
+            }
+        }
+
+        return new PushUserIntegrationKeyResponse { PushedCount = pushedCount };
+    }
+
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node)
     {
         return new Contracts.Grpc.ControlPlane.V1.RouterNodeSummary

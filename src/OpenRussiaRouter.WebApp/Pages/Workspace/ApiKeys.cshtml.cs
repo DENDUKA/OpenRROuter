@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
@@ -9,6 +10,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 public class ApiKeysModel : PageModelBase
 {
     private readonly AuthClient _authClient;
+    private readonly ControlPlaneClient _controlPlaneClient;
 
     public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -20,7 +22,11 @@ public class ApiKeysModel : PageModelBase
     [BindProperty] public CreateKeyInput Create { get; set; } = new();
     [BindProperty] public RenameKeyInput Rename { get; set; } = new();
 
-    public ApiKeysModel(AuthClient authClient) => _authClient = authClient;
+    public ApiKeysModel(AuthClient authClient, ControlPlaneClient controlPlaneClient)
+    {
+        _authClient = authClient;
+        _controlPlaneClient = controlPlaneClient;
+    }
 
     public async Task OnGetAsync()
     {
@@ -40,6 +46,7 @@ public class ApiKeysModel : PageModelBase
         {
             var result = await _authClient.CreateApiKeyAsync(User.GetUserId(), Create.Name);
             NewKeyValue = result.RawKey;
+            _ = _controlPlaneClient.PushUserIntegrationKeyAsync(Create.Name, result.RawKey, User.GetUserId());
             return RedirectToPage();
         }
         catch

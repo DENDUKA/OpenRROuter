@@ -13,6 +13,7 @@ service RouterControlPlane {
   rpc DeleteRouterNode (DeleteRouterNodeRequest) returns (DeleteRouterNodeResponse);
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
+  rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -129,4 +130,14 @@ message GetRouterNodeDetailsResponse {
   repeated RouterIntegrationKeySummary keys = 3;
   string error_code = 4;
   string api_error = 5;
+}
+
+message PushUserIntegrationKeyRequest {
+  string name = 1;
+  string raw_key = 2;
+  string machine_id = 3;
+}
+
+message PushUserIntegrationKeyResponse {
+  int32 pushed_count = 1;
 }

@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
+using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -10,6 +12,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class NodesModel : PageModelBase
 {
     private readonly ControlPlaneClient _controlPlaneClient;
+    private readonly AuthClient _authClient;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<NodesModel> _logger;
@@ -28,11 +31,13 @@ public class NodesModel : PageModelBase
 
     public NodesModel(
         ControlPlaneClient controlPlaneClient,
+        AuthClient authClient,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<NodesModel> logger)
     {
         _controlPlaneClient = controlPlaneClient;
+        _authClient = authClient;
         _httpClient = httpClientFactory.CreateClient("RouterNode");
         _configuration = configuration;
         _logger = logger;
@@ -164,14 +169,41 @@ public class NodesModel : PageModelBase
 
         if (node is null)
         {
-            TestResult = new TestFormResult(false, "Select a router node before sending a test request.");
+            TestResult = new TestFormResult(false, "Выберите ноду перед отправкой тестового запроса.");
             return Page();
         }
 
         TestInput.NodeId = node.NodeId;
 
+        var userId = User.GetUserId();
+        var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        if (!userKeys.Any(k => k.IsActive))
+        {
+            TestResult = new TestFormResult(false,
+                "Нет личных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
+            return Page();
+        }
+
+        var nodeToken = ResolveNodeToken(node.TokenSecretName);
+        if (string.IsNullOrWhiteSpace(nodeToken))
+        {
+            TestResult = new TestFormResult(false, "Токен управления нодой не настроен.");
+            return Page();
+        }
+
+        var tempKeyName = $"Node Test {DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
+        var tempKey = await _authClient.CreateApiKeyAsync(userId, tempKeyName, HttpContext.RequestAborted);
+
         try
         {
+            var integrationPayload = System.Text.Json.JsonSerializer.Serialize(
+                new { Name = tempKeyName, Key = tempKey.RawKey });
+            using var pushReq = new HttpRequestMessage(
+                HttpMethod.Post, $"{node.EndpointUrl.TrimEnd('/')}/api/integrations/keys");
+            pushReq.Headers.TryAddWithoutValidation("Authorization", $"Bearer {nodeToken}");
+            pushReq.Content = new StringContent(integrationPayload, System.Text.Encoding.UTF8, "application/json");
+            await _httpClient.SendAsync(pushReq, HttpContext.RequestAborted);
+
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
             {
                 model = TestInput.Model,
@@ -180,7 +212,7 @@ public class NodesModel : PageModelBase
 
             var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
-            AddNodeTokenHeaders(req, node);
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {tempKey.RawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
 
             using var resp = await _httpClient.SendAsync(req, HttpContext.RequestAborted);
@@ -190,6 +222,11 @@ public class NodesModel : PageModelBase
         catch (Exception ex)
         {
             TestResult = new TestFormResult(false, ex.Message);
+        }
+        finally
+        {
+            try { await _authClient.RevokeApiKeyAsync(userId, tempKey.ApiKeyId); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Не удалось отозвать временный тестовый ключ {KeyId}", tempKey.ApiKeyId); }
         }
 
         return Page();

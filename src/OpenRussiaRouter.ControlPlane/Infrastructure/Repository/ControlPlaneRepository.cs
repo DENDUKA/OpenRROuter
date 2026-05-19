@@ -15,17 +15,17 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         connection.Execute(
             """
             insert into control.router_nodes
-                (id, name, endpoint_url, token_secret_name, capacity_weight, enabled, status,
+                (id, name, endpoint_url, control_token, capacity_weight, enabled, status,
                  in_flight_requests, last_checked_at_utc, last_health_latency_ms,
                  last_health_error_code, created_at_utc)
             values
-                (@Id, @Name, @EndpointUrl, @TokenSecretName, @CapacityWeight, @Enabled, @Status,
+                (@Id, @Name, @EndpointUrl, @ControlToken, @CapacityWeight, @Enabled, @Status,
                  @InFlightRequests, @LastCheckedAtUtc, @LastHealthLatencyMs,
                  @LastHealthErrorCode, @CreatedAtUtc)
             on conflict (id) do update set
                 name = excluded.name,
                 endpoint_url = excluded.endpoint_url,
-                token_secret_name = excluded.token_secret_name,
+                control_token = excluded.control_token,
                 capacity_weight = excluded.capacity_weight,
                 enabled = excluded.enabled,
                 status = excluded.status,
@@ -153,7 +153,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             node.Id,
             node.Name,
             EndpointUrl = node.EndpointUrl.ToString(),
-            node.TokenSecretName,
+            node.ControlToken,
             node.CapacityWeight,
             node.Enabled,
             Status = node.Status.ToString(),
@@ -170,7 +170,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             id as Id,
             name as Name,
             endpoint_url as EndpointUrl,
-            token_secret_name as TokenSecretName,
+            control_token as ControlToken,
             capacity_weight as CapacityWeight,
             enabled as Enabled,
             status as Status,

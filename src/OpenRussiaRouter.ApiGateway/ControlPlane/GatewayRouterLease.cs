@@ -4,5 +4,5 @@ public sealed record GatewayRouterLease(
     string LeaseId,
     string NodeId,
     Uri EndpointUrl,
-    string TokenSecretName);
+    string ControlToken);
 

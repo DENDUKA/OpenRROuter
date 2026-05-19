@@ -85,8 +85,6 @@ public static class ApiGatewayExtensions
     public static IServiceCollection AddGatewayRouter(this IServiceCollection services)
     {
         services.AddReverseProxy();
-        services.AddSingleton<IRouterNodeTokenProvider, ConfigurationRouterNodeTokenProvider>();
-
         services.AddScoped<IRouterProxyClient, YarpRouterProxyClient>();
 
         return services;

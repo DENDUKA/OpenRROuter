@@ -26,7 +26,7 @@ public sealed class GrpcRouterControlPlaneService(
                 LeaseId = lease.LeaseId,
                 NodeId = lease.NodeId,
                 EndpointUrl = lease.EndpointUrl.ToString(),
-                TokenSecretName = lease.TokenSecretName
+                ControlToken = lease.ControlToken
             });
         }
         catch (InvalidOperationException ex)
@@ -56,7 +56,7 @@ public sealed class GrpcRouterControlPlaneService(
             var node = controlPlane.RegisterNode(
                 request.Name,
                 new Uri(request.EndpointUrl),
-                request.TokenSecretName,
+                request.ControlToken,
                 request.CapacityWeight,
                 DateTimeOffset.UtcNow);
 
@@ -241,7 +241,7 @@ public sealed class GrpcRouterControlPlaneService(
             Status = (node.Enabled ? node.Status : RouterNodeStatus.Disabled).ToString(),
             InFlightRequests = node.InFlightRequests,
             LastCheckedAtUtc = node.LastCheckedAtUtc?.ToString("O") ?? string.Empty,
-            TokenSecretName = node.TokenSecretName,
+            ControlToken = node.ControlToken,
             CapacityWeight = node.CapacityWeight,
             LastHealthErrorCode = node.LastHealthErrorCode ?? string.Empty
         };

@@ -10,14 +10,14 @@ public sealed class NodesPage(IPage page, string baseUrl)
         await page.WaitForSelectorAsync("[data-testid='btn-add-node']");
     }
 
-    public async Task AddNodeAsync(string name, string endpointUrl, string tokenSecretName = "", int capacityWeight = 100)
+    public async Task AddNodeAsync(string name, string endpointUrl, string controlToken = "", int capacityWeight = 100)
     {
         await page.ClickAsync("[data-testid='btn-add-node']");
         await page.WaitForSelectorAsync("[data-testid='form-add-node']");
 
         await page.FillAsync("[data-testid='input-name']", name);
         await page.FillAsync("[data-testid='input-endpoint-url']", endpointUrl);
-        await page.FillAsync("[data-testid='input-token-secret-name']", tokenSecretName);
+        await page.FillAsync("[data-testid='input-token-secret-name']", controlToken);
 
         await page.ClickAsync("[data-testid='btn-submit-add']");
         await page.WaitForSelectorAsync($"[data-testid='node-row'][data-node-name='{name}']");

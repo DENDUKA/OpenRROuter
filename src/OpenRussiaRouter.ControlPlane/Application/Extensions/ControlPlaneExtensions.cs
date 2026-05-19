@@ -29,7 +29,6 @@ public static class ControlPlaneExtensions
     public static IServiceCollection AddControlPlaneApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<RouterControlPlaneService>();
-        services.AddSingleton<IRouterNodeTokenResolver, ConfigurationRouterNodeTokenResolver>();
         services.AddHttpClient<IRouterNodeHealthClient, HttpRouterNodeHealthClient>();
         services.AddHttpClient<IRouterNodeProviderClient, RouterNodeProviderClient>();
         services.AddHostedService<RouterHealthCheckWorker>();

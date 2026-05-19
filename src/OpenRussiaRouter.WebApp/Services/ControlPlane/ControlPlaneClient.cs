@@ -65,13 +65,13 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
         await client.DeleteRouterNodeAsync(new DeleteRouterNodeRequest { NodeId = nodeId }, cancellationToken: cancellationToken);
     }
 
-    public async Task RegisterRouterNodeAsync(string name, string endpointUrl, string? tokenSecretName, int capacityWeight, CancellationToken cancellationToken = default)
+    public async Task RegisterRouterNodeAsync(string name, string endpointUrl, string? controlToken, int capacityWeight, CancellationToken cancellationToken = default)
     {
         var response = await client.RegisterRouterNodeAsync(new RegisterRouterNodeRequest
         {
             Name = name ?? string.Empty,
             EndpointUrl = endpointUrl ?? string.Empty,
-            TokenSecretName = tokenSecretName ?? string.Empty,
+            ControlToken = controlToken ?? string.Empty,
             CapacityWeight = capacityWeight
         }, cancellationToken: cancellationToken);
 
@@ -106,7 +106,7 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
             string.IsNullOrWhiteSpace(n.LastCheckedAtUtc)
                 ? null
                 : DateTimeOffset.Parse(n.LastCheckedAtUtc, System.Globalization.CultureInfo.InvariantCulture),
-            n.TokenSecretName,
+            n.ControlToken,
             n.CapacityWeight,
             n.LastHealthErrorCode);
     }

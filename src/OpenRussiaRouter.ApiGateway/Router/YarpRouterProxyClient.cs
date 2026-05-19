@@ -9,7 +9,7 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeTokenProvider tokenProvider)
+public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
     : IRouterProxyClient
 {
     private const string NodeTokenHeader = "X-ORR-Node-Token";
@@ -54,7 +54,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
         context.Request.Scheme = lease.EndpointUrl.Scheme;
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
         context.Request.Path = "/v1/chat/completions";
-        var nodeToken = tokenProvider.Resolve(lease.TokenSecretName);
+        var nodeToken = lease.ControlToken;
         if (!string.IsNullOrWhiteSpace(nodeToken))
         {
             context.Request.Headers[NodeTokenHeader] = nodeToken;
@@ -100,7 +100,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder, IRouterNodeT
 
         var requestUri = new Uri(lease.EndpointUrl, "/v1/chat/completions");
         var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        var nodeToken = tokenProvider.Resolve(lease.TokenSecretName);
+        var nodeToken = lease.ControlToken;
         if (!string.IsNullOrWhiteSpace(nodeToken))
         {
             request.Headers.TryAddWithoutValidation(NodeTokenHeader, nodeToken);

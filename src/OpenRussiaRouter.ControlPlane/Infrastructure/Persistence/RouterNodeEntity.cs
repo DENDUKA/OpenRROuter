@@ -10,7 +10,7 @@ public sealed class RouterNodeEntity
 
     public string EndpointUrl { get; set; } = string.Empty;
 
-    public string TokenSecretName { get; set; } = string.Empty;
+    public string ControlToken { get; set; } = string.Empty;
 
     public int CapacityWeight { get; set; }
 

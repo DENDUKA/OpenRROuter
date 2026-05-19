@@ -11,7 +11,7 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
     public RouterNode RegisterNode(
         string name,
         Uri endpointUrl,
-        string tokenSecretName,
+        string controlToken,
         int capacityWeight,
         DateTimeOffset nowUtc)
     {
@@ -19,7 +19,7 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             Guid.NewGuid().ToString("N"),
             name,
             endpointUrl,
-            tokenSecretName,
+            controlToken,
             capacityWeight,
             nowUtc);
 
@@ -91,7 +91,7 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             nowUtc);
         repository.AddLease(lease);
 
-        return new RouterNodeLease(lease.Id, node.Id, node.EndpointUrl, node.TokenSecretName);
+        return new RouterNodeLease(lease.Id, node.Id, node.EndpointUrl, node.ControlToken);
     }
 
     public void ReleaseRouterNode(string leaseId)

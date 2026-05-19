@@ -10,14 +10,14 @@ public sealed class RouterNode
         string id,
         string name,
         Uri endpointUrl,
-        string tokenSecretName,
+        string controlToken,
         int capacityWeight,
         DateTimeOffset createdAtUtc)
     {
         Id = Preconditions.RequireValue(id, nameof(id));
         Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = tokenSecretName?.Trim() ?? string.Empty;
+        ControlToken = controlToken?.Trim() ?? string.Empty;
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
         CreatedAtUtc = createdAtUtc;
     }
@@ -28,7 +28,7 @@ public sealed class RouterNode
 
     public Uri EndpointUrl { get; private set; }
 
-    public string TokenSecretName { get; private set; }
+    public string ControlToken { get; private set; }
 
     public int CapacityWeight { get; private set; }
 
@@ -46,11 +46,11 @@ public sealed class RouterNode
 
     public DateTimeOffset CreatedAtUtc { get; }
 
-    public void Update(string name, Uri endpointUrl, string tokenSecretName, int capacityWeight)
+    public void Update(string name, Uri endpointUrl, string controlToken, int capacityWeight)
     {
         Name = Preconditions.RequireValue(name, nameof(name));
         EndpointUrl = ValidateEndpoint(endpointUrl);
-        TokenSecretName = tokenSecretName?.Trim() ?? string.Empty;
+        ControlToken = controlToken?.Trim() ?? string.Empty;
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
     }
 

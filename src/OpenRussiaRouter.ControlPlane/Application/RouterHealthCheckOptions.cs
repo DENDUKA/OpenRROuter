@@ -18,6 +18,4 @@ public sealed class RouterHealthCheckOptions
 
     [Required]
     public string NodeTokenHeader { get; set; } = "X-ORR-Node-Token";
-
-    public Dictionary<string, string> NodeTokens { get; set; } = new(StringComparer.Ordinal);
 }

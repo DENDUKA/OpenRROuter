@@ -23,7 +23,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         Assert.NotEqual(string.Empty, response.LeaseId);
         Assert.NotEqual(string.Empty, response.NodeId);
         Assert.Equal("https://router-a.example/", response.EndpointUrl);
-        Assert.Equal("secret-a", response.TokenSecretName);
+        Assert.Equal("secret-a", response.ControlToken);
         Assert.Equal(string.Empty, response.ErrorCode);
     }
 
@@ -65,7 +65,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Name = "node-a",
             EndpointUrl = "https://router-a.example",
-            TokenSecretName = "secret-a",
+            ControlToken = "secret-a",
             CapacityWeight = 2
         }, context: null!);
         var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
@@ -105,7 +105,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         Assert.Equal(string.Empty, response.ErrorCode);
         Assert.Equal(nodeId, response.Node.NodeId);
-        Assert.Equal("secret-a", response.Node.TokenSecretName);
+        Assert.Equal("secret-a", response.Node.ControlToken);
         Assert.Equal(1, response.Node.CapacityWeight);
         var provider = Assert.Single(response.Providers);
         Assert.Equal("conn-1", provider.ConnectionId);
@@ -124,7 +124,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Name = "node-a",
             EndpointUrl = "http://router-a.example",
-            TokenSecretName = "secret-a",
+            ControlToken = "secret-a",
             CapacityWeight = 1
         }, context: null!);
 

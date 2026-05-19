@@ -39,7 +39,7 @@ public sealed class GrpcControlPlaneGatewayClient(
                 response.LeaseId,
                 response.NodeId,
                 endpoint,
-                response.TokenSecretName);
+                response.ControlToken);
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

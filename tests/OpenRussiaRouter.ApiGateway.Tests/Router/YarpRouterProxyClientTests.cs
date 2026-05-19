@@ -69,7 +69,7 @@ public sealed class YarpRouterProxyClientTests
 
     private sealed class StaticTokenProvider(string token) : IRouterNodeTokenProvider
     {
-        public string Resolve(string tokenSecretName) => token;
+        public string Resolve(string controlToken) => token;
     }
 }
 

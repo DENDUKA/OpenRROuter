@@ -12,7 +12,7 @@ public sealed record RouterNodeLease(
     string LeaseId,
     string NodeId,
     Uri EndpointUrl,
-    string TokenSecretName);
+    string ControlToken);
 
 public sealed record RouterNodeSummary(
     string Id,

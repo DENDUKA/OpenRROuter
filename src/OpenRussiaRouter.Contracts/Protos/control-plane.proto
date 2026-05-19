@@ -25,7 +25,7 @@ message SelectRouterNodeResponse {
   string lease_id = 1;
   string node_id = 2;
   string endpoint_url = 3;
-  string token_secret_name = 4;
+  string control_token = 4;
   string error_code = 5;
 }
 
@@ -41,7 +41,7 @@ message ReleaseRouterNodeResponse {
 message RegisterRouterNodeRequest {
   string name = 1;
   string endpoint_url = 2;
-  string token_secret_name = 3;
+  string control_token = 3;
   int32 capacity_weight = 4;
 }
 
@@ -93,7 +93,7 @@ message RouterNodeSummary {
   string status = 4;
   int32 in_flight_requests = 5;
   string last_checked_at_utc = 6;
-  string token_secret_name = 7;
+  string control_token = 7;
   int32 capacity_weight = 8;
   string last_health_error_code = 9;
 }

@@ -24,7 +24,7 @@ public sealed class GrpcRouterControlPlaneServiceIntegrationTests : IClassFixtur
         {
             Name = "node-a",
             EndpointUrl = "https://router-a.example",
-            TokenSecretName = "secret-a",
+            ControlToken = "secret-a",
             CapacityWeight = 1
         });
         var listed = await client.ListRouterNodesAsync(new ListRouterNodesRequest());

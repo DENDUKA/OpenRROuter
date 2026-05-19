@@ -235,7 +235,7 @@ public sealed class RouterNodeProviderClientTests
 
     private sealed class StaticTokenResolver(string? token) : IRouterNodeTokenResolver
     {
-        public string? Resolve(string tokenSecretName) => token;
+        public string? Resolve(string controlToken) => token;
     }
 
     private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler

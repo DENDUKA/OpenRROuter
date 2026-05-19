@@ -1,13 +1,10 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure;
 
-public sealed class RouterNodeProviderClient(
-    HttpClient httpClient,
-    IRouterNodeTokenResolver tokenResolver)
+public sealed class RouterNodeProviderClient(HttpClient httpClient)
     : IRouterNodeProviderClient
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
@@ -21,12 +18,7 @@ public sealed class RouterNodeProviderClient(
             ? "/api/integrations/providers/quota?includeInactive=true"
             : "/api/integrations/providers/quota";
 
-        return SendAsync<RouterProviderQuotaResponse>(
-            node,
-            HttpMethod.Get,
-            path,
-            content: null,
-            cancellationToken);
+        return SendAsync<RouterProviderQuotaResponse>(node, HttpMethod.Get, path, content: null, cancellationToken);
     }
 
     public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
@@ -56,39 +48,22 @@ public sealed class RouterNodeProviderClient(
 
         var query = new List<string>();
         if (!string.IsNullOrWhiteSpace(source))
-        {
             query.Add($"source={Uri.EscapeDataString(source.Trim())}");
-        }
-
         if (includeCompatible)
-        {
             query.Add("includeCompatible=true");
-        }
 
         var path = $"/api/integrations/providers/by-type/{Uri.EscapeDataString(provider.Trim())}/models";
         if (query.Count > 0)
-        {
             path += "?" + string.Join("&", query);
-        }
 
-        return SendAsync<RouterProviderModelsResponse>(
-            node,
-            HttpMethod.Get,
-            path,
-            content: null,
-            cancellationToken);
+        return SendAsync<RouterProviderModelsResponse>(node, HttpMethod.Get, path, content: null, cancellationToken);
     }
 
     public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
         RouterNode node,
         CancellationToken cancellationToken)
     {
-        return SendAsync<RouterIntegrationKeysResponse>(
-            node,
-            HttpMethod.Get,
-            "/api/integrations/keys",
-            content: null,
-            cancellationToken);
+        return SendAsync<RouterIntegrationKeysResponse>(node, HttpMethod.Get, "/api/integrations/keys", content: null, cancellationToken);
     }
 
     public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
@@ -133,14 +108,13 @@ public sealed class RouterNodeProviderClient(
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        var token = tokenResolver.Resolve(node.TokenSecretName);
-        if (string.IsNullOrWhiteSpace(token))
+        if (string.IsNullOrWhiteSpace(node.ControlToken))
         {
-            throw new InvalidOperationException("Router control token is not configured for this node.");
+            throw new InvalidOperationException($"Control token is not set for node '{node.Id}'.");
         }
 
         using var request = new HttpRequestMessage(method, new Uri(node.EndpointUrl, relativePathAndQuery));
-        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + token);
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
         request.Content = content;
 
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -150,17 +124,12 @@ public sealed class RouterNodeProviderClient(
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        var value = await JsonSerializer.DeserializeAsync<TResponse>(
-            stream,
-            JsonOptions,
-            cancellationToken).ConfigureAwait(false);
+        var value = await JsonSerializer.DeserializeAsync<TResponse>(stream, JsonOptions, cancellationToken).ConfigureAwait(false);
 
         return value ?? throw new InvalidOperationException("Router provider response body was empty.");
     }
 
-    private static async Task ThrowProviderExceptionAsync(
-        HttpResponseMessage response,
-        CancellationToken cancellationToken)
+    private static async Task ThrowProviderExceptionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var routerError = TryReadError(body);
@@ -173,25 +142,15 @@ public sealed class RouterNodeProviderClient(
 
     private static string? TryReadError(string body)
     {
-        if (string.IsNullOrWhiteSpace(body))
-        {
-            return null;
-        }
-
+        if (string.IsNullOrWhiteSpace(body)) return null;
         try
         {
             using var document = JsonDocument.Parse(body);
-            return document.RootElement.TryGetProperty("error", out var errorElement)
-                ? errorElement.GetString()
-                : null;
+            return document.RootElement.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
         }
-        catch (JsonException)
-        {
-            return null;
-        }
+        catch (JsonException) { return null; }
     }
 
     private sealed record ProviderStatusRequest(bool IsActive);
-
     private sealed record CreateIntegrationKeyRequest(string Name, string Key);
 }

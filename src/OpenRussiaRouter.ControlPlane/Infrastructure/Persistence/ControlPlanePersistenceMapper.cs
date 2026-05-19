@@ -12,7 +12,7 @@ public static class ControlPlanePersistenceMapper
             Id = node.Id,
             Name = node.Name,
             EndpointUrl = node.EndpointUrl.ToString(),
-            TokenSecretName = node.TokenSecretName,
+            ControlToken = node.ControlToken,
             CapacityWeight = node.CapacityWeight,
             Enabled = node.Enabled,
             Status = node.Status,
@@ -30,7 +30,7 @@ public static class ControlPlanePersistenceMapper
             entity.Id,
             entity.Name,
             new Uri(entity.EndpointUrl),
-            entity.TokenSecretName,
+            entity.ControlToken,
             entity.CapacityWeight,
             entity.CreatedAtUtc);
 

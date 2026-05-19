@@ -26,7 +26,7 @@ public sealed class GrpcRouterControlPlaneServicePostgresIntegrationTests
         {
             Name = "node-pg",
             EndpointUrl = "https://router-pg.example",
-            TokenSecretName = "secret-pg",
+            ControlToken = "secret-pg",
             CapacityWeight = 1
         });
         var listed = await client.ListRouterNodesAsync(new ListRouterNodesRequest());

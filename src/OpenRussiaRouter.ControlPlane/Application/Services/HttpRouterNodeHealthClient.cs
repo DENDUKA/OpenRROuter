@@ -10,7 +10,6 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public sealed class HttpRouterNodeHealthClient(
     HttpClient httpClient,
-    IRouterNodeTokenResolver tokenResolver,
     IOptionsMonitor<RouterHealthCheckOptions> options,
     ILogger<HttpRouterNodeHealthClient>? logger = null)
     : IRouterNodeHealthClient
@@ -20,8 +19,6 @@ public sealed class HttpRouterNodeHealthClient(
     {
         ArgumentNullException.ThrowIfNull(node);
 
-        var token = tokenResolver.Resolve(node.TokenSecretName);
-
         using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         timeoutCts.CancelAfter(options.CurrentValue.Timeout);
 
@@ -29,9 +26,9 @@ public sealed class HttpRouterNodeHealthClient(
         try
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildHealthUri(node.EndpointUrl, options.CurrentValue.HealthPath));
-            if (!string.IsNullOrWhiteSpace(token))
+            if (!string.IsNullOrWhiteSpace(node.ControlToken))
             {
-                request.Headers.TryAddWithoutValidation(options.CurrentValue.NodeTokenHeader, token);
+                request.Headers.TryAddWithoutValidation(options.CurrentValue.NodeTokenHeader, node.ControlToken);
             }
 
             using var response = await httpClient.SendAsync(

@@ -53,7 +53,7 @@ public class NodesModel : PageModelBase
     {
         try
         {
-            await _controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.TokenSecretName, Form.CapacityWeight);
+            await _controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.ControlToken, Form.CapacityWeight);
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -224,7 +224,7 @@ public class NodesModel : PageModelBase
 
     private void AddNodeTokenHeaders(HttpRequestMessage request, RouterNodeInfo node)
     {
-        var nodeToken = ResolveNodeToken(node.TokenSecretName);
+        var nodeToken = ResolveNodeToken(node.ControlToken);
         if (string.IsNullOrWhiteSpace(nodeToken))
             return;
 
@@ -232,12 +232,12 @@ public class NodesModel : PageModelBase
         request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {nodeToken}");
     }
 
-    private string ResolveNodeToken(string tokenSecretName)
+    private string ResolveNodeToken(string controlToken)
     {
-        if (string.IsNullOrWhiteSpace(tokenSecretName))
+        if (string.IsNullOrWhiteSpace(controlToken))
             return string.Empty;
 
-        return _configuration[$"RouterNodeTokens:{tokenSecretName.Trim()}"] ?? string.Empty;
+        return _configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
     }
 
     public static string GetStatusBadge(string status) => status switch
@@ -252,7 +252,7 @@ public class NodesModel : PageModelBase
     {
         public string Name { get; set; } = "";
         public string EndpointUrl { get; set; } = "";
-        public string TokenSecretName { get; set; } = "";
+        public string ControlToken { get; set; } = "";
         public int CapacityWeight { get; set; } = 100;
     }
 

@@ -123,6 +123,16 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             .ToArray();
     }
 
+    public RouterNode? GetRouterNode(string nodeId)
+    {
+        if (string.IsNullOrWhiteSpace(nodeId))
+        {
+            return null;
+        }
+
+        return repository.GetNode(nodeId.Trim());
+    }
+
     public IReadOnlyCollection<RouterNode> ListNodesForHealthChecks()
     {
         return repository.ListNodes(1000, null).Items;

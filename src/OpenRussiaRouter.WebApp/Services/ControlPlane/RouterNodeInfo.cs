@@ -6,4 +6,7 @@ public sealed record RouterNodeInfo(
     string EndpointUrl,
     string Status,
     int InFlightRequests,
-    DateTimeOffset? LastCheckedAt);
+    DateTimeOffset? LastCheckedAt,
+    string TokenSecretName = "",
+    int CapacityWeight = 0,
+    string LastHealthErrorCode = "");

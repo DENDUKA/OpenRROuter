@@ -2,18 +2,20 @@ using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
 public sealed class GrpcRouterControlPlaneServiceTests
 {
     private static readonly IRouterKeySyncService NoOpKeySync = new NoOpRouterKeySyncService();
+    private static readonly IRouterNodeProviderClient NoOpProviderClient = new NoOpRouterNodeProviderClient();
 
     [Fact]
     public async Task SelectRouterNode_HealthyNode_ReturnsLease()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync, NoOpProviderClient);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -29,7 +31,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task SelectRouterNode_NoHealthyNodes_ReturnsRouterUnavailable()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync, NoOpProviderClient);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -42,7 +44,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task ReleaseRouterNode_ExistingLease_ReturnsAcceptedAndReleasesLoad()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync, NoOpProviderClient);
         var lease = control.SelectRouterNode("req-1", DateTimeOffset.UtcNow);
 
         var response = await service.ReleaseRouterNode(
@@ -58,7 +60,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task RegisterAndListRouterNode_ValidRequest_ReturnsNodeSummary()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync, NoOpProviderClient);
 
         var registered = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -81,7 +83,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
     {
         var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync, NoOpProviderClient);
         var nodeId = Assert.Single(control.ListRouterNodes()).Id;
 
         var disabled = await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
@@ -92,9 +94,32 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task GetRouterNodeDetails_ExistingNode_ReturnsConnectionAndIntegrationApiData()
+    {
+        var control = CreateControlPlaneWithHealthyNode();
+        var nodeId = Assert.Single(control.ListRouterNodes()).Id;
+        var service = new GrpcRouterControlPlaneService(control, NoOpKeySync, new StubProviderClient());
+
+        var response = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = nodeId, IncludeInactiveProviders = true },
+            context: null!);
+
+        Assert.Equal(string.Empty, response.ErrorCode);
+        Assert.Equal(nodeId, response.Node.NodeId);
+        Assert.Equal("secret-a", response.Node.TokenSecretName);
+        Assert.Equal(1, response.Node.CapacityWeight);
+        var provider = Assert.Single(response.Providers);
+        Assert.Equal("conn-1", provider.ConnectionId);
+        Assert.Contains("\"message\":\"ok\"", provider.UsageJson);
+        var key = Assert.Single(response.Keys);
+        Assert.Equal("key-1", key.Id);
+        Assert.Equal("sk-or...t0kn", key.KeyPreview);
+    }
+
+    [Fact]
     public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync);
+        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpKeySync, NoOpProviderClient);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -126,6 +151,128 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public Task SyncAllAsync(CancellationToken ct) => Task.CompletedTask;
         public Task SyncToNodeAsync(string nodeId, CancellationToken ct) => Task.CompletedTask;
         public Task RevokeKeyAsync(string prefix, CancellationToken ct) => Task.CompletedTask;
+    }
+
+    private sealed class NoOpRouterNodeProviderClient : IRouterNodeProviderClient
+    {
+        public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
+            RouterNode node,
+            bool includeInactive,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new RouterProviderQuotaResponse());
+
+        public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
+            RouterNode node,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new RouterIntegrationKeysResponse());
+
+        public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
+            RouterNode node,
+            string connectionId,
+            bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
+            RouterNode node,
+            string provider,
+            string? source,
+            bool includeCompatible,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
+            RouterNode node,
+            string name,
+            string key,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
+            RouterNode node,
+            string keyId,
+            bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+    }
+
+    private sealed class StubProviderClient : IRouterNodeProviderClient
+    {
+        public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
+            RouterNode node,
+            bool includeInactive,
+            CancellationToken cancellationToken)
+        {
+            using var usage = System.Text.Json.JsonDocument.Parse("""{"message":"ok"}""");
+            return Task.FromResult(new RouterProviderQuotaResponse
+            {
+                Providers =
+                [
+                    new RouterProviderQuotaEntry
+                    {
+                        ConnectionId = "conn-1",
+                        Provider = "codex",
+                        Name = "Work Codex",
+                        AuthType = "oauth",
+                        IsActive = true,
+                        TestStatus = "active",
+                        QuotaSupported = true,
+                        Usage = usage.RootElement.Clone()
+                    }
+                ]
+            });
+        }
+
+        public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
+            RouterNode node,
+            CancellationToken cancellationToken)
+        {
+            return Task.FromResult(new RouterIntegrationKeysResponse
+            {
+                Keys =
+                [
+                    new RouterIntegrationKeyInfo
+                    {
+                        Id = "key-1",
+                        Name = "OpenRussiaRouter issued key",
+                        KeyPreview = "sk-or...t0kn",
+                        MachineId = "machine-1",
+                        IsActive = true,
+                        ManagedBy = "openrussia-router",
+                        CreatedAt = "2026-05-17T12:00:00.000Z"
+                    }
+                ]
+            });
+        }
+
+        public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
+            RouterNode node,
+            string connectionId,
+            bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
+            RouterNode node,
+            string provider,
+            string? source,
+            bool includeCompatible,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
+            RouterNode node,
+            string name,
+            string key,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
+            RouterNode node,
+            string keyId,
+            bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }
 

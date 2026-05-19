@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
+using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -10,10 +11,10 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
     IRouterKeySyncService keySyncService,
+    IRouterNodeProviderClient providerClient,
     ILogger<GrpcRouterControlPlaneService>? logger = null)
     : ControlGrpc.RouterControlPlaneBase
 {
-
     public override Task<SelectRouterNodeResponse> SelectRouterNode(
         SelectRouterNodeRequest request,
         ServerCallContext context)
@@ -128,17 +129,97 @@ public sealed class GrpcRouterControlPlaneService(
         ServerCallContext context)
     {
         var response = new ListRouterNodesResponse();
-        response.Nodes.AddRange(controlPlane.ListRouterNodes().Select(node => new Contracts.Grpc.ControlPlane.V1.RouterNodeSummary
+        response.Nodes.AddRange(controlPlane.ListNodesForHealthChecks().Select(MapNodeSummary));
+
+        return Task.FromResult(response);
+    }
+
+    public override async Task<GetRouterNodeDetailsResponse> GetRouterNodeDetails(
+        GetRouterNodeDetailsRequest request,
+        ServerCallContext context)
+    {
+        var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+        var node = controlPlane.GetRouterNode(request.NodeId);
+        if (node is null)
+        {
+            return new GetRouterNodeDetailsResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+
+        var response = new GetRouterNodeDetailsResponse { Node = MapNodeSummary(node) };
+        var apiErrors = new List<string>();
+
+        try
+        {
+            var quota = await providerClient.GetProviderQuotaAsync(
+                node,
+                request.IncludeInactiveProviders,
+                cancellationToken).ConfigureAwait(false);
+
+            response.Providers.AddRange(quota.Providers.Select(provider => new RouterProviderQuotaSummary
+            {
+                ConnectionId = provider.ConnectionId,
+                Provider = provider.Provider,
+                Name = provider.Name,
+                AuthType = provider.AuthType,
+                IsActive = provider.IsActive,
+                TestStatus = provider.TestStatus ?? string.Empty,
+                QuotaSupported = provider.QuotaSupported,
+                UsageJson = provider.Usage?.GetRawText() ?? string.Empty,
+                Error = provider.Error ?? string.Empty
+            }));
+        }
+        catch (Exception ex) when (
+            ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
+            ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            logger?.LogWarning(ex, "Failed to load provider quota for router node. NodeId: {NodeId}", node.Id);
+            apiErrors.Add("Provider quota unavailable: " + ex.Message);
+        }
+
+        try
+        {
+            var keys = await providerClient.ListIntegrationKeysAsync(
+                node,
+                cancellationToken).ConfigureAwait(false);
+
+            response.Keys.AddRange(keys.Keys.Select(key => new RouterIntegrationKeySummary
+            {
+                Id = key.Id,
+                Name = key.Name,
+                KeyPreview = key.KeyPreview,
+                MachineId = key.MachineId,
+                IsActive = key.IsActive,
+                ManagedBy = key.ManagedBy,
+                CreatedAt = key.CreatedAt
+            }));
+        }
+        catch (Exception ex) when (
+            ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
+            ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        {
+            logger?.LogWarning(ex, "Failed to load integration keys for router node. NodeId: {NodeId}", node.Id);
+            apiErrors.Add("Integration keys unavailable: " + ex.Message);
+        }
+
+        response.ApiError = string.Join(" ", apiErrors);
+        return response;
+    }
+
+    private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node)
+    {
+        return new Contracts.Grpc.ControlPlane.V1.RouterNodeSummary
         {
             NodeId = node.Id,
             Name = node.Name,
             EndpointUrl = node.EndpointUrl.ToString(),
-            Status = node.Status.ToString(),
+            Status = (node.Enabled ? node.Status : RouterNodeStatus.Disabled).ToString(),
             InFlightRequests = node.InFlightRequests,
-            LastCheckedAtUtc = node.LastCheckedAtUtc?.ToString("O") ?? string.Empty
-        }));
-
-        return Task.FromResult(response);
+            LastCheckedAtUtc = node.LastCheckedAtUtc?.ToString("O") ?? string.Empty,
+            TokenSecretName = node.TokenSecretName,
+            CapacityWeight = node.CapacityWeight,
+            LastHealthErrorCode = node.LastHealthErrorCode ?? string.Empty
+        };
     }
+
 }
 

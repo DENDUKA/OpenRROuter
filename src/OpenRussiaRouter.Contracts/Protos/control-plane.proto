@@ -12,6 +12,7 @@ service RouterControlPlane {
   rpc EnableRouterNode (EnableRouterNodeRequest) returns (EnableRouterNodeResponse);
   rpc DeleteRouterNode (DeleteRouterNodeRequest) returns (DeleteRouterNodeResponse);
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
+  rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -79,6 +80,11 @@ message DeleteRouterNodeResponse {
 message ListRouterNodesRequest {
 }
 
+message GetRouterNodeDetailsRequest {
+  string node_id = 1;
+  bool include_inactive_providers = 2;
+}
+
 message RouterNodeSummary {
   string node_id = 1;
   string name = 2;
@@ -86,8 +92,41 @@ message RouterNodeSummary {
   string status = 4;
   int32 in_flight_requests = 5;
   string last_checked_at_utc = 6;
+  string token_secret_name = 7;
+  int32 capacity_weight = 8;
+  string last_health_error_code = 9;
 }
 
 message ListRouterNodesResponse {
   repeated RouterNodeSummary nodes = 1;
+}
+
+message RouterProviderQuotaSummary {
+  string connection_id = 1;
+  string provider = 2;
+  string name = 3;
+  string auth_type = 4;
+  bool is_active = 5;
+  string test_status = 6;
+  bool quota_supported = 7;
+  string usage_json = 8;
+  string error = 9;
+}
+
+message RouterIntegrationKeySummary {
+  string id = 1;
+  string name = 2;
+  string key_preview = 3;
+  string machine_id = 4;
+  bool is_active = 5;
+  string managed_by = 6;
+  string created_at = 7;
+}
+
+message GetRouterNodeDetailsResponse {
+  RouterNodeSummary node = 1;
+  repeated RouterProviderQuotaSummary providers = 2;
+  repeated RouterIntegrationKeySummary keys = 3;
+  string error_code = 4;
+  string api_error = 5;
 }

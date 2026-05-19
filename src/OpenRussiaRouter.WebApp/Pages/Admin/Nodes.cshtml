@@ -64,7 +64,7 @@
                     @foreach (var node in Model.Nodes)
                     {
                         <tr data-testid="node-row" data-node-name="@node.Name" data-node-id="@node.NodeId">
-                            <td>@node.Name</td>
+                            <td><a href="/admin/nodes/@node.NodeId" data-testid="link-node-details">@node.Name</a></td>
                             <td><small>@node.EndpointUrl</small></td>
                             <td><span class="badge @Admin.NodesModel.GetStatusBadge(node.Status)" data-testid="node-status">@node.Status</span></td>
                             <td>@node.InFlightRequests</td>

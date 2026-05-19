@@ -1,0 +1,135 @@
+@page "/admin/nodes/{nodeId}"
+@model Admin.NodeDetailsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Router Node - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Router Node</h2>
+    <p>Connection and integration API status.</p>
+</div>
+
+<div class="adm-btn-row">
+    <a class="btn btn-secondary" href="/admin/nodes">Back to nodes</a>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert" data-testid="error-message">@Model.ErrorMessage</div>
+}
+
+@if (Model.Details is { } details)
+{
+    <div class="adm-card" data-testid="node-details-card">
+        <div class="adm-card-header adm-card-header--split">
+            <span>@details.Node.Name</span>
+            <span class="badge @Admin.NodeDetailsModel.GetNodeStatusBadge(details.Node.Status)" data-testid="node-status">@details.Node.Status</span>
+        </div>
+        <div class="adm-card-body">
+            <table class="table">
+                <tbody>
+                    <tr><th>Node ID</th><td><code>@details.Node.NodeId</code></td></tr>
+                    <tr><th>Endpoint</th><td><code>@details.Node.EndpointUrl</code></td></tr>
+                    <tr><th>Control token secret</th><td><code>@details.Node.TokenSecretName</code></td></tr>
+                    <tr><th>Capacity weight</th><td>@details.Node.CapacityWeight</td></tr>
+                    <tr><th>In-flight requests</th><td>@details.Node.InFlightRequests</td></tr>
+                    <tr><th>Last checked</th><td>@(details.Node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td></tr>
+                    <tr><th>Last health error</th><td>@(string.IsNullOrWhiteSpace(details.Node.LastHealthErrorCode) ? "None" : details.Node.LastHealthErrorCode)</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (details.ApiError != null)
+    {
+        <div class="alert alert-warning" role="alert" data-testid="api-error">@details.ApiError</div>
+    }
+
+    <div class="adm-card" data-testid="provider-quota-card">
+        <div class="adm-card-header">Provider Connections</div>
+        <div class="adm-card-body">
+            @if (details.Providers.Count == 0)
+            {
+                <p class="text-muted">No provider quota data returned.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Provider</th>
+                            <th>Connection</th>
+                            <th>Auth</th>
+                            <th>Status</th>
+                            <th>Test</th>
+                            <th>Usage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var provider in details.Providers)
+                        {
+                            <tr data-testid="provider-row" data-connection-id="@provider.ConnectionId">
+                                <td><code>@provider.Provider</code></td>
+                                <td>
+                                    <div>@provider.Name</div>
+                                    <small class="text-muted">@provider.ConnectionId</small>
+                                </td>
+                                <td>@provider.AuthType</td>
+                                <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(provider.IsActive)">@(provider.IsActive ? "active" : "inactive")</span></td>
+                                <td>@(provider.TestStatus ?? "-")</td>
+                                <td>
+                                    @if (provider.Error != null)
+                                    {
+                                        <span class="text-danger">@provider.Error</span>
+                                    }
+                                    else if (provider.UsageJson != null)
+                                    {
+                                        <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Admin.NodeDetailsModel.FormatJson(provider.UsageJson)</pre>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">No usage</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+
+    <div class="adm-card" data-testid="integration-keys-card">
+        <div class="adm-card-header">Service-managed Keys</div>
+        <div class="adm-card-body">
+            @if (details.Keys.Count == 0)
+            {
+                <p class="text-muted">No service-managed keys returned.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Preview</th>
+                            <th>Machine</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var key in details.Keys)
+                        {
+                            <tr data-testid="integration-key-row" data-key-id="@key.Id">
+                                <td>@key.Name</td>
+                                <td><code>@key.KeyPreview</code></td>
+                                <td><code>@key.MachineId</code></td>
+                                <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(key.IsActive)">@(key.IsActive ? "active" : "inactive")</span></td>
+                                <td>@key.CreatedAt</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}

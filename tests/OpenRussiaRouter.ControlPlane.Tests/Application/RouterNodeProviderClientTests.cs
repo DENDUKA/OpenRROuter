@@ -27,7 +27,7 @@ public sealed class RouterNodeProviderClientTests
               ]
             }
             """));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.GetProviderQuotaAsync(CreateNode(), includeInactive: true, CancellationToken.None);
 
@@ -55,7 +55,7 @@ public sealed class RouterNodeProviderClientTests
               }
             }
             """));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.UpdateProviderStatusAsync(CreateNode(), "conn-1", isActive: false, CancellationToken.None);
 
@@ -86,7 +86,7 @@ public sealed class RouterNodeProviderClientTests
               ]
             }
             """));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.ListProviderModelsAsync(
             CreateNode(),
@@ -121,7 +121,7 @@ public sealed class RouterNodeProviderClientTests
               ]
             }
             """));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None);
 
@@ -135,7 +135,7 @@ public sealed class RouterNodeProviderClientTests
     public async Task CreateIntegrationKeyAsync_SendsPostPayload()
     {
         var handler = new CapturingHandler(JsonResponse("""{ "created": true, "id": "key-1" }""", HttpStatusCode.Created));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.CreateIntegrationKeyAsync(
             CreateNode(),
@@ -165,7 +165,7 @@ public sealed class RouterNodeProviderClientTests
               "createdAt": "2026-05-17T12:00:00.000Z"
             }
             """));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var result = await client.UpdateIntegrationKeyStatusAsync(CreateNode(), "key-1", isActive: false, CancellationToken.None);
 
@@ -181,10 +181,10 @@ public sealed class RouterNodeProviderClientTests
     public async Task ListIntegrationKeysAsync_MissingToken_DoesNotSendRequest()
     {
         var handler = new CapturingHandler(JsonResponse("""{ "keys": [] }"""));
-        var client = CreateClient(handler, null);
+        var client = CreateClient(handler);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None));
+            () => client.ListIntegrationKeysAsync(CreateNode(string.Empty), CancellationToken.None));
 
         Assert.Equal(0, handler.RequestCount);
     }
@@ -195,7 +195,7 @@ public sealed class RouterNodeProviderClientTests
         var handler = new CapturingHandler(JsonResponse(
             """{ "error": "Unauthorized" }""",
             HttpStatusCode.Unauthorized));
-        var client = CreateClient(handler, "control-token");
+        var client = CreateClient(handler);
 
         var ex = await Assert.ThrowsAsync<RouterNodeProviderException>(
             () => client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None));
@@ -205,20 +205,18 @@ public sealed class RouterNodeProviderClientTests
         Assert.DoesNotContain("control-token", ex.Message);
     }
 
-    private static RouterNodeProviderClient CreateClient(CapturingHandler handler, string? token)
+    private static RouterNodeProviderClient CreateClient(CapturingHandler handler)
     {
-        return new RouterNodeProviderClient(
-            new HttpClient(handler),
-            new StaticTokenResolver(token));
+        return new RouterNodeProviderClient(new HttpClient(handler));
     }
 
-    private static RouterNode CreateNode()
+    private static RouterNode CreateNode(string controlToken = "control-token")
     {
         return new RouterNode(
             "node-a",
             "node-a",
             new Uri("https://router.example"),
-            "secret-a",
+            controlToken,
             1,
             DateTimeOffset.UtcNow);
     }
@@ -231,11 +229,6 @@ public sealed class RouterNodeProviderClientTests
         {
             Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json")
         };
-    }
-
-    private sealed class StaticTokenResolver(string? token) : IRouterNodeTokenResolver
-    {
-        public string? Resolve(string controlToken) => token;
     }
 
     private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler

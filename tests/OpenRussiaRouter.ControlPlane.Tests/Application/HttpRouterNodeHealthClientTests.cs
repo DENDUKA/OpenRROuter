@@ -16,8 +16,8 @@ public sealed class HttpRouterNodeHealthClientTests
         {
             Content = new StringContent("""{"status":"degraded"}""")
         });
-        var client = CreateClient(handler, new StaticTokenResolver("node-token"));
-        var node = CreateNode();
+        var client = CreateClient(handler);
+        var node = CreateNode("node-token");
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
@@ -30,8 +30,8 @@ public sealed class HttpRouterNodeHealthClientTests
     public async Task CheckAsync_MissingToken_MakesRequestWithoutTokenHeader()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK));
-        var client = CreateClient(handler, new StaticTokenResolver(null));
-        var node = CreateNode();
+        var client = CreateClient(handler);
+        var node = CreateNode(string.Empty);
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
@@ -47,8 +47,8 @@ public sealed class HttpRouterNodeHealthClientTests
     public async Task CheckAsync_HttpFailure_ReturnsStableErrorCode()
     {
         var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable));
-        var client = CreateClient(handler, new StaticTokenResolver("node-token"));
-        var node = CreateNode();
+        var client = CreateClient(handler);
+        var node = CreateNode("node-token");
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
@@ -56,9 +56,7 @@ public sealed class HttpRouterNodeHealthClientTests
         Assert.Equal("http_503", result.ErrorCode);
     }
 
-    private static HttpRouterNodeHealthClient CreateClient(
-        HttpMessageHandler handler,
-        IRouterNodeTokenResolver tokenResolver)
+    private static HttpRouterNodeHealthClient CreateClient(HttpMessageHandler handler)
     {
         var options = TestOptionsMonitor.Create(new RouterHealthCheckOptions
         {
@@ -66,23 +64,18 @@ public sealed class HttpRouterNodeHealthClientTests
             NodeTokenHeader = "X-ORR-Node-Token",
             Timeout = TimeSpan.FromSeconds(5)
         });
-        return new HttpRouterNodeHealthClient(new HttpClient(handler), tokenResolver, options);
+        return new HttpRouterNodeHealthClient(new HttpClient(handler), options);
     }
 
-    private static RouterNode CreateNode()
+    private static RouterNode CreateNode(string controlToken = "secret-a")
     {
         return new RouterNode(
             "node-a",
             "node-a",
             new Uri("https://router.example"),
-            "secret-a",
+            controlToken,
             1,
             DateTimeOffset.UtcNow);
-    }
-
-    private sealed class StaticTokenResolver(string? token) : IRouterNodeTokenResolver
-    {
-        public string? Resolve(string controlToken) => token;
     }
 
     private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler

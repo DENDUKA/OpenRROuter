@@ -13,8 +13,7 @@ public sealed class YarpRouterProxyClientTests
     public async Task SendChatCompletionAsync_SendsExpectedInternalRequest()
     {
         var forwarder = new CapturingForwarder();
-        var tokenProvider = new StaticTokenProvider("node-token");
-        var client = new YarpRouterProxyClient(forwarder, tokenProvider);
+        var client = new YarpRouterProxyClient(forwarder);
         var lease = new GatewayRouterLease(
             "lease-1",
             "node-1",
@@ -27,7 +26,7 @@ public sealed class YarpRouterProxyClientTests
         Assert.Equal("""{"ok":true}""", response.Body);
         Assert.Equal("https://router.example/", forwarder.DestinationPrefix);
         Assert.Equal("/v1/chat/completions", forwarder.Path);
-        Assert.Equal("node-token", forwarder.NodeToken);
+        Assert.Equal("secret-a", forwarder.NodeToken);
         Assert.Equal("req-1", forwarder.RequestId);
         Assert.Equal("""{"model":"gpt-test"}""", forwarder.Body);
     }
@@ -67,9 +66,5 @@ public sealed class YarpRouterProxyClientTests
         }
     }
 
-    private sealed class StaticTokenProvider(string token) : IRouterNodeTokenProvider
-    {
-        public string Resolve(string controlToken) => token;
-    }
 }
 

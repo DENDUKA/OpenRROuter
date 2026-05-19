@@ -15,31 +15,28 @@
 @if (Model.Action == "add")
 {
     <div class="adm-card">
-        <div class="adm-card-header">Add Router Node</div>
+        <div class="adm-card-header">Add F9Router Integration Node</div>
         <div class="adm-card-body">
             <form method="post" asp-page-handler="Add" data-testid="form-add-node">
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.Name" class="form-label">Name</label>
-                        <input asp-for="Form.Name" class="form-control" data-testid="input-name" />
+                        <input asp-for="Form.Name" class="form-control" placeholder="Production F9Router" data-testid="input-name" />
                     </div>
                     <div class="form-group">
-                        <label asp-for="Form.EndpointUrl" class="form-label">Endpoint URL</label>
-                        <input asp-for="Form.EndpointUrl" class="form-control" placeholder="https://..." data-testid="input-endpoint-url" />
+                        <label asp-for="Form.EndpointUrl" class="form-label">F9Router URL</label>
+                        <input asp-for="Form.EndpointUrl" class="form-control" placeholder="https://router.example" data-testid="input-endpoint-url" />
                     </div>
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="Form.TokenSecretName" class="form-label">Token Secret Name <small class="text-muted">(optional)</small></label>
-                        <input asp-for="Form.TokenSecretName" class="form-control" placeholder="Leave empty if node requires no token" data-testid="input-token-secret-name" />
-                    </div>
-                    <div class="form-group">
-                        <label asp-for="Form.CapacityWeight" class="form-label">Capacity Weight</label>
-                        <input asp-for="Form.CapacityWeight" class="form-control" type="number" data-testid="input-capacity-weight" />
+                        <label asp-for="Form.TokenSecretName" class="form-label">Control Token Secret</label>
+                        <input asp-for="Form.TokenSecretName" class="form-control" placeholder="router-control-token" data-testid="input-token-secret-name" />
                     </div>
                 </div>
+                <input asp-for="Form.CapacityWeight" type="hidden" value="100" />
                 <div class="adm-btn-row">
-                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-add">Add Node</button>
+                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-add">Connect Node</button>
                     <a class="btn btn-secondary" href="/admin/nodes">Cancel</a>
                 </div>
             </form>

@@ -18,7 +18,6 @@ public sealed class NodesPage(IPage page, string baseUrl)
         await page.FillAsync("[data-testid='input-name']", name);
         await page.FillAsync("[data-testid='input-endpoint-url']", endpointUrl);
         await page.FillAsync("[data-testid='input-token-secret-name']", tokenSecretName);
-        await page.FillAsync("[data-testid='input-capacity-weight']", capacityWeight.ToString());
 
         await page.ClickAsync("[data-testid='btn-submit-add']");
         await page.WaitForSelectorAsync($"[data-testid='node-row'][data-node-name='{name}']");

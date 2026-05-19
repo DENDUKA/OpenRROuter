@@ -24,7 +24,7 @@ spec:
         runAsNonRoot: true
       containers:
         - name: argocd-image-updater-controller
-          image: quay.io/argoprojlabs/argocd-image-updater:latest
+          image: quay.io/argoprojlabs/argocd-image-updater:v1.2.0
           imagePullPolicy: Always
           args:
             - --metrics-bind-address=:8443

@@ -209,16 +209,18 @@ kubectl -n argocd annotate application orr-services argocd.argoproj.io/refresh=h
 kubectl -n argocd annotate application orr-argocd-image-updater argocd.argoproj.io/refresh=hard --overwrite
 ```
 
-## 11. Install ImageUpdater CRD and CR
+## 11. Install CRDs for Argo CD controllers
 
-The repo deployment expects the `ImageUpdater` CRD. Install it before applying `orr-dev-image-updater.yaml`:
+The dev deployment pins Argo CD Image Updater to `v1.2.0`. v1.x requires the `ImageUpdater` CRD; the repo then creates `infra/argocd-image-updater/image-updater.yaml`, which selects `orr-services` and reads its existing image updater annotations.
+
+If Argo CD was applied incompletely, the ApplicationSet controller can also crash because `applicationsets.argoproj.io` is missing. Re-apply both CRDs before syncing the image updater app:
 
 ```powershell
-kubectl apply -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/master/config/crd/bases/argocd-image-updater.argoproj.io_imageupdaters.yaml
-kubectl apply -f infra/argocd/orr-dev-image-updater.yaml
+kubectl apply --server-side -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/crds/applicationset-crd.yaml
+kubectl apply --server-side -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/master/config/crd/bases/argocd-image-updater.argoproj.io_imageupdaters.yaml
 ```
 
-If the controller was already crashing before the CRD existed, restart it:
+If the image updater was already crashing before the CRD existed, restart it after the GitOps app syncs:
 
 ```powershell
 kubectl delete pod -n argocd -l control-plane=argocd-image-updater-controller
@@ -308,19 +310,20 @@ If missing, recreate GHCR pull secret and attach it to default ServiceAccount, t
 
 ### Argo CD Image Updater CrashLoopBackOff
 
-Check CRD:
+Check the CRD and deployed image:
 
 ```powershell
 kubectl get crd imageupdaters.argocd-image-updater.argoproj.io
+kubectl get deployment -n argocd argocd-image-updater-controller -o jsonpath='{.spec.template.spec.containers[0].image}'
 ```
 
-If missing:
+Expected:
 
-```powershell
-kubectl apply -f https://raw.githubusercontent.com/argoproj-labs/argocd-image-updater/master/config/crd/bases/argocd-image-updater.argoproj.io_imageupdaters.yaml
-kubectl apply -f infra/argocd/orr-dev-image-updater.yaml
-kubectl delete pod -n argocd -l control-plane=argocd-image-updater-controller
+```text
+quay.io/argoprojlabs/argocd-image-updater:v1.2.0
 ```
+
+If the CRD is missing, apply it with the command from step 11 and restart the image updater pod.
 
 ### localhost ports do not work after `kind create cluster`
 

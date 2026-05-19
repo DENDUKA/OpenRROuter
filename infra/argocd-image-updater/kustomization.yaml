@@ -4,5 +4,6 @@ namespace: argocd
 resources:
   - rbac.yaml
   - config.yaml
+  - image-updater.yaml
   - deployment.yaml
   - service.yaml

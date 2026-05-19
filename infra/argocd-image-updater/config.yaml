@@ -12,7 +12,7 @@ data:
         prefix: "ghcr.io"
         api_url: "https://ghcr.io"
         insecure: false
-        credentials: "secret:argocd/argocd-image-updater-secret#ghcr.token"
+        credentials: "pullsecret:argocd/ghcr-pull-secret"
 ---
 apiVersion: v1
 kind: ConfigMap

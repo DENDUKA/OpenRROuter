@@ -53,6 +53,11 @@ public sealed class GrpcRouterControlPlaneService(
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(request.ControlToken))
+            {
+                return Task.FromResult(new RegisterRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            }
+
             var node = controlPlane.RegisterNode(
                 request.Name,
                 new Uri(request.EndpointUrl),
@@ -248,4 +253,3 @@ public sealed class GrpcRouterControlPlaneService(
     }
 
 }
-

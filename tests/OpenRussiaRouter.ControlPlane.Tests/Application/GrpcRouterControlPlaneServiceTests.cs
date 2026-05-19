@@ -132,6 +132,25 @@ public sealed class GrpcRouterControlPlaneServiceTests
         Assert.Equal(ErrorCodes.ValidationFailed, response.ErrorCode);
     }
 
+    [Fact]
+    public async Task RegisterRouterNode_MissingControlToken_ReturnsValidationFailed()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
+
+        var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
+        {
+            Name = "node-a",
+            EndpointUrl = "https://router-a.example",
+            ControlToken = "",
+            CapacityWeight = 1
+        }, context: null!);
+
+        Assert.False(response.Registered);
+        Assert.Equal(ErrorCodes.ValidationFailed, response.ErrorCode);
+        Assert.Empty(control.ListNodesForHealthChecks());
+    }
+
     private static RouterControlPlaneService CreateControlPlaneWithHealthyNode()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
@@ -267,4 +286,3 @@ public sealed class GrpcRouterControlPlaneServiceTests
             throw new NotSupportedException();
     }
 }
-

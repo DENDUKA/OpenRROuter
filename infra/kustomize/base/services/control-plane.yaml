@@ -34,6 +34,8 @@ spec:
               value: "http://seq:5341"
             - name: Seq__ServiceName
               value: "control-plane"
+            - name: GrpcServices__Auth
+              value: "http://auth-service:8080"
             - name: ConnectionStrings__ControlPlaneDb
               valueFrom:
                 secretKeyRef:

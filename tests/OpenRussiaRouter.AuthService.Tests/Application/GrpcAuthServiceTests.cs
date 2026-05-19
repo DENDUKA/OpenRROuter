@@ -78,7 +78,7 @@ public sealed class GrpcAuthServiceTests
         Assert.Equal("user@example.com", user.Email);
         Assert.Equal("Admin", user.Role);
         Assert.True(apiKey.IsCreated);
-        Assert.StartsWith("orr_", apiKey.RawKey, StringComparison.Ordinal);
+        Assert.StartsWith("sk-or-", apiKey.RawKey, StringComparison.Ordinal);
         Assert.NotEmpty(apiKey.Prefix);
         Assert.True(revoked.IsRevoked);
     }

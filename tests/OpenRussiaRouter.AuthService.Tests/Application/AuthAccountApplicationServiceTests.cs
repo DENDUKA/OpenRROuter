@@ -48,7 +48,7 @@ public sealed class AuthAccountApplicationServiceTests
 
         var created = service.CreateApiKey("user-1", "default", DateTimeOffset.UtcNow);
 
-        Assert.StartsWith("orr_", created.RawKey, StringComparison.Ordinal);
+        Assert.StartsWith("sk-or-", created.RawKey, StringComparison.Ordinal);
         Assert.Single(repository.ApiKeys);
         Assert.Equal(created.ApiKey.SecretHash, repository.ApiKeys.Single().SecretHash);
         Assert.NotEqual(created.RawKey, repository.ApiKeys.Single().SecretHash);

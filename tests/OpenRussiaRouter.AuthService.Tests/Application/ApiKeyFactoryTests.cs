@@ -12,8 +12,8 @@ public sealed class ApiKeyFactoryTests
     {
         var created = _factory.Create("user-1", "default", DateTimeOffset.UtcNow);
 
-        Assert.StartsWith("orr_", created.RawKey, StringComparison.Ordinal);
-        Assert.StartsWith("orr_", created.ApiKey.Prefix, StringComparison.Ordinal);
+        Assert.StartsWith("sk-or-", created.RawKey, StringComparison.Ordinal);
+        Assert.StartsWith("sk-or-", created.ApiKey.Prefix, StringComparison.Ordinal);
         Assert.NotEqual(created.RawKey, created.ApiKey.SecretHash);
         Assert.Equal("default", created.ApiKey.Name);
         Assert.True(created.ApiKey.IsActive);

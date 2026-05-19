@@ -43,6 +43,11 @@ spec:
               value: "http://auth-service:8080"
             - name: RouterHealthChecks__HealthPath
               value: "/v1/models"
+            - name: RouterHealthChecks__NodeTokens__router-control-token
+              valueFrom:
+                secretKeyRef:
+                  name: router-nodes-secret
+                  key: router-control-token
           readinessProbe:
             httpGet:
               path: /health

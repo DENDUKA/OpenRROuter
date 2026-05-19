@@ -5,12 +5,12 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher, ISecretGenerator secretGenerator)
 {
-    private const string ApiKeyPrefix = "orr";
+    private const string ApiKeyPrefix = "sk-or";
     private const int VisiblePrefixLength = 12;
 
     public CreatedApiKey Create(string userId, string name, DateTimeOffset createdAtUtc)
     {
-        var rawKey = secretGenerator.Generate(ApiKeyPrefix, 36);
+        var rawKey = secretGenerator.Generate(ApiKeyPrefix, 36, separator: '-');
         var prefix = rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
         var apiKey = new ApiKey(
             Guid.NewGuid().ToString("N"),

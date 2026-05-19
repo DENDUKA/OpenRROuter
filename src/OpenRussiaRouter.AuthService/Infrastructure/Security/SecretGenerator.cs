@@ -5,7 +5,7 @@ namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 public sealed class SecretGenerator : ISecretGenerator
 {
 
-    public string Generate(string prefix, int bytes = 32)
+    public string Generate(string prefix, int bytes = 32, char separator = '_')
     {
         if (string.IsNullOrWhiteSpace(prefix))
         {
@@ -23,6 +23,6 @@ public sealed class SecretGenerator : ISecretGenerator
             .Replace('/', '_')
             .TrimEnd('=');
 
-        return $"{prefix}_{encoded}";
+        return $"{prefix}{separator}{encoded}";
     }
 }

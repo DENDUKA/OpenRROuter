@@ -176,9 +176,13 @@
         <form method="post" asp-page-handler="Test">
             <div class="adm-form-row">
                 <div class="form-group">
-                    <label asp-for="TestInput.ApiKey" class="form-label">API Key</label>
-                    <input asp-for="TestInput.ApiKey" class="form-control" type="password"
-                           placeholder="ORR Bearer token" autocomplete="off" data-testid="input-api-key" />
+                    <label asp-for="TestInput.NodeId" class="form-label">Router Node</label>
+                    <select asp-for="TestInput.NodeId" class="form-control" data-testid="select-test-node">
+                        @foreach (var node in Model.Nodes)
+                        {
+                            <option value="@node.NodeId">@node.Name (@node.Status)</option>
+                        }
+                    </select>
                 </div>
                 <div class="form-group">
                     <label asp-for="TestInput.Model" class="form-label">Model</label>

@@ -33,7 +33,7 @@ public class NodesModel : PageModelBase
         ILogger<NodesModel> logger)
     {
         _controlPlaneClient = controlPlaneClient;
-        _httpClient = httpClientFactory.CreateClient("ApiGateway");
+        _httpClient = httpClientFactory.CreateClient("RouterNode");
         _configuration = configuration;
         _logger = logger;
     }
@@ -122,6 +122,7 @@ public class NodesModel : PageModelBase
         {
             var modelsUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/models";
             using var req = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
+            AddNodeTokenHeaders(req, node);
             using var resp = await _httpClient.SendAsync(req);
             var body = await resp.Content.ReadAsStringAsync();
 
@@ -143,6 +144,7 @@ public class NodesModel : PageModelBase
             }
 
             NodeModelsName = node.Name;
+            TestInput.NodeId = node.NodeId;
         }
         catch (Exception ex)
         {
@@ -154,7 +156,20 @@ public class NodesModel : PageModelBase
 
     public async Task<IActionResult> OnPostTestAsync()
     {
-        var gatewayUrl = _configuration["ApiGateway:Url"]?.TrimEnd('/') ?? "http://localhost";
+        await OnGetAsync();
+
+        var node = string.IsNullOrWhiteSpace(TestInput.NodeId)
+            ? Nodes.FirstOrDefault(n => n.Status != "disabled")
+            : Nodes.FirstOrDefault(n => n.NodeId == TestInput.NodeId);
+
+        if (node is null)
+        {
+            TestResult = new TestFormResult(false, "Select a router node before sending a test request.");
+            return Page();
+        }
+
+        TestInput.NodeId = node.NodeId;
+
         try
         {
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
@@ -163,11 +178,12 @@ public class NodesModel : PageModelBase
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            using var req = new HttpRequestMessage(HttpMethod.Post, $"{gatewayUrl}/v1/chat/completions");
-            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {TestInput.ApiKey}");
+            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
+            using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
+            AddNodeTokenHeaders(req, node);
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
 
-            using var resp = await _httpClient.SendAsync(req);
+            using var resp = await _httpClient.SendAsync(req, HttpContext.RequestAborted);
             var body = await resp.Content.ReadAsStringAsync();
             TestResult = new TestFormResult(resp.IsSuccessStatusCode, body);
         }
@@ -176,8 +192,25 @@ public class NodesModel : PageModelBase
             TestResult = new TestFormResult(false, ex.Message);
         }
 
-        await OnGetAsync();
         return Page();
+    }
+
+    private void AddNodeTokenHeaders(HttpRequestMessage request, RouterNodeInfo node)
+    {
+        var nodeToken = ResolveNodeToken(node.TokenSecretName);
+        if (string.IsNullOrWhiteSpace(nodeToken))
+            return;
+
+        request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", nodeToken);
+        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {nodeToken}");
+    }
+
+    private string ResolveNodeToken(string tokenSecretName)
+    {
+        if (string.IsNullOrWhiteSpace(tokenSecretName))
+            return string.Empty;
+
+        return _configuration[$"RouterNodeTokens:{tokenSecretName.Trim()}"] ?? string.Empty;
     }
 
     public static string GetStatusBadge(string status) => status switch
@@ -198,7 +231,7 @@ public class NodesModel : PageModelBase
 
     public class TestFormInput
     {
-        public string ApiKey { get; set; } = "";
+        public string NodeId { get; set; } = "";
         public string Model { get; set; } = "minimax/MiniMax-M2.7";
         public string Message { get; set; } = "";
     }

@@ -12,8 +12,6 @@ namespace OpenRussiaRouter.ApiGateway.Router;
 public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
     : IRouterProxyClient
 {
-    private const string NodeTokenHeader = "X-ORR-Node-Token";
-
     private static readonly HttpMessageInvoker ForwardingHttpClient = new(new SocketsHttpHandler
     {
         UseProxy = false,
@@ -54,16 +52,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
         context.Request.Scheme = lease.EndpointUrl.Scheme;
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
         context.Request.Path = "/v1/chat/completions";
-        var nodeToken = lease.ControlToken;
-        if (!string.IsNullOrWhiteSpace(nodeToken))
-        {
-            context.Request.Headers[NodeTokenHeader] = nodeToken;
-            context.Request.Headers["Authorization"] = "Bearer " + nodeToken;
-        }
-        else
-        {
-            context.Request.Headers.Remove("Authorization");
-        }
+        context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
         context.Request.Headers[CorrelationIds.HeaderName] = requestId;
         context.Request.ContentType = "application/json";
         context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestJson));
@@ -100,12 +89,7 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
 
         var requestUri = new Uri(lease.EndpointUrl, "/v1/chat/completions");
         var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
-        var nodeToken = lease.ControlToken;
-        if (!string.IsNullOrWhiteSpace(nodeToken))
-        {
-            request.Headers.TryAddWithoutValidation(NodeTokenHeader, nodeToken);
-            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + nodeToken);
-        }
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
         request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);
         request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 

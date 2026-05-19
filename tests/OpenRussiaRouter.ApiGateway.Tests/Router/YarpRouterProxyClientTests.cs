@@ -26,7 +26,8 @@ public sealed class YarpRouterProxyClientTests
         Assert.Equal("""{"ok":true}""", response.Body);
         Assert.Equal("https://router.example/", forwarder.DestinationPrefix);
         Assert.Equal("/v1/chat/completions", forwarder.Path);
-        Assert.Equal("secret-a", forwarder.NodeToken);
+        Assert.Null(forwarder.NodeToken);
+        Assert.Equal("Bearer sk-test_secret", forwarder.Authorization);
         Assert.Equal("req-1", forwarder.RequestId);
         Assert.Equal("""{"model":"gpt-test"}""", forwarder.Body);
     }
@@ -38,6 +39,8 @@ public sealed class YarpRouterProxyClientTests
         public string? Path { get; private set; }
 
         public string? NodeToken { get; private set; }
+
+        public string? Authorization { get; private set; }
 
         public string? RequestId { get; private set; }
 
@@ -52,7 +55,10 @@ public sealed class YarpRouterProxyClientTests
         {
             DestinationPrefix = destinationPrefix;
             Path = context.Request.Path;
-            NodeToken = context.Request.Headers["X-ORR-Node-Token"];
+            NodeToken = context.Request.Headers.TryGetValue("X-ORR-Node-Token", out var nodeToken)
+                ? nodeToken.ToString()
+                : null;
+            Authorization = context.Request.Headers.Authorization;
             RequestId = context.Request.Headers[CorrelationIds.HeaderName];
 
             using var reader = new StreamReader(context.Request.Body);
@@ -67,4 +73,3 @@ public sealed class YarpRouterProxyClientTests
     }
 
 }
-

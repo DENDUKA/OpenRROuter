@@ -206,7 +206,7 @@ public class NodesModel : PageModelBase
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
+            var chatUrl = BuildGatewayChatCompletionsUrl();
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
@@ -261,7 +261,7 @@ public class NodesModel : PageModelBase
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
+            var chatUrl = BuildGatewayChatCompletionsUrl();
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
@@ -325,6 +325,12 @@ public class NodesModel : PageModelBase
             return string.Empty;
 
         return _configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
+    }
+
+    private string BuildGatewayChatCompletionsUrl()
+    {
+        var gatewayUrl = _configuration["ApiGateway:Url"] ?? "http://localhost";
+        return $"{gatewayUrl.TrimEnd('/')}/v1/chat/completions";
     }
 
     public static string GetStatusBadge(string status) => status switch

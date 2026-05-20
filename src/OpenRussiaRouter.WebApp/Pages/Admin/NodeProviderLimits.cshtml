@@ -1,0 +1,100 @@
+@page "/admin/nodes/{nodeId}/provider-limits"
+@model Admin.NodeProviderLimitsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Provider Limits - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Provider Limits — @Model.NodeName</h2>
+    <p>Remaining quota per provider connection on this node.</p>
+</div>
+
+<div class="adm-btn-row">
+    <a class="btn btn-secondary" href="/admin/nodes/@Model.NodeId">Back to node</a>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (Model.Providers.Count == 0 && Model.ErrorMessage == null)
+{
+    <div class="adm-card">
+        <div class="adm-card-body">
+            <p class="text-muted">No provider data available for this node.</p>
+        </div>
+    </div>
+}
+
+@foreach (var provider in Model.Providers)
+{
+    <div class="adm-card" data-testid="provider-limits-card" data-connection-id="@provider.ConnectionId">
+        <div class="adm-card-header adm-card-header--split">
+            <span>
+                @provider.Name
+                <small class="text-muted">(@provider.Provider)</small>
+            </span>
+            <span class="badge @Admin.NodeProviderLimitsModel.GetStatusBadge(provider.IsActive)">
+                @(provider.IsActive ? "active" : "inactive")
+            </span>
+        </div>
+        <div class="adm-card-body">
+            @if (provider.Error != null)
+            {
+                <span class="text-danger" data-testid="provider-error">@provider.Error</span>
+            }
+            else if (!provider.QuotaSupported)
+            {
+                <span class="text-muted" data-testid="quota-not-supported">Quota not supported</span>
+            }
+            else if (provider.Quotas.Count == 0)
+            {
+                <span class="text-muted" data-testid="no-quota-data">No quota data</span>
+            }
+            else
+            {
+                <table class="table table-sm" style="margin-bottom:0">
+                    <tbody>
+                        @foreach (var quota in provider.Quotas)
+                        {
+                            <tr data-testid="quota-row">
+                                <td style="width:200px;vertical-align:middle">
+                                    <span>@quota.Label</span>
+                                </td>
+                                <td style="vertical-align:middle">
+                                    @if (quota.Unlimited)
+                                    {
+                                        <span class="text-muted" data-testid="quota-unlimited">Unlimited</span>
+                                    }
+                                    else
+                                    {
+                                        var pct = Math.Round(quota.RemainingPercentage, 1);
+                                        var barClass = Admin.NodeProviderLimitsModel.GetProgressBarClass(quota.RemainingPercentage);
+                                        <div class="progress" style="height:16px;min-width:160px" data-testid="quota-bar">
+                                            <div class="progress-bar @barClass"
+                                                 role="progressbar"
+                                                 style="width:@(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%"
+                                                 aria-valuenow="@pct"
+                                                 aria-valuemin="0"
+                                                 aria-valuemax="100">
+                                                @pct%
+                                            </div>
+                                        </div>
+                                    }
+                                </td>
+                                <td style="vertical-align:middle;white-space:nowrap">
+                                    @if (!quota.Unlimited && quota.ResetAt != null)
+                                    {
+                                        var resetTime = DateTimeOffset.TryParse(quota.ResetAt, out var dt)
+                                            ? dt.ToLocalTime().ToString("g")
+                                            : quota.ResetAt;
+                                        <small class="text-muted" data-testid="quota-reset">Resets: @resetTime</small>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}

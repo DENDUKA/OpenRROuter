@@ -43,6 +43,7 @@ services:
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/001_initial.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/002_model_prices_model_id_compat.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/003_model_prices_model_id_repair.sql &&
+        psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/004_activity_by_token.sql &&
         psql -h postgres -U postgres -d openrussiarouter -f /migrations/control/001_initial.sql &&
         echo 'Migrations complete.'
       "
@@ -129,6 +130,8 @@ services:
         condition: service_started
       control-plane:
         condition: service_started
+      api-gateway:
+        condition: service_started
     ports:
       - "3000:8080"
     environment:
@@ -136,6 +139,7 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
+      ApiGateway__Url: "http://api-gateway:8080"
       Seq__Url: "http://seq:80"
 
 volumes:

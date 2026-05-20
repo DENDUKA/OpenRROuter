@@ -13,6 +13,8 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class NodesModel : PageModelBase
 {
+    private const string ModelPriceMissingErrorCode = "model_price_missing";
+
     private readonly ControlPlaneClient _controlPlaneClient;
     private readonly AuthClient _authClient;
     private readonly BillingClient _billingClient;
@@ -374,7 +376,7 @@ public class NodesModel : PageModelBase
                 completedAtUtc,
                 HttpContext.RequestAborted);
 
-            return string.IsNullOrWhiteSpace(errorCode)
+            return string.IsNullOrWhiteSpace(errorCode) || errorCode == ModelPriceMissingErrorCode
                 ? null
                 : $"BillingService returned {errorCode}.";
         }

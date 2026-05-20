@@ -152,7 +152,7 @@
                             <td><code>@modelId</code></td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-secondary"
-                                        onclick="document.getElementById('TestInput_Model').value='@modelId';document.getElementById('TestInput_Model').closest('form').scrollIntoView({behavior:'smooth'})">
+                                        onclick="document.getElementById('TestInput_Model').value='@modelId';const streamingModel=document.getElementById('StreamingTestInput_Model');if(streamingModel){streamingModel.value='@modelId';}document.getElementById('TestInput_Model').closest('form').scrollIntoView({behavior:'smooth'})">
                                     Use in test
                                 </button>
                             </td>
@@ -200,3 +200,130 @@
         </form>
     </div>
 </div>
+
+<div class="adm-card">
+    <div class="adm-card-header">Streaming Test Request</div>
+    <div class="adm-card-body">
+        <form method="post" asp-page-handler="StreamingTest" id="streaming-test-form" data-testid="form-streaming-test">
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label asp-for="StreamingTestInput.NodeId" class="form-label">Router Node</label>
+                    <select asp-for="StreamingTestInput.NodeId" class="form-control" data-testid="select-streaming-test-node">
+                        @foreach (var node in Model.Nodes)
+                        {
+                            <option value="@node.NodeId">@node.Name (@node.Status)</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label asp-for="StreamingTestInput.Model" class="form-label">Model</label>
+                    <input asp-for="StreamingTestInput.Model" class="form-control" data-testid="input-streaming-model" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label asp-for="StreamingTestInput.Message" class="form-label">Message</label>
+                <textarea asp-for="StreamingTestInput.Message" class="form-control" rows="3"
+                          placeholder="Hello! How are you?" data-testid="input-streaming-message"></textarea>
+            </div>
+            <div class="adm-btn-row">
+                <button type="submit" class="btn btn-primary" data-testid="btn-send-streaming-test">Send Streaming Request</button>
+                <button type="button" class="btn btn-secondary" id="btn-stop-streaming-test" disabled data-testid="btn-stop-streaming-test">Stop</button>
+            </div>
+        </form>
+        <div class="alert alert-info mt-3" role="alert" id="streaming-test-result" hidden data-testid="streaming-test-result">
+            <pre id="streaming-test-output" style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em;max-height:360px;overflow:auto"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const form = document.getElementById('streaming-test-form');
+        if (!form) {
+            return;
+        }
+
+        const output = document.getElementById('streaming-test-output');
+        const result = document.getElementById('streaming-test-result');
+        const submitButton = form.querySelector('button[type="submit"]');
+        const stopButton = document.getElementById('btn-stop-streaming-test');
+        let controller = null;
+
+        function setResultState(state) {
+            result.classList.remove('alert-info', 'alert-success', 'alert-danger');
+            result.classList.add(state);
+        }
+
+        function append(text) {
+            output.textContent += text;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+
+            if (controller) {
+                controller.abort();
+            }
+
+            controller = new AbortController();
+            output.textContent = '';
+            result.hidden = false;
+            setResultState('alert-info');
+            submitButton.disabled = true;
+            stopButton.disabled = false;
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    signal: controller.signal,
+                    headers: { 'X-Requested-With': 'fetch' }
+                });
+
+                if (!response.ok) {
+                    setResultState('alert-danger');
+                }
+
+                if (!response.body) {
+                    append(await response.text());
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        break;
+                    }
+
+                    append(decoder.decode(value, { stream: true }));
+                }
+
+                append(decoder.decode());
+                if (response.ok) {
+                    setResultState('alert-success');
+                }
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    append('\n[stream aborted]');
+                } else {
+                    setResultState('alert-danger');
+                    append(error.message);
+                }
+            } finally {
+                submitButton.disabled = false;
+                stopButton.disabled = true;
+                controller = null;
+            }
+        });
+
+        stopButton.addEventListener('click', () => {
+            if (controller) {
+                controller.abort();
+            }
+        });
+    })();
+</script>

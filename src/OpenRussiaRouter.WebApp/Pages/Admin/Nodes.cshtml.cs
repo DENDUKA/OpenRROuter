@@ -23,6 +23,7 @@ public class NodesModel : PageModelBase
 
     [BindProperty] public NodeFormInput Form { get; set; } = new();
     [BindProperty] public TestFormInput TestInput { get; set; } = new();
+    [BindProperty] public TestFormInput StreamingTestInput { get; set; } = new();
     public TestFormResult? TestResult { get; set; }
 
     [BindProperty] public string? FetchModelsNodeId { get; set; }
@@ -220,6 +221,92 @@ public class NodesModel : PageModelBase
         }
 
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostStreamingTestAsync()
+    {
+        await OnGetAsync();
+
+        Response.ContentType = "text/plain; charset=utf-8";
+        Response.Headers.CacheControl = "no-cache";
+
+        var node = string.IsNullOrWhiteSpace(StreamingTestInput.NodeId)
+            ? Nodes.FirstOrDefault(n => n.Status != "disabled")
+            : Nodes.FirstOrDefault(n => n.NodeId == StreamingTestInput.NodeId);
+
+        if (node is null)
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Select a node before sending a streaming test request.");
+
+        StreamingTestInput.NodeId = node.NodeId;
+
+        var userId = User.GetUserId();
+        var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        if (!userKeys.Any(k => k.IsActive))
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No personal API keys. Create an API key in Workspace -> API Keys.");
+
+        var rawKey = await _authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        if (string.IsNullOrWhiteSpace(rawKey))
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No active API key with a stored raw value. Recreate the key in Workspace -> API Keys.");
+
+        try
+        {
+            await _controlPlaneClient.PushUserIntegrationKeyAsync(
+                $"user:{userId}", rawKey, userId, nodeId: node.NodeId,
+                cancellationToken: HttpContext.RequestAborted);
+
+            var requestBody = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                model = StreamingTestInput.Model,
+                stream = true,
+                messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
+            });
+
+            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
+            using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
+            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
+            req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
+
+            using var resp = await _httpClient.SendAsync(
+                req,
+                HttpCompletionOption.ResponseHeadersRead,
+                HttpContext.RequestAborted);
+
+            Response.StatusCode = (int)resp.StatusCode;
+            Response.ContentType = resp.Content.Headers.ContentType?.ToString() ?? "text/plain; charset=utf-8";
+            await Response.StartAsync(HttpContext.RequestAborted);
+
+            await using var stream = await resp.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
+            var buffer = new byte[8192];
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer, HttpContext.RequestAborted);
+                if (read == 0)
+                    break;
+
+                await Response.Body.WriteAsync(buffer.AsMemory(0, read), HttpContext.RequestAborted);
+                await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
+        }
+        catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (!Response.HasStarted)
+                return await WriteStreamingErrorAsync(StatusCodes.Status500InternalServerError, ex.Message);
+
+            await Response.WriteAsync($"{Environment.NewLine}[stream error] {ex.Message}", HttpContext.RequestAborted);
+        }
+
+        return new EmptyResult();
+    }
+
+    private async Task<IActionResult> WriteStreamingErrorAsync(int statusCode, string message)
+    {
+        Response.StatusCode = statusCode;
+        Response.ContentType = "text/plain; charset=utf-8";
+        await Response.WriteAsync(message, HttpContext.RequestAborted);
+        return new EmptyResult();
     }
 
     private void AddNodeTokenHeaders(HttpRequestMessage request, RouterNodeInfo node)

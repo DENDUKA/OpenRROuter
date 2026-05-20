@@ -172,9 +172,48 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             select prefix as Prefix, secret_hash as SecretHash
             from auth.api_keys
             where revoked_at_utc is null
-            order by created_at_utc desc
             limit 10000;
             """).ToArray();
+    }
+
+    public ApiKey? FindActiveApiKeyBySecretHash(string secretHash)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return connection.QuerySingleOrDefault<ApiKeyEntity>(
+            """
+            select
+                ak.id as Id,
+                ak.user_id as UserId,
+                ak.name as Name,
+                ak.prefix as Prefix,
+                ak.secret_hash as SecretHash,
+                ak.raw_key as RawKey,
+                ak.created_at_utc as CreatedAtUtc,
+                ak.last_used_at_utc as LastUsedAtUtc,
+                ak.revoked_at_utc as RevokedAtUtc
+            from auth.api_keys ak
+            inner join auth.users u on u.id = ak.user_id
+            where ak.secret_hash = @SecretHash
+              and ak.revoked_at_utc is null
+              and u.status = 'Active'
+            limit 1;
+            """,
+            new { SecretHash = secretHash }) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
+    public void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        connection.Execute(
+            """
+            update auth.api_keys
+            set last_used_at_utc = @LastUsedAtUtc
+            where id = @ApiKeyId
+              and (last_used_at_utc is null or last_used_at_utc < @LastUsedAtUtc - interval '1 minute');
+            """,
+            new { ApiKeyId = apiKeyId, LastUsedAtUtc = lastUsedAtUtc });
     }
 
     private static object ToParameters(UserAccount user)

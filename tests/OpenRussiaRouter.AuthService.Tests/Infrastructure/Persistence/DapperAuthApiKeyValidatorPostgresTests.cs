@@ -34,9 +34,8 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
                 ('key-1', 'user-1', 'default', 'orr_test', @SecretHash, @NowUtc);
             """,
             new { NowUtc = DateTimeOffset.UtcNow, SecretHash = hasher.Hash("orr_test_secret") });
-        var validator = new DapperAuthApiKeyValidator(
-            new AuthDbConnectionFactory(connectionString),
-            hasher);
+        var repository = new AuthRepository(new AuthDbConnectionFactory(connectionString));
+        var validator = new DapperAuthApiKeyValidator(repository, hasher);
 
         var result = validator.Validate("orr_test_secret");
 

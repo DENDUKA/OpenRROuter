@@ -13,13 +13,26 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(entry);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(
+        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<LedgerEntryEntity>(
             """
-            insert into billing.ledger_entries
-                (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
-            values
-                (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
-            on conflict (idempotency_key) do nothing;
+            with ins as (
+                insert into billing.ledger_entries
+                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
+                values
+                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
+                on conflict (idempotency_key) do nothing
+                returning *
+            )
+            select id as Id, user_id as UserId, type as Type, amount as Amount, currency as Currency,
+                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc
+            from ins
+            union all
+            select id as Id, user_id as UserId, type as Type, amount as Amount, currency as Currency,
+                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc
+            from billing.ledger_entries
+            where idempotency_key = @IdempotencyKey
+              and not exists (select 1 from ins)
+            limit 1;
             """,
             new
             {
@@ -31,11 +44,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 entry.IdempotencyKey,
                 entry.Reason,
                 entry.CreatedAtUtc
-            });
-
-        return BillingPersistenceMapper.ToDomain(connection.QuerySingle<LedgerEntryEntity>(
-            LedgerByIdempotencySql,
-            new { entry.IdempotencyKey }));
+            }));
     }
 
     public MoneyAmount GetBalance(string userId)
@@ -52,16 +61,15 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(model);
         using var connection = connectionFactory.CreateConnection();
-        var modelIdColumn = GetModelIdColumn(connection);
         connection.Execute(
-            $"""
+            """
             insert into billing.model_prices
-                ({modelIdColumn}, display_name, router_model_id, price_version, input_per_million_amount,
+                (model_id, display_name, router_model_id, price_version, input_per_million_amount,
                  output_per_million_amount, cache_per_million_amount, currency, enabled)
             values
                 (@ModelId, @DisplayName, @RouterModelId, @PriceVersion, @InputPerMillionAmount,
                  @OutputPerMillionAmount, @CachePerMillionAmount, @Currency, @Enabled)
-            on conflict ({modelIdColumn}) do update set
+            on conflict (model_id) do update set
                 display_name = excluded.display_name,
                 router_model_id = excluded.router_model_id,
                 price_version = excluded.price_version,
@@ -88,38 +96,28 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public ModelPrice? GetEnabledModel(string modelId)
     {
         using var connection = connectionFactory.CreateConnection();
-        var modelIdColumn = GetModelIdColumn(connection);
         return connection.QuerySingleOrDefault<ModelPriceEntity>(
-            ModelPriceSelectSql(modelIdColumn) + $" where {modelIdColumn} = @ModelId and enabled = true;",
+            ModelPriceSelectSql + "where model_id = @ModelId and enabled = true;",
             new { ModelId = modelId }) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
     }
 
-public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
+    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
-        var modelIdColumn = GetModelIdColumn(connection);
-        var afterCondition = afterModelId != null ? $"and {modelIdColumn} > @AfterModelId" : "";
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterModelId != null)
+        {
+            afterCondition = "and model_id > @AfterModelId\n";
+            parameters.Add("AfterModelId", afterModelId);
+        }
+
         var items = connection.Query<ModelPriceEntity>(
-                $"""
-                select
-                    {modelIdColumn} as ModelId,
-                    display_name as DisplayName,
-                    router_model_id as RouterModelId,
-                    price_version as PriceVersion,
-                    input_per_million_amount as InputPerMillionAmount,
-                    output_per_million_amount as OutputPerMillionAmount,
-                    cache_per_million_amount as CachePerMillionAmount,
-                    currency as Currency,
-                    enabled as Enabled
-                from billing.model_prices
-                where enabled = true
-                {afterCondition}
-                order by {modelIdColumn}
-                limit @Limit;
-                """,
-                new { Limit = limit + 1, AfterModelId = afterModelId })
+                ModelPriceSelectSql + "where enabled = true\n" + afterCondition + "order by model_id\nlimit @Limit;",
+                parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -132,29 +130,21 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(i
         return (items, hasMore);
     }
 
-public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
+    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
     {
         using var connection = connectionFactory.CreateConnection();
-        var modelIdColumn = GetModelIdColumn(connection);
-        var afterCondition = afterModelId != null ? $"where {modelIdColumn} > @AfterModelId" : "";
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterModelId != null)
+        {
+            afterCondition = "where model_id > @AfterModelId\n";
+            parameters.Add("AfterModelId", afterModelId);
+        }
+
         var items = connection.Query<ModelPriceEntity>(
-                $"""
-                select
-                    {modelIdColumn} as ModelId,
-                    display_name as DisplayName,
-                    router_model_id as RouterModelId,
-                    price_version as PriceVersion,
-                    input_per_million_amount as InputPerMillionAmount,
-                    output_per_million_amount as OutputPerMillionAmount,
-                    cache_per_million_amount as CachePerMillionAmount,
-                    currency as Currency,
-                    enabled as Enabled
-                from billing.model_prices
-                {afterCondition}
-                order by {modelIdColumn}
-                limit @Limit;
-                """,
-                new { Limit = limit + 1, AfterModelId = afterModelId })
+                ModelPriceSelectSql + afterCondition + "order by model_id\nlimit @Limit;",
+                parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -171,15 +161,34 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(
+        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<UsageRecordEntity>(
             """
-            insert into billing.usage_records
-                (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
-                 input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc)
-            values
-                (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
-                 @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc)
-            on conflict (request_id) do nothing;
+            with ins as (
+                insert into billing.usage_records
+                    (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
+                     input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc)
+                values
+                    (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
+                     @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc)
+                on conflict (request_id) do nothing
+                returning *
+            )
+            select request_id as RequestId, user_id as UserId, api_key_id as ApiKeyId, model_id as ModelId,
+                   price_version as PriceVersion, router_node_id as RouterNodeId,
+                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
+                   created_at_utc as CreatedAtUtc
+            from ins
+            union all
+            select request_id as RequestId, user_id as UserId, api_key_id as ApiKeyId, model_id as ModelId,
+                   price_version as PriceVersion, router_node_id as RouterNodeId,
+                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
+                   created_at_utc as CreatedAtUtc
+            from billing.usage_records
+            where request_id = @RequestId
+              and not exists (select 1 from ins)
+            limit 1;
             """,
             new
             {
@@ -196,11 +205,7 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
                 CostCurrency = record.Cost.Currency.ToString(),
                 record.Status,
                 record.CreatedAtUtc
-            });
-
-        return BillingPersistenceMapper.ToDomain(connection.QuerySingle<UsageRecordEntity>(
-            UsageByRequestSql,
-            new { record.RequestId }));
+            }));
     }
 
     public UsageRecord? GetUsage(string requestId)
@@ -216,14 +221,26 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
     public (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null)
     {
         using var connection = connectionFactory.CreateConnection();
+        var conditions = new List<string>();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        if (afterCreatedAtUtc.HasValue)
+        {
+            conditions.Add("created_at_utc > @AfterCreatedAtUtc");
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+        }
+        if (userId != null)
+        {
+            conditions.Add("user_id = @UserId");
+            parameters.Add("UserId", userId);
+        }
+
+        var whereClause = conditions.Count > 0
+            ? "where " + string.Join(" and ", conditions) + "\n"
+            : "";
         var items = connection.Query<UsageRecordEntity>(
-                UsageSelectSql + """
-                where (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
-                  and (@UserId is null or user_id = @UserId)
-                order by created_at_utc
-                limit @Limit;
-                """,
-                new { Limit = limit + 1, AfterCreatedAtUtc = afterCreatedAtUtc, UserId = userId })
+                UsageSelectSql + whereClause + "order by created_at_utc\nlimit @Limit;",
+                parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -240,15 +257,32 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(
+        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<ActivityByTokenEntity>(
             """
-            insert into billing.activity_by_token
-                (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
-                 input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc)
-            values
-                (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
-                 @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc)
-            on conflict (request_id) do nothing;
+            with ins as (
+                insert into billing.activity_by_token
+                    (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
+                     input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc)
+                values
+                    (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
+                     @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc)
+                on conflict (request_id) do nothing
+                returning *
+            )
+            select request_id as RequestId, api_key_id as ApiKeyId, api_key_prefix as ApiKeyPrefix,
+                   model_id as ModelId, router_node_id as RouterNodeId,
+                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
+            from ins
+            union all
+            select request_id as RequestId, api_key_id as ApiKeyId, api_key_prefix as ApiKeyPrefix,
+                   model_id as ModelId, router_node_id as RouterNodeId,
+                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
+            from billing.activity_by_token
+            where request_id = @RequestId
+              and not exists (select 1 from ins)
+            limit 1;
             """,
             new
             {
@@ -263,11 +297,7 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
                 record.Status,
                 record.CreatedAtUtc,
                 record.CompletedAtUtc
-            });
-
-        return BillingPersistenceMapper.ToDomain(connection.QuerySingle<ActivityByTokenEntity>(
-            ActivityByTokenByRequestSql,
-            new { record.RequestId }));
+            }));
     }
 
     public (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
@@ -281,14 +311,21 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
         }
 
         using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("ApiKeyIds", apiKeyIds.ToArray());
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterCreatedAtUtc.HasValue)
+        {
+            afterCondition = "  and created_at_utc > @AfterCreatedAtUtc\n";
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+        }
+
         var items = connection.Query<ActivityByTokenEntity>(
-                ActivityByTokenSelectSql + """
-                where api_key_id = any(@ApiKeyIds)
-                  and (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
-                order by created_at_utc desc
-                limit @Limit;
-                """,
-                new { ApiKeyIds = apiKeyIds.ToArray(), Limit = limit + 1, AfterCreatedAtUtc = afterCreatedAtUtc })
+                ActivityByTokenSelectSql +
+                "where api_key_id = any(@ApiKeyIds)\n" + afterCondition +
+                "order by created_at_utc desc\nlimit @Limit;",
+                parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -318,6 +355,15 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
     public (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null)
     {
         using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterCreatedAtUtc.HasValue)
+        {
+            afterCondition = "where created_at_utc > @AfterCreatedAtUtc\n";
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+        }
+
         var items = connection.Query<BillingAnomalyEntity>(
                 """
                 select
@@ -327,11 +373,9 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
                     message as Message,
                     created_at_utc as CreatedAtUtc
                 from billing.billing_anomalies
-                where (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
-                order by created_at_utc
-                limit @Limit;
-                """,
-                new { Limit = limit + 1, AfterCreatedAtUtc = afterCreatedAtUtc })
+
+                """ + afterCondition + "order by created_at_utc\nlimit @Limit;",
+                parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -344,23 +388,9 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
         return (items, hasMore);
     }
 
-    private const string LedgerByIdempotencySql = """
+    private const string ModelPriceSelectSql = """
         select
-            id as Id,
-            user_id as UserId,
-            type as Type,
-            amount as Amount,
-            currency as Currency,
-            idempotency_key as IdempotencyKey,
-            reason as Reason,
-            created_at_utc as CreatedAtUtc
-        from billing.ledger_entries
-        where idempotency_key = @IdempotencyKey;
-        """;
-
-    private static string ModelPriceSelectSql(string modelIdColumn) => $$"""
-        select
-            {{modelIdColumn}} as ModelId,
+            model_id as ModelId,
             display_name as DisplayName,
             router_model_id as RouterModelId,
             price_version as PriceVersion,
@@ -370,22 +400,8 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
             currency as Currency,
             enabled as Enabled
         from billing.model_prices
+
         """;
-
-    private static string GetModelIdColumn(System.Data.IDbConnection connection)
-    {
-        const string sql = """
-            select exists (
-                select 1
-                from information_schema.columns
-                where table_schema = 'billing'
-                  and table_name = 'model_prices'
-                  and column_name = 'model_id'
-            );
-            """;
-
-        return connection.ExecuteScalar<bool>(sql) ? "model_id" : "id";
-    }
 
     private const string UsageSelectSql = """
         select
@@ -425,9 +441,5 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
             completed_at_utc as CompletedAtUtc
         from billing.activity_by_token
 
-        """;
-
-    private const string ActivityByTokenByRequestSql = ActivityByTokenSelectSql + """
-        where request_id = @RequestId;
         """;
 }

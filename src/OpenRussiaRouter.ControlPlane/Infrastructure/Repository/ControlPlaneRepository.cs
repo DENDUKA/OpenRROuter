@@ -58,13 +58,18 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     public (IReadOnlyCollection<RouterNode> Items, bool HasMore) ListNodes(int limit, string? afterName = null)
     {
         using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterName != null)
+        {
+            afterCondition = "where name > @AfterName\n";
+            parameters.Add("AfterName", afterName);
+        }
+
         var items = connection.Query<RouterNodeEntity>(
-                NodeSelectSql + """
-                where (@AfterName is null or name > @AfterName)
-                order by name
-                limit @Limit;
-                """,
-                new { Limit = limit + 1, AfterName = afterName })
+                NodeSelectSql + afterCondition + "order by name\nlimit @Limit;",
+                parameters)
             .Select(ControlPlanePersistenceMapper.ToDomain)
             .ToArray();
 

@@ -189,5 +189,15 @@ public sealed class AuthAccountApplicationServiceTests
                 .Select(k => k.RawKey)
                 .FirstOrDefault();
         }
+
+        public ApiKey? FindActiveApiKeyBySecretHash(string secretHash)
+        {
+            return ApiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null);
+        }
+
+        public void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc)
+        {
+            ApiKeys.SingleOrDefault(k => k.Id == apiKeyId)?.MarkUsed(lastUsedAtUtc);
+        }
     }
 }

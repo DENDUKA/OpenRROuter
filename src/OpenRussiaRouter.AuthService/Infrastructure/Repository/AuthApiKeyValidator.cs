@@ -1,6 +1,4 @@
-using Dapper;
 using OpenRussiaRouter.AuthService.Application.Services;
-using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
@@ -8,29 +6,10 @@ using OpenRussiaRouter.Contracts.Auth;
 namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
 public sealed class DapperAuthApiKeyValidator(
-    IAuthDbConnectionFactory connectionFactory,
+    IAuthRepository repository,
     Sha256SecretHasher secretHasher)
     : IAuthApiKeyValidator
 {
-    private const string SelectApiKeySql = """
-        select
-            ak.id as ApiKeyId,
-            ak.user_id as UserId,
-            ak.prefix as ApiKeyPrefix
-        from auth.api_keys ak
-        inner join auth.users u on u.id = ak.user_id
-        where ak.secret_hash = @SecretHash
-          and ak.revoked_at_utc is null
-          and u.status = 'Active'
-        limit 1;
-        """;
-
-    private const string MarkUsedSql = """
-        update auth.api_keys
-        set last_used_at_utc = @LastUsedAtUtc
-        where id = @ApiKeyId;
-        """;
-
     public ValidateApiKeyResult Validate(string rawKey)
     {
         if (string.IsNullOrWhiteSpace(rawKey))
@@ -38,23 +17,18 @@ public sealed class DapperAuthApiKeyValidator(
             return Invalid();
         }
 
-        using var connection = connectionFactory.CreateConnection();
-        var row = connection.QuerySingleOrDefault<ApiKeyValidationRow>(
-            SelectApiKeySql,
-            new { SecretHash = secretHasher.Hash(rawKey) });
-        if (row is null)
+        var apiKey = repository.FindActiveApiKeyBySecretHash(secretHasher.Hash(rawKey));
+        if (apiKey is null)
         {
             return Invalid();
         }
 
-        connection.Execute(MarkUsedSql, new { LastUsedAtUtc = DateTimeOffset.UtcNow, row.ApiKeyId });
-        return new ValidateApiKeyResult(true, row.UserId, row.ApiKeyId, row.ApiKeyPrefix, null);
+        repository.MarkApiKeyUsed(apiKey.Id, DateTimeOffset.UtcNow);
+        return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
     }
 
     private static ValidateApiKeyResult Invalid()
     {
         return new ValidateApiKeyResult(false, null, null, null, ErrorCodes.InvalidApiKey);
     }
-
-    private sealed record ApiKeyValidationRow(string ApiKeyId, string UserId, string ApiKeyPrefix);
 }

@@ -81,6 +81,26 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
+    public ApiKey? FindActiveApiKeyBySecretHash(string secretHash)
+    {
+        lock (gate)
+        {
+            return apiKeys.SingleOrDefault(key => key.SecretHash == secretHash && key.RevokedAtUtc is null);
+        }
+    }
+
+    public void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc)
+    {
+        lock (gate)
+        {
+            var key = apiKeys.SingleOrDefault(k => k.Id == apiKeyId);
+            if (key is { IsActive: true })
+            {
+                key.MarkUsed(lastUsedAtUtc);
+            }
+        }
+    }
+
     public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
     {
         lock (gate)

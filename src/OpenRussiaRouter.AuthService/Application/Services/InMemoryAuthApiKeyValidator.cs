@@ -30,8 +30,7 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         }
 
         var hash = _secretHasher.Hash(rawKey);
-        if (repository is InMemoryAuthRepository inMemoryRepository &&
-            inMemoryRepository.GetApiKeyBySecretHash(hash) is { IsActive: true } apiKey)
+        if (repository?.FindActiveApiKeyBySecretHash(hash) is { } apiKey)
         {
             return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
         }

@@ -30,4 +30,8 @@ UserAccount? GetUser(string userId);
     IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes();
 
     string? GetFirstActiveApiKeyRaw(string userId);
+
+    ApiKey? FindActiveApiKeyBySecretHash(string secretHash);
+
+    void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc);
 }

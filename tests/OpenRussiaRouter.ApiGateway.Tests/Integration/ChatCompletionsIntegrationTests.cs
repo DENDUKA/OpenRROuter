@@ -139,6 +139,37 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_HappyPath_UsageEventContainsApiKeyPrefix()
+    {
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingClient();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        await Task.Delay(50);
+        Assert.NotNull(billing.LastUsageEvent);
+        Assert.Equal("sk-or-test", billing.LastUsageEvent.ApiKeyPrefix);
+    }
+
+    [Fact]
+    public async Task NonStreaming_RouterBodyWithoutUsage_RecordsUsageMissingActivity()
+    {
+        const string routerBody = """{"id":"chatcmpl-1","choices":[{"message":{"content":"Hi"}}]}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingClient();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        await Task.Delay(50);
+        Assert.NotNull(billing.LastUsageEvent);
+        Assert.Equal("usage_missing", billing.LastUsageEvent.Status);
+        Assert.Equal(0, billing.LastUsageEvent.Usage.TotalTokens);
+    }
+
+    [Fact]
     public async Task NonStreaming_HappyPath_UsageEventDoesNotContainRequestBody()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":7,"completion_tokens":4}}""";
@@ -222,7 +253,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
     private sealed class StubAuthenticator : IApiKeyAuthenticator
     {
-        public ApiKeyAuthenticationResult Result { get; set; } = ApiKeyAuthenticationResult.Success("user-1", "key-1");
+        public ApiKeyAuthenticationResult Result { get; set; } = ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test");
 
         public Task<ApiKeyAuthenticationResult> AuthenticateAsync(string rawApiKey, CancellationToken ct)
             => Task.FromResult(Result);

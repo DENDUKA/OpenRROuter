@@ -30,6 +30,33 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
+    public async Task<IReadOnlyList<ActivityByTokenInfo>> ListActivityByTokenAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (apiKeyIds.Count == 0)
+        {
+            return [];
+        }
+
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListActivityByTokenRequest();
+        request.ApiKeyIds.AddRange(apiKeyIds);
+        var response = await client.ListActivityByTokenAsync(request, cancellationToken: cancellationToken);
+
+        return response.Records.Select(r => new ActivityByTokenInfo(
+            r.RequestId,
+            r.ApiKeyId,
+            r.ApiKeyPrefix,
+            r.ModelId,
+            r.RouterNodeId,
+            r.Usage?.InputTokens ?? 0,
+            r.Usage?.OutputTokens ?? 0,
+            r.Usage?.CacheTokens ?? 0,
+            r.Status,
+            DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture),
+            DateTimeOffset.Parse(r.CompletedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+    }
+
     public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountRub, string reason, CancellationToken cancellationToken = default)
     {
         var response = await client.CreateVirtualTopUpAsync(

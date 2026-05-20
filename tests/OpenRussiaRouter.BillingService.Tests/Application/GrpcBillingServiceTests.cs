@@ -52,6 +52,7 @@ public sealed class GrpcBillingServiceTests
             RequestId = "req-1",
             UserId = "user-1",
             ApiKeyId = "key-1",
+            ApiKeyPrefix = "sk-or-key-1",
             ModelId = "gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage
@@ -193,6 +194,7 @@ public sealed class GrpcBillingServiceTests
             RequestId = "req-invalid",
             UserId = "user-1",
             ApiKeyId = "key-1",
+            ApiKeyPrefix = "sk-or-key-1",
             ModelId = "gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = -1 },
@@ -221,6 +223,7 @@ public sealed class GrpcBillingServiceTests
             RequestId = "req-usage",
             UserId = "user-1",
             ApiKeyId = "key-1",
+            ApiKeyPrefix = "sk-or-key-1",
             ModelId = "gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 1_000_000, OutputTokens = 500_000 },
@@ -238,6 +241,55 @@ public sealed class GrpcBillingServiceTests
         Assert.Equal("20", record.CostRub);
         Assert.Equal(1_000_000, record.Usage.InputTokens);
         Assert.Equal(500_000, record.Usage.OutputTokens);
+    }
+
+    [Fact]
+    public async Task ListActivityByToken_ReturnsOnlyRequestedKeys()
+    {
+        var billing = CreateBillingWithModelAndBalance();
+        var service = new GrpcBillingService(billing);
+        var now = DateTimeOffset.UtcNow;
+
+        _ = await service.RecordUsage(new RecordUsageRequest
+        {
+            RequestId = "req-key-1",
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            ApiKeyPrefix = "sk-or-key-1",
+            ModelId = "gpt-test",
+            RouterNodeId = "router-1",
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 10, OutputTokens = 20, CacheTokens = 3 },
+            Status = "completed",
+            StartedAtUtc = now.AddSeconds(-1).ToString("O"),
+            CompletedAtUtc = now.ToString("O")
+        }, context: null!);
+
+        _ = await service.RecordUsage(new RecordUsageRequest
+        {
+            RequestId = "req-key-2",
+            UserId = "user-1",
+            ApiKeyId = "key-2",
+            ApiKeyPrefix = "sk-or-key-2",
+            ModelId = "gpt-test",
+            RouterNodeId = "router-1",
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 30, OutputTokens = 40, CacheTokens = 5 },
+            Status = "completed",
+            StartedAtUtc = now.AddSeconds(-1).ToString("O"),
+            CompletedAtUtc = now.ToString("O")
+        }, context: null!);
+
+        var response = await service.ListActivityByToken(new ListActivityByTokenRequest
+        {
+            ApiKeyIds = { "key-1" }
+        }, context: null!);
+
+        var record = Assert.Single(response.Records);
+        Assert.Equal("req-key-1", record.RequestId);
+        Assert.Equal("key-1", record.ApiKeyId);
+        Assert.Equal("sk-or-key-1", record.ApiKeyPrefix);
+        Assert.Equal(10, record.Usage.InputTokens);
+        Assert.Equal(20, record.Usage.OutputTokens);
+        Assert.Equal(3, record.Usage.CacheTokens);
     }
 
     private static BillingApplicationService CreateBillingWithModelAndBalance()

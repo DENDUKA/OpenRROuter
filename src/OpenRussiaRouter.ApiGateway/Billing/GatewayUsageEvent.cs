@@ -6,6 +6,7 @@ public sealed record GatewayUsageEvent(
     string RequestId,
     string UserId,
     string ApiKeyId,
+    string ApiKeyPrefix,
     string ModelId,
     string RouterNodeId,
     TokenUsage Usage,

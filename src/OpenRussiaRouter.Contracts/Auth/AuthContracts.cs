@@ -4,6 +4,7 @@ public sealed record ValidateApiKeyResult(
     bool IsValid,
     string? UserId,
     string? ApiKeyId,
+    string? ApiKeyPrefix,
     string? ErrorCode);
 
 public sealed record ApiKeySummary(

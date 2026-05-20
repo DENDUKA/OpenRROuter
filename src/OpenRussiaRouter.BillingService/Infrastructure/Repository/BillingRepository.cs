@@ -236,6 +236,71 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
         return (items, hasMore);
     }
 
+    public ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        using var connection = connectionFactory.CreateConnection();
+        connection.Execute(
+            """
+            insert into billing.activity_by_token
+                (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
+                 input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc)
+            values
+                (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
+                 @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc)
+            on conflict (request_id) do nothing;
+            """,
+            new
+            {
+                record.RequestId,
+                record.ApiKeyId,
+                record.ApiKeyPrefix,
+                record.ModelId,
+                record.RouterNodeId,
+                record.Usage.InputTokens,
+                record.Usage.OutputTokens,
+                record.Usage.CacheTokens,
+                record.Status,
+                record.CreatedAtUtc,
+                record.CompletedAtUtc
+            });
+
+        return BillingPersistenceMapper.ToDomain(connection.QuerySingle<ActivityByTokenEntity>(
+            ActivityByTokenByRequestSql,
+            new { record.RequestId }));
+    }
+
+    public (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+        IReadOnlyCollection<string> apiKeyIds,
+        int limit,
+        DateTimeOffset? afterCreatedAtUtc = null)
+    {
+        if (apiKeyIds.Count == 0)
+        {
+            return (Array.Empty<ActivityByTokenRecord>(), false);
+        }
+
+        using var connection = connectionFactory.CreateConnection();
+        var items = connection.Query<ActivityByTokenEntity>(
+                ActivityByTokenSelectSql + """
+                where api_key_id = any(@ApiKeyIds)
+                  and (@AfterCreatedAtUtc is null or created_at_utc > @AfterCreatedAtUtc)
+                order by created_at_utc desc
+                limit @Limit;
+                """,
+                new { ApiKeyIds = apiKeyIds.ToArray(), Limit = limit + 1, AfterCreatedAtUtc = afterCreatedAtUtc })
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore)
+        {
+            items = items.Take(limit).ToArray();
+        }
+
+        return (items, hasMore);
+    }
+
     public void AddAnomaly(BillingAnomaly anomaly)
     {
         ArgumentNullException.ThrowIfNull(anomaly);
@@ -342,6 +407,27 @@ public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int l
         """;
 
     private const string UsageByRequestSql = UsageSelectSql + """
+        where request_id = @RequestId;
+        """;
+
+    private const string ActivityByTokenSelectSql = """
+        select
+            request_id as RequestId,
+            api_key_id as ApiKeyId,
+            api_key_prefix as ApiKeyPrefix,
+            model_id as ModelId,
+            router_node_id as RouterNodeId,
+            input_tokens as InputTokens,
+            output_tokens as OutputTokens,
+            cache_tokens as CacheTokens,
+            status as Status,
+            created_at_utc as CreatedAtUtc,
+            completed_at_utc as CompletedAtUtc
+        from billing.activity_by_token
+
+        """;
+
+    private const string ActivityByTokenByRequestSql = ActivityByTokenSelectSql + """
         where request_id = @RequestId;
         """;
 }

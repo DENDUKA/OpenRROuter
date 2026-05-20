@@ -99,6 +99,38 @@ public static class BillingPersistenceMapper
             entity.CreatedAtUtc);
     }
 
+    public static ActivityByTokenEntity ToEntity(ActivityByTokenRecord record)
+    {
+        return new ActivityByTokenEntity
+        {
+            RequestId = record.RequestId,
+            ApiKeyId = record.ApiKeyId,
+            ApiKeyPrefix = record.ApiKeyPrefix,
+            ModelId = record.ModelId,
+            RouterNodeId = record.RouterNodeId,
+            InputTokens = record.Usage.InputTokens,
+            OutputTokens = record.Usage.OutputTokens,
+            CacheTokens = record.Usage.CacheTokens,
+            Status = record.Status,
+            CreatedAtUtc = record.CreatedAtUtc,
+            CompletedAtUtc = record.CompletedAtUtc
+        };
+    }
+
+    public static ActivityByTokenRecord ToDomain(ActivityByTokenEntity entity)
+    {
+        return new ActivityByTokenRecord(
+            entity.RequestId,
+            entity.ApiKeyId,
+            entity.ApiKeyPrefix,
+            entity.ModelId,
+            entity.RouterNodeId,
+            new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
+            entity.Status,
+            entity.CreatedAtUtc,
+            entity.CompletedAtUtc);
+    }
+
     public static BillingAnomalyEntity ToEntity(BillingAnomaly anomaly)
     {
         return new BillingAnomalyEntity

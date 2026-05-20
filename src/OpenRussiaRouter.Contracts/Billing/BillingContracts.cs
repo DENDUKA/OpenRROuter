@@ -16,6 +16,7 @@ public sealed record UsageEvent(
     string RequestId,
     string UserId,
     string ApiKeyId,
+    string ApiKeyPrefix,
     string ModelId,
     string RouterNodeId,
     TokenUsage Usage,

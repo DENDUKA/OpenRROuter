@@ -9,6 +9,8 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
 {
+    private const int VisiblePrefixLength = 12;
+
     private readonly ConcurrentDictionary<string, StoredApiKey> _keysByHash = new(StringComparer.Ordinal);
     private readonly IAuthRepository? repository;
     private readonly Sha256SecretHasher _secretHasher;
@@ -31,7 +33,7 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         if (repository is InMemoryAuthRepository inMemoryRepository &&
             inMemoryRepository.GetApiKeyBySecretHash(hash) is { IsActive: true } apiKey)
         {
-            return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, null);
+            return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
         }
 
         if (!_keysByHash.TryGetValue(hash, out var key) || key.Revoked)
@@ -39,18 +41,23 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
             return Invalid();
         }
 
-        return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, null);
+        return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, key.ApiKeyPrefix, null);
     }
 
     public void RegisterRawKey(string rawKey, string userId, string apiKeyId)
     {
-        var key = new StoredApiKey(userId, apiKeyId, Revoked: false);
+        var key = new StoredApiKey(userId, apiKeyId, GetPrefix(rawKey), Revoked: false);
         _keysByHash[_secretHasher.Hash(rawKey)] = key;
     }
 
     private static ValidateApiKeyResult Invalid()
     {
-        return new ValidateApiKeyResult(false, null, null, ErrorCodes.InvalidApiKey);
+        return new ValidateApiKeyResult(false, null, null, null, ErrorCodes.InvalidApiKey);
+    }
+
+    private static string GetPrefix(string rawKey)
+    {
+        return rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
     }
 
     private void LoadSeedKeys(IConfiguration configuration)
@@ -72,5 +79,5 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         }
     }
 
-    private sealed record StoredApiKey(string UserId, string ApiKeyId, bool Revoked);
+    private sealed record StoredApiKey(string UserId, string ApiKeyId, string ApiKeyPrefix, bool Revoked);
 }

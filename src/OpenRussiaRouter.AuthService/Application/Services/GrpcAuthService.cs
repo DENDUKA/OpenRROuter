@@ -27,6 +27,7 @@ public sealed class GrpcAuthService(
             IsValid = result.IsValid,
             UserId = result.UserId ?? string.Empty,
             ApiKeyId = result.ApiKeyId ?? string.Empty,
+            ApiKeyPrefix = result.ApiKeyPrefix ?? string.Empty,
             ErrorCode = result.ErrorCode ?? string.Empty
         });
     }

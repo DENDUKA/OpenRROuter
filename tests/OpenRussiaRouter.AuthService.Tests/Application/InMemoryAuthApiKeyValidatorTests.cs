@@ -18,6 +18,7 @@ public sealed class InMemoryAuthApiKeyValidatorTests
         Assert.True(result.IsValid);
         Assert.Equal("user-1", result.UserId);
         Assert.Equal("key-1", result.ApiKeyId);
+        Assert.Equal("orr_test_key", result.ApiKeyPrefix);
         Assert.Null(result.ErrorCode);
     }
 
@@ -31,6 +32,7 @@ public sealed class InMemoryAuthApiKeyValidatorTests
         Assert.False(result.IsValid);
         Assert.Null(result.UserId);
         Assert.Null(result.ApiKeyId);
+        Assert.Null(result.ApiKeyPrefix);
         Assert.Equal(ErrorCodes.InvalidApiKey, result.ErrorCode);
     }
 
@@ -52,6 +54,25 @@ public sealed class InMemoryAuthApiKeyValidatorTests
         Assert.True(result.IsValid);
         Assert.Equal("user-seed", result.UserId);
         Assert.Equal("key-seed", result.ApiKeyId);
+    }
+
+    [Fact]
+    public void Validate_SeedKey_ReturnsPrefixSnapshot()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Auth:SeedApiKeys:0:RawKey"] = "sk-or-seeded-secret",
+                ["Auth:SeedApiKeys:0:UserId"] = "user-seed",
+                ["Auth:SeedApiKeys:0:ApiKeyId"] = "key-seed"
+            })
+            .Build();
+        var validator = new InMemoryAuthApiKeyValidator(new Sha256SecretHasher(), configuration);
+
+        var result = validator.Validate("sk-or-seeded-secret");
+
+        Assert.True(result.IsValid);
+        Assert.Equal("sk-or-seeded", result.ApiKeyPrefix);
     }
 
     private static InMemoryAuthApiKeyValidator CreateValidator()

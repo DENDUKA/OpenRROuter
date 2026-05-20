@@ -15,7 +15,8 @@ public sealed class DapperAuthApiKeyValidator(
     private const string SelectApiKeySql = """
         select
             ak.id as ApiKeyId,
-            ak.user_id as UserId
+            ak.user_id as UserId,
+            ak.prefix as ApiKeyPrefix
         from auth.api_keys ak
         inner join auth.users u on u.id = ak.user_id
         where ak.secret_hash = @SecretHash
@@ -47,13 +48,13 @@ public sealed class DapperAuthApiKeyValidator(
         }
 
         connection.Execute(MarkUsedSql, new { LastUsedAtUtc = DateTimeOffset.UtcNow, row.ApiKeyId });
-        return new ValidateApiKeyResult(true, row.UserId, row.ApiKeyId, null);
+        return new ValidateApiKeyResult(true, row.UserId, row.ApiKeyId, row.ApiKeyPrefix, null);
     }
 
     private static ValidateApiKeyResult Invalid()
     {
-        return new ValidateApiKeyResult(false, null, null, ErrorCodes.InvalidApiKey);
+        return new ValidateApiKeyResult(false, null, null, null, ErrorCodes.InvalidApiKey);
     }
 
-    private sealed record ApiKeyValidationRow(string ApiKeyId, string UserId);
+    private sealed record ApiKeyValidationRow(string ApiKeyId, string UserId, string ApiKeyPrefix);
 }

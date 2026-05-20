@@ -108,6 +108,51 @@ public sealed class BillingApplicationServiceTests
     }
 
     [Fact]
+    public void RecordUsage_ValidUsage_WritesActivityByToken()
+    {
+        var service = CreateServiceWithModel();
+        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        service.RecordUsage(CreateUsageEvent("req-activity", new TokenUsage(10, 20, 3)), DateTimeOffset.UtcNow);
+
+        var activity = Assert.Single(service.ListActivityByToken(["key-1"]));
+        Assert.Equal("req-activity", activity.RequestId);
+        Assert.Equal("key-1", activity.ApiKeyId);
+        Assert.Equal("sk-or-test", activity.ApiKeyPrefix);
+        Assert.Equal(10, activity.Usage.InputTokens);
+        Assert.Equal(20, activity.Usage.OutputTokens);
+        Assert.Equal(3, activity.Usage.CacheTokens);
+    }
+
+    [Fact]
+    public void RecordUsage_UsageMissing_WritesActivityWithoutCharge()
+    {
+        var service = CreateServiceWithModel();
+        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        var result = service.RecordUsage(CreateUsageEvent("req-missing", new TokenUsage(0, 0, 0), "usage_missing"), DateTimeOffset.UtcNow);
+
+        Assert.True(result.Accepted);
+        Assert.Equal(MoneyAmount.Rub(100), service.GetBalance("user-1"));
+        var activity = Assert.Single(service.ListActivityByToken(["key-1"]));
+        Assert.Equal("usage_missing", activity.Status);
+        Assert.Equal(0, activity.Usage.TotalTokens);
+    }
+
+    [Fact]
+    public void RecordUsage_SameRequestId_DoesNotDuplicateActivity()
+    {
+        var service = CreateServiceWithModel();
+        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var usage = CreateUsageEvent("req-idempotent", new TokenUsage(1, 1, 0));
+
+        service.RecordUsage(usage, DateTimeOffset.UtcNow);
+        service.RecordUsage(usage, DateTimeOffset.UtcNow);
+
+        Assert.Single(service.ListActivityByToken(["key-1"]));
+    }
+
+    [Fact]
     public void RecordUsage_UnknownModel_CreatesAnomaly()
     {
         var service = CreateService();
@@ -157,17 +202,18 @@ public sealed class BillingApplicationServiceTests
             enabled);
     }
 
-    private static UsageEvent CreateUsageEvent(string requestId, TokenUsage usage)
+    private static UsageEvent CreateUsageEvent(string requestId, TokenUsage usage, string status = "succeeded")
     {
         var now = DateTimeOffset.UtcNow;
         return new UsageEvent(
             requestId,
             "user-1",
             "key-1",
+            "sk-or-test",
             "gpt-test",
             "router-1",
             usage,
-            "succeeded",
+            status,
             now.AddSeconds(-1),
             now);
     }

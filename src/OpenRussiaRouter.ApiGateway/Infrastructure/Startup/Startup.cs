@@ -123,21 +123,23 @@ public static class Startup
             var completedAt = DateTimeOffset.UtcNow;
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
 
-            RouterUsageExtractor.TryExtract(response.Body, out var usage);
-            if (usage.InputTokens > 0 || usage.OutputTokens > 0)
-            {
-                var usageEvent = new GatewayUsageEvent(
-                    requestId,
-                    authResult.UserId!,
-                    authResult.ApiKeyId!,
-                    metadata.Model,
-                    lease.NodeId,
-                    usage,
-                    response.StatusCode >= 500 ? "failed" : "completed",
-                    startedAt,
-                    completedAt);
-                _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
-            }
+            var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
+            var status = response.StatusCode >= 500
+                ? "failed"
+                : hasUsage ? "completed" : "usage_missing";
+
+            var usageEvent = new GatewayUsageEvent(
+                requestId,
+                authResult.UserId!,
+                authResult.ApiKeyId!,
+                authResult.ApiKeyPrefix!,
+                metadata.Model,
+                lease.NodeId,
+                usage,
+                status,
+                startedAt,
+                completedAt);
+            _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
 
             context.Response.StatusCode = response.StatusCode;
             context.Response.ContentType = response.ContentType;
@@ -254,20 +256,19 @@ public static class Startup
 
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
 
-            if (usage.InputTokens > 0 || usage.OutputTokens > 0)
-            {
-                var usageEvent = new GatewayUsageEvent(
-                    requestId,
-                    authResult.UserId!,
-                    authResult.ApiKeyId!,
-                    metadata.Model,
-                    lease.NodeId,
-                    usage,
-                    "completed",
-                    startedAt,
-                    completedAt);
-                _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
-            }
+            var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
+            var usageEvent = new GatewayUsageEvent(
+                requestId,
+                authResult.UserId!,
+                authResult.ApiKeyId!,
+                authResult.ApiKeyPrefix!,
+                metadata.Model,
+                lease.NodeId,
+                usage,
+                status,
+                startedAt,
+                completedAt);
+            _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
         }
         catch (OperationCanceledException)
         {

@@ -54,6 +54,7 @@ public sealed class GrpcBillingService(
             request.RequestId,
             request.UserId,
             request.ApiKeyId,
+            request.ApiKeyPrefix,
             request.ModelId,
             request.RouterNodeId,
             new BuildingBlocks.Usage.TokenUsage(
@@ -215,6 +216,32 @@ return Task.FromResult(response);
             CostRub = usage.Cost.Amount.ToString(CultureInfo.InvariantCulture),
             Status = usage.Status,
             CreatedAtUtc = usage.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+        }));
+
+        return Task.FromResult(response);
+    }
+
+    public override Task<ListActivityByTokenResponse> ListActivityByToken(
+        ListActivityByTokenRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListActivityByTokenResponse();
+        response.Records.AddRange(billing.ListActivityByToken(request.ApiKeyIds.ToArray()).Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
+        {
+            RequestId = activity.RequestId,
+            ApiKeyId = activity.ApiKeyId,
+            ApiKeyPrefix = activity.ApiKeyPrefix,
+            ModelId = activity.ModelId,
+            RouterNodeId = activity.RouterNodeId,
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage
+            {
+                InputTokens = activity.Usage.InputTokens,
+                OutputTokens = activity.Usage.OutputTokens,
+                CacheTokens = activity.Usage.CacheTokens
+            },
+            Status = activity.Status,
+            CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+            CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
         }));
 
         return Task.FromResult(response);

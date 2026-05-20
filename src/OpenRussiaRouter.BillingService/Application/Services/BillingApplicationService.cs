@@ -105,6 +105,22 @@ public sealed class BillingApplicationService(
             return new RecordUsageResult(false, null, MoneyAmount.Rub(0), "invalid_token_count");
         }
 
+        repository.AddActivityByToken(new ActivityByTokenRecord(
+            usageEvent.RequestId,
+            usageEvent.ApiKeyId,
+            usageEvent.ApiKeyPrefix,
+            usageEvent.ModelId,
+            usageEvent.RouterNodeId,
+            usageEvent.Usage,
+            usageEvent.Status,
+            nowUtc,
+            usageEvent.CompletedAtUtc));
+
+        if (usageEvent.Usage.TotalTokens == 0)
+        {
+            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
+        }
+
         var model = repository.GetEnabledModel(usageEvent.ModelId);
         if (model is null)
         {
@@ -149,6 +165,17 @@ public sealed class BillingApplicationService(
     {
         var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
         return repository.ListUsage(pageSize, null, userId).Items;
+    }
+
+    public IReadOnlyCollection<ActivityByTokenRecord> ListActivityByToken(IReadOnlyCollection<string> apiKeyIds)
+    {
+        if (apiKeyIds.Count == 0)
+        {
+            return Array.Empty<ActivityByTokenRecord>();
+        }
+
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListActivityByToken(apiKeyIds, pageSize).Items;
     }
 
     private static void ValidatePositiveRub(MoneyAmount amount, string name)

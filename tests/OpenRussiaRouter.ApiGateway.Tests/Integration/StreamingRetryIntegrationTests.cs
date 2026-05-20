@@ -96,6 +96,23 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Streaming_NoUsageInStream_RecordsUsageMissingActivity()
+    {
+        var billing = new StubBillingClient();
+        var router = new SequentialStreamingProxy(CreateSuccessSession("data: {\"choices\":[]}\n\ndata: [DONE]\n\n"));
+        var client = CreateStreamingClient(billing: billing, router: router);
+
+        var response = await PostStreamAsync(client);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await Task.Delay(50);
+        Assert.NotNull(billing.LastUsageEvent);
+        Assert.Equal("usage_missing", billing.LastUsageEvent.Status);
+        Assert.Equal(0, billing.LastUsageEvent.Usage.TotalTokens);
+        Assert.Equal("sk-or-test", billing.LastUsageEvent.ApiKeyPrefix);
+    }
+
     // --- Helpers ---
 
     private HttpClient CreateStreamingClient(
@@ -146,11 +163,13 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     private sealed class StubAuthenticator : IApiKeyAuthenticator
     {
         public Task<ApiKeyAuthenticationResult> AuthenticateAsync(string rawApiKey, CancellationToken ct)
-            => Task.FromResult(ApiKeyAuthenticationResult.Success("user-1", "key-1"));
+            => Task.FromResult(ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test"));
     }
 
     private sealed class StubBillingClient : IBillingGatewayClient
     {
+        public GatewayUsageEvent? LastUsageEvent { get; private set; }
+
         public Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken ct)
             => Task.FromResult<IReadOnlyCollection<GatewayPublicModel>>(Array.Empty<GatewayPublicModel>());
 
@@ -158,7 +177,10 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
             => Task.FromResult(new GatewayBalanceCheckResult(true, modelId, "v1", MoneyAmount.Rub(100), null));
 
         public Task<bool> RecordUsageAsync(GatewayUsageEvent ev, CancellationToken ct)
-            => Task.FromResult(true);
+        {
+            LastUsageEvent = ev;
+            return Task.FromResult(true);
+        }
     }
 
     private sealed class RetryTrackingControlPlane : IControlPlaneGatewayClient

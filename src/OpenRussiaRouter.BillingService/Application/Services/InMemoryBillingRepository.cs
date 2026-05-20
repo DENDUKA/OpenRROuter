@@ -10,6 +10,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     private readonly ConcurrentDictionary<string, LedgerEntry> _ledgerByIdempotencyKey = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ModelPrice> _models = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, UsageRecord> _usageByRequestId = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ActivityByTokenRecord> _activityByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentBag<BillingAnomaly> _anomalies = [];
 
     public LedgerEntry AddLedgerEntry(LedgerEntry entry)
@@ -107,6 +108,34 @@ var query = _usageByRequestId.Values.AsEnumerable();
             .OrderBy(usage => usage.CreatedAtUtc)
             .Take(limit + 1)
             .ToArray();
+        var hasMore = items.Length > limit;
+        if (hasMore)
+        {
+            items = items.Take(limit).ToArray();
+        }
+
+        return (items, hasMore);
+    }
+
+    public ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return _activityByRequestId.GetOrAdd(record.RequestId, record);
+    }
+
+    public (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+        IReadOnlyCollection<string> apiKeyIds,
+        int limit,
+        DateTimeOffset? afterCreatedAtUtc = null)
+    {
+        var keySet = apiKeyIds.ToHashSet(StringComparer.Ordinal);
+        var items = _activityByRequestId.Values
+            .Where(item => keySet.Contains(item.ApiKeyId))
+            .Where(item => afterCreatedAtUtc is null || item.CreatedAtUtc > afterCreatedAtUtc)
+            .OrderByDescending(item => item.CreatedAtUtc)
+            .Take(limit + 1)
+            .ToArray();
+
         var hasMore = items.Length > limit;
         if (hasMore)
         {

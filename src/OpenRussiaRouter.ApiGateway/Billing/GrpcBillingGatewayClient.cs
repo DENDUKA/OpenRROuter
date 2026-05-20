@@ -69,6 +69,7 @@ public sealed class GrpcBillingGatewayClient(
                 RequestId = usageEvent.RequestId,
                 UserId = usageEvent.UserId,
                 ApiKeyId = usageEvent.ApiKeyId,
+                ApiKeyPrefix = usageEvent.ApiKeyPrefix,
                 ModelId = usageEvent.ModelId,
                 RouterNodeId = usageEvent.RouterNodeId,
                 Usage = new TokenUsage

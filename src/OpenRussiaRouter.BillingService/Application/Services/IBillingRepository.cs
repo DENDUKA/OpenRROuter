@@ -24,6 +24,13 @@ public interface IBillingRepository
 
     (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null);
 
+    ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record);
+
+    (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+        IReadOnlyCollection<string> apiKeyIds,
+        int limit,
+        DateTimeOffset? afterCreatedAtUtc = null);
+
     void AddAnomaly(BillingAnomaly anomaly);
 
     (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null);

@@ -35,7 +35,7 @@ public sealed class GrpcApiKeyAuthenticator(
                         : response.ErrorCode);
             }
 
-            return ApiKeyAuthenticationResult.Success(response.UserId, response.ApiKeyId);
+            return ApiKeyAuthenticationResult.Success(response.UserId, response.ApiKeyId, response.ApiKeyPrefix);
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

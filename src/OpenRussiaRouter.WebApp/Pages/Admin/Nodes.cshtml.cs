@@ -2,7 +2,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
 
@@ -13,6 +15,7 @@ public class NodesModel : PageModelBase
 {
     private readonly ControlPlaneClient _controlPlaneClient;
     private readonly AuthClient _authClient;
+    private readonly BillingClient _billingClient;
     private readonly HttpClient _httpClient;
     private readonly IConfiguration _configuration;
     private readonly ILogger<NodesModel> _logger;
@@ -33,12 +36,14 @@ public class NodesModel : PageModelBase
     public NodesModel(
         ControlPlaneClient controlPlaneClient,
         AuthClient authClient,
+        BillingClient billingClient,
         IHttpClientFactory httpClientFactory,
         IConfiguration configuration,
         ILogger<NodesModel> logger)
     {
         _controlPlaneClient = controlPlaneClient;
         _authClient = authClient;
+        _billingClient = billingClient;
         _httpClient = httpClientFactory.CreateClient("RouterNode");
         _configuration = configuration;
         _logger = logger;
@@ -178,7 +183,8 @@ public class NodesModel : PageModelBase
 
         var userId = User.GetUserId();
         var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
-        if (!userKeys.Any(k => k.IsActive))
+        var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
+        if (activeKey is null)
         {
             TestResult = new TestFormResult(false,
                 "Нет личных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
@@ -206,14 +212,29 @@ public class NodesModel : PageModelBase
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            var chatUrl = BuildGatewayChatCompletionsUrl();
+            var startedAtUtc = DateTimeOffset.UtcNow;
+            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
 
             using var resp = await _httpClient.SendAsync(req, HttpContext.RequestAborted);
             var body = await resp.Content.ReadAsStringAsync();
-            TestResult = new TestFormResult(resp.IsSuccessStatusCode, body);
+            var completedAtUtc = DateTimeOffset.UtcNow;
+
+            var warning = await RecordTestActivityAsync(
+                userId,
+                activeKey,
+                TestInput.Model,
+                node.NodeId,
+                body,
+                resp.IsSuccessStatusCode,
+                startedAtUtc,
+                completedAtUtc);
+
+            TestResult = new TestFormResult(
+                resp.IsSuccessStatusCode && warning is null,
+                AppendWarning(body, warning));
         }
         catch (Exception ex)
         {
@@ -241,7 +262,8 @@ public class NodesModel : PageModelBase
 
         var userId = User.GetUserId();
         var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
-        if (!userKeys.Any(k => k.IsActive))
+        var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
+        if (activeKey is null)
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No personal API keys. Create an API key in Workspace -> API Keys.");
 
         var rawKey = await _authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
@@ -261,7 +283,8 @@ public class NodesModel : PageModelBase
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            var chatUrl = BuildGatewayChatCompletionsUrl();
+            var startedAtUtc = DateTimeOffset.UtcNow;
+            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
             using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
             req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
             req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
@@ -277,14 +300,31 @@ public class NodesModel : PageModelBase
 
             await using var stream = await resp.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
             var buffer = new byte[8192];
+            var capturedBody = new System.Text.StringBuilder();
             while (true)
             {
                 var read = await stream.ReadAsync(buffer, HttpContext.RequestAborted);
                 if (read == 0)
                     break;
 
+                capturedBody.Append(System.Text.Encoding.UTF8.GetString(buffer, 0, read));
                 await Response.Body.WriteAsync(buffer.AsMemory(0, read), HttpContext.RequestAborted);
                 await Response.Body.FlushAsync(HttpContext.RequestAborted);
+            }
+
+            var warning = await RecordTestActivityAsync(
+                userId,
+                activeKey,
+                StreamingTestInput.Model,
+                node.NodeId,
+                capturedBody.ToString(),
+                resp.IsSuccessStatusCode,
+                startedAtUtc,
+                DateTimeOffset.UtcNow);
+
+            if (warning is not null)
+            {
+                await Response.WriteAsync($"{Environment.NewLine}[activity warning] {warning}", HttpContext.RequestAborted);
             }
         }
         catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
@@ -299,6 +339,61 @@ public class NodesModel : PageModelBase
         }
 
         return new EmptyResult();
+    }
+
+    private async Task<string?> RecordTestActivityAsync(
+        string userId,
+        ApiKeyInfo apiKey,
+        string modelId,
+        string routerNodeId,
+        string responseBody,
+        bool isSuccessStatusCode,
+        DateTimeOffset startedAtUtc,
+        DateTimeOffset completedAtUtc)
+    {
+        var hasUsage = TokenUsageExtractor.TryExtractJson(responseBody, out var usage) ||
+                       TokenUsageExtractor.TryExtractStreamingSse(responseBody, out usage);
+        var status = isSuccessStatusCode
+            ? hasUsage ? "completed" : "usage_missing"
+            : "failed";
+
+        try
+        {
+            var errorCode = await _billingClient.RecordUsageAsync(
+                Guid.NewGuid().ToString("N"),
+                userId,
+                apiKey.Id,
+                apiKey.Prefix,
+                modelId,
+                routerNodeId,
+                usage.InputTokens,
+                usage.OutputTokens,
+                usage.CacheTokens,
+                status,
+                startedAtUtc,
+                completedAtUtc,
+                HttpContext.RequestAborted);
+
+            return string.IsNullOrWhiteSpace(errorCode)
+                ? null
+                : $"BillingService returned {errorCode}.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to record admin node test activity. UserId={UserId} ApiKeyId={ApiKeyId} NodeId={NodeId} Model={Model}",
+                userId, apiKey.Id, routerNodeId, modelId);
+            return ex.Message;
+        }
+    }
+
+    private static string AppendWarning(string body, string? warning)
+    {
+        if (string.IsNullOrWhiteSpace(warning))
+        {
+            return body;
+        }
+
+        return $"[activity warning] {warning}{Environment.NewLine}{Environment.NewLine}{body}";
     }
 
     private async Task<IActionResult> WriteStreamingErrorAsync(int statusCode, string message)
@@ -325,12 +420,6 @@ public class NodesModel : PageModelBase
             return string.Empty;
 
         return _configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
-    }
-
-    private string BuildGatewayChatCompletionsUrl()
-    {
-        var gatewayUrl = _configuration["ApiGateway:Url"] ?? "http://localhost";
-        return $"{gatewayUrl.TrimEnd('/')}/v1/chat/completions";
     }
 
     public static string GetStatusBadge(string status) => status switch

@@ -1,4 +1,6 @@
+using System.Globalization;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
+using BillingTokenUsage = OpenRussiaRouter.Contracts.Grpc.Billing.V1.TokenUsage;
 
 namespace OpenRussiaRouter.WebApp.Services.Billing;
 
@@ -28,6 +30,45 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             decimal.Parse(r.CostRub, System.Globalization.CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+    }
+
+    public async Task<string?> RecordUsageAsync(
+        string requestId,
+        string userId,
+        string apiKeyId,
+        string apiKeyPrefix,
+        string modelId,
+        string routerNodeId,
+        long inputTokens,
+        long outputTokens,
+        long cacheTokens,
+        string status,
+        DateTimeOffset startedAtUtc,
+        DateTimeOffset completedAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.RecordUsageAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.RecordUsageRequest
+            {
+                RequestId = requestId,
+                UserId = userId,
+                ApiKeyId = apiKeyId,
+                ApiKeyPrefix = apiKeyPrefix,
+                ModelId = modelId,
+                RouterNodeId = routerNodeId,
+                Usage = new BillingTokenUsage
+                {
+                    InputTokens = inputTokens,
+                    OutputTokens = outputTokens,
+                    CacheTokens = cacheTokens
+                },
+                Status = status,
+                StartedAtUtc = startedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                CompletedAtUtc = completedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            },
+            cancellationToken: cancellationToken);
+
+        return response.Accepted ? null : response.ErrorCode;
     }
 
     public async Task<IReadOnlyList<ActivityByTokenInfo>> ListActivityByTokenAsync(

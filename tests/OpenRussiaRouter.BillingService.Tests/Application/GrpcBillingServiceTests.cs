@@ -292,6 +292,23 @@ public sealed class GrpcBillingServiceTests
         Assert.Equal(3, record.Usage.CacheTokens);
     }
 
+    [Fact]
+    public async Task ListTopUps_ExistingTopUp_ReturnsRecord()
+    {
+        var billing = CreateBillingWithModelAndBalance();
+        var service = new GrpcBillingService(billing);
+
+        var response = await service.ListTopUps(
+            new ListTopUpsRequest { UserId = "user-1" },
+            context: null!);
+
+        var record = Assert.Single(response.Records);
+        Assert.NotEmpty(record.Id);
+        Assert.Equal("100", record.AmountRub);
+        Assert.Equal("test", record.Reason);
+        Assert.NotEmpty(record.CreatedAtUtc);
+    }
+
     private static BillingApplicationService CreateBillingWithModelAndBalance()
     {
         var billing = new BillingApplicationService(

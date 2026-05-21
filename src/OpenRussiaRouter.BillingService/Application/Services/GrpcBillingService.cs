@@ -247,6 +247,21 @@ return Task.FromResult(response);
         return Task.FromResult(response);
     }
 
+    public override Task<ListTopUpsResponse> ListTopUps(
+        ListTopUpsRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListTopUpsResponse();
+        response.Records.AddRange(billing.ListTopUps(request.UserId).Select(entry => new TopUpRecord
+        {
+            Id = entry.Id,
+            AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+            Reason = entry.Reason,
+            CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+        }));
+        return Task.FromResult(response);
+    }
+
     private static DateTimeOffset ParseTimestamp(string value)
     {
         if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))

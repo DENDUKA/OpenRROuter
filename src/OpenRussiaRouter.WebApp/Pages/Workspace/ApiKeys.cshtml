@@ -19,11 +19,33 @@
         <div class="ws-panel-body">
             <div class="alert alert-success">
                 <strong>Save your key — it won't be shown again!</strong>
-                <div class="ws-key-preview" data-testid="new-key-value">@Model.NewKeyValue</div>
+                <div class="ws-key-copy-row">
+                    <div class="ws-key-preview" id="newKeyValue" data-testid="new-key-value">@Model.NewKeyValue</div>
+                    <button type="button" class="btn btn-sm btn-secondary ws-key-copy-btn" data-testid="btn-copy-key"
+                            onclick="copyApiKey(this, 'newKeyValue')" title="Copy to clipboard">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
+                </div>
             </div>
             <a class="btn btn-primary" href="/workspace/apikeys" data-testid="btn-done-create">Done</a>
         </div>
     </div>
+
+    <script>
+        function copyApiKey(btn, elementId) {
+            var text = document.getElementById(elementId).textContent.trim();
+            navigator.clipboard.writeText(text).then(function () {
+                var span = btn.querySelector('span');
+                span.textContent = 'Copied!';
+                btn.disabled = true;
+                setTimeout(function () { span.textContent = 'Copy'; btn.disabled = false; }, 2000);
+            });
+        }
+    </script>
 }
 
 @if (Model.Action == "create" && Model.NewKeyValue == null)

@@ -853,7 +853,9 @@ code.d-block {
 .ws-btn-row { display: flex; gap: var(--spacing-md); }
 .ws-actions-cell { display: flex; align-items: center; gap: 2px; }
 
-.ws-key-preview { font-family: var(--font-mono); background: var(--color-canvas-mid); padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-sm); margin-top: var(--spacing-md); word-break: break-all; font-size: 13px; display: block; }
+.ws-key-preview { font-family: var(--font-mono); background: var(--color-canvas-mid); padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-sm); word-break: break-all; font-size: 13px; flex: 1; }
+.ws-key-copy-row { display: flex; align-items: flex-start; gap: var(--spacing-md); margin-top: var(--spacing-md); }
+.ws-key-copy-btn { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
 
 .ws-balance-amount { font-size: 28px; font-weight: 600; color: var(--color-ink); }
 .ws-balance-currency { font-size: 16px; font-weight: 400; color: var(--color-body); }

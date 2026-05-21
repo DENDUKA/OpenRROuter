@@ -15,6 +15,7 @@ service BillingService {
   rpc ListBillingAnomalies (ListBillingAnomaliesRequest) returns (ListBillingAnomaliesResponse);
   rpc ListModels (ListModelsRequest) returns (ListModelsResponse);
   rpc ListActivityByToken (ListActivityByTokenRequest) returns (ListActivityByTokenResponse);
+  rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
 }
 
 message CheckBalanceAndModelRequest {
@@ -183,4 +184,19 @@ message ListActivityByTokenResponse {
 
 message ListBillingAnomaliesResponse {
   repeated BillingAnomaly anomalies = 1;
+}
+
+message ListTopUpsRequest {
+  string user_id = 1;
+}
+
+message TopUpRecord {
+  string id = 1;
+  string amount_rub = 2;
+  string reason = 3;
+  string created_at_utc = 4;
+}
+
+message ListTopUpsResponse {
+  repeated TopUpRecord records = 1;
 }

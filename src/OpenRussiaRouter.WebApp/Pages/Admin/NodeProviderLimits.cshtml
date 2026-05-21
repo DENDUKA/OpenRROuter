@@ -2,6 +2,79 @@
 @model Admin.NodeProviderLimitsModel
 @{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Provider Limits - Admin"; }
 
+<style>
+    .quota-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .quota-item {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .quota-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .quota-label {
+        font-size: 13px;
+        color: var(--color-body);
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .quota-value {
+        font-size: 13px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        flex-shrink: 0;
+    }
+
+    .quota-bar-track {
+        height: 5px;
+        background: var(--color-canvas-mid);
+        border-radius: var(--radius-pill);
+        overflow: hidden;
+    }
+
+    .quota-bar-fill {
+        height: 100%;
+        border-radius: var(--radius-pill);
+    }
+
+    .quota-reset {
+        font-size: 11px;
+        color: var(--color-body-mid);
+    }
+
+    .quota-unlimited {
+        font-size: 13px;
+        color: var(--color-body-mid);
+    }
+
+    .quota-empty {
+        font-size: 13px;
+        color: var(--color-body-mid);
+        padding: 4px 0;
+    }
+
+    .provider-plan {
+        font-size: 12px;
+        color: var(--color-body-mid);
+        margin-bottom: 14px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+</style>
+
 <div class="adm-section-head">
     <h2>Provider Limits — @Model.NodeName</h2>
     <p>Remaining quota per provider connection on this node.</p>
@@ -44,56 +117,58 @@
             }
             else if (!provider.QuotaSupported)
             {
-                <span class="text-muted" data-testid="quota-not-supported">Quota not supported</span>
+                <span class="quota-empty" data-testid="quota-not-supported">Quota not supported</span>
             }
             else if (provider.Quotas.Count == 0)
             {
-                <span class="text-muted" data-testid="no-quota-data">No quota data</span>
+                <span class="quota-empty" data-testid="no-quota-data">No quota data</span>
             }
             else
             {
-                <table class="table table-sm" style="margin-bottom:0">
-                    <tbody>
-                        @foreach (var quota in provider.Quotas)
-                        {
-                            <tr data-testid="quota-row">
-                                <td style="width:200px;vertical-align:middle">
-                                    <span>@quota.Label</span>
-                                </td>
-                                <td style="vertical-align:middle">
-                                    @if (quota.Unlimited)
-                                    {
-                                        <span class="text-muted" data-testid="quota-unlimited">Unlimited</span>
-                                    }
-                                    else
-                                    {
-                                        var pct = Math.Round(quota.RemainingPercentage, 1);
-                                        var barClass = Admin.NodeProviderLimitsModel.GetProgressBarClass(quota.RemainingPercentage);
-                                        <div class="progress" style="height:16px;min-width:160px" data-testid="quota-bar">
-                                            <div class="progress-bar @barClass"
-                                                 role="progressbar"
-                                                 style="width:@(pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture))%"
-                                                 aria-valuenow="@pct"
-                                                 aria-valuemin="0"
-                                                 aria-valuemax="100">
-                                                @pct%
-                                            </div>
-                                        </div>
-                                    }
-                                </td>
-                                <td style="vertical-align:middle;white-space:nowrap">
-                                    @if (!quota.Unlimited && quota.ResetAt != null)
-                                    {
-                                        var resetTime = DateTimeOffset.TryParse(quota.ResetAt, out var dt)
-                                            ? dt.ToLocalTime().ToString("g")
-                                            : quota.ResetAt;
-                                        <small class="text-muted" data-testid="quota-reset">Resets: @resetTime</small>
-                                    }
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+                <div class="quota-list" data-testid="quota-list">
+                    @foreach (var quota in provider.Quotas)
+                    {
+                        var pct = Math.Round(quota.RemainingPercentage, 1);
+                        var color = pct > 50
+                            ? "var(--color-success)"
+                            : pct > 20
+                                ? "var(--color-warning)"
+                                : "var(--color-danger)";
+                        var pctStr = pct.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+
+                        <div class="quota-item" data-testid="quota-row">
+                            <div class="quota-item-header">
+                                <span class="quota-label">@quota.Label</span>
+                                @if (quota.Unlimited)
+                                {
+                                    <span class="quota-unlimited" data-testid="quota-unlimited">∞ Unlimited</span>
+                                }
+                                else
+                                {
+                                    <span class="quota-value" style="color:@color" data-testid="quota-value">@pctStr%</span>
+                                }
+                            </div>
+                            @if (!quota.Unlimited)
+                            {
+                                <div class="quota-bar-track" data-testid="quota-bar">
+                                    <div class="quota-bar-fill"
+                                         style="width:@pctStr%;background:@color"
+                                         role="progressbar"
+                                         aria-valuenow="@pct"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"></div>
+                                </div>
+                            }
+                            @if (!quota.Unlimited && quota.ResetAt != null)
+                            {
+                                var resetTime = DateTimeOffset.TryParse(quota.ResetAt, out var dt)
+                                    ? dt.ToLocalTime().ToString("g")
+                                    : quota.ResetAt;
+                                <div class="quota-reset" data-testid="quota-reset">Resets @resetTime</div>
+                            }
+                        </div>
+                    }
+                </div>
             }
         </div>
     </div>

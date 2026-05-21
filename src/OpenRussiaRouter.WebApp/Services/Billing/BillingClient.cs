@@ -98,6 +98,17 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             DateTimeOffset.Parse(r.CompletedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
+    public async Task<IReadOnlyList<TopUpInfo>> ListTopUpsAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.ListTopUpsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListTopUpsRequest { UserId = userId },
+            cancellationToken: cancellationToken);
+        return response.Records.Select(r => new TopUpInfo(
+            decimal.Parse(r.AmountRub, System.Globalization.CultureInfo.InvariantCulture),
+            r.Reason,
+            DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+    }
+
     public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountRub, string reason, CancellationToken cancellationToken = default)
     {
         var response = await client.CreateVirtualTopUpAsync(

@@ -27,3 +27,35 @@
         }
     </div>
 </div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Top-Up History</div>
+    <div class="ws-panel-body">
+        @if (Model.TopUps.Count == 0)
+        {
+            <p class="text-muted">No top-ups yet.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var topUp in Model.TopUps)
+                    {
+                        <tr>
+                            <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                            <td>@topUp.Amount.ToString("N2") RUB</td>
+                            <td>@topUp.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

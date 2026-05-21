@@ -29,6 +29,7 @@ message CheckBalanceAndModelResponse {
   string price_version = 3;
   string balance_rub = 4;
   string error_code = 5;
+  string router_model_id = 6;
 }
 
 message TokenUsage {

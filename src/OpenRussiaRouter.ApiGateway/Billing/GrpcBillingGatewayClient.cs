@@ -40,9 +40,14 @@ public sealed class GrpcBillingGatewayClient(
                 },
                 cancellationToken: cancellationToken);
 
+            var routerModelId = string.IsNullOrWhiteSpace(response.RouterModelId)
+                ? response.ModelId
+                : response.RouterModelId;
+
             return new GatewayBalanceCheckResult(
                 response.Allowed,
                 response.ModelId,
+                routerModelId,
                 string.IsNullOrWhiteSpace(response.PriceVersion) ? null : response.PriceVersion,
                 MoneyAmount.Rub(ParseDecimal(response.BalanceRub)),
                 string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode);
@@ -50,7 +55,7 @@ public sealed class GrpcBillingGatewayClient(
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning(ex, "Billing service balance check failed. UserId: {UserId}; ModelId: {ModelId}; RpcStatus: {RpcStatus}", userId, modelId, ex.StatusCode);
-            return new GatewayBalanceCheckResult(false, modelId, null, MoneyAmount.Rub(0), ErrorCodes.InternalError);
+            return new GatewayBalanceCheckResult(false, modelId, modelId, null, MoneyAmount.Rub(0), ErrorCodes.InternalError);
         }
     }
 

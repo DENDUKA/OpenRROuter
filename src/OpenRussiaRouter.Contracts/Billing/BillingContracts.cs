@@ -6,6 +6,7 @@ namespace OpenRussiaRouter.Contracts.Billing;
 public sealed record BalanceCheckResult(
     bool Allowed,
     string ModelId,
+    string RouterModelId,
     string? PriceVersion,
     MoneyAmount CurrentBalance,
     string? ErrorCode);

@@ -54,7 +54,7 @@ public sealed class BillingApplicationService(
         var model = repository.GetEnabledModel(RequireValue(modelId, nameof(modelId)));
         if (model is null)
         {
-            return new BalanceCheckResult(false, modelId, null, balance, ErrorCodes.ModelUnavailable);
+            return new BalanceCheckResult(false, modelId, modelId, null, balance, ErrorCodes.ModelUnavailable);
         }
 
         // Free models (all prices are zero) are accessible regardless of balance.
@@ -64,10 +64,10 @@ public sealed class BillingApplicationService(
 
         if (!isFreeModel && balance.Amount <= 0)
         {
-            return new BalanceCheckResult(false, modelId, model.PriceVersion, balance, ErrorCodes.InsufficientBalance);
+            return new BalanceCheckResult(false, modelId, model.RouterModelId, model.PriceVersion, balance, ErrorCodes.InsufficientBalance);
         }
 
-        return new BalanceCheckResult(true, modelId, model.PriceVersion, balance, null);
+        return new BalanceCheckResult(true, modelId, model.RouterModelId, model.PriceVersion, balance, null);
     }
 
     public IReadOnlyCollection<PublicModel> ListPublicModels()

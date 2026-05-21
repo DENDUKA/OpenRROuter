@@ -26,6 +26,7 @@ public sealed class GrpcBillingService(
         {
             Allowed = result.Allowed,
             ModelId = result.ModelId,
+            RouterModelId = result.RouterModelId,
             PriceVersion = result.PriceVersion ?? string.Empty,
             BalanceRub = result.CurrentBalance.Amount.ToString(CultureInfo.InvariantCulture),
             ErrorCode = result.ErrorCode ?? string.Empty

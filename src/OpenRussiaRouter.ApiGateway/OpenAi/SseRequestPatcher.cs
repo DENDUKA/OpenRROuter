@@ -5,6 +5,25 @@ namespace OpenRussiaRouter.ApiGateway.OpenAi;
 public static class SseRequestPatcher
 {
     /// <summary>
+    /// Replaces the "model" field value in the request JSON with <paramref name="routerModelId"/>.
+    /// Used to translate the billing model_id to the actual upstream model ID before forwarding.
+    /// </summary>
+    public static string PatchModel(string requestJson, string routerModelId)
+    {
+        try
+        {
+            var node = JsonNode.Parse(requestJson);
+            if (node is JsonObject obj)
+            {
+                obj["model"] = routerModelId;
+                return obj.ToJsonString();
+            }
+        }
+        catch { /* malformed JSON — return as-is */ }
+        return requestJson;
+    }
+
+    /// <summary>
     /// Ensures "stream": true and "stream_options": {"include_usage": true} are present
     /// so 9Router returns token usage in the final SSE chunk.
     /// </summary>

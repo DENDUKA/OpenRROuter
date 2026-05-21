@@ -116,9 +116,10 @@ public static class Startup
                 return;
             }
 
+            var patchedJson = SseRequestPatcher.PatchModel(body.Json, balanceResult.RouterModelId);
             var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
             var startedAt = DateTimeOffset.UtcNow;
-            var response = await routerProxy.SendChatCompletionAsync(lease, body.Json, requestId, apiKey, context.RequestAborted);
+            var response = await routerProxy.SendChatCompletionAsync(lease, patchedJson, requestId, apiKey, context.RequestAborted);
 
             var completedAt = DateTimeOffset.UtcNow;
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
@@ -209,7 +210,8 @@ public static class Startup
                 return;
             }
 
-            var patchedJson = SseRequestPatcher.InjectStreamOptions(body.Json);
+            var patchedJson = SseRequestPatcher.InjectStreamOptions(
+                SseRequestPatcher.PatchModel(body.Json, balanceResult.RouterModelId));
             var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
 
             var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, apiKey, context.RequestAborted);

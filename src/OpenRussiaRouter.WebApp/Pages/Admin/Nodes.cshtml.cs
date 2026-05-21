@@ -31,9 +31,6 @@ public class NodesModel : PageModelBase
     [BindProperty] public TestFormInput StreamingTestInput { get; set; } = new();
     public TestFormResult? TestResult { get; set; }
 
-    [BindProperty] public string? FetchModelsNodeId { get; set; }
-    public IReadOnlyList<string> NodeModels { get; set; } = [];
-    public string? NodeModelsName { get; set; }
 
     public NodesModel(
         ControlPlaneClient controlPlaneClient,
@@ -118,18 +115,14 @@ public class NodesModel : PageModelBase
         }
     }
 
-    public async Task<IActionResult> OnPostFetchModelsAsync()
+    public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
-        await OnGetAsync();
-        if (string.IsNullOrWhiteSpace(FetchModelsNodeId))
-            return Page();
+        try { Nodes = await _controlPlaneClient.ListRouterNodesAsync(); }
+        catch { return new JsonResult(Array.Empty<string>()); }
 
-        var node = Nodes.FirstOrDefault(n => n.NodeId == FetchModelsNodeId);
+        var node = Nodes.FirstOrDefault(n => n.NodeId == nodeId);
         if (node is null)
-        {
-            ErrorMessage = "Node not found.";
-            return Page();
-        }
+            return new JsonResult(Array.Empty<string>());
 
         try
         {
@@ -137,34 +130,29 @@ public class NodesModel : PageModelBase
             using var req = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
             AddNodeTokenHeaders(req, node);
             using var resp = await _httpClient.SendAsync(req);
-            var body = await resp.Content.ReadAsStringAsync();
 
             if (!resp.IsSuccessStatusCode)
-            {
-                ErrorMessage = $"Failed to fetch models from node: HTTP {(int)resp.StatusCode}";
-                return Page();
-            }
+                return new JsonResult(Array.Empty<string>());
 
+            var body = await resp.Content.ReadAsStringAsync();
             using var doc = System.Text.Json.JsonDocument.Parse(body);
             if (doc.RootElement.TryGetProperty("data", out var dataEl))
             {
-                NodeModels = dataEl.EnumerateArray()
+                var models = dataEl.EnumerateArray()
                     .Where(m => m.TryGetProperty("id", out _))
                     .Select(m => m.GetProperty("id").GetString() ?? "")
                     .Where(id => !string.IsNullOrWhiteSpace(id))
                     .OrderBy(id => id)
                     .ToList();
+                return new JsonResult(models);
             }
 
-            NodeModelsName = node.Name;
-            TestInput.NodeId = node.NodeId;
+            return new JsonResult(Array.Empty<string>());
         }
-        catch (Exception ex)
+        catch
         {
-            ErrorMessage = $"Failed to fetch models: {ex.Message}";
+            return new JsonResult(Array.Empty<string>());
         }
-
-        return Page();
     }
 
     public async Task<IActionResult> OnPostTestAsync()

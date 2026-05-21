@@ -70,21 +70,6 @@
                             <td>@node.InFlightRequests</td>
                             <td>@(node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td>
                             <td class="adm-actions-cell">
-                                <form method="post" asp-page-handler="FetchModels" style="display:inline">
-                                    <input type="hidden" name="FetchModelsNodeId" value="@node.NodeId" />
-                                    <button type="submit" class="btn-icon" title="List models" aria-label="List models" data-testid="btn-models">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
-                                             fill="none" stroke="currentColor" stroke-width="2"
-                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <line x1="8" y1="6" x2="21" y2="6"/>
-                                            <line x1="8" y1="12" x2="21" y2="12"/>
-                                            <line x1="8" y1="18" x2="21" y2="18"/>
-                                            <line x1="3" y1="6" x2="3.01" y2="6"/>
-                                            <line x1="3" y1="12" x2="3.01" y2="12"/>
-                                            <line x1="3" y1="18" x2="3.01" y2="18"/>
-                                        </svg>
-                                    </button>
-                                </form>
                                 <a href="/admin/nodes/@node.NodeId/provider-limits"
                                    class="btn-icon"
                                    title="Provider limits"
@@ -151,32 +136,6 @@
     </div>
 </div>
 
-@if (Model.NodeModels.Count > 0)
-{
-    <div class="adm-card" data-testid="models-card">
-        <div class="adm-card-header">Models on @Model.NodeModelsName (@Model.NodeModels.Count)</div>
-        <div class="adm-card-body">
-            <table class="table">
-                <thead><tr><th>Model ID</th><th></th></tr></thead>
-                <tbody>
-                    @foreach (var modelId in Model.NodeModels)
-                    {
-                        <tr data-testid="model-row" data-model-id="@modelId">
-                            <td><code>@modelId</code></td>
-                            <td>
-                                <button type="button" class="btn btn-sm btn-secondary"
-                                        onclick="document.getElementById('TestInput_Model').value='@modelId';const streamingModel=document.getElementById('StreamingTestInput_Model');if(streamingModel){streamingModel.value='@modelId';}document.getElementById('TestInput_Model').closest('form').scrollIntoView({behavior:'smooth'})">
-                                    Use in test
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-    </div>
-}
-
 <div class="adm-card">
     <div class="adm-card-header">Test Request</div>
     <div class="adm-card-body">
@@ -199,7 +158,9 @@
                 </div>
                 <div class="form-group">
                     <label asp-for="TestInput.Model" class="form-label">Model</label>
-                    <input asp-for="TestInput.Model" class="form-control" data-testid="input-model" />
+                    <select asp-for="TestInput.Model" class="form-control" data-testid="input-model">
+                        <option value="@Model.TestInput.Model">@Model.TestInput.Model</option>
+                    </select>
                 </div>
             </div>
             <div class="form-group">
@@ -230,7 +191,9 @@
                 </div>
                 <div class="form-group">
                     <label asp-for="StreamingTestInput.Model" class="form-label">Model</label>
-                    <input asp-for="StreamingTestInput.Model" class="form-control" data-testid="input-streaming-model" />
+                    <select asp-for="StreamingTestInput.Model" class="form-control" data-testid="input-streaming-model">
+                        <option value="@Model.StreamingTestInput.Model">@Model.StreamingTestInput.Model</option>
+                    </select>
                 </div>
             </div>
             <div class="form-group">
@@ -338,5 +301,59 @@
                 controller.abort();
             }
         });
+    })();
+
+    (async () => {
+        const pairs = [
+            { nodeSelectId: 'TestInput_NodeId', modelSelectId: 'TestInput_Model' },
+            { nodeSelectId: 'StreamingTestInput_NodeId', modelSelectId: 'StreamingTestInput_Model' }
+        ];
+
+        async function fetchModels(nodeId) {
+            if (!nodeId) return [];
+            try {
+                const resp = await fetch(`?handler=NodeModels&nodeId=${encodeURIComponent(nodeId)}`);
+                if (!resp.ok) return [];
+                return await resp.json();
+            } catch {
+                return [];
+            }
+        }
+
+        function populateModelSelect(select, models) {
+            const prev = select.value;
+            select.innerHTML = '';
+            if (models.length === 0) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = '— no models —';
+                select.appendChild(opt);
+                return;
+            }
+            for (const m of models) {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                select.appendChild(opt);
+            }
+            select.value = (prev && models.includes(prev)) ? prev : models[0];
+        }
+
+        for (const { nodeSelectId, modelSelectId } of pairs) {
+            const nodeSelect = document.getElementById(nodeSelectId);
+            const modelSelect = document.getElementById(modelSelectId);
+            if (!nodeSelect || !modelSelect) continue;
+
+            if (nodeSelect.value) {
+                const models = await fetchModels(nodeSelect.value);
+                populateModelSelect(modelSelect, models);
+            }
+
+            nodeSelect.addEventListener('change', async () => {
+                modelSelect.innerHTML = '<option value="">Loading…</option>';
+                const models = await fetchModels(nodeSelect.value);
+                populateModelSelect(modelSelect, models);
+            });
+        }
     })();
 </script>

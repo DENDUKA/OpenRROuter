@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
@@ -10,8 +9,6 @@ public class NodeProviderLimitsModel(
     ControlPlaneClient controlPlaneClient,
     ILogger<NodeProviderLimitsModel> logger) : PageModelBase
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
     public string NodeId { get; private set; } = string.Empty;
     public string NodeName { get; private set; } = string.Empty;
     public IReadOnlyList<ProviderLimitView> Providers { get; private set; } = [];
@@ -56,40 +53,38 @@ public class NodeProviderLimitsModel(
             return [];
         try
         {
-            var usage = JsonSerializer.Deserialize<ProviderUsageDto>(usageJson, JsonOptions);
-            if (usage?.Quotas is not { Count: > 0 })
+            using var doc = JsonDocument.Parse(usageJson);
+            var root = doc.RootElement;
+
+            if (!root.TryGetProperty("quotas", out var quotasEl) ||
+                quotasEl.ValueKind != JsonValueKind.Object)
                 return [];
 
-            return usage.Quotas
-                .Select(kvp => new QuotaView(
-                    kvp.Key,
-                    kvp.Value.RemainingPercentage,
-                    kvp.Value.ResetAt,
-                    kvp.Value.Unlimited))
-                .ToList();
+            var result = new List<QuotaView>();
+            foreach (var prop in quotasEl.EnumerateObject())
+            {
+                var entry = prop.Value;
+
+                var remaining = entry.TryGetProperty("remainingPercentage", out var pctEl)
+                    ? pctEl.GetDouble()
+                    : 0;
+
+                string? resetAt = null;
+                if (entry.TryGetProperty("resetAt", out var resetEl) &&
+                    resetEl.ValueKind == JsonValueKind.String)
+                    resetAt = resetEl.GetString();
+
+                var unlimited = entry.TryGetProperty("unlimited", out var unlEl) &&
+                                unlEl.ValueKind == JsonValueKind.True;
+
+                result.Add(new QuotaView(prop.Name, remaining, resetAt, unlimited));
+            }
+            return result;
         }
-        catch (JsonException)
+        catch
         {
             return [];
         }
-    }
-
-    private sealed record ProviderUsageDto
-    {
-        [JsonPropertyName("quotas")]
-        public Dictionary<string, QuotaEntryDto>? Quotas { get; init; }
-    }
-
-    private sealed record QuotaEntryDto
-    {
-        [JsonPropertyName("remainingPercentage")]
-        public double RemainingPercentage { get; init; }
-
-        [JsonPropertyName("resetAt")]
-        public string? ResetAt { get; init; }
-
-        [JsonPropertyName("unlimited")]
-        public bool Unlimited { get; init; }
     }
 }
 

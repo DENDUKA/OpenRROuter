@@ -155,6 +155,12 @@ public sealed class BillingApplicationService(
 
     public MoneyAmount GetBalance(string userId) => repository.GetBalance(RequireValue(userId, nameof(userId)));
 
+    public IReadOnlyCollection<LedgerEntry> ListTopUps(string userId)
+    {
+        var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);
+        return repository.ListTopUps(RequireValue(userId, nameof(userId)), pageSize).Items;
+    }
+
     public IReadOnlyCollection<BillingAnomaly> ListAnomalies()
     {
         var pageSize = Math.Min(paginationOptions.Value.DefaultPageSize, paginationOptions.Value.MaxPageSize);

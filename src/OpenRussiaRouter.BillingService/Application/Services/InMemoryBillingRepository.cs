@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
@@ -16,6 +17,23 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     public LedgerEntry AddLedgerEntry(LedgerEntry entry)
     {
         return _ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry);
+    }
+
+    public (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit)
+    {
+        var items = _ledgerByIdempotencyKey.Values
+            .Where(e => e.UserId == userId && e.Type == LedgerEntryType.VirtualTopUp)
+            .OrderByDescending(e => e.CreatedAtUtc)
+            .Take(limit + 1)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore)
+        {
+            items = items.Take(limit).ToArray();
+        }
+
+        return (items, hasMore);
     }
 
     public MoneyAmount GetBalance(string userId)

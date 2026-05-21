@@ -176,6 +176,30 @@ public sealed class BillingApplicationServiceTests
         Assert.Single(service.ListAnomalies());
     }
 
+    [Fact]
+    public void ListTopUps_AfterTopUps_ReturnsTopUpsForUser()
+    {
+        var service = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "first", "key-1", now);
+        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(200), "second", "key-2", now.AddSeconds(1));
+
+        var topUps = service.ListTopUps("user-1");
+
+        Assert.Equal(2, topUps.Count);
+    }
+
+    [Fact]
+    public void ListTopUps_OtherUserTopUps_NotReturned()
+    {
+        var service = CreateService();
+        service.CreateVirtualTopUp("admin-1", "user-2", MoneyAmount.Rub(100), "other", "key-3", DateTimeOffset.UtcNow);
+
+        var topUps = service.ListTopUps("user-1");
+
+        Assert.Empty(topUps);
+    }
+
     private static BillingApplicationService CreateService()
     {
         return new BillingApplicationService(

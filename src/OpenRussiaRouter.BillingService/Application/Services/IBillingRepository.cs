@@ -8,6 +8,8 @@ public interface IBillingRepository
 
     LedgerEntry AddLedgerEntry(LedgerEntry entry);
 
+    (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit);
+
     MoneyAmount GetBalance(string userId);
 
     void UpsertModel(ModelPrice model);

@@ -9,6 +9,25 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 public sealed class BillingRepository(IBillingDbConnectionFactory connectionFactory) : IBillingRepository
 {
 
+    public (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var items = connection.Query<LedgerEntryEntity>(
+                LedgerEntrySelectSql +
+                "where user_id = @UserId and type = 'VirtualTopUp'\norder by created_at_utc desc\nlimit @Limit;",
+                new { UserId = userId, Limit = limit + 1 })
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore)
+        {
+            items = items.Take(limit).ToArray();
+        }
+
+        return (items, hasMore);
+    }
+
     public LedgerEntry AddLedgerEntry(LedgerEntry entry)
     {
         ArgumentNullException.ThrowIfNull(entry);
@@ -387,6 +406,20 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
         return (items, hasMore);
     }
+
+    private const string LedgerEntrySelectSql = """
+        select
+            id as Id,
+            user_id as UserId,
+            type as Type,
+            amount as Amount,
+            currency as Currency,
+            idempotency_key as IdempotencyKey,
+            reason as Reason,
+            created_at_utc as CreatedAtUtc
+        from billing.ledger_entries
+
+        """;
 
     private const string ModelPriceSelectSql = """
         select

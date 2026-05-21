@@ -44,6 +44,26 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
+                        <label asp-for="Form.RouterModelId" class="form-label">Router Model</label>
+                        @if (Model.AvailableNodeModels.Count > 0)
+                        {
+                            <select asp-for="Form.RouterModelId" class="form-control">
+                                <option value="">— select from node —</option>
+                                @foreach (var modelId in Model.AvailableNodeModels)
+                                {
+                                    <option value="@modelId">@modelId</option>
+                                }
+                            </select>
+                        }
+                        else
+                        {
+                            <input asp-for="Form.RouterModelId" class="form-control" placeholder="e.g. minimax/MiniMax-M2.7" />
+                            <small class="text-muted">Nodes unavailable — enter model ID manually</small>
+                        }
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
                         <label asp-for="Form.InputPrice" class="form-label">Input Price (RUB/1M)</label>
                         <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.01" />
                         <span asp-validation-for="Form.InputPrice" class="validation-message"></span>

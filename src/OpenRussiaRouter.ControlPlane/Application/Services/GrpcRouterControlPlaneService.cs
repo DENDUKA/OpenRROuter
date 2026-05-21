@@ -236,6 +236,40 @@ public sealed class GrpcRouterControlPlaneService(
         return new PushUserIntegrationKeyResponse { PushedCount = pushedCount };
     }
 
+    public override async Task<ListAvailableNodeModelsResponse> ListAvailableNodeModels(
+        ListAvailableNodeModelsRequest request,
+        ServerCallContext context)
+    {
+        var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+        var nodes = controlPlane.ListNodesForHealthChecks().Where(n => n.Enabled);
+
+        var tasks = nodes.Select(async node =>
+        {
+            try
+            {
+                var result = await providerClient.ListModelsAsync(node, cancellationToken).ConfigureAwait(false);
+                return result.Data.Select(m => m.Id).ToList();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Failed to list models from node {NodeId}", node.Id);
+                return (IEnumerable<string>)[];
+            }
+        });
+
+        var allIds = await Task.WhenAll(tasks).ConfigureAwait(false);
+        var modelIds = allIds
+            .SelectMany(ids => ids)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet()
+            .Order()
+            .ToList();
+
+        var response = new ListAvailableNodeModelsResponse();
+        response.ModelIds.AddRange(modelIds);
+        return response;
+    }
+
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node)
     {
         return new Contracts.Grpc.ControlPlane.V1.RouterNodeSummary

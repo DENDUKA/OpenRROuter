@@ -14,6 +14,7 @@ service RouterControlPlane {
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
+  rpc ListAvailableNodeModels (ListAvailableNodeModelsRequest) returns (ListAvailableNodeModelsResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -141,4 +142,10 @@ message PushUserIntegrationKeyRequest {
 
 message PushUserIntegrationKeyResponse {
   int32 pushed_count = 1;
+}
+
+message ListAvailableNodeModelsRequest {}
+
+message ListAvailableNodeModelsResponse {
+  repeated string model_ids = 1;
 }

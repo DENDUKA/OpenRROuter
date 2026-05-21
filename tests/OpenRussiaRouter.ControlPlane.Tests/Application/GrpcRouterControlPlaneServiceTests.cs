@@ -205,6 +205,11 @@ public sealed class GrpcRouterControlPlaneServiceTests
             bool isActive,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<NodeModelsResponse> ListModelsAsync(
+            RouterNode node,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new NodeModelsResponse());
     }
 
     private sealed class StubProviderClient : IRouterNodeProviderClient
@@ -284,5 +289,13 @@ public sealed class GrpcRouterControlPlaneServiceTests
             bool isActive,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<NodeModelsResponse> ListModelsAsync(
+            RouterNode node,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new NodeModelsResponse
+            {
+                Data = [new NodeModelInfo { Id = "minimax/MiniMax-M2.7" }]
+            });
     }
 }

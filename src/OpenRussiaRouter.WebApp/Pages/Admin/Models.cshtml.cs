@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -9,8 +10,10 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class ModelsModel : PageModelBase
 {
     private readonly BillingClient _billingClient;
+    private readonly ControlPlaneClient _controlPlaneClient;
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
+    public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
     public string? Action => Request.Query["action"];
@@ -18,7 +21,11 @@ public class ModelsModel : PageModelBase
 
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
-    public ModelsModel(BillingClient billingClient) => _billingClient = billingClient;
+    public ModelsModel(BillingClient billingClient, ControlPlaneClient controlPlaneClient)
+    {
+        _billingClient = billingClient;
+        _controlPlaneClient = controlPlaneClient;
+    }
 
     public async Task OnGetAsync()
     {
@@ -29,18 +36,26 @@ public class ModelsModel : PageModelBase
                 var all = await _billingClient.ListModelsAsync();
                 var m = all.FirstOrDefault(x => x.Id == EditModelId);
                 if (m != null)
-                    Form = new ModelFormInput { Id = m.Id, DisplayName = m.DisplayName, InputPrice = m.InputPrice, OutputPrice = m.OutputPrice };
+                    Form = new ModelFormInput
+                    {
+                        Id = m.Id,
+                        DisplayName = m.DisplayName,
+                        RouterModelId = m.UpstreamModelId,
+                        InputPrice = m.InputPrice,
+                        OutputPrice = m.OutputPrice
+                    };
             }
             catch { /* ignore */ }
         }
-        await LoadModels();
+
+        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
     }
 
     public async Task<IActionResult> OnPostSaveAsync(bool isNew)
     {
         if (!ModelState.IsValid)
         {
-            await LoadModels();
+            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
             return Page();
         }
         try
@@ -50,10 +65,14 @@ public class ModelsModel : PageModelBase
                 existing = await _billingClient.ListModelsAsync();
 
             var orig = isNew ? null : existing.FirstOrDefault(x => x.Id == Form.Id);
+            var routerModelId = string.IsNullOrWhiteSpace(Form.RouterModelId)
+                ? Form.Id.Trim()
+                : Form.RouterModelId.Trim();
+
             var m = new ModelInfo(
                 Form.Id.Trim(),
                 Form.DisplayName.Trim(),
-                orig?.UpstreamModelId ?? Form.Id.Trim(),
+                routerModelId,
                 orig?.PriceVersion ?? "v1",
                 Form.InputPrice,
                 Form.OutputPrice,
@@ -67,7 +86,7 @@ public class ModelsModel : PageModelBase
         catch (Exception ex)
         {
             ErrorMessage = $"Failed to save model: {ex.Message}";
-            await LoadModels();
+            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
             return Page();
         }
     }
@@ -78,6 +97,11 @@ public class ModelsModel : PageModelBase
         catch { ErrorMessage ??= "Failed to load models."; }
     }
 
+    private async Task LoadAvailableNodeModels()
+    {
+        AvailableNodeModels = await _controlPlaneClient.ListAvailableNodeModelsAsync();
+    }
+
     public class ModelFormInput
     {
         [Required]
@@ -85,6 +109,8 @@ public class ModelsModel : PageModelBase
         public string Id { get; set; } = "";
 
         [Required] public string DisplayName { get; set; } = "";
+
+        public string RouterModelId { get; set; } = "";
 
         [Range(0, 1000000)] public decimal InputPrice { get; set; }
 

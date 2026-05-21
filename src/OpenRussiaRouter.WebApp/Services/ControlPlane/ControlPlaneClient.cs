@@ -95,6 +95,21 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
         }, cancellationToken: cancellationToken);
     }
 
+    public async Task<IReadOnlyList<string>> ListAvailableNodeModelsAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await client.ListAvailableNodeModelsAsync(
+                new ListAvailableNodeModelsRequest(),
+                cancellationToken: cancellationToken);
+            return response.ModelIds.ToList();
+        }
+        catch
+        {
+            return [];
+        }
+    }
+
     private static RouterNodeInfo MapNode(RouterNodeSummary n)
     {
         return new RouterNodeInfo(

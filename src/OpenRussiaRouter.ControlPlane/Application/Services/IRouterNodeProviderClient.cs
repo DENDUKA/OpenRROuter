@@ -37,4 +37,8 @@ public interface IRouterNodeProviderClient
         string keyId,
         bool isActive,
         CancellationToken cancellationToken);
+
+    Task<NodeModelsResponse> ListModelsAsync(
+        RouterNode node,
+        CancellationToken cancellationToken);
 }

@@ -80,6 +80,16 @@ public sealed record RouterIntegrationKeyCreateResponse
     public string Id { get; init; } = string.Empty;
 }
 
+public sealed record NodeModelsResponse
+{
+    public IReadOnlyList<NodeModelInfo> Data { get; init; } = [];
+}
+
+public sealed record NodeModelInfo
+{
+    public string Id { get; init; } = string.Empty;
+}
+
 public sealed class RouterNodeProviderException : Exception
 {
     public RouterNodeProviderException(

@@ -3,20 +3,12 @@ kind: Ingress
 metadata:
   name: api-gateway-localhost-ingress
   namespace: orr-dev
+  annotations:
+    nginx.ingress.kubernetes.io/server-alias: "127.0.0.1"
 spec:
   ingressClassName: nginx
   rules:
     - host: localhost
-      http:
-        paths:
-          - path: /v1/
-            pathType: Prefix
-            backend:
-              service:
-                name: api-gateway
-                port:
-                  number: 80
-    - host: "127.0.0.1"
       http:
         paths:
           - path: /v1/

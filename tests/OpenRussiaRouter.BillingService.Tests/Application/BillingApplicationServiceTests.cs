@@ -159,8 +159,9 @@ public sealed class BillingApplicationServiceTests
 
         var result = service.RecordUsage(CreateUsageEvent("req-1", new TokenUsage(1, 1, 0)), DateTimeOffset.UtcNow);
 
-        Assert.False(result.Accepted);
-        Assert.Equal("model_price_missing", result.ErrorCode);
+        Assert.True(result.Accepted);
+        Assert.Null(result.ErrorCode);
+        Assert.Equal(MoneyAmount.Rub(0), result.Cost);
         Assert.Single(service.ListAnomalies());
     }
 

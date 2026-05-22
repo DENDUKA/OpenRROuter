@@ -177,6 +177,7 @@ message ActivityByTokenRecord {
   string status = 7;
   string created_at_utc = 8;
   string completed_at_utc = 9;
+  string cost_rub = 10;
 }
 
 message ListActivityByTokenResponse {

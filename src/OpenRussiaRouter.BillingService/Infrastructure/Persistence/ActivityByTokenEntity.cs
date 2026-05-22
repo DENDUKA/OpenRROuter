@@ -10,6 +10,7 @@ public sealed class ActivityByTokenEntity
     public long InputTokens { get; set; }
     public long OutputTokens { get; set; }
     public long CacheTokens { get; set; }
+    public decimal? CostAmount { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset CompletedAtUtc { get; set; }

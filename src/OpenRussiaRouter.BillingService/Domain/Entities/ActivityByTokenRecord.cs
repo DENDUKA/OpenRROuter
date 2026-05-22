@@ -1,3 +1,4 @@
+using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.BillingService.Domain.Entities;
@@ -9,6 +10,7 @@ public sealed record ActivityByTokenRecord(
     string ModelId,
     string RouterNodeId,
     TokenUsage Usage,
+    MoneyAmount Cost,
     string Status,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset CompletedAtUtc);

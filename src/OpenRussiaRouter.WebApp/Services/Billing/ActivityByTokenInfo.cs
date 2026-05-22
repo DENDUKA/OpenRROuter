@@ -9,6 +9,7 @@ public sealed record ActivityByTokenInfo(
     long InputTokens,
     long OutputTokens,
     long CacheTokens,
+    decimal CostRub,
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset CompletedAt);

@@ -24,7 +24,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Date</th><th>Token</th><th>Model</th><th>Input</th><th>Output</th><th>Cache</th><th>Status</th>
+                        <th>Date</th><th>Token</th><th>Model</th><th>Input</th><th>Output</th><th>Cache</th><th>Cost</th><th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,6 +37,7 @@
                             <td class="num">@r.InputTokens.ToString("N0")</td>
                             <td class="num">@r.OutputTokens.ToString("N0")</td>
                             <td class="num">@r.CacheTokens.ToString("N0")</td>
+                            <td class="num">@r.CostRub.ToString("N4") ₽</td>
                             <td>
                                 <span class="badge @(r.Status == "completed" ? "badge-success" : "badge-warning")">@r.Status</span>
                             </td>

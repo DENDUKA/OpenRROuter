@@ -126,6 +126,7 @@ public static class BillingPersistenceMapper
             entity.ModelId,
             entity.RouterNodeId,
             new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
+            new MoneyAmount(entity.CostAmount ?? 0m, Currency.Rub),
             entity.Status,
             entity.CreatedAtUtc,
             entity.CompletedAtUtc);

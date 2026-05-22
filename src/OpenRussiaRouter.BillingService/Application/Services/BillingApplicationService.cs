@@ -112,6 +112,7 @@ public sealed class BillingApplicationService(
             usageEvent.ModelId,
             usageEvent.RouterNodeId,
             usageEvent.Usage,
+            MoneyAmount.Rub(0),
             usageEvent.Status,
             nowUtc,
             usageEvent.CompletedAtUtc));
@@ -125,7 +126,8 @@ public sealed class BillingApplicationService(
         if (model is null)
         {
             AddAnomaly(usageEvent.RequestId, "model_price_missing", "Enabled model price was not found.", nowUtc);
-            return new RecordUsageResult(false, null, MoneyAmount.Rub(0), "model_price_missing");
+            logger?.LogError("Model price not found for model {ModelId}, request {RequestId}. Usage recorded with zero cost.", usageEvent.ModelId, usageEvent.RequestId);
+            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
         }
 
         var cost = usageCostCalculator.Calculate(usageEvent.Usage, model.Price);

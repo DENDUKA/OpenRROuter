@@ -93,6 +93,7 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             r.Usage?.InputTokens ?? 0,
             r.Usage?.OutputTokens ?? 0,
             r.Usage?.CacheTokens ?? 0,
+            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, System.Globalization.CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture),
             DateTimeOffset.Parse(r.CompletedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();

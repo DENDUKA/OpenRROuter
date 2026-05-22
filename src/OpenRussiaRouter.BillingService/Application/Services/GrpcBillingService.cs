@@ -242,7 +242,8 @@ return Task.FromResult(response);
             },
             Status = activity.Status,
             CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
         }));
 
         return Task.FromResult(response);

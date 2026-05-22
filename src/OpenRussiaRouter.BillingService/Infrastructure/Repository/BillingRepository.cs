@@ -291,12 +291,14 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             select request_id as RequestId, api_key_id as ApiKeyId, api_key_prefix as ApiKeyPrefix,
                    model_id as ModelId, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   null::numeric as CostAmount,
                    status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
             from ins
             union all
             select request_id as RequestId, api_key_id as ApiKeyId, api_key_prefix as ApiKeyPrefix,
                    model_id as ModelId, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
+                   null::numeric as CostAmount,
                    status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
             from billing.activity_by_token
             where request_id = @RequestId
@@ -336,14 +338,14 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var afterCondition = "";
         if (afterCreatedAtUtc.HasValue)
         {
-            afterCondition = "  and created_at_utc > @AfterCreatedAtUtc\n";
+            afterCondition = "  and a.created_at_utc > @AfterCreatedAtUtc\n";
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
         var items = connection.Query<ActivityByTokenEntity>(
                 ActivityByTokenSelectSql +
-                "where api_key_id = any(@ApiKeyIds)\n" + afterCondition +
-                "order by created_at_utc desc\nlimit @Limit;",
+                "where a.api_key_id = any(@ApiKeyIds)\n" + afterCondition +
+                "order by a.created_at_utc desc\nlimit @Limit;",
                 parameters)
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
@@ -461,18 +463,20 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
     private const string ActivityByTokenSelectSql = """
         select
-            request_id as RequestId,
-            api_key_id as ApiKeyId,
-            api_key_prefix as ApiKeyPrefix,
-            model_id as ModelId,
-            router_node_id as RouterNodeId,
-            input_tokens as InputTokens,
-            output_tokens as OutputTokens,
-            cache_tokens as CacheTokens,
-            status as Status,
-            created_at_utc as CreatedAtUtc,
-            completed_at_utc as CompletedAtUtc
-        from billing.activity_by_token
+            a.request_id as RequestId,
+            a.api_key_id as ApiKeyId,
+            a.api_key_prefix as ApiKeyPrefix,
+            a.model_id as ModelId,
+            a.router_node_id as RouterNodeId,
+            a.input_tokens as InputTokens,
+            a.output_tokens as OutputTokens,
+            a.cache_tokens as CacheTokens,
+            coalesce(u.cost_amount, 0) as CostAmount,
+            a.status as Status,
+            a.created_at_utc as CreatedAtUtc,
+            a.completed_at_utc as CompletedAtUtc
+        from billing.activity_by_token a
+        left join billing.usage_records u on u.request_id = a.request_id
 
         """;
 }

@@ -19,6 +19,9 @@ public class ModelsModel : PageModelBase
     public string? Action => Request.Query["action"];
     public string? EditModelId => Request.Query["modelId"];
 
+    public bool ShowForm { get; set; }
+    public bool IsAdd { get; set; }
+
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
     public ModelsModel(BillingClient billingClient, ControlPlaneClient controlPlaneClient)
@@ -29,8 +32,18 @@ public class ModelsModel : PageModelBase
 
     public async Task OnGetAsync()
     {
-        if (Action == "edit" && EditModelId != null)
+        if (TempData["SuccessMessage"] is string success)
+            SuccessMessage = success;
+
+        if (Action == "add")
         {
+            ShowForm = true;
+            IsAdd = true;
+        }
+        else if (Action == "edit" && EditModelId != null)
+        {
+            ShowForm = true;
+            IsAdd = false;
             try
             {
                 var all = await _billingClient.ListModelsAsync();
@@ -42,7 +55,9 @@ public class ModelsModel : PageModelBase
                         DisplayName = m.DisplayName,
                         RouterModelId = m.UpstreamModelId,
                         InputPrice = m.InputPrice,
-                        OutputPrice = m.OutputPrice
+                        OutputPrice = m.OutputPrice,
+                        CachePrice = m.CachePrice,
+                        Enabled = m.Enabled
                     };
             }
             catch { /* ignore */ }
@@ -53,6 +68,9 @@ public class ModelsModel : PageModelBase
 
     public async Task<IActionResult> OnPostSaveAsync(bool isNew)
     {
+        ShowForm = true;
+        IsAdd = isNew;
+
         if (!ModelState.IsValid)
         {
             await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
@@ -60,11 +78,16 @@ public class ModelsModel : PageModelBase
         }
         try
         {
-            IReadOnlyList<ModelInfo> existing = [];
-            if (!isNew)
-                existing = await _billingClient.ListModelsAsync();
+            IReadOnlyList<ModelInfo> existing = await _billingClient.ListModelsAsync();
+            var orig = existing.FirstOrDefault(x => x.Id == Form.Id);
 
-            var orig = isNew ? null : existing.FirstOrDefault(x => x.Id == Form.Id);
+            if (isNew && orig != null)
+            {
+                ModelState.AddModelError("Form.Id", $"Model '{Form.Id}' already exists.");
+                await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+                return Page();
+            }
+
             var routerModelId = string.IsNullOrWhiteSpace(Form.RouterModelId)
                 ? Form.Id.Trim()
                 : Form.RouterModelId.Trim();
@@ -76,8 +99,8 @@ public class ModelsModel : PageModelBase
                 orig?.PriceVersion ?? "v1",
                 Form.InputPrice,
                 Form.OutputPrice,
-                orig?.CachePrice ?? 0m,
-                orig?.Enabled ?? true);
+                Form.CachePrice,
+                Form.Enabled);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -86,6 +109,33 @@ public class ModelsModel : PageModelBase
         catch (Exception ex)
         {
             ErrorMessage = $"Failed to save model: {ex.Message}";
+            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+            return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostToggleEnabledAsync(string modelId)
+    {
+        if (string.IsNullOrWhiteSpace(modelId))
+            return RedirectToPage();
+        try
+        {
+            var existing = await _billingClient.ListModelsAsync();
+            var m = existing.FirstOrDefault(x => x.Id == modelId);
+            if (m == null)
+            {
+                TempData["SuccessMessage"] = null;
+                ErrorMessage = $"Model '{modelId}' not found.";
+                await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+                return Page();
+            }
+            await _billingClient.UpsertModelAsync(m with { Enabled = !m.Enabled });
+            TempData["SuccessMessage"] = m.Enabled ? $"Model '{modelId}' disabled." : $"Model '{modelId}' enabled.";
+            return RedirectToPage();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Failed to toggle model: {ex.Message}";
             await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
             return Page();
         }
@@ -115,5 +165,9 @@ public class ModelsModel : PageModelBase
         [Range(0, 1000000)] public decimal InputPrice { get; set; }
 
         [Range(0, 1000000)] public decimal OutputPrice { get; set; }
+
+        [Range(0, 1000000)] public decimal CachePrice { get; set; }
+
+        public bool Enabled { get; set; } = true;
     }
 }

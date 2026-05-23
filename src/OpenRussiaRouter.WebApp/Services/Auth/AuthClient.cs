@@ -15,6 +15,16 @@ public sealed class AuthClient(AuthGrpc.AuthServiceClient client)
         return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
     }
 
+    public async Task<LoginResponse?> LoginOrRegisterWithGoogleAsync(string googleSub, string email, CancellationToken cancellationToken = default)
+    {
+        var response = await client.LoginOrRegisterWithGoogleAsync(
+            new LoginWithGoogleRequest { GoogleSub = googleSub, Email = email },
+            cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+            return null;
+        return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
+    }
+
     public async Task<InviteCompletionResponse> CompleteInviteAsync(string rawToken, string password, CancellationToken cancellationToken = default)
     {
         var response = await client.CompleteInviteAsync(new CompleteInviteRequest { RawToken = rawToken, Password = password }, cancellationToken: cancellationToken);

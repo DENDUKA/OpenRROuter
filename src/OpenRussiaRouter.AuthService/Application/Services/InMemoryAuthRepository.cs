@@ -8,6 +8,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     private readonly Dictionary<string, UserAccount> _users = [];
     private readonly List<Invite> _invites = [];
     private readonly List<ApiKey> _apiKeys = [];
+    private readonly List<ExternalLogin> _externalLogins = [];
 
     public Task AddInviteAsync(Invite invite, CancellationToken ct = default)
     {
@@ -140,6 +141,30 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         {
             var key = _apiKeys.SingleOrDefault(k => k.Id == apiKeyId);
             if (key is { IsActive: true }) key.MarkUsed(lastUsedAtUtc);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_externalLogins.SingleOrDefault(l => l.Provider == provider && l.ProviderSub == providerSub));
+        }
+    }
+
+    public Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
+    {
+        lock (_gate) { _externalLogins.Add(login); }
+        return Task.CompletedTask;
+    }
+
+    public Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            _users[user.Id] = user;
+            _externalLogins.Add(login);
         }
         return Task.CompletedTask;
     }

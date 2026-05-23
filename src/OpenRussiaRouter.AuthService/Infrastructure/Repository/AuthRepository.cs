@@ -313,4 +313,13 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             revoked_at_utc as RevokedAtUtc
         from auth.api_keys
         """;
+
+    public Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
+        => throw new NotImplementedException();
+
+    public Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
+        => throw new NotImplementedException();
+
+    public Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
+        => throw new NotImplementedException();
 }

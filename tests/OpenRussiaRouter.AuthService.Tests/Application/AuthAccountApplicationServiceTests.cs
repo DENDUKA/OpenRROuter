@@ -174,5 +174,17 @@ public sealed class AuthAccountApplicationServiceTests
             ApiKeys.SingleOrDefault(k => k.Id == apiKeyId)?.MarkUsed(lastUsedAtUtc);
             return Task.CompletedTask;
         }
+
+        public Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
+            => Task.FromResult<ExternalLogin?>(null);
+
+        public Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
+        {
+            Users[user.Id] = user;
+            return Task.CompletedTask;
+        }
     }
 }

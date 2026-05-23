@@ -33,4 +33,10 @@ public interface IAuthRepository
     Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default);
 
     Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default);
+
+    Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default);
+
+    Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default);
+
+    Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default);
 }

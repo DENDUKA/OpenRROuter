@@ -123,7 +123,10 @@
 <div class="adm-card">
     <div class="adm-card-header adm-card-header--split">
         <span>Public Models</span>
-        <a class="btn btn-sm btn-primary" href="?action=add">Add Model</a>
+        <div class="adm-btn-row">
+            <a class="btn btn-sm btn-secondary" href="/admin/models/sync">Sync from 9Router</a>
+            <a class="btn btn-sm btn-primary" href="?action=add">Add Model</a>
+        </div>
     </div>
     <div class="adm-card-body">
         @if (Model.Models.Count == 0)

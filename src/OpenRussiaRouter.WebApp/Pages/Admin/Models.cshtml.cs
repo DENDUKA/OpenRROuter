@@ -16,6 +16,7 @@ public class ModelsModel : PageModelBase
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
+    public IReadOnlyList<string> WarningMessages { get; set; } = [];
     public string? Action => Request.Query["action"];
     public string? EditModelId => Request.Query["modelId"];
 
@@ -34,6 +35,8 @@ public class ModelsModel : PageModelBase
     {
         if (TempData["SuccessMessage"] is string success)
             SuccessMessage = success;
+        if (TempData["WarningMessages"] is string warnings)
+            WarningMessages = warnings.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
         if (Action == "add")
         {

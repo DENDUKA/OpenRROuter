@@ -15,6 +15,17 @@
 {
     <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
 }
+@if (Model.WarningMessages.Count > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <ul style="margin:0;padding-left:1.25rem">
+            @foreach (var warning in Model.WarningMessages)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </div>
+}
 
 @if (Model.ShowForm)
 {

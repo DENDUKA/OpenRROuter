@@ -1,0 +1,233 @@
+@page "/admin/models/sync"
+@model Admin.ModelsSyncModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Sync Models - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Sync Models</h2>
+    <p>Compare node catalogs with billing models and import new entries.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.WarningMessages.Count > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        <ul style="margin:0;padding-left:1.25rem">
+            @foreach (var warning in Model.WarningMessages)
+            {
+                <li>@warning</li>
+            }
+        </ul>
+    </div>
+}
+@if (Model.UnreachableNodeIds.Count > 0)
+{
+    <div class="alert alert-warning" role="alert">
+        Unreachable nodes: @string.Join(", ", Model.UnreachableNodeIds)
+    </div>
+}
+@if (Model.ShowAddNodeMessage)
+{
+    <div class="alert alert-info" role="status">Add a node first.</div>
+}
+
+@if (Model.CatalogUnavailable && Model.BillingOnlyModels.Count > 0)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Billing Catalog</div>
+        <div class="adm-card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Billing ID</th>
+                        <th>Display Name</th>
+                        <th>Upstream</th>
+                        <th>Status</th>
+                        <th>Input / Output / Cache per 1M</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var m in Model.BillingOnlyModels)
+                    {
+                        <tr>
+                            <td><code>@m.Id</code></td>
+                            <td>@m.DisplayName</td>
+                            <td><code>@m.UpstreamModelId</code></td>
+                            <td>
+                                <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
+                                    @(m.Enabled ? "Enabled" : "Disabled")
+                                </span>
+                            </td>
+                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") RUB</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (!Model.CatalogUnavailable && !Model.BillingUnavailable)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">New On Nodes</div>
+        <div class="adm-card-body">
+            @if (Model.NewOnNodes.Count == 0)
+            {
+                <p class="text-muted">No new node models to import.</p>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="Import">
+                    <div asp-validation-summary="ModelOnly" class="validation-message"></div>
+                    <div class="adm-form-row">
+                        <div class="form-group">
+                            <label asp-for="Form.InputPrice" class="form-label">Default Input Price (RUB/1M)</label>
+                            <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.01" data-testid="models-sync-input-price" />
+                            <span asp-validation-for="Form.InputPrice" class="validation-message"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Form.OutputPrice" class="form-label">Default Output Price (RUB/1M)</label>
+                            <input asp-for="Form.OutputPrice" class="form-control" type="number" step="0.01" data-testid="models-sync-output-price" />
+                            <span asp-validation-for="Form.OutputPrice" class="validation-message"></span>
+                        </div>
+                        <div class="form-group">
+                            <label asp-for="Form.CachePrice" class="form-label">Default Cache Price (RUB/1M)</label>
+                            <input asp-for="Form.CachePrice" class="form-control" type="number" step="0.01" data-testid="models-sync-cache-price" />
+                            <span asp-validation-for="Form.CachePrice" class="validation-message"></span>
+                        </div>
+                    </div>
+                    <div class="adm-form-row">
+                        <div class="form-group">
+                            <label asp-for="Form.Prefix" class="form-label">Public ID Prefix</label>
+                            <input asp-for="Form.Prefix" class="form-control" placeholder="myorg/" data-testid="models-sync-prefix" />
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input asp-for="Form.EnableOnImport" type="checkbox" data-testid="models-sync-enable" />
+                                Enable on import
+                            </label>
+                        </div>
+                    </div>
+                    <table class="table" data-testid="models-sync-new-table">
+                        <thead>
+                            <tr>
+                                <th>Import</th>
+                                <th>Suggested Billing ID</th>
+                                <th>Display Name</th>
+                                <th>Upstream</th>
+                                <th>Type</th>
+                                <th>Providers</th>
+                                <th>Nodes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in Model.NewOnNodes)
+                            {
+                                <tr data-testid="models-sync-row" data-upstream-id="@row.UpstreamId">
+                                    <td>
+                                        <input type="checkbox"
+                                               name="selectedUpstreamIds"
+                                               value="@row.UpstreamId"
+                                               checked="@Model.SelectedUpstreamIds.Contains(row.UpstreamId)"
+                                               data-testid="models-sync-checkbox" />
+                                    </td>
+                                    <td><code>@(Model.Form.Prefix + row.PublicId)</code></td>
+                                    <td>@row.DisplayName</td>
+                                    <td><code>@row.UpstreamId</code></td>
+                                    <td>@row.ModelType</td>
+                                    <td>@string.Join(", ", row.SourceProviders)</td>
+                                    <td>@string.Join(", ", row.NodeIds)</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="adm-btn-row">
+                        <button type="submit" class="btn btn-primary" data-testid="models-sync-submit">Import Selected</button>
+                        <a class="btn btn-secondary" href="/admin/models">Back to Models</a>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+}
+
+@if (!Model.CatalogUnavailable && Model.Configured.Count > 0)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Configured</div>
+        <div class="adm-card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Billing ID</th>
+                        <th>Billing Display Name</th>
+                        <th>Upstream</th>
+                        <th>Type</th>
+                        <th>Providers</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Configured)
+                    {
+                        <tr>
+                            <td><code>@row.BillingId</code></td>
+                            <td>@row.BillingDisplayName</td>
+                            <td><code>@row.UpstreamId</code></td>
+                            <td>@row.ModelType</td>
+                            <td>@string.Join(", ", row.SourceProviders)</td>
+                            <td>
+                                <span class="badge @(row.Enabled ? "badge-success" : "badge-secondary")">
+                                    @(row.Enabled ? "Enabled" : "Disabled")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@if (Model.MissingFromNodesSuppressed)
+{
+    <div class="alert alert-info" role="status">Missing-from-nodes rows are hidden while some nodes are unreachable.</div>
+}
+else if (!Model.CatalogUnavailable && Model.MissingFromNodes.Count > 0)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Missing From Nodes</div>
+        <div class="adm-card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Billing ID</th>
+                        <th>Display Name</th>
+                        <th>Upstream</th>
+                        <th>Status</th>
+                        <th>Input / Output / Cache per 1M</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.MissingFromNodes)
+                    {
+                        <tr>
+                            <td><code>@row.Id</code></td>
+                            <td>@row.DisplayName</td>
+                            <td><code>@row.UpstreamModelId</code></td>
+                            <td>
+                                <span class="badge @(row.Enabled ? "badge-success" : "badge-secondary")">
+                                    @(row.Enabled ? "Enabled" : "Disabled")
+                                </span>
+                            </td>
+                            <td>@row.InputPrice.ToString("N2") / @row.OutputPrice.ToString("N2") / @row.CachePrice.ToString("N2") RUB</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}

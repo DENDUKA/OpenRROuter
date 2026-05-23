@@ -144,9 +144,25 @@ else
                         <label class="form-label" for="f-key">API key</label>
                         <select id="f-key" name="key" class="form-select">
                             <option value="">All keys</option>
-                            @foreach (var k in Model.ApiKeys)
+                            @{ var activeKeys = Model.ApiKeys.Where(k => k.IsActive).ToList();
+                               var revokedKeys = Model.ApiKeys.Where(k => !k.IsActive).ToList(); }
+                            @if (activeKeys.Count > 0)
                             {
-                                <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
+                                <optgroup label="Active">
+                                    @foreach (var k in activeKeys)
+                                    {
+                                        <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
+                                    }
+                                </optgroup>
+                            }
+                            @if (revokedKeys.Count > 0)
+                            {
+                                <optgroup label="Revoked">
+                                    @foreach (var k in revokedKeys)
+                                    {
+                                        <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
+                                    }
+                                </optgroup>
                             }
                         </select>
                     </div>

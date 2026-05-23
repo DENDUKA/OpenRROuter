@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: webapp
+          env:
+            - name: Google__ClientId
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-google-secret
+                  key: client-id
+            - name: Google__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-google-secret
+                  key: client-secret

@@ -6,6 +6,9 @@ resources:
   - webapp-localhost-ingress.yaml
   - api-gateway-localhost-ingress.yaml
   - mock-llm-node.yaml
+
+patches:
+  - path: webapp-google-patch.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"

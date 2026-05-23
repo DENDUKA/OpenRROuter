@@ -3,7 +3,9 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 
-public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient client)
+public sealed class ControlPlaneClient(
+    ControlGrpc.RouterControlPlaneClient client,
+    ILogger<ControlPlaneClient> logger)
 {
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {
@@ -116,6 +118,35 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
         catch
         {
             return [];
+        }
+    }
+
+    public async Task<NodeModelCatalogResult> ListNodeModelCatalogAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var response = await client.ListNodeModelCatalogAsync(
+                new ListNodeModelCatalogRequest(),
+                cancellationToken: cancellationToken);
+
+            return new NodeModelCatalogResult(
+                Entries: response.Entries.Select(e => new NodeModelCatalogEntry(
+                    UpstreamId: e.UpstreamId,
+                    PublicId: e.PublicId,
+                    DisplayName: e.DisplayName,
+                    ModelType: e.ModelType,
+                    SourceProviders: e.SourceProviders.ToList(),
+                    NodeIds: e.NodeIds.ToList())).ToList(),
+                UnreachableNodeIds: response.UnreachableNodeIds.ToList(),
+                Error: null);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to load node model catalog");
+            return new NodeModelCatalogResult(
+                Entries: [],
+                UnreachableNodeIds: [],
+                Error: $"Failed to load node model catalog: {ex.Message}");
         }
     }
 

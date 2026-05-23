@@ -16,6 +16,7 @@ service RouterControlPlane {
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
   rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
   rpc ListAvailableNodeModels (ListAvailableNodeModelsRequest) returns (ListAvailableNodeModelsResponse);
+  rpc ListNodeModelCatalog (ListNodeModelCatalogRequest) returns (ListNodeModelCatalogResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -158,4 +159,20 @@ message ListAvailableNodeModelsRequest {}
 
 message ListAvailableNodeModelsResponse {
   repeated string model_ids = 1;
+}
+
+message ListNodeModelCatalogRequest {}
+
+message UpstreamModelEntry {
+  string upstream_id = 1;
+  string public_id = 2;
+  string display_name = 3;
+  string model_type = 4;
+  repeated string source_providers = 5;
+  repeated string node_ids = 6;
+}
+
+message ListNodeModelCatalogResponse {
+  repeated UpstreamModelEntry entries = 1;
+  repeated string unreachable_node_ids = 2;
 }

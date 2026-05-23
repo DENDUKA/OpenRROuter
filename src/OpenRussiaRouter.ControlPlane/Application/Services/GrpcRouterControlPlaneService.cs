@@ -1,3 +1,4 @@
+using System.Net;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
@@ -299,6 +300,205 @@ public sealed class GrpcRouterControlPlaneService(
         var response = new ListAvailableNodeModelsResponse();
         response.ModelIds.AddRange(modelIds);
         return response;
+    }
+
+    public override async Task<ListNodeModelCatalogResponse> ListNodeModelCatalog(
+        ListNodeModelCatalogRequest request,
+        ServerCallContext context)
+    {
+        var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+        var nodes = (await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false))
+            .Where(n => n.Enabled)
+            .ToList();
+
+        var response = new ListNodeModelCatalogResponse();
+        if (nodes.Count == 0)
+            return response;
+
+        var nodeResults = await Task.WhenAll(
+            nodes.Select(node => CollectNodeCatalogAsync(node, cancellationToken))
+        ).ConfigureAwait(false);
+
+        var accumulators = new Dictionary<string, CatalogAccumulator>(StringComparer.Ordinal);
+        foreach (var result in nodeResults)
+        {
+            if (result.Unreachable)
+                continue;
+
+            foreach (var observation in result.Observations)
+            {
+                if (!accumulators.TryGetValue(observation.UpstreamId, out var acc))
+                {
+                    acc = new CatalogAccumulator { UpstreamId = observation.UpstreamId };
+                    accumulators[observation.UpstreamId] = acc;
+                }
+
+                (acc.PublicId, acc.PublicIdRank) =
+                    ChooseField(acc.PublicId, acc.PublicIdRank, observation.PublicId, observation.Rank);
+                (acc.DisplayName, acc.DisplayNameRank) =
+                    ChooseField(acc.DisplayName, acc.DisplayNameRank, observation.DisplayName, observation.Rank);
+                (acc.ModelType, acc.ModelTypeRank) =
+                    ChooseField(acc.ModelType, acc.ModelTypeRank, observation.ModelType, observation.Rank);
+
+                foreach (var source in observation.SourceProviders)
+                {
+                    if (!string.IsNullOrWhiteSpace(source))
+                        acc.SourceProviders.Add(source);
+                }
+
+                acc.NodeIds.Add(result.NodeId);
+            }
+        }
+
+        foreach (var acc in accumulators.Values.OrderBy(a => a.UpstreamId, StringComparer.Ordinal))
+        {
+            var entry = new UpstreamModelEntry
+            {
+                UpstreamId = acc.UpstreamId,
+                PublicId = string.IsNullOrWhiteSpace(acc.PublicId) ? acc.UpstreamId : acc.PublicId,
+                DisplayName = acc.DisplayName,
+                ModelType = acc.ModelType
+            };
+            entry.SourceProviders.AddRange(acc.SourceProviders.OrderBy(s => s, StringComparer.Ordinal));
+            entry.NodeIds.AddRange(acc.NodeIds.OrderBy(s => s, StringComparer.Ordinal));
+            response.Entries.Add(entry);
+        }
+
+        foreach (var nodeId in nodeResults.Where(r => r.Unreachable).Select(r => r.NodeId).OrderBy(s => s, StringComparer.Ordinal))
+            response.UnreachableNodeIds.Add(nodeId);
+
+        return response;
+    }
+
+    private async Task<NodeCatalogResult> CollectNodeCatalogAsync(RouterNode node, CancellationToken cancellationToken)
+    {
+        RouterProviderListResponse providers;
+        try
+        {
+            providers = await providerClient.ListProvidersAsync(node, cancellationToken).ConfigureAwait(false);
+        }
+        catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return await CollectFallbackModelsAsync(node, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
+        {
+            logger.LogWarning(ex, "ListProviders failed for router node. NodeId: {NodeId}", node.Id);
+            return new NodeCatalogResult(node.Id, Unreachable: true, []);
+        }
+
+        var providerKeys = providers.Connections
+            .Where(c => c.IsActive && !string.IsNullOrWhiteSpace(c.Provider))
+            .Select(c => c.Provider)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var observations = new List<ModelObservation>();
+        foreach (var providerKey in providerKeys)
+        {
+            try
+            {
+                var providerModels = await providerClient.ListProviderModelsAsync(
+                    node, providerKey, source: null, includeCompatible: true, cancellationToken).ConfigureAwait(false);
+
+                foreach (var model in providerModels.Models)
+                {
+                    if (string.IsNullOrWhiteSpace(model.Id) || !model.Enabled)
+                        continue;
+
+                    var publicId = string.IsNullOrWhiteSpace(model.PublicId) ? string.Empty : model.PublicId;
+                    observations.Add(new ModelObservation
+                    {
+                        UpstreamId = model.Id,
+                        PublicId = publicId,
+                        DisplayName = model.Name ?? string.Empty,
+                        ModelType = model.Type ?? string.Empty,
+                        SourceProviders = model.Sources ?? [],
+                        Rank = 2
+                    });
+                }
+            }
+            catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+            {
+                continue;
+            }
+            catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
+            {
+                logger.LogWarning(ex, "ListProviderModels failed. NodeId: {NodeId}; Provider: {Provider}", node.Id, providerKey);
+                continue;
+            }
+        }
+
+        return new NodeCatalogResult(node.Id, Unreachable: false, observations);
+    }
+
+    private async Task<NodeCatalogResult> CollectFallbackModelsAsync(RouterNode node, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var models = await providerClient.ListModelsAsync(node, cancellationToken).ConfigureAwait(false);
+            var observations = models.Data
+                .Where(m => !string.IsNullOrWhiteSpace(m.Id))
+                .Select(m => new ModelObservation
+                {
+                    UpstreamId = m.Id,
+                    PublicId = m.Id,
+                    DisplayName = string.Empty,
+                    ModelType = string.Empty,
+                    SourceProviders = [],
+                    Rank = 1
+                })
+                .ToList();
+            return new NodeCatalogResult(node.Id, Unreachable: false, observations);
+        }
+        catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
+        {
+            logger.LogWarning(ex, "Fallback /v1/models failed for router node. NodeId: {NodeId}", node.Id);
+            return new NodeCatalogResult(node.Id, Unreachable: true, []);
+        }
+    }
+
+    private static bool IsTransientProviderError(Exception ex, CancellationToken cancellationToken) =>
+        ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
+        (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested);
+
+    private static (string Value, int Rank) ChooseField(string current, int currentRank, string incoming, int incomingRank)
+    {
+        if (string.IsNullOrWhiteSpace(incoming))
+            return (current, currentRank);
+
+        if (incomingRank > currentRank ||
+            (incomingRank == currentRank && string.IsNullOrWhiteSpace(current)))
+        {
+            return (incoming, incomingRank);
+        }
+
+        return (current, currentRank);
+    }
+
+    private sealed record NodeCatalogResult(string NodeId, bool Unreachable, IReadOnlyList<ModelObservation> Observations);
+
+    private sealed class ModelObservation
+    {
+        public string UpstreamId { get; init; } = string.Empty;
+        public string PublicId { get; init; } = string.Empty;
+        public string DisplayName { get; init; } = string.Empty;
+        public string ModelType { get; init; } = string.Empty;
+        public IReadOnlyList<string> SourceProviders { get; init; } = [];
+        public int Rank { get; init; }
+    }
+
+    private sealed class CatalogAccumulator
+    {
+        public string UpstreamId { get; init; } = string.Empty;
+        public string PublicId { get; set; } = string.Empty;
+        public int PublicIdRank { get; set; }
+        public string DisplayName { get; set; } = string.Empty;
+        public int DisplayNameRank { get; set; }
+        public string ModelType { get; set; } = string.Empty;
+        public int ModelTypeRank { get; set; }
+        public HashSet<string> SourceProviders { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public HashSet<string> NodeIds { get; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>

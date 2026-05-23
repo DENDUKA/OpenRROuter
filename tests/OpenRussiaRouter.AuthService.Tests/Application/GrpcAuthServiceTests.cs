@@ -12,11 +12,13 @@ public sealed class GrpcAuthServiceTests
     [Fact]
     public async Task ValidateApiKey_ValidKey_ReturnsGrpcResponse()
     {
+        var repo = new InMemoryAuthRepository();
         var service = new GrpcAuthService(
             new StubValidator(new ValidateApiKeyResult(true, "user-1", "key-1", "sk-or-abc123", null)),
-            new InMemoryAuthRepository(),
+            repo,
             CreateAccounts(),
             CreateLoginService(),
+            new GoogleAuthService(repo, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_test" }, context: null!);
@@ -31,11 +33,13 @@ public sealed class GrpcAuthServiceTests
     [Fact]
     public async Task ValidateApiKey_InvalidKey_ReturnsErrorCode()
     {
+        var repo2 = new InMemoryAuthRepository();
         var service = new GrpcAuthService(
             new StubValidator(new ValidateApiKeyResult(false, null, null, null, "invalid_api_key")),
-            new InMemoryAuthRepository(),
+            repo2,
             CreateAccounts(),
             CreateLoginService(),
+            new GoogleAuthService(repo2, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_bad" }, context: null!);
@@ -51,7 +55,8 @@ public sealed class GrpcAuthServiceTests
     public async Task InviteAndApiKeyMethods_PersistWorkflow_ReturnSuccessResponses()
     {
         var accounts = CreateAccounts();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), CreateInMemoryAuthRepository(), accounts, CreateLoginService(), NullLogger<GrpcAuthService>.Instance);
+        var sharedRepo = new InMemoryAuthRepository();
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), sharedRepo, accounts, CreateLoginService(), new GoogleAuthService(sharedRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
 
         var invite = await service.CreateInvite(new CreateInviteRequest
         {
@@ -93,7 +98,8 @@ public sealed class GrpcAuthServiceTests
     public async Task CreateInvite_InvalidRole_ReturnsValidationError()
     {
         var accounts = CreateAccounts();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), CreateInMemoryAuthRepository(), accounts, CreateLoginService(), NullLogger<GrpcAuthService>.Instance);
+        var invalidRoleRepo = new InMemoryAuthRepository();
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), invalidRoleRepo, accounts, CreateLoginService(), new GoogleAuthService(invalidRoleRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.CreateInvite(new CreateInviteRequest
         {
@@ -280,6 +286,7 @@ public sealed class GrpcAuthServiceTests
             repo,
             accounts,
             new LoginService(new Pbkdf2PasswordHasher(), secretGenerator),
+            new GoogleAuthService(repo, secretGenerator),
             NullLogger<GrpcAuthService>.Instance);
         return (service, repo);
     }

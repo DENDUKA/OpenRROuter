@@ -36,6 +36,7 @@ public static class AuthServiceExtensions
         services.AddSingleton<InviteRegistrationService>();
         services.AddSingleton<ApiKeyFactory>();
         services.AddSingleton<LoginService>();
+        services.AddSingleton<GoogleAuthService>();
         services.AddSingleton<AuthAccountApplicationService>();
 
         return services;

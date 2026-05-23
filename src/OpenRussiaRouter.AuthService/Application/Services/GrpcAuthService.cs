@@ -13,6 +13,7 @@ public sealed class GrpcAuthService(
     IAuthRepository repository,
     AuthAccountApplicationService accounts,
     LoginService loginService,
+    GoogleAuthService googleAuthService,
     ILogger<GrpcAuthService> logger) : AuthGrpc.AuthServiceBase
 {
     public override async Task<ValidateApiKeyResponse> ValidateApiKey(
@@ -37,6 +38,27 @@ public sealed class GrpcAuthService(
     {
         var user = await repository.GetUserByEmailAsync(request.Email, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         var result = loginService.Login(user, request.Password, DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+
+        if (!result.Succeeded)
+            return new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.AuthenticationRequired };
+
+        return new LoginResponse
+        {
+            Succeeded = true,
+            SessionToken = result.Session!.Token,
+            UserId = result.Session.UserId,
+            Role = result.Session.Role.ToString()
+        };
+    }
+
+    public override async Task<LoginResponse> LoginOrRegisterWithGoogle(
+        LoginWithGoogleRequest request,
+        ServerCallContext context)
+    {
+        var result = await googleAuthService.LoginOrRegisterWithGoogleAsync(
+            request.GoogleSub,
+            request.Email,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         if (!result.Succeeded)
             return new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.AuthenticationRequired };

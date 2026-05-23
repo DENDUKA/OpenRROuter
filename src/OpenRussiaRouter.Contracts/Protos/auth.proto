@@ -16,6 +16,7 @@ service AuthService {
   rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
   rpc ListActiveApiKeyHashes (ListActiveApiKeyHashesRequest) returns (ListActiveApiKeyHashesResponse);
   rpc GetFirstActiveApiKeyRaw (GetFirstActiveApiKeyRawRequest) returns (GetFirstActiveApiKeyRawResponse);
+  rpc LoginOrRegisterWithGoogle (LoginWithGoogleRequest) returns (LoginResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -159,4 +160,9 @@ message GetFirstActiveApiKeyRawRequest {
 
 message GetFirstActiveApiKeyRawResponse {
   string raw_key = 1;
+}
+
+message LoginWithGoogleRequest {
+  string google_sub = 1;
+  string email      = 2;
 }

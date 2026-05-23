@@ -29,6 +29,11 @@ public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher, ISecretGen
             return LoginResult.Failed(AuthErrorCodes.UserDisabled);
         }
 
+        if (user.PasswordHash is null)
+        {
+            return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
+        }
+
         if (!passwordHasher.VerifyPassword(password, user.PasswordHash))
         {
             return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);

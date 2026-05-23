@@ -12,7 +12,7 @@ public sealed class UserAccountEntity
 
     public UserStatus Status { get; set; }
 
-    public string PasswordHash { get; set; } = string.Empty;
+    public string? PasswordHash { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
 }

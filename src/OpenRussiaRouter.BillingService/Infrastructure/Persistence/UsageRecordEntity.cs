@@ -30,4 +30,8 @@ public sealed class UsageRecordEntity
     public string Status { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public string? ProviderName { get; set; }
+
+    public string? ProviderAccount { get; set; }
 }

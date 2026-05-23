@@ -217,4 +217,54 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         if (hasMore) items = items.Take(limit).ToArray();
         return Task.FromResult<(IReadOnlyCollection<BillingAnomaly>, bool)>((items, hasMore));
     }
+
+    public Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
+        int limit,
+        string? afterCursor = null,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        var costByRequest = _usageByRequestId.Values
+            .ToDictionary(u => u.RequestId, u => u.Cost, StringComparer.Ordinal);
+        var userByRequest = _usageByRequestId.Values
+            .ToDictionary(u => u.RequestId, u => u.UserId, StringComparer.Ordinal);
+
+        var query = _activityByRequestId.Values.AsEnumerable();
+
+        if (afterCursor is not null && DateTimeOffset.TryParse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind, out var cursor))
+            query = query.Where(a => a.CreatedAtUtc < cursor);
+        if (!string.IsNullOrEmpty(modelFilter))
+            query = query.Where(a => a.ModelId == modelFilter);
+        if (!string.IsNullOrEmpty(providerFilter))
+            query = query.Where(a => a.ProviderName == providerFilter);
+        if (fromUtc.HasValue)
+            query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
+        if (toUtc.HasValue)
+            query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
+
+        var items = query
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .Take(limit + 1)
+            .Select(a => new AdminRequestRecord(
+                a.RequestId,
+                userByRequest.GetValueOrDefault(a.RequestId, ""),
+                a.ApiKeyPrefix,
+                a.ModelId,
+                a.RouterNodeId,
+                a.ProviderName,
+                a.ProviderAccount,
+                a.Usage,
+                costByRequest.GetValueOrDefault(a.RequestId, MoneyAmount.Rub(0)),
+                a.Status,
+                a.CreatedAtUtc,
+                a.CompletedAtUtc))
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<AdminRequestRecord>, bool)>((items, hasMore));
+    }
 }

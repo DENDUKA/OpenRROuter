@@ -13,5 +13,6 @@ public sealed record UsageRecord(
     TokenUsage Usage,
     MoneyAmount Cost,
     string Status,
-    DateTimeOffset CreatedAtUtc);
-
+    DateTimeOffset CreatedAtUtc,
+    string? ProviderName = null,
+    string? ProviderAccount = null);

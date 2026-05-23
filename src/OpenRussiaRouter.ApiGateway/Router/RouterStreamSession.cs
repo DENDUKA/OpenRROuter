@@ -16,6 +16,9 @@ public sealed class RouterStreamSession : IAsyncDisposable
     public int StatusCode => (int)_response.StatusCode;
     public bool IsSuccess => _response.IsSuccessStatusCode;
 
+    public string? ProviderName => _response.Headers.TryGetValues("x-9r-provider", out var pv) ? pv.FirstOrDefault() : null;
+    public string? ProviderAccount => _response.Headers.TryGetValues("x-9r-account", out var av) ? av.FirstOrDefault() : null;
+
     public async Task<string> ReadErrorBodyAsync(CancellationToken cancellationToken)
         => await _response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
 

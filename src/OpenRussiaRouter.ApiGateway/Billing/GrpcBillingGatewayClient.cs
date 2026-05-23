@@ -85,7 +85,9 @@ public sealed class GrpcBillingGatewayClient(
                 },
                 Status = usageEvent.Status,
                 StartedAtUtc = usageEvent.StartedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-                CompletedAtUtc = usageEvent.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+                CompletedAtUtc = usageEvent.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                ProviderName = usageEvent.ProviderName ?? "",
+                ProviderAccount = usageEvent.ProviderAccount ?? ""
             },
             cancellationToken: cancellationToken);
 

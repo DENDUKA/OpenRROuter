@@ -23,5 +23,7 @@ public sealed record UsageEvent(
     TokenUsage Usage,
     string Status,
     DateTimeOffset StartedAtUtc,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc,
+    string? ProviderName = null,
+    string? ProviderAccount = null);
 

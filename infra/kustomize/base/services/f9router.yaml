@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: f9router-data
+  namespace: orr-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: f9router
+  namespace: orr-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: f9router
+  template:
+    metadata:
+      labels:
+        app: f9router
+    spec:
+      containers:
+        - name: f9router
+          image: ghcr.io/inc64/f9router:latest
+          ports:
+            - containerPort: 20128
+          env:
+            - name: PORT
+              value: "20128"
+            - name: NODE_ENV
+              value: production
+            - name: DATA_DIR
+              value: /app/data
+            - name: BASE_URL
+              value: "http://f9router"
+            - name: NEXT_PUBLIC_BASE_URL
+              value: "http://f9router"
+          envFrom:
+            - secretRef:
+                name: f9router-secret
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 20128
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 20128
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 150m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: f9router-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: f9router
+  namespace: orr-dev
+spec:
+  ports:
+    - port: 80
+      targetPort: 20128
+  selector:
+    app: f9router

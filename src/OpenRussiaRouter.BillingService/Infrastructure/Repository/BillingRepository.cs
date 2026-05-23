@@ -175,10 +175,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             with ins as (
                 insert into billing.usage_records
                     (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
-                     input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc)
+                     input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc,
+                     provider_name, provider_account)
                 values
                     (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
-                     @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc)
+                     @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
+                     @ProviderName, @ProviderAccount)
                 on conflict (request_id) do nothing
                 returning *
             )
@@ -186,14 +188,14 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                    price_version as PriceVersion, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
                    cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
-                   created_at_utc as CreatedAtUtc
+                   created_at_utc as CreatedAtUtc, provider_name as ProviderName, provider_account as ProviderAccount
             from ins
             union all
             select request_id as RequestId, user_id as UserId, api_key_id as ApiKeyId, model_id as ModelId,
                    price_version as PriceVersion, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
                    cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
-                   created_at_utc as CreatedAtUtc
+                   created_at_utc as CreatedAtUtc, provider_name as ProviderName, provider_account as ProviderAccount
             from billing.usage_records
             where request_id = @RequestId
               and not exists (select 1 from ins)
@@ -213,7 +215,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 CostAmount = record.Cost.Amount,
                 CostCurrency = record.Cost.Currency.ToString(),
                 record.Status,
-                record.CreatedAtUtc
+                record.CreatedAtUtc,
+                ProviderName = record.ProviderName ?? (object)DBNull.Value,
+                ProviderAccount = record.ProviderAccount ?? (object)DBNull.Value
             }).ConfigureAwait(false));
     }
 
@@ -267,10 +271,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             with ins as (
                 insert into billing.activity_by_token
                     (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
-                     input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc)
+                     input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc,
+                     provider_name, provider_account)
                 values
                     (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
-                     @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc)
+                     @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc,
+                     @ProviderName, @ProviderAccount)
                 on conflict (request_id) do nothing
                 returning *
             )
@@ -278,14 +284,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                    model_id as ModelId, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
                    null::numeric as CostAmount,
-                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
+                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc,
+                   provider_name as ProviderName, provider_account as ProviderAccount
             from ins
             union all
             select request_id as RequestId, api_key_id as ApiKeyId, api_key_prefix as ApiKeyPrefix,
                    model_id as ModelId, router_node_id as RouterNodeId,
                    input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
                    null::numeric as CostAmount,
-                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc
+                   status as Status, created_at_utc as CreatedAtUtc, completed_at_utc as CompletedAtUtc,
+                   provider_name as ProviderName, provider_account as ProviderAccount
             from billing.activity_by_token
             where request_id = @RequestId
               and not exists (select 1 from ins)
@@ -303,7 +311,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 record.Usage.CacheTokens,
                 record.Status,
                 record.CreatedAtUtc,
-                record.CompletedAtUtc
+                record.CompletedAtUtc,
+                ProviderName = record.ProviderName ?? (object)DBNull.Value,
+                ProviderAccount = record.ProviderAccount ?? (object)DBNull.Value
             }).ConfigureAwait(false));
     }
 
@@ -515,7 +525,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cost_amount as CostAmount,
             cost_currency as CostCurrency,
             status as Status,
-            created_at_utc as CreatedAtUtc
+            created_at_utc as CreatedAtUtc,
+            provider_name as ProviderName,
+            provider_account as ProviderAccount
         from billing.usage_records
 
         """;
@@ -537,9 +549,68 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             coalesce(u.cost_amount, 0) as CostAmount,
             a.status as Status,
             a.created_at_utc as CreatedAtUtc,
-            a.completed_at_utc as CompletedAtUtc
+            a.completed_at_utc as CompletedAtUtc,
+            a.provider_name as ProviderName,
+            a.provider_account as ProviderAccount
         from billing.activity_by_token a
         left join billing.usage_records u on u.request_id = a.request_id
 
         """;
+
+    public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
+        int limit,
+        string? afterCursor = null,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+
+        var conditions = new List<string>();
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            conditions.Add("a.created_at_utc < @AfterCursor");
+            parameters.Add("AfterCursor", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
+        }
+        if (!string.IsNullOrEmpty(modelFilter)) { conditions.Add("a.model_id = @ModelFilter"); parameters.Add("ModelFilter", modelFilter); }
+        if (!string.IsNullOrEmpty(providerFilter)) { conditions.Add("a.provider_name = @ProviderFilter"); parameters.Add("ProviderFilter", providerFilter); }
+        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
+        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
+
+        var whereClause = conditions.Count > 0 ? "where " + string.Join(" and ", conditions) + "\n" : "";
+
+        var items = (await connection.QueryAsync<AdminRequestEntity>(
+            $"""
+            select
+                a.request_id as RequestId,
+                coalesce(u.user_id, '') as UserId,
+                a.api_key_prefix as ApiKeyPrefix,
+                a.model_id as ModelId,
+                a.router_node_id as RouterNodeId,
+                a.provider_name as ProviderName,
+                a.provider_account as ProviderAccount,
+                a.input_tokens as InputTokens,
+                a.output_tokens as OutputTokens,
+                a.cache_tokens as CacheTokens,
+                coalesce(u.cost_amount, 0) as CostAmount,
+                a.status as Status,
+                a.created_at_utc as CreatedAtUtc,
+                a.completed_at_utc as CompletedAtUtc
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause}order by a.created_at_utc desc
+            limit @Limit;
+            """,
+            parameters).ConfigureAwait(false))
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore) items = items.Take(limit).ToArray();
+        return (items, hasMore);
+    }
 }

@@ -13,4 +13,6 @@ public sealed record ActivityByTokenRecord(
     MoneyAmount Cost,
     string Status,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset CompletedAtUtc);
+    DateTimeOffset CompletedAtUtc,
+    string? ProviderName = null,
+    string? ProviderAccount = null);

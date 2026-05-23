@@ -222,4 +222,44 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             a.Message,
             DateTimeOffset.Parse(a.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
+
+    public async Task<(IReadOnlyList<AdminRequestInfo> Items, bool HasMore, string? NextCursor)> ListAdminRequestsAsync(
+        string? afterCursor = null,
+        int pageSize = 50,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListAdminRequestsRequest
+        {
+            AfterCursor = afterCursor ?? string.Empty,
+            PageSize = pageSize,
+            ModelFilter = modelFilter ?? string.Empty,
+            ProviderFilter = providerFilter ?? string.Empty,
+            FromUtc = fromUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+        };
+        var response = await client.ListAdminRequestsAsync(request, cancellationToken: cancellationToken);
+
+        var items = response.Records.Select(r => new AdminRequestInfo(
+            r.RequestId,
+            r.UserId,
+            r.ApiKeyPrefix,
+            r.ModelId,
+            r.RouterNodeId,
+            string.IsNullOrEmpty(r.ProviderName) ? null : r.ProviderName,
+            string.IsNullOrEmpty(r.ProviderAccount) ? null : r.ProviderAccount,
+            r.InputTokens,
+            r.OutputTokens,
+            r.CacheTokens,
+            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, CultureInfo.InvariantCulture),
+            r.Status,
+            DateTimeOffset.Parse(r.CreatedAtUtc, CultureInfo.InvariantCulture),
+            DateTimeOffset.Parse(r.CompletedAtUtc, CultureInfo.InvariantCulture))).ToList();
+
+        return (items, response.Records.Count >= pageSize && !string.IsNullOrEmpty(response.NextCursor),
+            string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+    }
 }

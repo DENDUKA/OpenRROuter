@@ -80,7 +80,9 @@ public static class BillingPersistenceMapper
             CostAmount = record.Cost.Amount,
             CostCurrency = record.Cost.Currency,
             Status = record.Status,
-            CreatedAtUtc = record.CreatedAtUtc
+            CreatedAtUtc = record.CreatedAtUtc,
+            ProviderName = record.ProviderName,
+            ProviderAccount = record.ProviderAccount
         };
     }
 
@@ -96,7 +98,9 @@ public static class BillingPersistenceMapper
             new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
             new MoneyAmount(entity.CostAmount, entity.CostCurrency),
             entity.Status,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            entity.ProviderName,
+            entity.ProviderAccount);
     }
 
     public static ActivityByTokenEntity ToEntity(ActivityByTokenRecord record)
@@ -113,7 +117,9 @@ public static class BillingPersistenceMapper
             CacheTokens = record.Usage.CacheTokens,
             Status = record.Status,
             CreatedAtUtc = record.CreatedAtUtc,
-            CompletedAtUtc = record.CompletedAtUtc
+            CompletedAtUtc = record.CompletedAtUtc,
+            ProviderName = record.ProviderName,
+            ProviderAccount = record.ProviderAccount
         };
     }
 
@@ -127,6 +133,25 @@ public static class BillingPersistenceMapper
             entity.RouterNodeId,
             new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
             new MoneyAmount(entity.CostAmount ?? 0m, Currency.Rub),
+            entity.Status,
+            entity.CreatedAtUtc,
+            entity.CompletedAtUtc,
+            entity.ProviderName,
+            entity.ProviderAccount);
+    }
+
+    public static AdminRequestRecord ToDomain(AdminRequestEntity entity)
+    {
+        return new AdminRequestRecord(
+            entity.RequestId,
+            entity.UserId,
+            entity.ApiKeyPrefix,
+            entity.ModelId,
+            entity.RouterNodeId,
+            entity.ProviderName,
+            entity.ProviderAccount,
+            new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
+            MoneyAmount.Rub(entity.CostAmount),
             entity.Status,
             entity.CreatedAtUtc,
             entity.CompletedAtUtc);

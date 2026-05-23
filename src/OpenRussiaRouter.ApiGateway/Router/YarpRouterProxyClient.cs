@@ -75,7 +75,10 @@ public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
         var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         var contentType = context.Response.ContentType ?? "application/json";
 
-        return new RouterProxyResponse(context.Response.StatusCode, contentType, body);
+        var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
+        var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
+
+        return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
     }
 
     public async Task<RouterStreamSession> BeginStreamChatCompletionAsync(

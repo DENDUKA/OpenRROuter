@@ -23,3 +23,5 @@ images:
     newTag: dev-latest
   - name: ghcr.io/denduka/webapp
     newTag: dev-latest
+  - name: ghcr.io/inc64/f9router
+    newTag: dev-latest

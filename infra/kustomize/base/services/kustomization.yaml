@@ -8,3 +8,4 @@ resources:
   - api-gateway.yaml
   - webapp.yaml
   - ingress.yaml
+  - f9router.yaml

@@ -14,4 +14,6 @@ public sealed class ActivityByTokenEntity
     public string Status { get; set; } = string.Empty;
     public DateTimeOffset CreatedAtUtc { get; set; }
     public DateTimeOffset CompletedAtUtc { get; set; }
+    public string? ProviderName { get; set; }
+    public string? ProviderAccount { get; set; }
 }

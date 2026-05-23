@@ -161,7 +161,8 @@ public static class Startup
 
             _ = billingClient.RecordUsageAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
-                    body.Metadata.Model!, auth.Lease.NodeId, usage, status, startedAt, completedAt),
+                    body.Metadata.Model!, auth.Lease.NodeId, usage, status, startedAt, completedAt,
+                    response.ProviderName, response.ProviderAccount),
                 CancellationToken.None)
                 .ContinueWith(
                     t => GetLogger(context, "OpenRussiaRouter.ApiGateway.Billing")
@@ -236,8 +237,12 @@ public static class Startup
 
             var startedAt = DateTimeOffset.UtcNow;
             TokenUsage usage;
+            string? streamProviderName;
+            string? streamProviderAccount;
             await using (session)
             {
+                streamProviderName = session.ProviderName;
+                streamProviderAccount = session.ProviderAccount;
                 usage = await session.CopyToAsync(context.Response.Body, context.RequestAborted);
             }
             var completedAt = DateTimeOffset.UtcNow;
@@ -247,7 +252,8 @@ public static class Startup
             var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
             _ = billingClient.RecordUsageAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
-                    body.Metadata.Model!, lease.NodeId, usage, status, startedAt, completedAt),
+                    body.Metadata.Model!, lease.NodeId, usage, status, startedAt, completedAt,
+                    streamProviderName, streamProviderAccount),
                 CancellationToken.None)
                 .ContinueWith(
                     t => GetLogger(context, "OpenRussiaRouter.ApiGateway.Billing")

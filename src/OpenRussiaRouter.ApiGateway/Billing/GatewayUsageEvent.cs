@@ -12,5 +12,6 @@ public sealed record GatewayUsageEvent(
     TokenUsage Usage,
     string Status,
     DateTimeOffset StartedAtUtc,
-    DateTimeOffset CompletedAtUtc);
-
+    DateTimeOffset CompletedAtUtc,
+    string? ProviderName = null,
+    string? ProviderAccount = null);

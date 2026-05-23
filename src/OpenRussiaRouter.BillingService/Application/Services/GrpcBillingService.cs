@@ -64,7 +64,9 @@ public sealed class GrpcBillingService(
                 request.Usage?.CacheTokens ?? 0),
             request.Status,
             ParseTimestamp(request.StartedAtUtc),
-            ParseTimestamp(request.CompletedAtUtc));
+            ParseTimestamp(request.CompletedAtUtc),
+            string.IsNullOrEmpty(request.ProviderName) ? null : request.ProviderName,
+            string.IsNullOrEmpty(request.ProviderAccount) ? null : request.ProviderAccount);
 
         var result = await billing.RecordUsageAsync(usageEvent, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
@@ -263,7 +265,9 @@ public sealed class GrpcBillingService(
             Status = activity.Status,
             CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+            ProviderName = activity.ProviderName ?? "",
+            ProviderAccount = activity.ProviderAccount ?? ""
         }));
         return response;
     }
@@ -323,6 +327,45 @@ public sealed class GrpcBillingService(
                 Reason = entry.Reason,
                 CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
             }));
+        return response;
+    }
+
+    public override async Task<ListAdminRequestsResponse> ListAdminRequests(
+        ListAdminRequestsRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var pageSize = request.PageSize > 0 ? request.PageSize : 50;
+        var (items, hasMore) = await billing.GetAdminUsageRecordsAsync(
+            pageSize,
+            afterCursor: string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
+            modelFilter: string.IsNullOrEmpty(request.ModelFilter) ? null : request.ModelFilter,
+            providerFilter: string.IsNullOrEmpty(request.ProviderFilter) ? null : request.ProviderFilter,
+            fromUtc: ParseOptionalTimestamp(request.FromUtc),
+            toUtc: ParseOptionalTimestamp(request.ToUtc),
+            ct: ct).ConfigureAwait(false);
+
+        var response = new ListAdminRequestsResponse();
+        if (hasMore && items.Count > 0)
+            response.NextCursor = items.Last().CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        response.Records.AddRange(items.Select(r => new Contracts.Grpc.Billing.V1.AdminRequestRecord
+        {
+            RequestId = r.RequestId,
+            UserId = r.UserId,
+            ApiKeyPrefix = r.ApiKeyPrefix,
+            ModelId = r.ModelId,
+            RouterNodeId = r.RouterNodeId,
+            ProviderName = r.ProviderName ?? "",
+            ProviderAccount = r.ProviderAccount ?? "",
+            InputTokens = r.Usage.InputTokens,
+            OutputTokens = r.Usage.OutputTokens,
+            CacheTokens = r.Usage.CacheTokens,
+            CostRub = r.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+            Status = r.Status,
+            CreatedAtUtc = r.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+            CompletedAtUtc = r.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+        }));
         return response;
     }
 

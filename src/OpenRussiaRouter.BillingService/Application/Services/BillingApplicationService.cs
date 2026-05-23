@@ -110,7 +110,9 @@ public sealed class BillingApplicationService(
             MoneyAmount.Rub(0),
             usageEvent.Status,
             nowUtc,
-            usageEvent.CompletedAtUtc), ct).ConfigureAwait(false);
+            usageEvent.CompletedAtUtc,
+            usageEvent.ProviderName,
+            usageEvent.ProviderAccount), ct).ConfigureAwait(false);
 
         if (usageEvent.Usage.TotalTokens == 0)
             return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
@@ -134,7 +136,9 @@ public sealed class BillingApplicationService(
             usageEvent.Usage,
             cost,
             usageEvent.Status,
-            nowUtc), ct).ConfigureAwait(false);
+            nowUtc,
+            usageEvent.ProviderName,
+            usageEvent.ProviderAccount), ct).ConfigureAwait(false);
 
         await repository.AddLedgerEntryAsync(new LedgerEntry(
             Guid.NewGuid().ToString("N"),
@@ -197,6 +201,19 @@ public sealed class BillingApplicationService(
             return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Rub(0), [], []);
 
         return await repository.GetActivitySummaryAsync(apiKeyIds, fromUtc, toUtc, ct).ConfigureAwait(false);
+    }
+
+    public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
+        int pageSize,
+        string? afterCursor = null,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        var limit = pageSize > 0 ? pageSize : paginationOptions.Value.EffectivePageSize;
+        return await repository.GetAdminUsageRecordsAsync(limit, afterCursor, modelFilter, providerFilter, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
 
     private static void ValidatePositiveRub(MoneyAmount amount, string name)

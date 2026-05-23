@@ -17,6 +17,7 @@ service BillingService {
   rpc ListActivityByToken (ListActivityByTokenRequest) returns (ListActivityByTokenResponse);
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
+  rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
 }
 
 message CheckBalanceAndModelRequest {
@@ -50,6 +51,8 @@ message RecordUsageRequest {
   string started_at_utc = 8;
   string completed_at_utc = 9;
   string api_key_prefix = 10;
+  string provider_name = 11;
+  string provider_account = 12;
 }
 
 message RecordUsageResponse {
@@ -185,6 +188,8 @@ message ActivityByTokenRecord {
   string created_at_utc = 8;
   string completed_at_utc = 9;
   string cost_rub = 10;
+  string provider_name = 11;
+  string provider_account = 12;
 }
 
 message ListActivityByTokenResponse {
@@ -245,4 +250,35 @@ message TopUpRecord {
 
 message ListTopUpsResponse {
   repeated TopUpRecord records = 1;
+}
+
+message ListAdminRequestsRequest {
+  string after_cursor = 1;
+  int32 page_size = 2;
+  string model_filter = 3;
+  string provider_filter = 4;
+  string from_utc = 5;
+  string to_utc = 6;
+}
+
+message AdminRequestRecord {
+  string request_id = 1;
+  string user_id = 2;
+  string api_key_prefix = 3;
+  string model_id = 4;
+  string router_node_id = 5;
+  string provider_name = 6;
+  string provider_account = 7;
+  int64 input_tokens = 8;
+  int64 output_tokens = 9;
+  int64 cache_tokens = 10;
+  string status = 11;
+  string created_at_utc = 12;
+  string completed_at_utc = 13;
+  string cost_rub = 14;
+}
+
+message ListAdminRequestsResponse {
+  repeated AdminRequestRecord records = 1;
+  string next_cursor = 2;
 }

@@ -1,0 +1,89 @@
+@page
+@model Admin.RequestsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Requests - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Requests</h2>
+    <p>All LLM requests routed through the gateway.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header">
+        <span>Requests</span>
+        <form method="get" class="d-flex gap-2 align-items-center flex-wrap" style="font-weight:normal">
+            <input type="text" name="model" value="@Model.ModelFilter" placeholder="Model filter" class="form-control form-control-sm" style="width:180px" />
+            <input type="text" name="provider" value="@Model.ProviderFilter" placeholder="Provider filter" class="form-control form-control-sm" style="width:150px" />
+            <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" />
+            <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" />
+            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+            @if (Model.ModelFilter != null || Model.ProviderFilter != null || Model.FromUtc != null || Model.ToUtc != null)
+            {
+                <a href="/admin/requests" class="btn btn-sm btn-outline-secondary">Clear</a>
+            }
+        </form>
+    </div>
+    <div class="adm-card-body" style="overflow-x:auto">
+        @if (Model.Records.Count == 0)
+        {
+            <p class="text-muted">No requests found.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>API Key</th>
+                        <th>Model</th>
+                        <th>Node</th>
+                        <th>Provider</th>
+                        <th>Account</th>
+                        <th>Tokens in/out/cache</th>
+                        <th>Cost</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Records)
+                    {
+                        var (badgeClass, badgeLabel) = Model.GetStatusBadge(r.Status);
+                        <tr>
+                            <td style="white-space:nowrap">
+                                <small title="@r.CreatedAt.ToString("O")">@r.CreatedAt.ToLocalTime().ToString("g")</small>
+                            </td>
+                            <td><small>@r.ApiKeyPrefix…</small></td>
+                            <td><small>@r.ModelId</small></td>
+                            <td><small title="@r.RouterNodeId">@Model.GetNodeName(r.RouterNodeId)</small></td>
+                            <td><small>@(r.ProviderName ?? "—")</small></td>
+                            <td><small>@(r.ProviderAccount ?? "—")</small></td>
+                            <td style="white-space:nowrap">
+                                <small>@r.InputTokens / @r.OutputTokens / @r.CacheTokens</small>
+                            </td>
+                            <td style="white-space:nowrap">
+                                <small>@r.CostRub.ToString("F4") ₽</small>
+                            </td>
+                            <td><span class="badge @badgeClass">@badgeLabel</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Model.HasMore && Model.NextCursor != null)
+            {
+                var nextUrl = $"/admin/requests?cursor={Uri.EscapeDataString(Model.NextCursor)}";
+                if (Model.ModelFilter != null) nextUrl += $"&model={Uri.EscapeDataString(Model.ModelFilter)}";
+                if (Model.ProviderFilter != null) nextUrl += $"&provider={Uri.EscapeDataString(Model.ProviderFilter)}";
+                if (Model.FromUtc != null) nextUrl += $"&from={Uri.EscapeDataString(Model.FromUtc)}";
+                if (Model.ToUtc != null) nextUrl += $"&to={Uri.EscapeDataString(Model.ToUtc)}";
+                <div class="mt-2">
+                    <a href="@nextUrl" class="btn btn-sm btn-outline-primary">Next page</a>
+                </div>
+            }
+        }
+    </div>
+</div>

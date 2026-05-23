@@ -46,4 +46,13 @@ public interface IBillingRepository
     Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default);
 
     Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default);
+
+    Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
+        int limit,
+        string? afterCursor = null,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default);
 }

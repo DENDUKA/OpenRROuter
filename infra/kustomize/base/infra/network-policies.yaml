@@ -80,6 +80,7 @@ spec:
           - api-gateway
           - control-plane
           - webapp
+          - f9router
   policyTypes:
     - Egress
   egress:
@@ -255,6 +256,26 @@ spec:
               app: db-create
       ports:
         - port: 5432
+          protocol: TCP
+
+---
+# f9router accepts HTTP from any pod in namespace (ClusterIP only, no Ingress).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-f9router
+  namespace: orr-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: f9router
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - port: 20128
           protocol: TCP
 
 ---

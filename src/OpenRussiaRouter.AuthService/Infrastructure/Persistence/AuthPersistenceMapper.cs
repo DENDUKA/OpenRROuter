@@ -109,4 +109,10 @@ public static class AuthPersistenceMapper
 
         return apiKey;
     }
+
+    public static ExternalLogin ToDomain(ExternalLoginEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        return new ExternalLogin(entity.Id, entity.UserId, entity.Provider, entity.ProviderSub, entity.CreatedAtUtc);
+    }
 }

@@ -314,12 +314,68 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         from auth.api_keys
         """;
 
-    public Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<ExternalLoginEntity>(
+            ExternalLoginSelectSql + " where provider = @Provider and provider_sub = @ProviderSub;",
+            new { Provider = provider, ProviderSub = providerSub }).ConfigureAwait(false) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
 
-    public Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(login);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(
+            """
+            insert into auth.external_logins
+                (id, user_id, provider, provider_sub, created_at_utc)
+            values
+                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
+            """,
+            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc }).ConfigureAwait(false);
+    }
 
-    public Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
-        => throw new NotImplementedException();
+    public async Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(login);
+        using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        await connection.ExecuteAsync(
+            """
+            insert into auth.users
+                (id, email, role, status, password_hash, created_at_utc)
+            values
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+            """,
+            ToParameters(user),
+            transaction).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(
+            """
+            insert into auth.external_logins
+                (id, user_id, provider, provider_sub, created_at_utc)
+            values
+                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
+            """,
+            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc },
+            transaction).ConfigureAwait(false);
+
+        transaction.Commit();
+    }
+
+    private const string ExternalLoginSelectSql = """
+        select
+            id as Id,
+            user_id as UserId,
+            provider as Provider,
+            provider_sub as ProviderSub,
+            created_at_utc as CreatedAtUtc
+        from auth.external_logins
+        """;
 }

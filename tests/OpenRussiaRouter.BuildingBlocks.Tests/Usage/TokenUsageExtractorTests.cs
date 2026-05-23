@@ -26,6 +26,25 @@ public sealed class TokenUsageExtractorTests
     }
 
     [Fact]
+    public void TryExtractStreamingSse_PrefersOrrRawOverBufferedUsage()
+    {
+        var body = """
+            data: {"choices":[{"delta":{"content":"hi"}}]}
+
+            data: {"usage":{"prompt_tokens":2144,"completion_tokens":2042,"total_tokens":4186,"_orr_raw":{"prompt_tokens":144,"completion_tokens":42}}}
+
+            data: [DONE]
+
+            """;
+
+        var result = TokenUsageExtractor.TryExtractStreamingSse(body, out var usage);
+
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(144);
+        usage.OutputTokens.Should().Be(42);
+    }
+
+    [Fact]
     public void TryExtractStreamingSse_MissingUsage_ReturnsFalse()
     {
         var body = """

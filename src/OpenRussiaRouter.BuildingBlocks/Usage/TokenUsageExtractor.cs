@@ -20,6 +20,18 @@ public static class TokenUsageExtractor
                 return false;
             }
 
+            // 9RFork inflates standard usage fields by BUFFER_TOKENS (~2000) for CLI
+            // context tracking. Real counts are duplicated under `_orr_raw` for billing.
+            if (usageElement.TryGetProperty("_orr_raw", out var rawElement) &&
+                rawElement.ValueKind == JsonValueKind.Object)
+            {
+                usage = new TokenUsage(
+                    ReadInt64(rawElement, "prompt_tokens", "input_tokens"),
+                    ReadInt64(rawElement, "completion_tokens", "output_tokens"),
+                    ReadCacheTokens(usageElement));
+                return true;
+            }
+
             usage = new TokenUsage(
                 ReadInt64(usageElement, "input_tokens", "prompt_tokens"),
                 ReadInt64(usageElement, "output_tokens", "completion_tokens"),

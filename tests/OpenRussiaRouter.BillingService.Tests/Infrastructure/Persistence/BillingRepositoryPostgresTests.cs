@@ -1,4 +1,5 @@
 using Dapper;
+using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
@@ -29,15 +30,15 @@ public sealed class BillingRepositoryPostgresTests
         var repository = new BillingRepository(new BillingDbConnectionFactory(connectionString));
         var now = DateTimeOffset.UtcNow;
 
-        repository.AddLedgerEntry(new LedgerEntry("ledger-1", "user-1", LedgerEntryType.VirtualTopUp, MoneyAmount.Rub(100), "idem-1", "top-up", now));
-        repository.UpsertModel(new ModelPrice(
+        await repository.AddLedgerEntryAsync(new LedgerEntry("ledger-1", "user-1", LedgerEntryType.VirtualTopUp, MoneyAmount.Rub(100), "idem-1", "top-up", now));
+        await repository.UpsertModelAsync(new ModelPrice(
             "gpt-test",
             "GPT Test",
             "router/gpt-test",
             "v1",
             new ModelTokenPrice(MoneyAmount.Rub(10), MoneyAmount.Rub(20), MoneyAmount.Rub(2)),
             Enabled: true));
-        repository.AddUsage(new UsageRecord(
+        await repository.AddUsageAsync(new UsageRecord(
             "req-1",
             "user-1",
             "key-1",
@@ -48,12 +49,12 @@ public sealed class BillingRepositoryPostgresTests
             MoneyAmount.Rub(0.001m),
             "succeeded",
             now));
-        repository.AddAnomaly(new BillingAnomaly("anomaly-1", "req-2", "missing_usage", "safe message", now));
+        await repository.AddAnomalyAsync(new BillingAnomaly("anomaly-1", "req-2", "missing_usage", "safe message", now));
 
-        Assert.Equal(100, repository.GetBalance("user-1").Amount);
-        Assert.Equal("gpt-test", repository.GetEnabledModel("gpt-test")?.ModelId);
-        Assert.Equal("req-1", repository.GetUsage("req-1")?.RequestId);
-        Assert.Equal("anomaly-1", Assert.Single(repository.ListAnomalies(100, null).Items).Id);
+        (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(100);
+        (await repository.GetEnabledModelAsync("gpt-test"))?.ModelId.Should().Be("gpt-test");
+        (await repository.GetUsageAsync("req-1"))?.RequestId.Should().Be("req-1");
+        (await repository.ListAnomaliesAsync(100, null)).Items.Should().ContainSingle().Which.Id.Should().Be("anomaly-1");
     }
 
 }

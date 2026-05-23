@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.ControlPlane;
@@ -13,7 +14,7 @@ public sealed class RouterHealthCheckWorkerTests
     public async Task RunOnceAsync_HealthyResult_UpdatesNodeStatus()
     {
         var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        controlPlane.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
         var worker = new RouterHealthCheckWorker(
             controlPlane,
             new StubHealthClient(new RouterNodeHealthResult(RouterNodeStatus.Healthy, 17, null)),
@@ -22,17 +23,17 @@ public sealed class RouterHealthCheckWorkerTests
 
         await worker.RunOnceAsync(CancellationToken.None);
 
-        var summary = Assert.Single(controlPlane.ListRouterNodes());
-        Assert.Equal(RouterNodeStatus.Healthy, summary.Status);
-        Assert.NotNull(summary.LastCheckedAtUtc);
+        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        summary.Status.Should().Be(RouterNodeStatus.Healthy);
+        summary.LastCheckedAtUtc.Should().NotBeNull();
     }
 
     [Fact]
     public async Task RunOnceAsync_DisabledNode_DoesNotCallHealthClient()
     {
         var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var node = controlPlane.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
-        controlPlane.DisableNode(node.Id);
+        var node = await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        await controlPlane.DisableNodeAsync(node.Id);
         var healthClient = new CountingHealthClient();
         var worker = new RouterHealthCheckWorker(
             controlPlane,
@@ -42,9 +43,9 @@ public sealed class RouterHealthCheckWorkerTests
 
         await worker.RunOnceAsync(CancellationToken.None);
 
-        Assert.Equal(0, healthClient.CallCount);
-        var summary = Assert.Single(controlPlane.ListRouterNodes());
-        Assert.Equal(RouterNodeStatus.Disabled, summary.Status);
+        healthClient.CallCount.Should().Be(0);
+        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        summary.Status.Should().Be(RouterNodeStatus.Disabled);
     }
 
     private sealed class StubHealthClient(RouterNodeHealthResult result) : IRouterNodeHealthClient

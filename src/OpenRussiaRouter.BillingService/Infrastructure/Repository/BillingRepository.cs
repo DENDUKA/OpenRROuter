@@ -8,31 +8,30 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
 public sealed class BillingRepository(IBillingDbConnectionFactory connectionFactory) : IBillingRepository
 {
-
-    public (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit)
+    public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var items = connection.Query<LedgerEntryEntity>(
+        var items = (await connection.QueryAsync<LedgerEntryEntity>(
                 LedgerEntrySelectSql +
-                "where user_id = @UserId and type = 'VirtualTopUp'\norder by created_at_utc desc\nlimit @Limit;",
-                new { UserId = userId, Limit = limit + 1 })
+                """
+                where user_id = @UserId and type = 'VirtualTopUp'
+                order by created_at_utc desc
+                limit @Limit;
+                """,
+                new { UserId = userId, Limit = limit + 1 }).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 
-    public LedgerEntry AddLedgerEntry(LedgerEntry entry)
+    public async Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entry);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<LedgerEntryEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<LedgerEntryEntity>(
             """
             with ins as (
                 insert into billing.ledger_entries
@@ -63,24 +62,23 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 entry.IdempotencyKey,
                 entry.Reason,
                 entry.CreatedAtUtc
-            }));
+            }).ConfigureAwait(false));
     }
 
-    public MoneyAmount GetBalance(string userId)
+    public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var amount = connection.ExecuteScalar<decimal>(
+        var amount = await connection.ExecuteScalarAsync<decimal>(
             "select coalesce(sum(amount), 0) from billing.ledger_entries where user_id = @UserId;",
-            new { UserId = userId });
-
+            new { UserId = userId }).ConfigureAwait(false);
         return MoneyAmount.Rub(amount);
     }
 
-    public void UpsertModel(ModelPrice model)
+    public async Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(model);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(
+        await connection.ExecuteAsync(
             """
             insert into billing.model_prices
                 (model_id, display_name, router_model_id, price_version, input_per_million_amount,
@@ -109,20 +107,20 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 CachePerMillionAmount = model.Price.CachePerMillion.Amount,
                 Currency = model.Price.InputPerMillion.Currency.ToString(),
                 model.Enabled
-            });
+            }).ConfigureAwait(false);
     }
 
-    public ModelPrice? GetEnabledModel(string modelId)
+    public async Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return connection.QuerySingleOrDefault<ModelPriceEntity>(
+        return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(
             ModelPriceSelectSql + "where model_id = @ModelId and enabled = true;",
-            new { ModelId = modelId }) is { } entity
+            new { ModelId = modelId }).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
     }
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
+    public async Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -134,22 +132,18 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterModelId", afterModelId);
         }
 
-        var items = connection.Query<ModelPriceEntity>(
+        var items = (await connection.QueryAsync<ModelPriceEntity>(
                 ModelPriceSelectSql + "where enabled = true\n" + afterCondition + "order by model_id\nlimit @Limit;",
-                parameters)
+                parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
+    public async Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListAllModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -161,26 +155,22 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterModelId", afterModelId);
         }
 
-        var items = connection.Query<ModelPriceEntity>(
+        var items = (await connection.QueryAsync<ModelPriceEntity>(
                 ModelPriceSelectSql + afterCondition + "order by model_id\nlimit @Limit;",
-                parameters)
+                parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 
-    public UsageRecord AddUsage(UsageRecord record)
+    public async Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<UsageRecordEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<UsageRecordEntity>(
             """
             with ins as (
                 insert into billing.usage_records
@@ -224,20 +214,20 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 CostCurrency = record.Cost.Currency.ToString(),
                 record.Status,
                 record.CreatedAtUtc
-            }));
+            }).ConfigureAwait(false));
     }
 
-    public UsageRecord? GetUsage(string requestId)
+    public async Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return connection.QuerySingleOrDefault<UsageRecordEntity>(
+        return await connection.QuerySingleOrDefaultAsync<UsageRecordEntity>(
             UsageByRequestSql,
-            new { RequestId = requestId }) is { } entity
+            new { RequestId = requestId }).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
     }
 
-    public (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null)
+    public async Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var conditions = new List<string>();
@@ -257,26 +247,22 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var whereClause = conditions.Count > 0
             ? "where " + string.Join(" and ", conditions) + "\n"
             : "";
-        var items = connection.Query<UsageRecordEntity>(
+        var items = (await connection.QueryAsync<UsageRecordEntity>(
                 UsageSelectSql + whereClause + "order by created_at_utc\nlimit @Limit;",
-                parameters)
+                parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 
-    public ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record)
+    public async Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(connection.QueryFirst<ActivityByTokenEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<ActivityByTokenEntity>(
             """
             with ins as (
                 insert into billing.activity_by_token
@@ -318,18 +304,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 record.Status,
                 record.CreatedAtUtc,
                 record.CompletedAtUtc
-            }));
+            }).ConfigureAwait(false));
     }
 
-    public (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
-        DateTimeOffset? afterCreatedAtUtc = null)
+        DateTimeOffset? afterCreatedAtUtc = null,
+        CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-        {
             return (Array.Empty<ActivityByTokenRecord>(), false);
-        }
 
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -342,38 +327,34 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
-        var items = connection.Query<ActivityByTokenEntity>(
+        var items = (await connection.QueryAsync<ActivityByTokenEntity>(
                 ActivityByTokenSelectSql +
                 "where a.api_key_id = any(@ApiKeyIds)\n" + afterCondition +
                 "order by a.created_at_utc desc\nlimit @Limit;",
-                parameters)
+                parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 
-    public void AddAnomaly(BillingAnomaly anomaly)
+    public async Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(anomaly);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(
+        await connection.ExecuteAsync(
             """
             insert into billing.billing_anomalies
                 (id, request_id, type, message, created_at_utc)
             values
                 (@Id, @RequestId, @Type, @Message, @CreatedAtUtc);
             """,
-            anomaly);
+            anomaly).ConfigureAwait(false);
     }
 
-    public (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null)
+    public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -385,7 +366,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
-        var items = connection.Query<BillingAnomalyEntity>(
+        var items = (await connection.QueryAsync<BillingAnomalyEntity>(
                 """
                 select
                     id as Id,
@@ -396,16 +377,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 from billing.billing_anomalies
 
                 """ + afterCondition + "order by created_at_utc\nlimit @Limit;",
-                parameters)
+                parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
+        if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
     }
 

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.BuildingBlocks.Tests.Usage;
@@ -18,10 +19,10 @@ public sealed class TokenUsageExtractorTests
 
         var result = TokenUsageExtractor.TryExtractStreamingSse(body, out var usage);
 
-        Assert.True(result);
-        Assert.Equal(11, usage.InputTokens);
-        Assert.Equal(22, usage.OutputTokens);
-        Assert.Equal(5, usage.CacheTokens);
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(11);
+        usage.OutputTokens.Should().Be(22);
+        usage.CacheTokens.Should().Be(5);
     }
 
     [Fact]
@@ -36,7 +37,7 @@ public sealed class TokenUsageExtractorTests
 
         var result = TokenUsageExtractor.TryExtractStreamingSse(body, out var usage);
 
-        Assert.False(result);
-        Assert.Equal(default, usage);
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
     }
 }

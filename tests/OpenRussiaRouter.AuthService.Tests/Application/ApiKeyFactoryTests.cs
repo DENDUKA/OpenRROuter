@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
@@ -12,11 +13,11 @@ public sealed class ApiKeyFactoryTests
     {
         var created = _factory.Create("user-1", "default", DateTimeOffset.UtcNow);
 
-        Assert.StartsWith("sk-or-", created.RawKey, StringComparison.Ordinal);
-        Assert.StartsWith("sk-or-", created.ApiKey.Prefix, StringComparison.Ordinal);
-        Assert.NotEqual(created.RawKey, created.ApiKey.SecretHash);
-        Assert.Equal("default", created.ApiKey.Name);
-        Assert.True(created.ApiKey.IsActive);
+        created.RawKey.Should().StartWith("sk-or-");
+        created.ApiKey.Prefix.Should().StartWith("sk-or-");
+        created.RawKey.Should().NotBe(created.ApiKey.SecretHash);
+        created.ApiKey.Name.Should().Be("default");
+        created.ApiKey.IsActive.Should().BeTrue();
     }
 
     [Fact]
@@ -27,8 +28,8 @@ public sealed class ApiKeyFactoryTests
 
         var result = _factory.VerifyAndMarkUsed(created.RawKey, created.ApiKey, now.AddMinutes(1));
 
-        Assert.True(result);
-        Assert.Equal(now.AddMinutes(1), created.ApiKey.LastUsedAtUtc);
+        result.Should().BeTrue();
+        created.ApiKey.LastUsedAtUtc.Should().Be(now.AddMinutes(1));
     }
 
     [Fact]
@@ -38,8 +39,8 @@ public sealed class ApiKeyFactoryTests
 
         var result = _factory.VerifyAndMarkUsed("orr_wrong", created.ApiKey, DateTimeOffset.UtcNow);
 
-        Assert.False(result);
-        Assert.Null(created.ApiKey.LastUsedAtUtc);
+        result.Should().BeFalse();
+        created.ApiKey.LastUsedAtUtc.Should().BeNull();
     }
 
     [Fact]
@@ -50,7 +51,7 @@ public sealed class ApiKeyFactoryTests
 
         var result = _factory.VerifyAndMarkUsed(created.RawKey, created.ApiKey, DateTimeOffset.UtcNow);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -61,8 +62,7 @@ public sealed class ApiKeyFactoryTests
 
         created.ApiKey.Rename("renamed");
 
-        Assert.Equal("renamed", created.ApiKey.Name);
-        Assert.Equal(hash, created.ApiKey.SecretHash);
+        created.ApiKey.Name.Should().Be("renamed");
+        created.ApiKey.SecretHash.Should().Be(hash);
     }
 }
-

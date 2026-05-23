@@ -1,4 +1,5 @@
 using Dapper;
+using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 using OpenRussiaRouter.AuthService.Infrastructure.Repository;
@@ -37,12 +38,12 @@ public sealed class AuthRepositoryListKeyHashesTests
             """, new { Id = "key-2", Now = now, RevokedAt = now.AddMinutes(1) });
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
-        var hashes = repo.ListActiveApiKeyHashes();
+        var hashes = await repo.ListActiveApiKeyHashesAsync();
 
-        Assert.Single(hashes);
+        hashes.Should().ContainSingle();
         var entry = hashes.Single();
-        Assert.Equal("orr_abc", entry.Prefix);
-        Assert.Equal("hash-active", entry.SecretHash);
+        entry.Prefix.Should().Be("orr_abc");
+        entry.SecretHash.Should().Be("hash-active");
     }
 
     [Fact]
@@ -56,9 +57,9 @@ public sealed class AuthRepositoryListKeyHashesTests
         database.TruncateAuth();
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
-        var hashes = repo.ListActiveApiKeyHashes();
+        var hashes = await repo.ListActiveApiKeyHashesAsync();
 
-        Assert.Empty(hashes);
+        hashes.Should().BeEmpty();
     }
 
     [Fact]
@@ -89,10 +90,10 @@ public sealed class AuthRepositoryListKeyHashesTests
         }
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
-        var hashes = repo.ListActiveApiKeyHashes();
+        var hashes = await repo.ListActiveApiKeyHashesAsync();
 
-        Assert.Equal(5, hashes.Count);
+        hashes.Should().HaveCount(5);
         // Verify ordering: most recent first
-        Assert.Equal("orr_005", hashes.First().Prefix);
+        hashes.First().Prefix.Should().Be("orr_005");
     }
 }

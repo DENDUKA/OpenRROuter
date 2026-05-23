@@ -10,25 +10,19 @@ public sealed class DapperAuthApiKeyValidator(
     Sha256SecretHasher secretHasher)
     : IAuthApiKeyValidator
 {
-    public ValidateApiKeyResult Validate(string rawKey)
+    public async Task<ValidateApiKeyResult> ValidateAsync(string rawKey, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(rawKey))
-        {
             return Invalid();
-        }
 
-        var apiKey = repository.FindActiveApiKeyBySecretHash(secretHasher.Hash(rawKey));
+        var apiKey = await repository.FindActiveApiKeyBySecretHashAsync(secretHasher.Hash(rawKey), ct).ConfigureAwait(false);
         if (apiKey is null)
-        {
             return Invalid();
-        }
 
-        repository.MarkApiKeyUsed(apiKey.Id, DateTimeOffset.UtcNow);
+        await repository.MarkApiKeyUsedAsync(apiKey.Id, DateTimeOffset.UtcNow, ct).ConfigureAwait(false);
         return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
     }
 
-    private static ValidateApiKeyResult Invalid()
-    {
-        return new ValidateApiKeyResult(false, null, null, null, ErrorCodes.InvalidApiKey);
-    }
+    private static ValidateApiKeyResult Invalid() =>
+        new(false, null, null, null, ErrorCodes.InvalidApiKey);
 }

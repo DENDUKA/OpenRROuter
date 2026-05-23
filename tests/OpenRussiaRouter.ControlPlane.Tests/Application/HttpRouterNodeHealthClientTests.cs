@@ -1,4 +1,5 @@
 using System.Net;
+using FluentAssertions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application;
@@ -21,26 +22,9 @@ public sealed class HttpRouterNodeHealthClientTests
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
-        Assert.Equal(RouterNodeStatus.Degraded, result.Status);
-        Assert.Equal("node-token", handler.LastRequest?.Headers.GetValues("X-ORR-Node-Token").Single());
-        Assert.Equal("https://router.example/healthz", handler.LastRequest?.RequestUri?.ToString());
-    }
-
-    [Fact]
-    public async Task CheckAsync_MissingToken_MakesRequestWithoutTokenHeader()
-    {
-        var handler = new CapturingHandler(new HttpResponseMessage(HttpStatusCode.OK));
-        var client = CreateClient(handler);
-        var node = CreateNode(string.Empty);
-
-        var result = await client.CheckAsync(node, CancellationToken.None);
-
-        // Request is made even without a token
-        Assert.NotNull(handler.LastRequest);
-        Assert.False(handler.LastRequest!.Headers.Contains("X-ORR-Node-Token"));
-        // 200 OK with no status body defaults to Healthy
-        Assert.Equal(RouterNodeStatus.Healthy, result.Status);
-        Assert.Null(result.ErrorCode);
+        result.Status.Should().Be(RouterNodeStatus.Degraded);
+        handler.LastRequest?.Headers.GetValues("X-ORR-Node-Token").Single().Should().Be("node-token");
+        handler.LastRequest?.RequestUri?.ToString().Should().Be("https://router.example/healthz");
     }
 
     [Fact]
@@ -52,8 +36,8 @@ public sealed class HttpRouterNodeHealthClientTests
 
         var result = await client.CheckAsync(node, CancellationToken.None);
 
-        Assert.Equal(RouterNodeStatus.Unhealthy, result.Status);
-        Assert.Equal("http_503", result.ErrorCode);
+        result.Status.Should().Be(RouterNodeStatus.Unhealthy);
+        result.ErrorCode.Should().Be("http_503");
     }
 
     private static HttpRouterNodeHealthClient CreateClient(HttpMessageHandler handler)

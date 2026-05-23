@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using FluentAssertions;
 using OpenRussiaRouter.ApiGateway.Router;
 
 namespace OpenRussiaRouter.ApiGateway.Tests.Router;
@@ -11,7 +12,7 @@ public sealed class RouterStreamSessionTests
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK);
         var session = new RouterStreamSession(response);
-        Assert.True(session.IsSuccess);
+        session.IsSuccess.Should().BeTrue();
     }
 
     [Fact]
@@ -19,7 +20,7 @@ public sealed class RouterStreamSessionTests
     {
         var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);
         var session = new RouterStreamSession(response);
-        Assert.False(session.IsSuccess);
+        session.IsSuccess.Should().BeFalse();
     }
 
     [Fact]
@@ -27,7 +28,7 @@ public sealed class RouterStreamSessionTests
     {
         var response = new HttpResponseMessage(HttpStatusCode.TooManyRequests);
         var session = new RouterStreamSession(response);
-        Assert.Equal(429, session.StatusCode);
+        session.StatusCode.Should().Be(429);
     }
 
     [Fact]
@@ -45,9 +46,9 @@ public sealed class RouterStreamSessionTests
 
         destination.Position = 0;
         var output = new StreamReader(destination).ReadToEnd();
-        Assert.Contains("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}", output);
-        Assert.Contains("data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}", output);
-        Assert.Contains("data: [DONE]", output);
+        output.Should().Contain("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}");
+        output.Should().Contain("data: {\"choices\":[{\"delta\":{\"content\":\" world\"}}]}");
+        output.Should().Contain("data: [DONE]");
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public sealed class RouterStreamSessionTests
         await using var session = CreateSession(sseBody);
         var usage = await session.CopyToAsync(new MemoryStream(), CancellationToken.None);
 
-        Assert.Equal(10, usage.InputTokens);
-        Assert.Equal(20, usage.OutputTokens);
+        usage.InputTokens.Should().Be(10);
+        usage.OutputTokens.Should().Be(20);
     }
 
     [Fact]
@@ -72,8 +73,8 @@ public sealed class RouterStreamSessionTests
         await using var session = CreateSession(sseBody);
         var usage = await session.CopyToAsync(new MemoryStream(), CancellationToken.None);
 
-        Assert.Equal(15, usage.InputTokens);
-        Assert.Equal(30, usage.OutputTokens);
+        usage.InputTokens.Should().Be(15);
+        usage.OutputTokens.Should().Be(30);
     }
 
     [Fact]
@@ -84,8 +85,8 @@ public sealed class RouterStreamSessionTests
         await using var session = CreateSession(sseBody);
         var usage = await session.CopyToAsync(new MemoryStream(), CancellationToken.None);
 
-        Assert.Equal(0, usage.InputTokens);
-        Assert.Equal(0, usage.OutputTokens);
+        usage.InputTokens.Should().Be(0);
+        usage.OutputTokens.Should().Be(0);
     }
 
     [Fact]
@@ -104,9 +105,9 @@ public sealed class RouterStreamSessionTests
 
         destination.Position = 0;
         var output = new StreamReader(destination).ReadToEnd();
-        Assert.DoesNotContain(": keep-alive", output);
-        Assert.DoesNotContain("event: delta", output);
-        Assert.Contains("data: {\"choices\":[]}", output);
+        output.Should().NotContain(": keep-alive");
+        output.Should().NotContain("event: delta");
+        output.Should().Contain("data: {\"choices\":[]}");
     }
 
     private static RouterStreamSession CreateSession(string sseBody)

@@ -13,16 +13,15 @@ namespace OpenRussiaRouter.BillingService.Application.Services;
 
 public sealed class GrpcBillingService(
     BillingApplicationService billing,
-    ILogger<GrpcBillingService>? logger = null) : BillingGrpc.BillingServiceBase
+    ILogger<GrpcBillingService> logger) : BillingGrpc.BillingServiceBase
 {
-
-    public override Task<CheckBalanceAndModelResponse> CheckBalanceAndModel(
+    public override async Task<CheckBalanceAndModelResponse> CheckBalanceAndModel(
         CheckBalanceAndModelRequest request,
         ServerCallContext context)
     {
-        var result = billing.CheckBalanceAndModel(request.UserId, request.ModelId);
+        var result = await billing.CheckBalanceAndModelAsync(request.UserId, request.ModelId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-        return Task.FromResult(new CheckBalanceAndModelResponse
+        return new CheckBalanceAndModelResponse
         {
             Allowed = result.Allowed,
             ModelId = result.ModelId,
@@ -30,24 +29,25 @@ public sealed class GrpcBillingService(
             PriceVersion = result.PriceVersion ?? string.Empty,
             BalanceRub = result.CurrentBalance.Amount.ToString(CultureInfo.InvariantCulture),
             ErrorCode = result.ErrorCode ?? string.Empty
-        });
+        };
     }
 
-    public override Task<ListPublicModelsResponse> ListPublicModels(
+    public override async Task<ListPublicModelsResponse> ListPublicModels(
         ListPublicModelsRequest request,
         ServerCallContext context)
     {
         var response = new ListPublicModelsResponse();
-        response.Models.AddRange(billing.ListPublicModels().Select(model => new Contracts.Grpc.Billing.V1.PublicModel
-        {
-            Id = model.Id,
-            DisplayName = model.DisplayName
-        }));
-
-        return Task.FromResult(response);
+        response.Models.AddRange(
+            (await billing.ListPublicModelsAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(model => new Contracts.Grpc.Billing.V1.PublicModel
+            {
+                Id = model.Id,
+                DisplayName = model.DisplayName
+            }));
+        return response;
     }
 
-    public override Task<RecordUsageResponse> RecordUsage(
+    public override async Task<RecordUsageResponse> RecordUsage(
         RecordUsageRequest request,
         ServerCallContext context)
     {
@@ -66,75 +66,76 @@ public sealed class GrpcBillingService(
             ParseTimestamp(request.StartedAtUtc),
             ParseTimestamp(request.CompletedAtUtc));
 
-        var result = billing.RecordUsage(usageEvent, DateTimeOffset.UtcNow);
+        var result = await billing.RecordUsageAsync(usageEvent, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-        return Task.FromResult(new RecordUsageResponse
+        return new RecordUsageResponse
         {
             Accepted = result.Accepted,
             RequestId = result.RequestId ?? string.Empty,
             ErrorCode = result.ErrorCode ?? string.Empty
-        });
+        };
     }
 
-    public override Task<GetBalanceResponse> GetBalance(
+    public override async Task<GetBalanceResponse> GetBalance(
         GetBalanceRequest request,
         ServerCallContext context)
     {
         try
         {
-            var balance = billing.GetBalance(request.UserId);
-            return Task.FromResult(new GetBalanceResponse
+            var balance = await billing.GetBalanceAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new GetBalanceResponse
             {
                 UserId = request.UserId,
                 BalanceRub = balance.Amount.ToString(CultureInfo.InvariantCulture)
-            });
+            };
         }
         catch (ArgumentException ex)
         {
-            logger?.LogWarning(ex, "GetBalance failed. UserId: {UserId}", request.UserId);
-            return Task.FromResult(new GetBalanceResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "GetBalance failed. UserId: {UserId}", request.UserId);
+            return new GetBalanceResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<CreateVirtualTopUpResponse> CreateVirtualTopUp(
+    public override async Task<CreateVirtualTopUpResponse> CreateVirtualTopUp(
         CreateVirtualTopUpRequest request,
         ServerCallContext context)
     {
         try
         {
             var amount = MoneyAmount.Rub(decimal.Parse(request.AmountRub, CultureInfo.InvariantCulture));
-            var entry = billing.CreateVirtualTopUp(
+            var entry = await billing.CreateVirtualTopUpAsync(
                 request.AdminId,
                 request.UserId,
                 amount,
                 request.Reason,
                 request.IdempotencyKey,
-                DateTimeOffset.UtcNow);
-            var balance = billing.GetBalance(request.UserId);
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var balance = await billing.GetBalanceAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-            return Task.FromResult(new CreateVirtualTopUpResponse
+            return new CreateVirtualTopUpResponse
             {
                 Created = true,
                 LedgerEntryId = entry.Id,
                 UserId = entry.UserId,
                 AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
                 BalanceRub = balance.Amount.ToString(CultureInfo.InvariantCulture)
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
         {
-            logger?.LogWarning(ex, "CreateVirtualTopUp failed. AdminId: {AdminId}; UserId: {UserId}; IdempotencyKey: {IdempotencyKey}", request.AdminId, request.UserId, request.IdempotencyKey);
-            return Task.FromResult(new CreateVirtualTopUpResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "CreateVirtualTopUp failed. AdminId: {AdminId}; UserId: {UserId}; IdempotencyKey: {IdempotencyKey}", request.AdminId, request.UserId, request.IdempotencyKey);
+            return new CreateVirtualTopUpResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<UpsertModelPriceResponse> UpsertModelPrice(
+    public override async Task<UpsertModelPriceResponse> UpsertModelPrice(
         UpsertModelPriceRequest request,
         ServerCallContext context)
     {
         try
         {
-            billing.UpsertModel(new ModelPrice(
+            await billing.UpsertModelAsync(new ModelPrice(
                 request.ModelId,
                 request.DisplayName,
                 request.UpstreamModelId,
@@ -143,134 +144,141 @@ public sealed class GrpcBillingService(
                     MoneyAmount.Rub(decimal.Parse(request.InputPricePer1MRub, CultureInfo.InvariantCulture)),
                     MoneyAmount.Rub(decimal.Parse(request.OutputPricePer1MRub, CultureInfo.InvariantCulture)),
                     MoneyAmount.Rub(decimal.Parse(request.CachePricePer1MRub, CultureInfo.InvariantCulture))),
-                request.Enabled));
+                request.Enabled),
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-            return Task.FromResult(new UpsertModelPriceResponse
+            return new UpsertModelPriceResponse
             {
                 Upserted = true,
                 ModelId = request.ModelId
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
         {
-            logger?.LogWarning(ex, "UpsertModelPrice failed. ModelId: {ModelId}; PriceVersion: {PriceVersion}", request.ModelId, request.PriceVersion);
-            return Task.FromResult(new UpsertModelPriceResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "UpsertModelPrice failed. ModelId: {ModelId}; PriceVersion: {PriceVersion}", request.ModelId, request.PriceVersion);
+            return new UpsertModelPriceResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<ListBillingAnomaliesResponse> ListBillingAnomalies(
+    public override async Task<ListBillingAnomaliesResponse> ListBillingAnomalies(
         ListBillingAnomaliesRequest request,
         ServerCallContext context)
     {
         var response = new ListBillingAnomaliesResponse();
-        response.Anomalies.AddRange(billing.ListAnomalies().Select(anomaly => new Contracts.Grpc.Billing.V1.BillingAnomaly
-        {
-            Id = anomaly.Id,
-            RequestId = anomaly.RequestId,
-            Type = anomaly.Type,
-            Message = anomaly.Message,
-            CreatedAtUtc = anomaly.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
-        }));
-
-return Task.FromResult(response);
+        response.Anomalies.AddRange(
+            (await billing.ListAnomaliesAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(anomaly => new Contracts.Grpc.Billing.V1.BillingAnomaly
+            {
+                Id = anomaly.Id,
+                RequestId = anomaly.RequestId,
+                Type = anomaly.Type,
+                Message = anomaly.Message,
+                CreatedAtUtc = anomaly.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            }));
+        return response;
     }
 
-    public override Task<ListModelsResponse> ListModels(
+    public override async Task<ListModelsResponse> ListModels(
         ListModelsRequest request,
         ServerCallContext context)
     {
         var response = new ListModelsResponse();
-        response.Models.AddRange(billing.ListAllModels().Select(model => new Contracts.Grpc.Billing.V1.ModelDetail
-        {
-            Id = model.ModelId,
-            DisplayName = model.DisplayName,
-            UpstreamModelId = model.RouterModelId,
-            PriceVersion = model.PriceVersion,
-            InputPricePer1MRub = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-            OutputPricePer1MRub = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-            CachePricePer1MRub = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-            Enabled = model.Enabled
-        }));
-
-return Task.FromResult(response);
+        response.Models.AddRange(
+            (await billing.ListAllModelsAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(model => new Contracts.Grpc.Billing.V1.ModelDetail
+            {
+                Id = model.ModelId,
+                DisplayName = model.DisplayName,
+                UpstreamModelId = model.RouterModelId,
+                PriceVersion = model.PriceVersion,
+                InputPricePer1MRub = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                OutputPricePer1MRub = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                CachePricePer1MRub = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                Enabled = model.Enabled
+            }));
+        return response;
     }
 
-    public override Task<ListUsageResponse> ListUsage(
+    public override async Task<ListUsageResponse> ListUsage(
         ListUsageRequest request,
         ServerCallContext context)
     {
         var response = new ListUsageResponse();
-        response.Records.AddRange(billing.ListUsage(string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId).Select(usage => new Contracts.Grpc.Billing.V1.UsageRecord
-        {
-            RequestId = usage.RequestId,
-            UserId = usage.UserId,
-            ApiKeyId = usage.ApiKeyId,
-            ModelId = usage.ModelId,
-            PriceVersion = usage.PriceVersion,
-            RouterNodeId = usage.RouterNodeId,
-            Usage = new Contracts.Grpc.Billing.V1.TokenUsage
+        var userId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId;
+        response.Records.AddRange(
+            (await billing.ListUsageAsync(userId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(usage => new Contracts.Grpc.Billing.V1.UsageRecord
             {
-                InputTokens = usage.Usage.InputTokens,
-                OutputTokens = usage.Usage.OutputTokens,
-                CacheTokens = usage.Usage.CacheTokens
-            },
-            CostRub = usage.Cost.Amount.ToString(CultureInfo.InvariantCulture),
-            Status = usage.Status,
-            CreatedAtUtc = usage.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
-        }));
-
-        return Task.FromResult(response);
+                RequestId = usage.RequestId,
+                UserId = usage.UserId,
+                ApiKeyId = usage.ApiKeyId,
+                ModelId = usage.ModelId,
+                PriceVersion = usage.PriceVersion,
+                RouterNodeId = usage.RouterNodeId,
+                Usage = new Contracts.Grpc.Billing.V1.TokenUsage
+                {
+                    InputTokens = usage.Usage.InputTokens,
+                    OutputTokens = usage.Usage.OutputTokens,
+                    CacheTokens = usage.Usage.CacheTokens
+                },
+                CostRub = usage.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+                Status = usage.Status,
+                CreatedAtUtc = usage.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            }));
+        return response;
     }
 
-    public override Task<ListActivityByTokenResponse> ListActivityByToken(
+    public override async Task<ListActivityByTokenResponse> ListActivityByToken(
         ListActivityByTokenRequest request,
         ServerCallContext context)
     {
         var response = new ListActivityByTokenResponse();
-        response.Records.AddRange(billing.ListActivityByToken(request.ApiKeyIds.ToArray()).Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
-        {
-            RequestId = activity.RequestId,
-            ApiKeyId = activity.ApiKeyId,
-            ApiKeyPrefix = activity.ApiKeyPrefix,
-            ModelId = activity.ModelId,
-            RouterNodeId = activity.RouterNodeId,
-            Usage = new Contracts.Grpc.Billing.V1.TokenUsage
+        response.Records.AddRange(
+            (await billing.ListActivityByTokenAsync(request.ApiKeyIds.ToArray(), context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
             {
-                InputTokens = activity.Usage.InputTokens,
-                OutputTokens = activity.Usage.OutputTokens,
-                CacheTokens = activity.Usage.CacheTokens
-            },
-            Status = activity.Status,
-            CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
-        }));
-
-        return Task.FromResult(response);
+                RequestId = activity.RequestId,
+                ApiKeyId = activity.ApiKeyId,
+                ApiKeyPrefix = activity.ApiKeyPrefix,
+                ModelId = activity.ModelId,
+                RouterNodeId = activity.RouterNodeId,
+                Usage = new Contracts.Grpc.Billing.V1.TokenUsage
+                {
+                    InputTokens = activity.Usage.InputTokens,
+                    OutputTokens = activity.Usage.OutputTokens,
+                    CacheTokens = activity.Usage.CacheTokens
+                },
+                Status = activity.Status,
+                CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+            }));
+        return response;
     }
 
-    public override Task<ListTopUpsResponse> ListTopUps(
+    public override async Task<ListTopUpsResponse> ListTopUps(
         ListTopUpsRequest request,
         ServerCallContext context)
     {
         var response = new ListTopUpsResponse();
-        response.Records.AddRange(billing.ListTopUps(request.UserId).Select(entry => new TopUpRecord
-        {
-            Id = entry.Id,
-            AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
-            Reason = entry.Reason,
-            CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
-        }));
-        return Task.FromResult(response);
+        response.Records.AddRange(
+            (await billing.ListTopUpsAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(entry => new TopUpRecord
+            {
+                Id = entry.Id,
+                AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+                Reason = entry.Reason,
+                CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            }));
+        return response;
     }
 
-    private static DateTimeOffset ParseTimestamp(string value)
+    private DateTimeOffset ParseTimestamp(string value)
     {
         if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))
-        {
             return parsed.ToUniversalTime();
-        }
 
+        logger.LogWarning("Failed to parse timestamp '{Value}'; using UtcNow as fallback.", value);
         return DateTimeOffset.UtcNow;
     }
 }

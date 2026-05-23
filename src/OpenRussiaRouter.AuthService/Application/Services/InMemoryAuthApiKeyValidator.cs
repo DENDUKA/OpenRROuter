@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
-
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
@@ -12,33 +11,32 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
     private const int VisiblePrefixLength = 12;
 
     private readonly ConcurrentDictionary<string, StoredApiKey> _keysByHash = new(StringComparer.Ordinal);
-    private readonly IAuthRepository? repository;
+    private readonly IAuthRepository? _repository;
     private readonly Sha256SecretHasher _secretHasher;
 
     public InMemoryAuthApiKeyValidator(Sha256SecretHasher secretHasher, IConfiguration configuration, IAuthRepository? repository = null)
     {
-        this.repository = repository;
+        _repository = repository;
         _secretHasher = secretHasher;
         LoadSeedKeys(configuration);
     }
 
-    public ValidateApiKeyResult Validate(string rawKey)
+    public async Task<ValidateApiKeyResult> ValidateAsync(string rawKey, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(rawKey))
-        {
             return Invalid();
-        }
 
         var hash = _secretHasher.Hash(rawKey);
-        if (repository?.FindActiveApiKeyBySecretHash(hash) is { } apiKey)
+
+        if (_repository is not null)
         {
-            return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
+            var apiKey = await _repository.FindActiveApiKeyBySecretHashAsync(hash, ct).ConfigureAwait(false);
+            if (apiKey is not null)
+                return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
         }
 
         if (!_keysByHash.TryGetValue(hash, out var key) || key.Revoked)
-        {
             return Invalid();
-        }
 
         return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, key.ApiKeyPrefix, null);
     }
@@ -49,15 +47,11 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         _keysByHash[_secretHasher.Hash(rawKey)] = key;
     }
 
-    private static ValidateApiKeyResult Invalid()
-    {
-        return new ValidateApiKeyResult(false, null, null, null, ErrorCodes.InvalidApiKey);
-    }
+    private static ValidateApiKeyResult Invalid() =>
+        new(false, null, null, null, ErrorCodes.InvalidApiKey);
 
-    private static string GetPrefix(string rawKey)
-    {
-        return rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
-    }
+    private static string GetPrefix(string rawKey) =>
+        rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
 
     private void LoadSeedKeys(IConfiguration configuration)
     {

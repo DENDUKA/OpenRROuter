@@ -16,20 +16,19 @@ public sealed class RouterHealthCheckWorker(
     public async Task RunOnceAsync(CancellationToken cancellationToken)
     {
         if (!options.CurrentValue.Enabled)
-        {
             return;
-        }
 
-        var nodes = controlPlane.ListNodesForHealthChecks();
+        var nodes = await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false);
         foreach (var node in nodes.Where(candidate => candidate.Enabled))
         {
             var result = await healthClient.CheckAsync(node, cancellationToken).ConfigureAwait(false);
-            controlPlane.ApplyHealth(
+            await controlPlane.ApplyHealthAsync(
                 node.Id,
                 result.Status,
                 DateTimeOffset.UtcNow,
                 result.LatencyMs,
-                result.ErrorCode);
+                result.ErrorCode,
+                cancellationToken).ConfigureAwait(false);
         }
     }
 

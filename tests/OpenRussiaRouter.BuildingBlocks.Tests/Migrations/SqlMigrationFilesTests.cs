@@ -1,3 +1,5 @@
+using FluentAssertions;
+
 namespace OpenRussiaRouter.BuildingBlocks.Tests.Migrations;
 
 public sealed class SqlMigrationFilesTests
@@ -10,11 +12,11 @@ public sealed class SqlMigrationFilesTests
     {
         var sql = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", service, "001_initial.sql"));
 
-        Assert.Contains($"create schema if not exists {service}", sql, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(firstTable, sql, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains(secondTable, sql, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("entity framework", sql, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("dbcontext", sql, StringComparison.OrdinalIgnoreCase);
+        sql.Should().ContainEquivalentOf($"create schema if not exists {service}");
+        sql.Should().ContainEquivalentOf(firstTable);
+        sql.Should().ContainEquivalentOf(secondTable);
+        sql.Should().NotContainEquivalentOf("entity framework");
+        sql.Should().NotContainEquivalentOf("dbcontext");
     }
 
     [Fact]
@@ -22,9 +24,9 @@ public sealed class SqlMigrationFilesTests
     {
         var sql = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "db", "migrations", "auth", "002_seed_default_admin.sql"));
 
-        Assert.Contains("admin@example.com", sql, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("pbkdf2-sha256.210000.", sql, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("StrongPassword123!", sql, StringComparison.Ordinal);
+        sql.Should().Contain("admin@example.com");
+        sql.Should().Contain("pbkdf2-sha256.210000.");
+        sql.Should().NotContain("StrongPassword123!");
     }
 
     private static string FindRepositoryRoot()

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
@@ -14,7 +15,7 @@ public sealed class CorrelationIdReaderTests
 
         var result = CorrelationIdReader.Get(context.Request);
 
-        Assert.Equal("corr-1", result);
+        result.Should().Be("corr-1");
     }
 
     [Fact]
@@ -24,7 +25,6 @@ public sealed class CorrelationIdReaderTests
 
         var result = CorrelationIdReader.Get(context.Request);
 
-        Assert.False(string.IsNullOrWhiteSpace(result));
+        result.Should().NotBeNullOrWhiteSpace();
     }
 }
-

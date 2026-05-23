@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ApiGateway.Http;
@@ -19,13 +20,13 @@ public sealed class GatewayErrorsTests
 
         var json = await ReadBodyAsync(context);
         var error = json.RootElement.GetProperty("error");
-        Assert.Equal(StatusCodes.Status402PaymentRequired, context.Response.StatusCode);
-        Assert.Equal("billing_error", error.GetProperty("type").GetString());
-        Assert.Equal(ErrorCodes.InsufficientBalance, error.GetProperty("code").GetString());
-        Assert.Equal("Insufficient balance.", error.GetProperty("message").GetString());
-        Assert.Equal("corr-1", error.GetProperty("request_id").GetString());
-        Assert.Equal("corr-1", context.Response.Headers[CorrelationIds.HeaderName]);
-        Assert.Equal("corr-1", context.Response.Headers["X-Request-Id"]);
+        context.Response.StatusCode.Should().Be(StatusCodes.Status402PaymentRequired);
+        error.GetProperty("type").GetString().Should().Be("billing_error");
+        error.GetProperty("code").GetString().Should().Be(ErrorCodes.InsufficientBalance);
+        error.GetProperty("message").GetString().Should().Be("Insufficient balance.");
+        error.GetProperty("request_id").GetString().Should().Be("corr-1");
+        context.Response.Headers[CorrelationIds.HeaderName].Should().Equal("corr-1");
+        context.Response.Headers["X-Request-Id"].Should().Equal("corr-1");
     }
 
     [Fact]
@@ -36,11 +37,11 @@ public sealed class GatewayErrorsTests
         await GatewayErrors.Internal(context.Request).ExecuteAsync(context);
 
         var error = (await ReadBodyAsync(context)).RootElement.GetProperty("error");
-        Assert.Equal(StatusCodes.Status500InternalServerError, context.Response.StatusCode);
-        Assert.Equal("internal_error", error.GetProperty("type").GetString());
-        Assert.Equal(ErrorCodes.InternalError, error.GetProperty("code").GetString());
-        Assert.Equal("Internal server error.", error.GetProperty("message").GetString());
-        Assert.DoesNotContain("Exception", error.GetProperty("message").GetString(), StringComparison.OrdinalIgnoreCase);
+        context.Response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        error.GetProperty("type").GetString().Should().Be("internal_error");
+        error.GetProperty("code").GetString().Should().Be(ErrorCodes.InternalError);
+        error.GetProperty("message").GetString().Should().Be("Internal server error.");
+        error.GetProperty("message").GetString().Should().NotContainEquivalentOf("Exception");
     }
 
     private static DefaultHttpContext CreateContext(string correlationId)

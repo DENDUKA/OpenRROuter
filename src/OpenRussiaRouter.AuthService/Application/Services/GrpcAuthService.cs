@@ -13,61 +13,59 @@ public sealed class GrpcAuthService(
     IAuthRepository repository,
     AuthAccountApplicationService accounts,
     LoginService loginService,
-    ILogger<GrpcAuthService>? logger = null) : AuthGrpc.AuthServiceBase
+    ILogger<GrpcAuthService> logger) : AuthGrpc.AuthServiceBase
 {
-
-    public override Task<ValidateApiKeyResponse> ValidateApiKey(
+    public override async Task<ValidateApiKeyResponse> ValidateApiKey(
         ValidateApiKeyRequest request,
         ServerCallContext context)
     {
-        var result = apiKeyValidator.Validate(request.RawKey);
+        var result = await apiKeyValidator.ValidateAsync(request.RawKey, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-        return Task.FromResult(new ValidateApiKeyResponse
+        return new ValidateApiKeyResponse
         {
             IsValid = result.IsValid,
             UserId = result.UserId ?? string.Empty,
             ApiKeyId = result.ApiKeyId ?? string.Empty,
             ApiKeyPrefix = result.ApiKeyPrefix ?? string.Empty,
             ErrorCode = result.ErrorCode ?? string.Empty
-        });
+        };
     }
 
-    public override Task<LoginResponse> Login(
+    public override async Task<LoginResponse> Login(
         LoginRequest request,
         ServerCallContext context)
     {
-        var user = repository.GetUserByEmail(request.Email);
+        var user = await repository.GetUserByEmailAsync(request.Email, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         var result = loginService.Login(user, request.Password, DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
 
         if (!result.Succeeded)
-        {
-            return Task.FromResult(new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.AuthenticationRequired });
-        }
+            return new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.AuthenticationRequired };
 
-        return Task.FromResult(new LoginResponse
+        return new LoginResponse
         {
             Succeeded = true,
             SessionToken = result.Session!.Token,
             UserId = result.Session.UserId,
             Role = result.Session.Role.ToString()
-        });
+        };
     }
 
-    public override Task<CreateInviteResponse> CreateInvite(
+    public override async Task<CreateInviteResponse> CreateInvite(
         CreateInviteRequest request,
         ServerCallContext context)
     {
         try
         {
             var expiresAtUtc = DateTimeOffset.FromUnixTimeSeconds(request.ExpiresAtUnixTimeSeconds);
-            var created = accounts.CreateInvite(
+            var created = await accounts.CreateInviteAsync(
                 request.Email,
                 ParseRole(request.Role),
                 request.CreatedByAdminId,
                 expiresAtUtc,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-            return Task.FromResult(new CreateInviteResponse
+            return new CreateInviteResponse
             {
                 IsCreated = true,
                 InviteId = created.Invite.Id,
@@ -75,45 +73,55 @@ public sealed class GrpcAuthService(
                 Email = created.Invite.Email,
                 Role = created.Invite.Role.ToString(),
                 ExpiresAtUnixTimeSeconds = created.Invite.ExpiresAtUtc.ToUnixTimeSeconds()
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            logger?.LogWarning(ex, "CreateInvite failed. Email: {Email}; Role: {Role}", request.Email, request.Role);
-            return Task.FromResult(new CreateInviteResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "CreateInvite failed. Email: {Email}; Role: {Role}", request.Email, request.Role);
+            return new CreateInviteResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<CompleteInviteResponse> CompleteInvite(
+    public override async Task<CompleteInviteResponse> CompleteInvite(
         CompleteInviteRequest request,
         ServerCallContext context)
     {
         try
         {
-            var user = accounts.CompleteInvite(request.RawToken, request.Password, DateTimeOffset.UtcNow);
-            return Task.FromResult(new CompleteInviteResponse
+            var user = await accounts.CompleteInviteAsync(
+                request.RawToken,
+                request.Password,
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new CompleteInviteResponse
             {
                 IsCompleted = true,
                 UserId = user.Id,
                 Email = user.Email,
                 Role = user.Role.ToString()
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            logger?.LogWarning(ex, "CompleteInvite failed.");
-            return Task.FromResult(new CompleteInviteResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "CompleteInvite failed.");
+            return new CompleteInviteResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<CreateApiKeyResponse> CreateApiKey(
+    public override async Task<CreateApiKeyResponse> CreateApiKey(
         CreateApiKeyRequest request,
         ServerCallContext context)
     {
         try
         {
-            var created = accounts.CreateApiKey(request.UserId, request.Name, DateTimeOffset.UtcNow);
-            return Task.FromResult(new CreateApiKeyResponse
+            var created = await accounts.CreateApiKeyAsync(
+                request.UserId,
+                request.Name,
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new CreateApiKeyResponse
             {
                 IsCreated = true,
                 ApiKeyId = created.ApiKey.Id,
@@ -121,42 +129,37 @@ public sealed class GrpcAuthService(
                 Prefix = created.ApiKey.Prefix,
                 Name = created.ApiKey.Name,
                 CreatedAtUnixTimeSeconds = created.ApiKey.CreatedAtUtc.ToUnixTimeSeconds()
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
         {
-            logger?.LogWarning(ex, "CreateApiKey failed. UserId: {UserId}; Name: {Name}", request.UserId, request.Name);
-            return Task.FromResult(new CreateApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "CreateApiKey failed. UserId: {UserId}; Name: {Name}", request.UserId, request.Name);
+            return new CreateApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<RevokeApiKeyResponse> RevokeApiKey(
+    public override async Task<RevokeApiKeyResponse> RevokeApiKey(
         RevokeApiKeyRequest request,
         ServerCallContext context)
     {
         try
         {
-            accounts.RevokeApiKey(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow);
-            return Task.FromResult(new RevokeApiKeyResponse { IsRevoked = true });
+            await accounts.RevokeApiKeyAsync(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new RevokeApiKeyResponse { IsRevoked = true };
         }
-        catch (KeyNotFoundException ex)
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
         {
-            logger?.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
-            return Task.FromResult(new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
-        }
-        catch (ArgumentException ex)
-        {
-            logger?.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
-            return Task.FromResult(new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<ListApiKeysResponse> ListApiKeys(
+    public override async Task<ListApiKeysResponse> ListApiKeys(
         ListApiKeysRequest request,
         ServerCallContext context)
     {
-        var keys = accounts.ListApiKeys(request.UserId);
-        return Task.FromResult(new ListApiKeysResponse
+        var keys = await accounts.ListApiKeysAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new ListApiKeysResponse
         {
             Keys =
             {
@@ -171,36 +174,31 @@ public sealed class GrpcAuthService(
                     IsActive = k.IsActive
                 })
             }
-        });
+        };
     }
 
-    public override Task<RenameApiKeyResponse> RenameApiKey(
+    public override async Task<RenameApiKeyResponse> RenameApiKey(
         RenameApiKeyRequest request,
         ServerCallContext context)
     {
         try
         {
-            accounts.RenameApiKey(request.UserId, request.ApiKeyId, request.Name);
-            return Task.FromResult(new RenameApiKeyResponse { IsRenamed = true });
+            await accounts.RenameApiKeyAsync(request.UserId, request.ApiKeyId, request.Name, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new RenameApiKeyResponse { IsRenamed = true };
         }
-        catch (KeyNotFoundException ex)
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
         {
-            logger?.LogWarning(ex, "RenameApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; Name: {Name}", request.UserId, request.ApiKeyId, request.Name);
-            return Task.FromResult(new RenameApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
-        }
-        catch (ArgumentException ex)
-        {
-            logger?.LogWarning(ex, "RenameApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; Name: {Name}", request.UserId, request.ApiKeyId, request.Name);
-            return Task.FromResult(new RenameApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "RenameApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; Name: {Name}", request.UserId, request.ApiKeyId, request.Name);
+            return new RenameApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<ListUsersResponse> ListUsers(
+    public override async Task<ListUsersResponse> ListUsers(
         ListUsersRequest request,
         ServerCallContext context)
     {
-        var users = accounts.ListUsers();
-        return Task.FromResult(new ListUsersResponse
+        var users = await accounts.ListUsersAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new ListUsersResponse
         {
             Users =
             {
@@ -213,32 +211,29 @@ public sealed class GrpcAuthService(
                     CreatedAtUnixTimeSeconds = u.CreatedAtUtc.ToUnixTimeSeconds()
                 })
             }
-        });
+        };
     }
 
-    public override Task<ListActiveApiKeyHashesResponse> ListActiveApiKeyHashes(
+    public override async Task<ListActiveApiKeyHashesResponse> ListActiveApiKeyHashes(
         ListActiveApiKeyHashesRequest request,
         ServerCallContext context)
     {
-        var hashes = repository.ListActiveApiKeyHashes();
+        var hashes = await repository.ListActiveApiKeyHashesAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         var response = new ListActiveApiKeyHashesResponse();
         response.Keys.AddRange(hashes.Select(h => new ApiKeyHashEntry
         {
             Prefix = h.Prefix,
             SecretHash = h.SecretHash
         }));
-        return Task.FromResult(response);
+        return response;
     }
 
-    public override Task<GetFirstActiveApiKeyRawResponse> GetFirstActiveApiKeyRaw(
+    public override async Task<GetFirstActiveApiKeyRawResponse> GetFirstActiveApiKeyRaw(
         GetFirstActiveApiKeyRawRequest request,
         ServerCallContext context)
     {
-        var rawKey = repository.GetFirstActiveApiKeyRaw(request.UserId);
-        return Task.FromResult(new GetFirstActiveApiKeyRawResponse
-        {
-            RawKey = rawKey ?? string.Empty
-        });
+        var rawKey = await repository.GetFirstActiveApiKeyRawAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new GetFirstActiveApiKeyRawResponse { RawKey = rawKey ?? string.Empty };
     }
 
     private static UserRole ParseRole(string role)
@@ -248,4 +243,3 @@ public sealed class GrpcAuthService(
             : throw new ArgumentException("Unknown role.", nameof(role));
     }
 }
-

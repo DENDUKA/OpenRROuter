@@ -1,4 +1,5 @@
 using System.Net;
+using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Router;
@@ -22,14 +23,14 @@ public sealed class YarpRouterProxyClientTests
 
         var response = await client.SendChatCompletionAsync(lease, """{"model":"gpt-test"}""", "req-1", "sk-test_secret", CancellationToken.None);
 
-        Assert.Equal(200, response.StatusCode);
-        Assert.Equal("""{"ok":true}""", response.Body);
-        Assert.Equal("https://router.example/", forwarder.DestinationPrefix);
-        Assert.Equal("/v1/chat/completions", forwarder.Path);
-        Assert.Null(forwarder.NodeToken);
-        Assert.Equal("Bearer sk-test_secret", forwarder.Authorization);
-        Assert.Equal("req-1", forwarder.RequestId);
-        Assert.Equal("""{"model":"gpt-test"}""", forwarder.Body);
+        response.StatusCode.Should().Be(200);
+        response.Body.Should().Be("""{"ok":true}""");
+        forwarder.DestinationPrefix.Should().Be("https://router.example/");
+        forwarder.Path.Should().Be("/v1/chat/completions");
+        forwarder.NodeToken.Should().BeNull();
+        forwarder.Authorization.Should().Be("Bearer sk-test_secret");
+        forwarder.RequestId.Should().Be("req-1");
+        forwarder.Body.Should().Be("""{"model":"gpt-test"}""");
     }
 
     private sealed class CapturingForwarder : IHttpForwarder

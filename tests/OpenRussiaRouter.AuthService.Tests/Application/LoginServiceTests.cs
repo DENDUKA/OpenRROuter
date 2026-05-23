@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
@@ -19,12 +20,12 @@ public sealed class LoginServiceTests
 
         var result = service.Login(user, "StrongPassword123!", now, TimeSpan.FromHours(8));
 
-        Assert.True(result.Succeeded);
-        Assert.NotNull(result.Session);
-        Assert.StartsWith("orr_session_", result.Session.Token, StringComparison.Ordinal);
-        Assert.Equal(user.Id, result.Session.UserId);
-        Assert.Equal(user.Role, result.Session.Role);
-        Assert.Equal(now.AddHours(8), result.Session.ExpiresAtUtc);
+        result.Succeeded.Should().BeTrue();
+        result.Session.Should().NotBeNull();
+        result.Session!.Token.Should().StartWith("orr_session_");
+        result.Session.UserId.Should().Be(user.Id);
+        result.Session.Role.Should().Be(user.Role);
+        result.Session.ExpiresAtUtc.Should().Be(now.AddHours(8));
     }
 
     [Fact]
@@ -34,9 +35,9 @@ public sealed class LoginServiceTests
 
         var result = service.Login(null, "StrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Session);
-        Assert.Equal("invalid_credentials", result.ErrorCode);
+        result.Succeeded.Should().BeFalse();
+        result.Session.Should().BeNull();
+        result.ErrorCode.Should().Be("invalid_credentials");
     }
 
     [Fact]
@@ -47,9 +48,9 @@ public sealed class LoginServiceTests
 
         var result = service.Login(user, "WrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Session);
-        Assert.Equal("invalid_credentials", result.ErrorCode);
+        result.Succeeded.Should().BeFalse();
+        result.Session.Should().BeNull();
+        result.ErrorCode.Should().Be("invalid_credentials");
     }
 
     [Fact]
@@ -61,9 +62,9 @@ public sealed class LoginServiceTests
 
         var result = service.Login(user, "StrongPassword123!", DateTimeOffset.UtcNow, TimeSpan.FromHours(8));
 
-        Assert.False(result.Succeeded);
-        Assert.Null(result.Session);
-        Assert.Equal("user_disabled", result.ErrorCode);
+        result.Succeeded.Should().BeFalse();
+        result.Session.Should().BeNull();
+        result.ErrorCode.Should().Be("user_disabled");
     }
 
     private UserAccount CreateUser(string password, DateTimeOffset createdAtUtc)
@@ -76,4 +77,3 @@ public sealed class LoginServiceTests
             createdAtUtc);
     }
 }
-

@@ -10,130 +10,125 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
+    IControlPlaneRepository repository,
     IRouterNodeProviderClient providerClient,
-    ILogger<GrpcRouterControlPlaneService>? logger = null)
+    ILogger<GrpcRouterControlPlaneService> logger)
     : ControlGrpc.RouterControlPlaneBase
 {
-    public override Task<SelectRouterNodeResponse> SelectRouterNode(
+    public override async Task<SelectRouterNodeResponse> SelectRouterNode(
         SelectRouterNodeRequest request,
         ServerCallContext context)
     {
         try
         {
-            var lease = controlPlane.SelectRouterNode(request.RequestId, DateTimeOffset.UtcNow);
-            return Task.FromResult(new SelectRouterNodeResponse
+            var lease = await controlPlane.SelectRouterNodeAsync(request.RequestId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new SelectRouterNodeResponse
             {
                 LeaseId = lease.LeaseId,
                 NodeId = lease.NodeId,
                 EndpointUrl = lease.EndpointUrl.ToString(),
                 ControlToken = lease.ControlToken
-            });
+            };
         }
         catch (InvalidOperationException ex)
         {
-            logger?.LogWarning(ex, "SelectRouterNode failed. RequestId: {RequestId}; ModelId: {ModelId}", request.RequestId, request.ModelId);
-            return Task.FromResult(new SelectRouterNodeResponse
-            {
-                ErrorCode = ErrorCodes.RouterUnavailable
-            });
+            logger.LogWarning(ex, "SelectRouterNode failed. RequestId: {RequestId}; ModelId: {ModelId}", request.RequestId, request.ModelId);
+            return new SelectRouterNodeResponse { ErrorCode = ErrorCodes.RouterUnavailable };
         }
     }
 
-    public override Task<ReleaseRouterNodeResponse> ReleaseRouterNode(
+    public override async Task<ReleaseRouterNodeResponse> ReleaseRouterNode(
         ReleaseRouterNodeRequest request,
         ServerCallContext context)
     {
-        controlPlane.ReleaseRouterNode(request.LeaseId);
-        return Task.FromResult(new ReleaseRouterNodeResponse { Accepted = true });
+        await controlPlane.ReleaseRouterNodeAsync(request.LeaseId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new ReleaseRouterNodeResponse { Accepted = true };
     }
 
-    public override Task<RegisterRouterNodeResponse> RegisterRouterNode(
+    public override async Task<RegisterRouterNodeResponse> RegisterRouterNode(
         RegisterRouterNodeRequest request,
         ServerCallContext context)
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(request.ControlToken))
-            {
-                return Task.FromResult(new RegisterRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
-            }
-
-            var node = controlPlane.RegisterNode(
+            var node = await controlPlane.RegisterNodeAsync(
                 request.Name,
                 new Uri(request.EndpointUrl),
                 request.ControlToken,
                 request.CapacityWeight,
-                DateTimeOffset.UtcNow);
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-            return Task.FromResult(new RegisterRouterNodeResponse
+            return new RegisterRouterNodeResponse
             {
                 Registered = true,
                 NodeId = node.Id
-            });
+            };
         }
         catch (Exception ex) when (ex is ArgumentException or UriFormatException)
         {
-            logger?.LogWarning(ex, "RegisterRouterNode failed. Name: {Name}; EndpointUrl: {EndpointUrl}", request.Name, request.EndpointUrl);
-            return Task.FromResult(new RegisterRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "RegisterRouterNode failed. Name: {Name}; EndpointUrl: {EndpointUrl}", request.Name, request.EndpointUrl);
+            return new RegisterRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<DisableRouterNodeResponse> DisableRouterNode(
+    public override async Task<DisableRouterNodeResponse> DisableRouterNode(
         DisableRouterNodeRequest request,
         ServerCallContext context)
     {
         try
         {
-            controlPlane.DisableNode(request.NodeId);
-            return Task.FromResult(new DisableRouterNodeResponse { Disabled = true });
+            await controlPlane.DisableNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DisableRouterNodeResponse { Disabled = true };
         }
         catch (KeyNotFoundException ex)
         {
-            logger?.LogWarning(ex, "DisableRouterNode failed. NodeId: {NodeId}", request.NodeId);
-            return Task.FromResult(new DisableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "DisableRouterNode failed. NodeId: {NodeId}", request.NodeId);
+            return new DisableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<DeleteRouterNodeResponse> DeleteRouterNode(
+    public override async Task<DeleteRouterNodeResponse> DeleteRouterNode(
         DeleteRouterNodeRequest request,
         ServerCallContext context)
     {
         try
         {
-            controlPlane.DeleteNode(request.NodeId);
-            return Task.FromResult(new DeleteRouterNodeResponse { Deleted = true });
+            await controlPlane.DeleteNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DeleteRouterNodeResponse { Deleted = true };
         }
         catch (KeyNotFoundException ex)
         {
-            logger?.LogWarning(ex, "DeleteRouterNode failed. NodeId: {NodeId}", request.NodeId);
-            return Task.FromResult(new DeleteRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "DeleteRouterNode failed. NodeId: {NodeId}", request.NodeId);
+            return new DeleteRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<EnableRouterNodeResponse> EnableRouterNode(
+    public override async Task<EnableRouterNodeResponse> EnableRouterNode(
         EnableRouterNodeRequest request,
         ServerCallContext context)
     {
         try
         {
-            controlPlane.EnableNode(request.NodeId);
-            return Task.FromResult(new EnableRouterNodeResponse { Enabled = true });
+            await controlPlane.EnableNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new EnableRouterNodeResponse { Enabled = true };
         }
         catch (KeyNotFoundException ex)
         {
-            logger?.LogWarning(ex, "EnableRouterNode failed. NodeId: {NodeId}", request.NodeId);
-            return Task.FromResult(new EnableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed });
+            logger.LogWarning(ex, "EnableRouterNode failed. NodeId: {NodeId}", request.NodeId);
+            return new EnableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
-    public override Task<ListRouterNodesResponse> ListRouterNodes(
+    public override async Task<ListRouterNodesResponse> ListRouterNodes(
         ListRouterNodesRequest request,
         ServerCallContext context)
     {
         var response = new ListRouterNodesResponse();
-        response.Nodes.AddRange(controlPlane.ListNodesForHealthChecks().Select(MapNodeSummary));
-
-        return Task.FromResult(response);
+        response.Nodes.AddRange(
+            (await controlPlane.ListNodesForHealthChecksAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(MapNodeSummary));
+        return response;
     }
 
     public override async Task<GetRouterNodeDetailsResponse> GetRouterNodeDetails(
@@ -141,11 +136,9 @@ public sealed class GrpcRouterControlPlaneService(
         ServerCallContext context)
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
-        var node = controlPlane.GetRouterNode(request.NodeId);
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, cancellationToken).ConfigureAwait(false);
         if (node is null)
-        {
             return new GetRouterNodeDetailsResponse { ErrorCode = ErrorCodes.ValidationFailed };
-        }
 
         var response = new GetRouterNodeDetailsResponse { Node = MapNodeSummary(node) };
         var apiErrors = new List<string>();
@@ -174,7 +167,7 @@ public sealed class GrpcRouterControlPlaneService(
             ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
             ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            logger?.LogWarning(ex, "Failed to load provider quota for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "Failed to load provider quota for router node. NodeId: {NodeId}", node.Id);
             apiErrors.Add("Provider quota unavailable: " + ex.Message);
         }
 
@@ -199,7 +192,7 @@ public sealed class GrpcRouterControlPlaneService(
             ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
             ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
         {
-            logger?.LogWarning(ex, "Failed to load integration keys for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "Failed to load integration keys for router node. NodeId: {NodeId}", node.Id);
             apiErrors.Add("Integration keys unavailable: " + ex.Message);
         }
 
@@ -211,7 +204,7 @@ public sealed class GrpcRouterControlPlaneService(
         PushUserIntegrationKeyRequest request,
         ServerCallContext context)
     {
-        var all = controlPlane.ListNodesForHealthChecks();
+        var all = await controlPlane.ListNodesForHealthChecksAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         IEnumerable<RouterNode> targets = string.IsNullOrWhiteSpace(request.NodeId)
             ? all.Where(n => n.Enabled)
@@ -222,18 +215,55 @@ public sealed class GrpcRouterControlPlaneService(
         {
             try
             {
-                await providerClient.CreateIntegrationKeyAsync(
-                    node, request.Name, request.RawKey, context.CancellationToken)
+                var result = await providerClient.CreateIntegrationKeyAsync(
+                    node, request.Name, request.RawKey, context?.CancellationToken ?? CancellationToken.None)
                     .ConfigureAwait(false);
                 pushedCount++;
+
+                if (!string.IsNullOrWhiteSpace(request.ApiKeyId) && !string.IsNullOrWhiteSpace(result.Id))
+                    await repository.SaveIntegrationKeyMappingAsync(request.ApiKeyId, node.Id, result.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                logger?.LogWarning(ex, "Не удалось запушить integration key на ноду {NodeId}", node.Id);
+                logger.LogWarning(ex, "Не удалось запушить integration key на ноду {NodeId}", node.Id);
             }
         }
 
         return new PushUserIntegrationKeyResponse { PushedCount = pushedCount };
+    }
+
+    public override async Task<RevokeUserIntegrationKeyResponse> RevokeUserIntegrationKey(
+        RevokeUserIntegrationKeyRequest request,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.ApiKeyId))
+            return new RevokeUserIntegrationKeyResponse { RevokedCount = 0 };
+
+        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var revokedCount = 0;
+
+        foreach (var (nodeId, routerKeyId) in mappings)
+        {
+            var node = await repository.GetNodeAsync(nodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            if (node is null) continue;
+
+            try
+            {
+                await providerClient.UpdateIntegrationKeyStatusAsync(
+                    node, routerKeyId, isActive: false, context?.CancellationToken ?? CancellationToken.None)
+                    .ConfigureAwait(false);
+                revokedCount++;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Не удалось отозвать integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
+                    nodeId, routerKeyId);
+            }
+        }
+
+        await repository.RemoveIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        return new RevokeUserIntegrationKeyResponse { RevokedCount = revokedCount };
     }
 
     public override async Task<ListAvailableNodeModelsResponse> ListAvailableNodeModels(
@@ -241,7 +271,8 @@ public sealed class GrpcRouterControlPlaneService(
         ServerCallContext context)
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
-        var nodes = controlPlane.ListNodesForHealthChecks().Where(n => n.Enabled);
+        var nodes = (await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false))
+            .Where(n => n.Enabled);
 
         var tasks = nodes.Select(async node =>
         {
@@ -252,7 +283,7 @@ public sealed class GrpcRouterControlPlaneService(
             }
             catch (Exception ex)
             {
-                logger?.LogWarning(ex, "Failed to list models from node {NodeId}", node.Id);
+                logger.LogWarning(ex, "Failed to list models from node {NodeId}", node.Id);
                 return (IEnumerable<string>)[];
             }
         });
@@ -270,9 +301,8 @@ public sealed class GrpcRouterControlPlaneService(
         return response;
     }
 
-    private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node)
-    {
-        return new Contracts.Grpc.ControlPlane.V1.RouterNodeSummary
+    private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>
+        new()
         {
             NodeId = node.Id,
             Name = node.Name,
@@ -284,6 +314,4 @@ public sealed class GrpcRouterControlPlaneService(
             CapacityWeight = node.CapacityWeight,
             LastHealthErrorCode = node.LastHealthErrorCode ?? string.Empty
         };
-    }
-
 }

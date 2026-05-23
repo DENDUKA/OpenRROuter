@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BuildingBlocks.Tests.Money;
@@ -12,7 +13,7 @@ public sealed class MoneyAmountTests
 
         var result = left + right;
 
-        Assert.Equal(MoneyAmount.Rub(16m), result);
+        result.Should().Be(MoneyAmount.Rub(16m));
     }
 
     [Fact]
@@ -23,7 +24,6 @@ public sealed class MoneyAmountTests
 
         var result = left - right;
 
-        Assert.Equal(MoneyAmount.Rub(5.25m), result);
+        result.Should().Be(MoneyAmount.Rub(5.25m));
     }
 }
-

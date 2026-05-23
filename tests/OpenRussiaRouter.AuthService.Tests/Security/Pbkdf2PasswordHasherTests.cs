@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Tests.Security;
@@ -11,8 +12,8 @@ public sealed class Pbkdf2PasswordHasherTests
 
         var hash = hasher.HashPassword("StrongPassword123!");
 
-        Assert.NotEqual("StrongPassword123!", hash);
-        Assert.StartsWith("pbkdf2-sha256.", hash, StringComparison.Ordinal);
+        hash.Should().NotBe("StrongPassword123!");
+        hash.Should().StartWith("pbkdf2-sha256.");
     }
 
     [Fact]
@@ -23,7 +24,7 @@ public sealed class Pbkdf2PasswordHasherTests
 
         var result = hasher.VerifyPassword("StrongPassword123!", hash);
 
-        Assert.True(result);
+        result.Should().BeTrue();
     }
 
     [Fact]
@@ -34,7 +35,7 @@ public sealed class Pbkdf2PasswordHasherTests
 
         var result = hasher.VerifyPassword("WrongPassword123!", hash);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -42,7 +43,6 @@ public sealed class Pbkdf2PasswordHasherTests
     {
         var hasher = new Pbkdf2PasswordHasher();
 
-        Assert.Throws<ArgumentException>(() => hasher.HashPassword("short"));
+        ((Action)(() => hasher.HashPassword("short"))).Should().Throw<ArgumentException>();
     }
 }
-

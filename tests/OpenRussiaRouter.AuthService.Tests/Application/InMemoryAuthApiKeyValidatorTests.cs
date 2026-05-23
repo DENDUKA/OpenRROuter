@@ -1,3 +1,4 @@
+using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
@@ -8,36 +9,36 @@ namespace OpenRussiaRouter.AuthService.Tests.Application;
 public sealed class InMemoryAuthApiKeyValidatorTests
 {
     [Fact]
-    public void Validate_RegisteredRawKey_ReturnsUserAndKeyContext()
+    public async Task Validate_RegisteredRawKey_ReturnsUserAndKeyContext()
     {
         var validator = CreateValidator();
         validator.RegisterRawKey("orr_test_key", "user-1", "key-1");
 
-        var result = validator.Validate("orr_test_key");
+        var result = await validator.ValidateAsync("orr_test_key");
 
-        Assert.True(result.IsValid);
-        Assert.Equal("user-1", result.UserId);
-        Assert.Equal("key-1", result.ApiKeyId);
-        Assert.Equal("orr_test_key", result.ApiKeyPrefix);
-        Assert.Null(result.ErrorCode);
+        result.IsValid.Should().BeTrue();
+        result.UserId.Should().Be("user-1");
+        result.ApiKeyId.Should().Be("key-1");
+        result.ApiKeyPrefix.Should().Be("orr_test_key");
+        result.ErrorCode.Should().BeNull();
     }
 
     [Fact]
-    public void Validate_UnknownRawKey_ReturnsInvalidApiKey()
+    public async Task Validate_UnknownRawKey_ReturnsInvalidApiKey()
     {
         var validator = CreateValidator();
 
-        var result = validator.Validate("orr_unknown");
+        var result = await validator.ValidateAsync("orr_unknown");
 
-        Assert.False(result.IsValid);
-        Assert.Null(result.UserId);
-        Assert.Null(result.ApiKeyId);
-        Assert.Null(result.ApiKeyPrefix);
-        Assert.Equal(ErrorCodes.InvalidApiKey, result.ErrorCode);
+        result.IsValid.Should().BeFalse();
+        result.UserId.Should().BeNull();
+        result.ApiKeyId.Should().BeNull();
+        result.ApiKeyPrefix.Should().BeNull();
+        result.ErrorCode.Should().Be(ErrorCodes.InvalidApiKey);
     }
 
     [Fact]
-    public void Validate_ConfigSeededRawKey_ReturnsUserAndKeyContext()
+    public async Task Validate_ConfigSeededRawKey_ReturnsUserAndKeyContext()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -49,15 +50,15 @@ public sealed class InMemoryAuthApiKeyValidatorTests
             .Build();
         var validator = new InMemoryAuthApiKeyValidator(new Sha256SecretHasher(), configuration);
 
-        var result = validator.Validate("orr_seed_key");
+        var result = await validator.ValidateAsync("orr_seed_key");
 
-        Assert.True(result.IsValid);
-        Assert.Equal("user-seed", result.UserId);
-        Assert.Equal("key-seed", result.ApiKeyId);
+        result.IsValid.Should().BeTrue();
+        result.UserId.Should().Be("user-seed");
+        result.ApiKeyId.Should().Be("key-seed");
     }
 
     [Fact]
-    public void Validate_SeedKey_ReturnsPrefixSnapshot()
+    public async Task Validate_SeedKey_ReturnsPrefixSnapshot()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
@@ -69,10 +70,10 @@ public sealed class InMemoryAuthApiKeyValidatorTests
             .Build();
         var validator = new InMemoryAuthApiKeyValidator(new Sha256SecretHasher(), configuration);
 
-        var result = validator.Validate("sk-or-seeded-secret");
+        var result = await validator.ValidateAsync("sk-or-seeded-secret");
 
-        Assert.True(result.IsValid);
-        Assert.Equal("sk-or-seeded", result.ApiKeyPrefix);
+        result.IsValid.Should().BeTrue();
+        result.ApiKeyPrefix.Should().Be("sk-or-seeded");
     }
 
     private static InMemoryAuthApiKeyValidator CreateValidator()
@@ -82,4 +83,3 @@ public sealed class InMemoryAuthApiKeyValidatorTests
             new ConfigurationBuilder().Build());
     }
 }
-

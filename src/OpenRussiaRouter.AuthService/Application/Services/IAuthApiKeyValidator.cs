@@ -4,7 +4,6 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public interface IAuthApiKeyValidator
 {
-
-    ValidateApiKeyResult Validate(string rawKey);
+    Task<ValidateApiKeyResult> ValidateAsync(string rawKey, CancellationToken ct = default);
 }
 

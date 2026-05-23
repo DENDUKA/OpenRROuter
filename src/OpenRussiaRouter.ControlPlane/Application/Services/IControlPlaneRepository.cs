@@ -4,20 +4,25 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public interface IControlPlaneRepository
 {
+    Task UpsertNodeAsync(RouterNode node, CancellationToken ct = default);
 
-    void UpsertNode(RouterNode node);
+    Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default);
 
-    bool RemoveNode(string nodeId);
+    Task<RouterNode?> GetNodeAsync(string nodeId, CancellationToken ct = default);
 
-    RouterNode? GetNode(string nodeId);
+    Task<(IReadOnlyCollection<RouterNode> Items, bool HasMore)> ListNodesAsync(int limit, string? afterName = null, CancellationToken ct = default);
 
-    (IReadOnlyCollection<RouterNode> Items, bool HasMore) ListNodes(int limit, string? afterName = null);
+    Task AddLeaseAsync(RouterLease lease, CancellationToken ct = default);
 
-    void AddLease(RouterLease lease);
+    Task<RouterLease?> RemoveLeaseAsync(string leaseId, CancellationToken ct = default);
 
-    RouterLease? RemoveLease(string leaseId);
+    Task<IReadOnlyCollection<RouterLease>> RemoveExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default);
 
-    IReadOnlyCollection<RouterLease> RemoveExpiredLeases(DateTimeOffset nowUtc);
+    Task ReleaseNodesAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct = default);
 
-    void ReleaseNodes(IReadOnlyCollection<string> nodeIds);
+    Task SaveIntegrationKeyMappingAsync(string apiKeyId, string nodeId, string routerKeyId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<(string NodeId, string RouterKeyId)>> GetIntegrationKeyMappingsAsync(string apiKeyId, CancellationToken ct = default);
+
+    Task RemoveIntegrationKeyMappingsAsync(string apiKeyId, CancellationToken ct = default);
 }

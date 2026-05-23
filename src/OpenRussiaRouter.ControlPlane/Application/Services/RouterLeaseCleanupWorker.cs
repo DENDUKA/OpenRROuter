@@ -11,14 +11,12 @@ public sealed class RouterLeaseCleanupWorker(
     : BackgroundService
 {
 
-    public void RunOnce(DateTimeOffset nowUtc)
+    public async Task RunOnceAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         if (!options.CurrentValue.Enabled)
-        {
             return;
-        }
 
-        controlPlane.ReleaseExpiredLeases(nowUtc);
+        await controlPlane.ReleaseExpiredLeasesAsync(nowUtc, ct).ConfigureAwait(false);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -27,7 +25,7 @@ public sealed class RouterLeaseCleanupWorker(
         {
             try
             {
-                RunOnce(DateTimeOffset.UtcNow);
+                await RunOnceAsync(DateTimeOffset.UtcNow, stoppingToken).ConfigureAwait(false);
             }
             catch (Exception exception)
             {

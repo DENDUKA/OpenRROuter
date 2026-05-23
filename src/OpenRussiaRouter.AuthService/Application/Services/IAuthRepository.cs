@@ -4,34 +4,33 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public interface IAuthRepository
 {
+    Task AddInviteAsync(Invite invite, CancellationToken ct = default);
 
-    void AddInvite(Invite invite);
+    Task<Invite?> GetInviteByTokenHashAsync(string tokenHash, CancellationToken ct = default);
 
-    Invite? GetInviteByTokenHash(string tokenHash);
+    Task AddUserAndMarkInviteUsedAsync(UserAccount user, Invite invite, CancellationToken ct = default);
 
-    void AddUserAndMarkInviteUsed(UserAccount user, Invite invite);
+    Task<UserAccount?> GetUserAsync(string userId, CancellationToken ct = default);
 
-UserAccount? GetUser(string userId);
+    Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default);
 
-    UserAccount? GetUserByEmail(string email);
+    Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default);
 
-    IReadOnlyCollection<UserAccount> ListUsers();
+    Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default);
 
-    void AddApiKey(ApiKey apiKey);
+    Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default);
 
-    ApiKey? GetApiKey(string apiKeyId);
+    Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default);
 
-    IReadOnlyCollection<ApiKey> ListApiKeys(string userId);
+    Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default);
 
-    bool RenameApiKey(string userId, string apiKeyId, string name);
+    Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default);
 
-    bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc);
+    Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default);
 
-    IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes();
+    Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default);
 
-    string? GetFirstActiveApiKeyRaw(string userId);
+    Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default);
 
-    ApiKey? FindActiveApiKeyBySecretHash(string secretHash);
-
-    void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc);
+    Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default);
 }

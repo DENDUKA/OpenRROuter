@@ -1,4 +1,5 @@
 using Dapper;
+using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application;
@@ -27,16 +28,16 @@ public sealed class ControlPlaneRepositoryPostgresTests
         var service = new RouterControlPlaneService(
             new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(connectionString)));
         var now = DateTimeOffset.UtcNow;
-        var node = service.RegisterNode("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
-        service.ApplyHealth(node.Id, RouterNodeStatus.Healthy, now, 15, null);
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now, 15, null);
 
-        var lease = service.SelectRouterNode("req-1", now);
-        service.ReleaseExpiredLeases(now.AddMinutes(6));
+        var lease = await service.SelectRouterNodeAsync("req-1", now);
+        await service.ReleaseExpiredLeasesAsync(now.AddMinutes(6));
 
-        Assert.Equal(node.Id, lease.NodeId);
-        var summary = Assert.Single(service.ListRouterNodes());
-        Assert.Equal(0, summary.InFlightRequests);
-        Assert.Equal(RouterNodeStatus.Healthy, summary.Status);
+        lease.NodeId.Should().Be(node.Id);
+        var summary = (await service.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        summary.InFlightRequests.Should().Be(0);
+        summary.Status.Should().Be(RouterNodeStatus.Healthy);
     }
 
 }

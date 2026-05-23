@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.ApiGateway.Auth;
 
 namespace OpenRussiaRouter.ApiGateway.Tests.Auth;
@@ -15,8 +16,7 @@ public sealed class BearerTokenReaderTests
     {
         var result = BearerTokenReader.TryRead(header, out var token);
 
-        Assert.Equal(expectedResult, result);
-        Assert.Equal(expectedToken, token);
+        result.Should().Be(expectedResult);
+        token.Should().Be(expectedToken);
     }
 }
-

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
@@ -8,54 +9,54 @@ namespace OpenRussiaRouter.AuthService.Tests.Application;
 public sealed class AuthAccountApplicationServiceTests
 {
     [Fact]
-    public void CreateInvite_StoresInviteAndReturnsRawTokenOnce()
+    public async Task CreateInvite_StoresInviteAndReturnsRawTokenOnce()
     {
         var repository = new TestAuthRepository();
         var service = CreateService(repository);
         var now = DateTimeOffset.UtcNow;
 
-        var created = service.CreateInvite("USER@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
+        var created = await service.CreateInviteAsync("USER@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
 
-        Assert.StartsWith("orr_invite_", created.RawToken, StringComparison.Ordinal);
-        Assert.Single(repository.Invites);
-        Assert.NotEqual(created.RawToken, repository.Invites.Single().TokenHash);
-        Assert.Equal("user@example.com", repository.Invites.Single().Email);
+        created.RawToken.Should().StartWith("orr_invite_");
+        repository.Invites.Should().ContainSingle();
+        created.RawToken.Should().NotBe(repository.Invites.Single().TokenHash);
+        repository.Invites.Single().Email.Should().Be("user@example.com");
     }
 
     [Fact]
-    public void CompleteInvite_ValidToken_StoresUserAndMarksInviteUsed()
+    public async Task CompleteInvite_ValidToken_StoresUserAndMarksInviteUsed()
     {
         var repository = new TestAuthRepository();
         var service = CreateService(repository);
         var now = DateTimeOffset.UtcNow;
-        var created = service.CreateInvite("user@example.com", UserRole.Admin, "admin-1", now.AddDays(1), now);
+        var created = await service.CreateInviteAsync("user@example.com", UserRole.Admin, "admin-1", now.AddDays(1), now);
 
-        var user = service.CompleteInvite(created.RawToken, "StrongPassword123!", now.AddMinutes(1));
+        var user = await service.CompleteInviteAsync(created.RawToken, "StrongPassword123!", now.AddMinutes(1));
 
-        Assert.Equal("user@example.com", user.Email);
-        Assert.Equal(UserRole.Admin, user.Role);
-        Assert.Single(repository.Users);
-        Assert.True(repository.Invites.Single().IsUsed);
+        user.Email.Should().Be("user@example.com");
+        user.Role.Should().Be(UserRole.Admin);
+        repository.Users.Should().ContainSingle();
+        repository.Invites.Single().IsUsed.Should().BeTrue();
     }
 
     [Fact]
-    public void CreateApiKey_ActiveUser_StoresHashAndReturnsRawKey()
+    public async Task CreateApiKey_ActiveUser_StoresHashAndReturnsRawKey()
     {
         var repository = new TestAuthRepository();
         var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
         repository.Users[user.Id] = user;
         var service = CreateService(repository);
 
-        var created = service.CreateApiKey("user-1", "default", DateTimeOffset.UtcNow);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
 
-        Assert.StartsWith("sk-or-", created.RawKey, StringComparison.Ordinal);
-        Assert.Single(repository.ApiKeys);
-        Assert.Equal(created.ApiKey.SecretHash, repository.ApiKeys.Single().SecretHash);
-        Assert.NotEqual(created.RawKey, repository.ApiKeys.Single().SecretHash);
+        created.RawKey.Should().StartWith("sk-or-");
+        repository.ApiKeys.Should().ContainSingle();
+        created.ApiKey.SecretHash.Should().Be(repository.ApiKeys.Single().SecretHash);
+        created.RawKey.Should().NotBe(repository.ApiKeys.Single().SecretHash);
     }
 
     [Fact]
-    public void CreateApiKey_DisabledUser_Throws()
+    public async Task CreateApiKey_DisabledUser_Throws()
     {
         var repository = new TestAuthRepository();
         var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
@@ -63,26 +64,26 @@ public sealed class AuthAccountApplicationServiceTests
         repository.Users[user.Id] = user;
         var service = CreateService(repository);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            service.CreateApiKey("user-1", "default", DateTimeOffset.UtcNow));
+        await ((Func<Task>)(() =>
+            service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow))).Should().ThrowAsync<InvalidOperationException>();
     }
 
     [Fact]
-    public void RenameAndRevokeApiKey_ExistingKey_UpdatesMetadata()
+    public async Task RenameAndRevokeApiKey_ExistingKey_UpdatesMetadata()
     {
         var repository = new TestAuthRepository();
         var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
         repository.Users[user.Id] = user;
         var service = CreateService(repository);
-        var created = service.CreateApiKey("user-1", "default", DateTimeOffset.UtcNow);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
         var revokedAt = DateTimeOffset.UtcNow.AddMinutes(1);
 
-        service.RenameApiKey("user-1", created.ApiKey.Id, "renamed");
-        service.RevokeApiKey("user-1", created.ApiKey.Id, revokedAt);
+        await service.RenameApiKeyAsync("user-1", created.ApiKey.Id, "renamed");
+        await service.RevokeApiKeyAsync("user-1", created.ApiKey.Id, revokedAt);
 
-        var key = Assert.Single(repository.ApiKeys);
-        Assert.Equal("renamed", key.Name);
-        Assert.Equal(revokedAt, key.RevokedAtUtc);
+        var key = repository.ApiKeys.Should().ContainSingle().Which;
+        key.Name.Should().Be("renamed");
+        key.RevokedAtUtc.Should().Be(revokedAt);
     }
 
     private static AuthAccountApplicationService CreateService(TestAuthRepository repository)
@@ -99,105 +100,79 @@ public sealed class AuthAccountApplicationServiceTests
     private sealed class TestAuthRepository : IAuthRepository
     {
         public Dictionary<string, UserAccount> Users { get; } = new(StringComparer.Ordinal);
-
         public List<Invite> Invites { get; } = [];
-
         public List<ApiKey> ApiKeys { get; } = [];
 
-        public void AddInvite(Invite invite)
+        public Task AddInviteAsync(Invite invite, CancellationToken ct = default)
         {
             Invites.Add(invite);
+            return Task.CompletedTask;
         }
 
-        public Invite? GetInviteByTokenHash(string tokenHash)
-        {
-            return Invites.SingleOrDefault(invite => invite.TokenHash == tokenHash);
-        }
+        public Task<Invite?> GetInviteByTokenHashAsync(string tokenHash, CancellationToken ct = default) =>
+            Task.FromResult(Invites.SingleOrDefault(invite => invite.TokenHash == tokenHash));
 
-        public void AddUserAndMarkInviteUsed(UserAccount user, Invite invite)
+        public Task AddUserAndMarkInviteUsedAsync(UserAccount user, Invite invite, CancellationToken ct = default)
         {
             Users[user.Id] = user;
+            return Task.CompletedTask;
         }
 
-        public UserAccount? GetUser(string userId)
-        {
-            return Users.GetValueOrDefault(userId);
-        }
+        public Task<UserAccount?> GetUserAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(Users.GetValueOrDefault(userId));
 
-        public UserAccount? GetUserByEmail(string email)
-        {
-            return Users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant());
-        }
+        public Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default) =>
+            Task.FromResult(Users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant()));
 
-        public IReadOnlyCollection<UserAccount> ListUsers()
-        {
-            return Users.Values.ToArray();
-        }
+        public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default) =>
+            Task.FromResult<(IReadOnlyCollection<UserAccount>, bool)>((Users.Values.ToArray(), false));
 
-        public void AddApiKey(ApiKey apiKey)
+        public Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
         {
             ApiKeys.Add(apiKey);
+            return Task.CompletedTask;
         }
 
-        public ApiKey? GetApiKey(string apiKeyId)
-        {
-            return ApiKeys.SingleOrDefault(key => key.Id == apiKeyId);
-        }
+        public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default) =>
+            Task.FromResult(ApiKeys.SingleOrDefault(key => key.Id == apiKeyId));
 
-        public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
-        {
-            return ApiKeys.Where(key => key.UserId == userId).ToArray();
-        }
+        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default) =>
+            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId).ToArray(), false));
 
-        public bool RenameApiKey(string userId, string apiKeyId, string name)
+        public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
         {
             var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
-            if (key is null)
-            {
-                return false;
-            }
-
+            if (key is null) return Task.FromResult(false);
             key.Rename(name);
-            return true;
+            return Task.FromResult(true);
         }
 
-        public bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc)
+        public Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
         {
             var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
-            if (key is null)
-            {
-                return false;
-            }
-
+            if (key is null) return Task.FromResult(false);
             key.Revoke(revokedAtUtc);
-            return true;
+            return Task.FromResult(true);
         }
 
-        public IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes()
-        {
-            return ApiKeys
-                .Where(k => k.RevokedAtUtc is null)
-                .Select(k => (k.Prefix, k.SecretHash))
-                .ToArray();
-        }
+        public Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyCollection<(string, string)>>(
+                ApiKeys.Where(k => k.RevokedAtUtc is null).Select(k => (k.Prefix, k.SecretHash)).ToArray());
 
-        public string? GetFirstActiveApiKeyRaw(string userId)
-        {
-            return ApiKeys
+        public Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(ApiKeys
                 .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
                 .OrderByDescending(k => k.CreatedAtUtc)
                 .Select(k => k.RawKey)
-                .FirstOrDefault();
-        }
+                .FirstOrDefault());
 
-        public ApiKey? FindActiveApiKeyBySecretHash(string secretHash)
-        {
-            return ApiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null);
-        }
+        public Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default) =>
+            Task.FromResult(ApiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null));
 
-        public void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc)
+        public Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default)
         {
             ApiKeys.SingleOrDefault(k => k.Id == apiKeyId)?.MarkUsed(lastUsedAtUtc);
+            return Task.CompletedTask;
         }
     }
 }

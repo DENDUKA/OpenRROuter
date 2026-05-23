@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.BuildingBlocks.Migrations;
 
 namespace OpenRussiaRouter.BuildingBlocks.Tests.Migrations;
@@ -20,13 +21,13 @@ public sealed class SqlMigrationLoaderTests
                 migrations,
                 first =>
                 {
-                    Assert.Equal("001_first", first.Version);
-                    Assert.Equal("select 1;", first.Sql);
+                    first.Version.Should().Be("001_first");
+                    first.Sql.Should().Be("select 1;");
                 },
                 second =>
                 {
-                    Assert.Equal("002_second", second.Version);
-                    Assert.Equal("select 2;", second.Sql);
+                    second.Version.Should().Be("002_second");
+                    second.Sql.Should().Be("select 2;");
                 });
         }
         finally
@@ -40,6 +41,6 @@ public sealed class SqlMigrationLoaderTests
     {
         var missingDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
 
-        Assert.Throws<DirectoryNotFoundException>(() => SqlMigrationLoader.LoadFromDirectory(missingDirectory));
+        ((Action)(() => SqlMigrationLoader.LoadFromDirectory(missingDirectory))).Should().Throw<DirectoryNotFoundException>();
     }
 }

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.ApiGateway.Router;
 
 namespace OpenRussiaRouter.ApiGateway.Tests.Router;
@@ -11,10 +12,10 @@ public sealed class RouterUsageExtractorTests
 
         var result = RouterUsageExtractor.TryExtract(json, out var usage);
 
-        Assert.True(result);
-        Assert.Equal(10, usage.InputTokens);
-        Assert.Equal(20, usage.OutputTokens);
-        Assert.Equal(3, usage.CacheTokens);
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(10);
+        usage.OutputTokens.Should().Be(20);
+        usage.CacheTokens.Should().Be(3);
     }
 
     [Fact]
@@ -24,10 +25,10 @@ public sealed class RouterUsageExtractorTests
 
         var result = RouterUsageExtractor.TryExtract(json, out var usage);
 
-        Assert.True(result);
-        Assert.Equal(10, usage.InputTokens);
-        Assert.Equal(20, usage.OutputTokens);
-        Assert.Equal(3, usage.CacheTokens);
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(10);
+        usage.OutputTokens.Should().Be(20);
+        usage.CacheTokens.Should().Be(3);
     }
 
     [Fact]
@@ -35,7 +36,7 @@ public sealed class RouterUsageExtractorTests
     {
         var result = RouterUsageExtractor.TryExtract("""{"id":"chatcmpl_1"}""", out _);
 
-        Assert.False(result);
+        result.Should().BeFalse();
     }
 
     [Fact]
@@ -45,10 +46,10 @@ public sealed class RouterUsageExtractorTests
 
         var result = RouterUsageExtractor.TryExtract(json, out var usage);
 
-        Assert.True(result);
-        Assert.Equal(10, usage.InputTokens);
-        Assert.Equal(20, usage.OutputTokens);
-        Assert.Equal(7, usage.CacheTokens);
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(10);
+        usage.OutputTokens.Should().Be(20);
+        usage.CacheTokens.Should().Be(7);
     }
 
     [Fact]
@@ -58,8 +59,8 @@ public sealed class RouterUsageExtractorTests
 
         var result = RouterUsageExtractor.TryExtract(json, out var usage);
 
-        Assert.True(result);
-        Assert.Equal(8, usage.CacheTokens);
+        result.Should().BeTrue();
+        usage.CacheTokens.Should().Be(8);
     }
 
     [Fact]
@@ -67,7 +68,7 @@ public sealed class RouterUsageExtractorTests
     {
         var result = RouterUsageExtractor.TryExtract("""{"usage":""", out var usage);
 
-        Assert.False(result);
-        Assert.Equal(default, usage);
+        result.Should().BeFalse();
+        usage.TotalTokens.Should().Be(0);
     }
 }

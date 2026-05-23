@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -14,12 +13,10 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     private readonly ConcurrentDictionary<string, ActivityByTokenRecord> _activityByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentBag<BillingAnomaly> _anomalies = [];
 
-    public LedgerEntry AddLedgerEntry(LedgerEntry entry)
-    {
-        return _ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry);
-    }
+    public Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default) =>
+        Task.FromResult(_ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry));
 
-    public (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit)
+    public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         var items = _ledgerByIdempotencyKey.Values
             .Where(e => e.UserId == userId && e.Type == LedgerEntryType.VirtualTopUp)
@@ -28,123 +25,91 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<LedgerEntry>, bool)>((items, hasMore));
     }
 
-    public MoneyAmount GetBalance(string userId)
+    public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
     {
         var amount = _ledgerByIdempotencyKey.Values
             .Where(entry => entry.UserId == userId)
             .Select(entry => entry.Amount.Amount)
             .DefaultIfEmpty(0m)
             .Sum();
-
-        return MoneyAmount.Rub(amount);
+        return Task.FromResult(MoneyAmount.Rub(amount));
     }
 
-    public void UpsertModel(ModelPrice model)
+    public Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
     {
         _models[model.ModelId] = model;
+        return Task.CompletedTask;
     }
 
-    public ModelPrice? GetEnabledModel(string modelId)
-    {
-        return _models.TryGetValue(modelId, out var model) && model.Enabled ? model : null;
-    }
+    public Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default) =>
+        Task.FromResult(_models.TryGetValue(modelId, out var model) && model.Enabled ? model : null);
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null)
+    public Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {
         var ordered = _models.Values
-            .Where(model => model.Enabled)
-            .OrderBy(model => model.ModelId)
+            .Where(m => m.Enabled)
+            .OrderBy(m => m.ModelId)
             .AsEnumerable();
 
         if (afterModelId != null)
-        {
-            ordered = ordered.Where(model => string.Compare(model.ModelId, afterModelId, StringComparison.Ordinal) > 0);
-        }
+            ordered = ordered.Where(m => string.Compare(m.ModelId, afterModelId, StringComparison.Ordinal) > 0);
 
         var items = ordered.Take(limit + 1).ToArray();
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<ModelPrice>, bool)>((items, hasMore));
     }
 
-    public (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null)
+    public Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListAllModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {
         var ordered = _models.Values
-            .OrderBy(model => model.ModelId)
+            .OrderBy(m => m.ModelId)
             .AsEnumerable();
 
         if (afterModelId != null)
-        {
-            ordered = ordered.Where(model => string.Compare(model.ModelId, afterModelId, StringComparison.Ordinal) > 0);
-        }
+            ordered = ordered.Where(m => string.Compare(m.ModelId, afterModelId, StringComparison.Ordinal) > 0);
 
         var items = ordered.Take(limit + 1).ToArray();
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<ModelPrice>, bool)>((items, hasMore));
     }
 
-    public UsageRecord AddUsage(UsageRecord record)
-    {
-        return _usageByRequestId.GetOrAdd(record.RequestId, record);
-    }
+    public Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default) =>
+        Task.FromResult(_usageByRequestId.GetOrAdd(record.RequestId, record));
 
-    public UsageRecord? GetUsage(string requestId)
-    {
-        return _usageByRequestId.GetValueOrDefault(requestId);
-    }
+    public Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default) =>
+        Task.FromResult(_usageByRequestId.GetValueOrDefault(requestId));
 
-    public (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null)
+    public Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default)
     {
-var query = _usageByRequestId.Values.AsEnumerable();
+        var query = _usageByRequestId.Values.AsEnumerable();
         if (afterCreatedAtUtc.HasValue)
-        {
-            query = query.Where(usage => usage.CreatedAtUtc > afterCreatedAtUtc.Value);
-        }
+            query = query.Where(u => u.CreatedAtUtc > afterCreatedAtUtc.Value);
         if (!string.IsNullOrWhiteSpace(userId))
-        {
-            query = query.Where(usage => usage.UserId == userId);
-        }
+            query = query.Where(u => u.UserId == userId);
 
-        var items = query
-            .OrderBy(usage => usage.CreatedAtUtc)
-            .Take(limit + 1)
-            .ToArray();
+        var items = query.OrderBy(u => u.CreatedAtUtc).Take(limit + 1).ToArray();
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<UsageRecord>, bool)>((items, hasMore));
     }
 
-    public ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record)
+    public Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(record);
-        return _activityByRequestId.GetOrAdd(record.RequestId, record);
+        return Task.FromResult(_activityByRequestId.GetOrAdd(record.RequestId, record));
     }
 
-    public (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+    public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
-        DateTimeOffset? afterCreatedAtUtc = null)
+        DateTimeOffset? afterCreatedAtUtc = null,
+        CancellationToken ct = default)
     {
         var keySet = apiKeyIds.ToHashSet(StringComparer.Ordinal);
         var items = _activityByRequestId.Values
@@ -155,39 +120,25 @@ var query = _usageByRequestId.Values.AsEnumerable();
             .ToArray();
 
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<ActivityByTokenRecord>, bool)>((items, hasMore));
     }
 
-    public void AddAnomaly(BillingAnomaly anomaly)
+    public Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default)
     {
         _anomalies.Add(anomaly);
+        return Task.CompletedTask;
     }
 
-    public (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null)
+    public Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
     {
         var query = _anomalies.AsEnumerable();
-
         if (afterCreatedAtUtc.HasValue)
-        {
             query = query.Where(a => a.CreatedAtUtc > afterCreatedAtUtc.Value);
-        }
 
-        var items = query
-            .OrderBy(a => a.CreatedAtUtc)
-            .Take(limit + 1)
-            .ToArray();
-
+        var items = query.OrderBy(a => a.CreatedAtUtc).Take(limit + 1).ToArray();
         var hasMore = items.Length > limit;
-        if (hasMore)
-        {
-            items = items.Take(limit).ToArray();
-        }
-
-        return (items, hasMore);
+        if (hasMore) items = items.Take(limit).ToArray();
+        return Task.FromResult<(IReadOnlyCollection<BillingAnomaly>, bool)>((items, hasMore));
     }
 }

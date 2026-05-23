@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         await AssertErrorCode(response, ErrorCodes.AuthenticationRequired);
     }
 
@@ -44,7 +45,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-invalid_key");
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         await AssertErrorCode(response, ErrorCodes.InvalidApiKey);
     }
 
@@ -61,7 +62,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
-        Assert.Equal(HttpStatusCode.PaymentRequired, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
         await AssertErrorCode(response, ErrorCodes.InsufficientBalance);
     }
 
@@ -76,8 +77,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"unknown-model"}""", bearer: "sk-ok_key");
 
-        // billing_error type always maps to 402 in WriteJsonErrorAsync
-        Assert.Equal(HttpStatusCode.PaymentRequired, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         await AssertErrorCode(response, ErrorCodes.ValidationFailed);
     }
 
@@ -91,7 +91,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         await AssertErrorCode(response, ErrorCodes.RouterUnavailable);
     }
 
@@ -106,9 +106,9 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Equal(routerBody, body);
+        body.Should().Be(routerBody);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
-        Assert.Equal("failed", control.LastReleasedStatus);
+        control.LastReleasedStatus.Should().Be("failed");
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         // Fire-and-forget usage recording — give it a moment to complete
         await Task.Delay(50);
-        Assert.True(billing.RecordUsageCalled);
+        billing.RecordUsageCalled.Should().BeTrue();
     }
 
     [Fact]
@@ -149,8 +149,8 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
         await Task.Delay(50);
-        Assert.NotNull(billing.LastUsageEvent);
-        Assert.Equal("sk-or-test", billing.LastUsageEvent.ApiKeyPrefix);
+        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastUsageEvent!.ApiKeyPrefix.Should().Be("sk-or-test");
     }
 
     [Fact]
@@ -164,9 +164,9 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
         await Task.Delay(50);
-        Assert.NotNull(billing.LastUsageEvent);
-        Assert.Equal("usage_missing", billing.LastUsageEvent.Status);
-        Assert.Equal(0, billing.LastUsageEvent.Usage.TotalTokens);
+        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastUsageEvent!.Status.Should().Be("usage_missing");
+        billing.LastUsageEvent.Usage.TotalTokens.Should().Be(0);
     }
 
     [Fact]
@@ -180,10 +180,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         await PostChatAsync(client, """{"model":"gpt-4","messages":[{"role":"user","content":"secret prompt"}]}""", bearer: "sk-ok_key");
 
         await Task.Delay(50);
-        Assert.True(billing.RecordUsageCalled);
-        Assert.NotNull(billing.LastUsageEvent);
+        billing.RecordUsageCalled.Should().BeTrue();
+        billing.LastUsageEvent.Should().NotBeNull();
         // E2E-004: prompt bodies must never appear in usage events
-        Assert.DoesNotContain("secret prompt", JsonSerializer.Serialize(billing.LastUsageEvent));
+        JsonSerializer.Serialize(billing.LastUsageEvent).Should().NotContain("secret prompt");
     }
 
     // --- Models endpoint ---
@@ -193,7 +193,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var client = CreateClient();
         var response = await client.GetAsync("/v1/models");
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -208,9 +208,9 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await client.GetAsync("/v1/models");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal("list", json.RootElement.GetProperty("object").GetString());
+        json.RootElement.GetProperty("object").GetString().Should().Be("list");
     }
 
     // --- Helpers ---
@@ -246,7 +246,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var body = await response.Content.ReadAsStringAsync();
         var doc = JsonDocument.Parse(body);
-        Assert.Equal(expectedCode, doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+        doc.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be(expectedCode);
     }
 
     // --- Test doubles ---

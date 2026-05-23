@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
@@ -21,11 +22,11 @@ public sealed class InviteRegistrationServiceTests
             now.AddDays(1),
             now);
 
-        Assert.Equal("user@example.com", result.Invite.Email);
-        Assert.Equal(UserRole.User, result.Invite.Role);
-        Assert.StartsWith("orr_invite_", result.RawToken, StringComparison.Ordinal);
-        Assert.NotEqual(result.RawToken, result.Invite.TokenHash);
-        Assert.False(result.Invite.IsUsed);
+        result.Invite.Email.Should().Be("user@example.com");
+        result.Invite.Role.Should().Be(UserRole.User);
+        result.RawToken.Should().StartWith("orr_invite_");
+        result.RawToken.Should().NotBe(result.Invite.TokenHash);
+        result.Invite.IsUsed.Should().BeFalse();
     }
 
     [Fact]
@@ -36,10 +37,10 @@ public sealed class InviteRegistrationServiceTests
 
         var user = _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(1));
 
-        Assert.Equal("user@example.com", user.Email);
-        Assert.Equal(UserRole.Admin, user.Role);
-        Assert.True(created.Invite.IsUsed);
-        Assert.NotEqual("StrongPassword123!", user.PasswordHash);
+        user.Email.Should().Be("user@example.com");
+        user.Role.Should().Be(UserRole.Admin);
+        created.Invite.IsUsed.Should().BeTrue();
+        user.PasswordHash.Should().NotBe("StrongPassword123!");
     }
 
     [Fact]
@@ -49,8 +50,8 @@ public sealed class InviteRegistrationServiceTests
         var created = _service.CreateInvite("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
         _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(1));
 
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(2)));
+        ((Action)(() =>
+            _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(2)))).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -59,8 +60,8 @@ public sealed class InviteRegistrationServiceTests
         var now = DateTimeOffset.UtcNow;
         var created = _service.CreateInvite("user@example.com", UserRole.User, "admin-1", now.AddMinutes(1), now);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(2)));
+        ((Action)(() =>
+            _service.CompleteInvite(created.Invite, created.RawToken, "StrongPassword123!", now.AddMinutes(2)))).Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
@@ -69,8 +70,7 @@ public sealed class InviteRegistrationServiceTests
         var now = DateTimeOffset.UtcNow;
         var created = _service.CreateInvite("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
 
-        Assert.Throws<InvalidOperationException>(() =>
-            _service.CompleteInvite(created.Invite, "wrong-token", "StrongPassword123!", now.AddMinutes(1)));
+        ((Action)(() =>
+            _service.CompleteInvite(created.Invite, "wrong-token", "StrongPassword123!", now.AddMinutes(1)))).Should().Throw<InvalidOperationException>();
     }
 }
-

@@ -1,4 +1,5 @@
 using Dapper;
+using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 using OpenRussiaRouter.AuthService.Infrastructure.Repository;
@@ -37,11 +38,11 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
         var repository = new AuthRepository(new AuthDbConnectionFactory(connectionString));
         var validator = new DapperAuthApiKeyValidator(repository, hasher);
 
-        var result = validator.Validate("orr_test_secret");
+        var result = await validator.ValidateAsync("orr_test_secret");
 
-        Assert.True(result.IsValid);
-        Assert.Equal("user-1", result.UserId);
-        Assert.Equal("key-1", result.ApiKeyId);
+        result.IsValid.Should().BeTrue();
+        result.UserId.Should().Be("user-1");
+        result.ApiKeyId.Should().Be("key-1");
         Assert.NotNull(connection.ExecuteScalar<DateTime?>(
             "select last_used_at_utc from auth.api_keys where id = 'key-1';"));
     }

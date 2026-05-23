@@ -1,4 +1,5 @@
 using System.Net;
+using FluentAssertions;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using OpenRussiaRouter.ControlPlane.Infrastructure;
@@ -31,12 +32,12 @@ public sealed class RouterNodeProviderClientTests
 
         var result = await client.GetProviderQuotaAsync(CreateNode(), includeInactive: true, CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Get, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/providers/quota?includeInactive=true", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        var provider = Assert.Single(result.Providers);
-        Assert.Equal("conn-1", provider.ConnectionId);
-        Assert.Equal("ok", provider.Usage?.GetProperty("message").GetString());
+        handler.LastMethod.Should().Be(HttpMethod.Get);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/quota?includeInactive=true");
+        handler.Authorization.Should().Be("Bearer control-token");
+        var provider = result.Providers.Should().ContainSingle().Which;
+        provider.ConnectionId.Should().Be("conn-1");
+        provider.Usage?.GetProperty("message").GetString().Should().Be("ok");
     }
 
     [Fact]
@@ -59,12 +60,12 @@ public sealed class RouterNodeProviderClientTests
 
         var result = await client.UpdateProviderStatusAsync(CreateNode(), "conn-1", isActive: false, CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Patch, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/providers/conn-1/status", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        Assert.Equal("""{"isActive":false}""", handler.Body);
-        Assert.Equal("conn-1", result.Connection?.Id);
-        Assert.False(result.Connection?.IsActive);
+        handler.LastMethod.Should().Be(HttpMethod.Patch);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/conn-1/status");
+        handler.Authorization.Should().Be("Bearer control-token");
+        handler.Body.Should().Be("""{"isActive":false}""");
+        result.Connection?.Id.Should().Be("conn-1");
+        result.Connection?.IsActive.Should().BeFalse();
     }
 
     [Fact]
@@ -95,12 +96,12 @@ public sealed class RouterNodeProviderClientTests
             includeCompatible: true,
             CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Get, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/providers/by-type/minimax/models?source=static&includeCompatible=true", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        var model = Assert.Single(result.Models);
-        Assert.Equal("MiniMax-M2.7", model.Id);
-        Assert.Equal("minimax/MiniMax-M2.7", model.PublicId);
+        handler.LastMethod.Should().Be(HttpMethod.Get);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/by-type/minimax/models?source=static&includeCompatible=true");
+        handler.Authorization.Should().Be("Bearer control-token");
+        var model = result.Models.Should().ContainSingle().Which;
+        model.Id.Should().Be("MiniMax-M2.7");
+        model.PublicId.Should().Be("minimax/MiniMax-M2.7");
     }
 
     [Fact]
@@ -125,10 +126,10 @@ public sealed class RouterNodeProviderClientTests
 
         var result = await client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Get, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/keys", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        Assert.Equal("key-1", Assert.Single(result.Keys).Id);
+        handler.LastMethod.Should().Be(HttpMethod.Get);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/keys");
+        handler.Authorization.Should().Be("Bearer control-token");
+        result.Keys.Should().ContainSingle().Which.Id.Should().Be("key-1");
     }
 
     [Fact]
@@ -143,12 +144,12 @@ public sealed class RouterNodeProviderClientTests
             "sk-or-tenant-123-fixed-token",
             CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Post, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/keys", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        Assert.Equal("""{"name":"OpenRussiaRouter issued key","key":"sk-or-tenant-123-fixed-token"}""", handler.Body);
-        Assert.True(result.Created);
-        Assert.Equal("key-1", result.Id);
+        handler.LastMethod.Should().Be(HttpMethod.Post);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/keys");
+        handler.Authorization.Should().Be("Bearer control-token");
+        handler.Body.Should().Be("""{"name":"OpenRussiaRouter issued key","key":"sk-or-tenant-123-fixed-token"}""");
+        result.Created.Should().BeTrue();
+        result.Id.Should().Be("key-1");
     }
 
     [Fact]
@@ -169,24 +170,18 @@ public sealed class RouterNodeProviderClientTests
 
         var result = await client.UpdateIntegrationKeyStatusAsync(CreateNode(), "key-1", isActive: false, CancellationToken.None);
 
-        Assert.Equal(HttpMethod.Patch, handler.LastMethod);
-        Assert.Equal("https://router.example/api/integrations/keys/key-1/status", handler.LastUri);
-        Assert.Equal("Bearer control-token", handler.Authorization);
-        Assert.Equal("""{"isActive":false}""", handler.Body);
-        Assert.Equal("key-1", result.Id);
-        Assert.False(result.IsActive);
+        handler.LastMethod.Should().Be(HttpMethod.Patch);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/keys/key-1/status");
+        handler.Authorization.Should().Be("Bearer control-token");
+        handler.Body.Should().Be("""{"isActive":false}""");
+        result.Id.Should().Be("key-1");
+        result.IsActive.Should().BeFalse();
     }
 
     [Fact]
-    public async Task ListIntegrationKeysAsync_MissingToken_DoesNotSendRequest()
+    public void ListIntegrationKeysAsync_MissingToken_ThrowsAtNodeConstruction()
     {
-        var handler = new CapturingHandler(JsonResponse("""{ "keys": [] }"""));
-        var client = CreateClient(handler);
-
-        await Assert.ThrowsAsync<InvalidOperationException>(
-            () => client.ListIntegrationKeysAsync(CreateNode(string.Empty), CancellationToken.None));
-
-        Assert.Equal(0, handler.RequestCount);
+        ((Action)(() => CreateNode(string.Empty))).Should().Throw<ArgumentException>();
     }
 
     [Fact]
@@ -197,12 +192,11 @@ public sealed class RouterNodeProviderClientTests
             HttpStatusCode.Unauthorized));
         var client = CreateClient(handler);
 
-        var ex = await Assert.ThrowsAsync<RouterNodeProviderException>(
-            () => client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None));
+        var ex = await ((Func<Task>)(() => client.ListIntegrationKeysAsync(CreateNode(), CancellationToken.None))).Should().ThrowAsync<RouterNodeProviderException>();
 
-        Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
-        Assert.Equal("Unauthorized", ex.RouterError);
-        Assert.DoesNotContain("control-token", ex.Message);
+        ex.Which.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        ex.Which.RouterError.Should().Be("Unauthorized");
+        ex.Which.Message.Should().NotContain("control-token");
     }
 
     private static RouterNodeProviderClient CreateClient(CapturingHandler handler)

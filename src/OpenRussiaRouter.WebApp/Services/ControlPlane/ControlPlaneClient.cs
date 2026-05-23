@@ -82,7 +82,7 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
     }
 
     public async Task PushUserIntegrationKeyAsync(
-        string name, string rawKey, string machineId,
+        string name, string rawKey, string machineId, string apiKeyId,
         string? nodeId = null,
         CancellationToken cancellationToken = default)
     {
@@ -91,7 +91,16 @@ public sealed class ControlPlaneClient(ControlGrpc.RouterControlPlaneClient clie
             Name = name,
             RawKey = rawKey,
             MachineId = machineId,
+            ApiKeyId = apiKeyId,
             NodeId = nodeId ?? string.Empty
+        }, cancellationToken: cancellationToken);
+    }
+
+    public async Task RevokeUserIntegrationKeyAsync(string apiKeyId, CancellationToken cancellationToken = default)
+    {
+        await client.RevokeUserIntegrationKeyAsync(new RevokeUserIntegrationKeyRequest
+        {
+            ApiKeyId = apiKeyId
         }, cancellationToken: cancellationToken);
     }
 

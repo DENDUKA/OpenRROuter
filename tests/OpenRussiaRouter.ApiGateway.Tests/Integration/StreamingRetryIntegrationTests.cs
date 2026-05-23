@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,11 +35,11 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         var response = await PostStreamAsync(client);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("text/event-stream", response.Content.Headers.ContentType?.MediaType);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/event-stream");
         var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("data: " + chunk1, body);
-        Assert.Contains("data: [DONE]", body);
+        body.Should().Contain("data: " + chunk1);
+        body.Should().Contain("data: [DONE]");
     }
 
     [Fact]
@@ -53,9 +54,9 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         var response = await PostStreamAsync(client);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(2, control.SelectCallCount);
-        Assert.Equal(2, router.CallCount);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        control.SelectCallCount.Should().Be(2);
+        router.CallCount.Should().Be(2);
     }
 
     [Fact]
@@ -68,9 +69,9 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         var response = await PostStreamAsync(client);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.Equal(ErrorCodes.RouterUnavailable, doc.RootElement.GetProperty("error").GetProperty("code").GetString());
+        doc.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be(ErrorCodes.RouterUnavailable);
     }
 
     [Fact]
@@ -82,8 +83,8 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         var response = await PostStreamAsync(client);
 
-        Assert.Equal(HttpStatusCode.ServiceUnavailable, response.StatusCode);
-        Assert.Equal(0, router.CallCount);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
+        router.CallCount.Should().Be(0);
     }
 
     [Fact]
@@ -93,7 +94,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         var response = await client.PostAsync(
             "/v1/chat/completions/stream",
             new StringContent("""{"model":"gpt-4"}""", Encoding.UTF8, "application/json"));
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -105,12 +106,12 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         var response = await PostStreamAsync(client);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
         await Task.Delay(50);
-        Assert.NotNull(billing.LastUsageEvent);
-        Assert.Equal("usage_missing", billing.LastUsageEvent.Status);
-        Assert.Equal(0, billing.LastUsageEvent.Usage.TotalTokens);
-        Assert.Equal("sk-or-test", billing.LastUsageEvent.ApiKeyPrefix);
+        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastUsageEvent!.Status.Should().Be("usage_missing");
+        billing.LastUsageEvent.Usage.TotalTokens.Should().Be(0);
+        billing.LastUsageEvent.ApiKeyPrefix.Should().Be("sk-or-test");
     }
 
     // --- Helpers ---

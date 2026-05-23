@@ -51,7 +51,7 @@ public sealed class ApiKeyManagementTests : IClassFixture<PlaywrightFixture>
         // Step 3: Create a key — raw key must be shown once
         var rawKey = await keysPage.CreateKeyAsync(keyName);
         Assert.NotEmpty(rawKey);
-        Assert.StartsWith("orr_", rawKey);
+        Assert.StartsWith("sk-or-", rawKey);
 
         // Step 4: Key appears in list as Active
         var statusAfterCreate = await keysPage.GetKeyStatusAsync(keyName);

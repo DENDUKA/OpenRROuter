@@ -1,3 +1,5 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
@@ -13,53 +15,54 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task SelectRouterNode_HealthyNode_ReturnsLease()
     {
-        var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
             context: null!);
 
-        Assert.NotEqual(string.Empty, response.LeaseId);
-        Assert.NotEqual(string.Empty, response.NodeId);
-        Assert.Equal("https://router-a.example/", response.EndpointUrl);
-        Assert.Equal("secret-a", response.ControlToken);
-        Assert.Equal(string.Empty, response.ErrorCode);
+        response.LeaseId.Should().NotBe(string.Empty);
+        response.NodeId.Should().NotBe(string.Empty);
+        response.EndpointUrl.Should().Be("https://router-a.example/");
+        response.ControlToken.Should().Be("secret-a");
+        response.ErrorCode.Should().Be(string.Empty);
     }
 
     [Fact]
     public async Task SelectRouterNode_NoHealthyNodes_ReturnsRouterUnavailable()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpProviderClient);
+        var repo = new InMemoryControlPlaneRepository();
+        var service = CreateService(new RouterControlPlaneService(repo), repo);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
             context: null!);
 
-        Assert.Equal(ErrorCodes.RouterUnavailable, response.ErrorCode);
+        response.ErrorCode.Should().Be(ErrorCodes.RouterUnavailable);
     }
 
     [Fact]
     public async Task ReleaseRouterNode_ExistingLease_ReturnsAcceptedAndReleasesLoad()
     {
-        var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
-        var lease = control.SelectRouterNode("req-1", DateTimeOffset.UtcNow);
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var lease = await control.SelectRouterNodeAsync("req-1", DateTimeOffset.UtcNow);
 
         var response = await service.ReleaseRouterNode(
             new ReleaseRouterNodeRequest { LeaseId = lease.LeaseId, Status = "succeeded" },
             context: null!);
 
-        Assert.True(response.Accepted);
-        var summary = Assert.Single(control.ListRouterNodes());
-        Assert.Equal(0, summary.InFlightRequests);
+        response.Accepted.Should().BeTrue();
+        var summary = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        summary.InFlightRequests.Should().Be(0);
     }
 
     [Fact]
     public async Task RegisterAndListRouterNode_ValidRequest_ReturnsNodeSummary()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
+        var service = CreateService(control);
 
         var registered = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -70,55 +73,56 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }, context: null!);
         var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
 
-        Assert.True(registered.Registered);
-        Assert.NotEmpty(registered.NodeId);
-        var node = Assert.Single(nodes.Nodes);
-        Assert.Equal(registered.NodeId, node.NodeId);
-        Assert.Equal("node-a", node.Name);
-        Assert.Equal("https://router-a.example/", node.EndpointUrl);
+        registered.Registered.Should().BeTrue();
+        registered.NodeId.Should().NotBeNullOrEmpty();
+        var node = nodes.Nodes.Should().ContainSingle().Which;
+        node.NodeId.Should().Be(registered.NodeId);
+        node.Name.Should().Be("node-a");
+        node.EndpointUrl.Should().Be("https://router-a.example/");
     }
 
     [Fact]
     public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
     {
-        var control = CreateControlPlaneWithHealthyNode();
-        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
-        var nodeId = Assert.Single(control.ListRouterNodes()).Id;
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
 
         var disabled = await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
         var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
 
-        Assert.True(disabled.Disabled);
-        Assert.Equal("Disabled", Assert.Single(nodes.Nodes).Status);
+        disabled.Disabled.Should().BeTrue();
+        nodes.Nodes.Should().ContainSingle().Which.Status.Should().Be("Disabled");
     }
 
     [Fact]
     public async Task GetRouterNodeDetails_ExistingNode_ReturnsConnectionAndIntegrationApiData()
     {
-        var control = CreateControlPlaneWithHealthyNode();
-        var nodeId = Assert.Single(control.ListRouterNodes()).Id;
-        var service = new GrpcRouterControlPlaneService(control, new StubProviderClient());
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var service = CreateService(control, providerClient: new StubProviderClient());
 
         var response = await service.GetRouterNodeDetails(
             new GetRouterNodeDetailsRequest { NodeId = nodeId, IncludeInactiveProviders = true },
             context: null!);
 
-        Assert.Equal(string.Empty, response.ErrorCode);
-        Assert.Equal(nodeId, response.Node.NodeId);
-        Assert.Equal("secret-a", response.Node.ControlToken);
-        Assert.Equal(1, response.Node.CapacityWeight);
-        var provider = Assert.Single(response.Providers);
-        Assert.Equal("conn-1", provider.ConnectionId);
-        Assert.Contains("\"message\":\"ok\"", provider.UsageJson);
-        var key = Assert.Single(response.Keys);
-        Assert.Equal("key-1", key.Id);
-        Assert.Equal("sk-or...t0kn", key.KeyPreview);
+        response.ErrorCode.Should().Be(string.Empty);
+        response.Node.NodeId.Should().Be(nodeId);
+        response.Node.ControlToken.Should().Be("secret-a");
+        response.Node.CapacityWeight.Should().Be(1);
+        var provider = response.Providers.Should().ContainSingle().Which;
+        provider.ConnectionId.Should().Be("conn-1");
+        provider.UsageJson.Should().Contain("\"message\":\"ok\"");
+        var key = response.Keys.Should().ContainSingle().Which;
+        key.Id.Should().Be("key-1");
+        key.KeyPreview.Should().Be("sk-or...t0kn");
     }
 
     [Fact]
     public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
     {
-        var service = new GrpcRouterControlPlaneService(new RouterControlPlaneService(new InMemoryControlPlaneRepository()), NoOpProviderClient);
+        var repo = new InMemoryControlPlaneRepository();
+        var service = CreateService(new RouterControlPlaneService(repo), repo);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -128,15 +132,15 @@ public sealed class GrpcRouterControlPlaneServiceTests
             CapacityWeight = 1
         }, context: null!);
 
-        Assert.False(response.Registered);
-        Assert.Equal(ErrorCodes.ValidationFailed, response.ErrorCode);
+        response.Registered.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
     }
 
     [Fact]
     public async Task RegisterRouterNode_MissingControlToken_ReturnsValidationFailed()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var service = new GrpcRouterControlPlaneService(control, NoOpProviderClient);
+        var service = CreateService(control);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -146,21 +150,135 @@ public sealed class GrpcRouterControlPlaneServiceTests
             CapacityWeight = 1
         }, context: null!);
 
-        Assert.False(response.Registered);
-        Assert.Equal(ErrorCodes.ValidationFailed, response.ErrorCode);
-        Assert.Empty(control.ListNodesForHealthChecks());
+        response.Registered.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+        (await control.ListNodesForHealthChecksAsync()).Should().BeEmpty();
     }
 
-    private static RouterControlPlaneService CreateControlPlaneWithHealthyNode()
+    [Fact]
+    public async Task DisableRouterNode_UnknownNode_ReturnsValidationFailed()
     {
         var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
-        var node = control.RegisterNode(
+        var service = CreateService(control);
+
+        var response = await service.DisableRouterNode(
+            new DisableRouterNodeRequest { NodeId = "does-not-exist" },
+            context: null!);
+
+        response.Disabled.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task DeleteRouterNode_ExistingNode_ReturnsDeletedAndNodeRemovedFromList()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+
+        var deleted = await service.DeleteRouterNode(
+            new DeleteRouterNodeRequest { NodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id },
+            context: null!);
+        var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
+
+        deleted.Deleted.Should().BeTrue();
+        nodes.Nodes.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteRouterNode_UnknownNode_ReturnsValidationFailed()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var service = CreateService(control);
+
+        var response = await service.DeleteRouterNode(
+            new DeleteRouterNodeRequest { NodeId = "does-not-exist" },
+            context: null!);
+
+        response.Deleted.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task EnableRouterNode_DisabledNode_ReturnsEnabled()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
+
+        var response = await service.EnableRouterNode(
+            new EnableRouterNodeRequest { NodeId = nodeId },
+            context: null!);
+
+        response.Enabled.Should().BeTrue();
+        response.ErrorCode.Should().Be(string.Empty);
+    }
+
+    [Fact]
+    public async Task EnableRouterNode_UnknownNode_ReturnsValidationFailed()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var service = CreateService(control);
+
+        var response = await service.EnableRouterNode(
+            new EnableRouterNodeRequest { NodeId = "does-not-exist" },
+            context: null!);
+
+        response.Enabled.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task GetRouterNodeDetails_UnknownNode_ReturnsValidationFailed()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var service = CreateService(control);
+
+        var response = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = "does-not-exist" },
+            context: null!);
+
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task GetRouterNodeDetails_ProviderThrows_ReturnsNodeWithApiError()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var service = CreateService(control, providerClient: new ThrowingProviderClient());
+
+        var response = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = nodeId },
+            context: null!);
+
+        response.ErrorCode.Should().Be(string.Empty);
+        response.Node.NodeId.Should().Be(nodeId);
+        response.ApiError.Should().NotBeNullOrEmpty();
+    }
+
+    private static GrpcRouterControlPlaneService CreateService(
+        RouterControlPlaneService control,
+        IControlPlaneRepository? repo = null,
+        IRouterNodeProviderClient? providerClient = null)
+    {
+        return new GrpcRouterControlPlaneService(
+            control,
+            repo ?? new InMemoryControlPlaneRepository(),
+            providerClient ?? NoOpProviderClient,
+            NullLogger<GrpcRouterControlPlaneService>.Instance);
+    }
+
+    private static async Task<RouterControlPlaneService> CreateControlPlaneWithHealthyNodeAsync()
+    {
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var node = await control.RegisterNodeAsync(
             "node-a",
             new Uri("https://router-a.example"),
             "secret-a",
             1,
             DateTimeOffset.UtcNow);
-        control.ApplyHealth(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+        await control.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
         return control;
     }
 
@@ -209,6 +327,37 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public Task<NodeModelsResponse> ListModelsAsync(
             RouterNode node,
             CancellationToken cancellationToken) =>
+            Task.FromResult(new NodeModelsResponse());
+    }
+
+    private sealed class ThrowingProviderClient : IRouterNodeProviderClient
+    {
+        public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
+            RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
+            throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
+
+        public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
+            RouterNode node, CancellationToken cancellationToken) =>
+            throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
+
+        public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
+            RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
+            RouterNode node, string provider, string? source, bool includeCompatible, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
+            RouterNode node, string name, string key, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
+            RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<NodeModelsResponse> ListModelsAsync(
+            RouterNode node, CancellationToken cancellationToken) =>
             Task.FromResult(new NodeModelsResponse());
     }
 

@@ -4,161 +4,143 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public sealed class InMemoryAuthRepository : IAuthRepository
 {
-    private readonly object gate = new();
-    private readonly Dictionary<string, UserAccount> users = [];
-    private readonly List<Invite> invites = [];
-    private readonly List<ApiKey> apiKeys = [];
+    private readonly object _gate = new();
+    private readonly Dictionary<string, UserAccount> _users = [];
+    private readonly List<Invite> _invites = [];
+    private readonly List<ApiKey> _apiKeys = [];
 
-    public void AddInvite(Invite invite)
+    public Task AddInviteAsync(Invite invite, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate) { _invites.Add(invite); }
+        return Task.CompletedTask;
+    }
+
+    public Task<Invite?> GetInviteByTokenHashAsync(string tokenHash, CancellationToken ct = default)
+    {
+        lock (_gate)
         {
-            invites.Add(invite);
+            return Task.FromResult(_invites.SingleOrDefault(i => i.TokenHash == tokenHash));
         }
     }
 
-    public Invite? GetInviteByTokenHash(string tokenHash)
+    public Task AddUserAndMarkInviteUsedAsync(UserAccount user, Invite invite, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate) { _users[user.Id] = user; }
+        return Task.CompletedTask;
+    }
+
+    public Task<UserAccount?> GetUserAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_gate) { return Task.FromResult(_users.GetValueOrDefault(userId)); }
+    }
+
+    public Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default)
+    {
+        lock (_gate)
         {
-            return invites.SingleOrDefault(invite => invite.TokenHash == tokenHash);
+            return Task.FromResult(_users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant()));
         }
     }
 
-    public void AddUserAndMarkInviteUsed(UserAccount user, Invite invite)
+    public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate)
         {
-            users[user.Id] = user;
+            var all = _users.Values.OrderByDescending(u => u.CreatedAtUtc).Take(limit + 1).ToArray();
+            var hasMore = all.Length > limit;
+            IReadOnlyCollection<UserAccount> result = hasMore ? all.Take(limit).ToArray() : all;
+            return Task.FromResult((result, hasMore));
         }
     }
 
-    public UserAccount? GetUser(string userId)
+    public Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate) { _apiKeys.Add(apiKey); }
+        return Task.CompletedTask;
+    }
+
+    public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default)
+    {
+        lock (_gate) { return Task.FromResult(_apiKeys.SingleOrDefault(k => k.Id == apiKeyId)); }
+    }
+
+    public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default)
+    {
+        lock (_gate)
         {
-            return users.GetValueOrDefault(userId);
+            var all = _apiKeys
+                .Where(k => k.UserId == userId)
+                .OrderByDescending(k => k.CreatedAtUtc)
+                .Take(limit + 1)
+                .ToArray();
+            var hasMore = all.Length > limit;
+            IReadOnlyCollection<ApiKey> result = hasMore ? all.Take(limit).ToArray() : all;
+            return Task.FromResult((result, hasMore));
         }
     }
 
-    public UserAccount? GetUserByEmail(string email)
+    public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate)
         {
-            return users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant());
-        }
-    }
-
-    public IReadOnlyCollection<UserAccount> ListUsers()
-    {
-        lock (gate)
-        {
-            return users.Values.ToArray();
-        }
-    }
-
-    public void AddApiKey(ApiKey apiKey)
-    {
-        lock (gate)
-        {
-            apiKeys.Add(apiKey);
-        }
-    }
-
-    public ApiKey? GetApiKey(string apiKeyId)
-    {
-        lock (gate)
-        {
-            return apiKeys.SingleOrDefault(key => key.Id == apiKeyId);
-        }
-    }
-
-    public ApiKey? GetApiKeyBySecretHash(string secretHash)
-    {
-        lock (gate)
-        {
-            return apiKeys.SingleOrDefault(key => key.SecretHash == secretHash);
-        }
-    }
-
-    public ApiKey? FindActiveApiKeyBySecretHash(string secretHash)
-    {
-        lock (gate)
-        {
-            return apiKeys.SingleOrDefault(key => key.SecretHash == secretHash && key.RevokedAtUtc is null);
-        }
-    }
-
-    public void MarkApiKeyUsed(string apiKeyId, DateTimeOffset lastUsedAtUtc)
-    {
-        lock (gate)
-        {
-            var key = apiKeys.SingleOrDefault(k => k.Id == apiKeyId);
-            if (key is { IsActive: true })
-            {
-                key.MarkUsed(lastUsedAtUtc);
-            }
-        }
-    }
-
-    public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
-    {
-        lock (gate)
-        {
-            return apiKeys.Where(key => key.UserId == userId).ToArray();
-        }
-    }
-
-    public bool RenameApiKey(string userId, string apiKeyId, string name)
-    {
-        lock (gate)
-        {
-            var key = apiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
-            if (key is null)
-            {
-                return false;
-            }
-
+            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            if (key is null) return Task.FromResult(false);
             key.Rename(name);
-            return true;
+            return Task.FromResult(true);
         }
     }
 
-    public bool RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc)
+    public Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate)
         {
-            var key = apiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
-            if (key is null)
-            {
-                return false;
-            }
-
+            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            if (key is null) return Task.FromResult(false);
             key.Revoke(revokedAtUtc);
-            return true;
+            return Task.FromResult(true);
         }
     }
 
-    public IReadOnlyCollection<(string Prefix, string SecretHash)> ListActiveApiKeyHashes()
+    public Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate)
         {
-            return apiKeys
+            IReadOnlyCollection<(string, string)> result = _apiKeys
                 .Where(k => k.RevokedAtUtc is null)
                 .Select(k => (k.Prefix, k.SecretHash))
                 .ToArray();
+            return Task.FromResult(result);
         }
     }
 
-    public string? GetFirstActiveApiKeyRaw(string userId)
+    public Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default)
     {
-        lock (gate)
+        lock (_gate)
         {
-            return apiKeys
+            var raw = _apiKeys
                 .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
                 .OrderByDescending(k => k.CreatedAtUtc)
                 .Select(k => k.RawKey)
                 .FirstOrDefault();
+            return Task.FromResult(raw);
         }
+    }
+
+    public Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_apiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null));
+        }
+    }
+
+    public Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            var key = _apiKeys.SingleOrDefault(k => k.Id == apiKeyId);
+            if (key is { IsActive: true }) key.MarkUsed(lastUsedAtUtc);
+        }
+        return Task.CompletedTask;
     }
 }

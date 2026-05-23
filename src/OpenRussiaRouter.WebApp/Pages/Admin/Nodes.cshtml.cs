@@ -11,16 +11,17 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class NodesModel : PageModelBase
+public class NodesModel(
+    ControlPlaneClient controlPlaneClient,
+    AuthClient authClient,
+    BillingClient billingClient,
+    IHttpClientFactory httpClientFactory,
+    IConfiguration configuration,
+    ILogger<NodesModel> logger) : PageModelBase
 {
     private const string ModelPriceMissingErrorCode = "model_price_missing";
 
-    private readonly ControlPlaneClient _controlPlaneClient;
-    private readonly AuthClient _authClient;
-    private readonly BillingClient _billingClient;
-    private readonly HttpClient _httpClient;
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<NodesModel> _logger;
+    private readonly HttpClient _httpClient = httpClientFactory.CreateClient("RouterNode");
 
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -31,39 +32,26 @@ public class NodesModel : PageModelBase
     [BindProperty] public TestFormInput StreamingTestInput { get; set; } = new();
     public TestFormResult? TestResult { get; set; }
 
-
-    public NodesModel(
-        ControlPlaneClient controlPlaneClient,
-        AuthClient authClient,
-        BillingClient billingClient,
-        IHttpClientFactory httpClientFactory,
-        IConfiguration configuration,
-        ILogger<NodesModel> logger)
-    {
-        _controlPlaneClient = controlPlaneClient;
-        _authClient = authClient;
-        _billingClient = billingClient;
-        _httpClient = httpClientFactory.CreateClient("RouterNode");
-        _configuration = configuration;
-        _logger = logger;
-    }
-
     public async Task OnGetAsync()
     {
-        try { Nodes = await _controlPlaneClient.ListRouterNodesAsync(); }
-        catch { ErrorMessage = "Failed to load router nodes."; }
+        try { Nodes = await controlPlaneClient.ListRouterNodesAsync(); }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load router nodes.");
+            ErrorMessage = "Failed to load router nodes.";
+        }
     }
 
     public async Task<IActionResult> OnPostAddAsync()
     {
         try
         {
-            await _controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.ControlToken, Form.CapacityWeight);
+            await controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.ControlToken, Form.CapacityWeight);
             return RedirectToPage();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "OnPostAddAsync failed. Name={Name} Endpoint={Endpoint}", Form.Name, Form.EndpointUrl);
+            logger.LogError(ex, "OnPostAddAsync failed. Name={Name} Endpoint={Endpoint}", Form.Name, Form.EndpointUrl);
             ErrorMessage = $"Failed to add router node: {ex.GetType().Name}: {ex.Message}";
             await OnGetAsync();
             return Page();
@@ -74,11 +62,12 @@ public class NodesModel : PageModelBase
     {
         try
         {
-            await _controlPlaneClient.DisableRouterNodeAsync(nodeId);
+            await controlPlaneClient.DisableRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostDisableAsync failed. NodeId={NodeId}", nodeId);
             ErrorMessage = "Failed to disable router node.";
             await OnGetAsync();
             return Page();
@@ -89,11 +78,12 @@ public class NodesModel : PageModelBase
     {
         try
         {
-            await _controlPlaneClient.DeleteRouterNodeAsync(nodeId);
+            await controlPlaneClient.DeleteRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostDeleteAsync failed. NodeId={NodeId}", nodeId);
             ErrorMessage = "Failed to delete router node.";
             await OnGetAsync();
             return Page();
@@ -104,11 +94,12 @@ public class NodesModel : PageModelBase
     {
         try
         {
-            await _controlPlaneClient.EnableRouterNodeAsync(nodeId);
+            await controlPlaneClient.EnableRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogError(ex, "OnPostEnableAsync failed. NodeId={NodeId}", nodeId);
             ErrorMessage = "Failed to enable router node.";
             await OnGetAsync();
             return Page();
@@ -117,7 +108,7 @@ public class NodesModel : PageModelBase
 
     public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
-        try { Nodes = await _controlPlaneClient.ListRouterNodesAsync(); }
+        try { Nodes = await controlPlaneClient.ListRouterNodesAsync(); }
         catch { return new JsonResult(Array.Empty<string>()); }
 
         var node = Nodes.FirstOrDefault(n => n.NodeId == nodeId);
@@ -172,7 +163,7 @@ public class NodesModel : PageModelBase
         TestInput.NodeId = node.NodeId;
 
         var userId = User.GetUserId();
-        var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        var userKeys = await authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
         var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
         if (activeKey is null)
         {
@@ -181,7 +172,7 @@ public class NodesModel : PageModelBase
             return Page();
         }
 
-        var rawKey = await _authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        var rawKey = await authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
 
         if (string.IsNullOrWhiteSpace(rawKey))
         {
@@ -192,8 +183,8 @@ public class NodesModel : PageModelBase
 
         try
         {
-            await _controlPlaneClient.PushUserIntegrationKeyAsync(
-                $"user:{userId}", rawKey, userId, nodeId: node.NodeId,
+            await controlPlaneClient.PushUserIntegrationKeyAsync(
+                $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
                 cancellationToken: HttpContext.RequestAborted);
 
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
@@ -251,19 +242,19 @@ public class NodesModel : PageModelBase
         StreamingTestInput.NodeId = node.NodeId;
 
         var userId = User.GetUserId();
-        var userKeys = await _authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        var userKeys = await authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
         var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
         if (activeKey is null)
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No personal API keys. Create an API key in Workspace -> API Keys.");
 
-        var rawKey = await _authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        var rawKey = await authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No active API key with a stored raw value. Recreate the key in Workspace -> API Keys.");
 
         try
         {
-            await _controlPlaneClient.PushUserIntegrationKeyAsync(
-                $"user:{userId}", rawKey, userId, nodeId: node.NodeId,
+            await controlPlaneClient.PushUserIntegrationKeyAsync(
+                $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
                 cancellationToken: HttpContext.RequestAborted);
 
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
@@ -349,7 +340,7 @@ public class NodesModel : PageModelBase
 
         try
         {
-            var errorCode = await _billingClient.RecordUsageAsync(
+            var errorCode = await billingClient.RecordUsageAsync(
                 Guid.NewGuid().ToString("N"),
                 userId,
                 apiKey.Id,
@@ -370,7 +361,7 @@ public class NodesModel : PageModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to record admin node test activity. UserId={UserId} ApiKeyId={ApiKeyId} NodeId={NodeId} Model={Model}",
+            logger.LogWarning(ex, "Failed to record admin node test activity. UserId={UserId} ApiKeyId={ApiKeyId} NodeId={NodeId} Model={Model}",
                 userId, apiKey.Id, routerNodeId, modelId);
             return ex.Message;
         }
@@ -409,7 +400,7 @@ public class NodesModel : PageModelBase
         if (string.IsNullOrWhiteSpace(controlToken))
             return string.Empty;
 
-        return _configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
+        return configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
     }
 
     public static string GetStatusBadge(string status) => status switch

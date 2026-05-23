@@ -46,7 +46,7 @@ private readonly AuthClient _authClient;
         {
             var result = await _authClient.CreateApiKeyAsync(User.GetUserId(), Create.Name);
             NewKeyValue = result.RawKey;
-            _ = _controlPlaneClient.PushUserIntegrationKeyAsync(Create.Name, result.RawKey, User.GetUserId());
+            _ = _controlPlaneClient.PushUserIntegrationKeyAsync(Create.Name, result.RawKey, User.GetUserId(), result.ApiKeyId);
             return RedirectToPage();
         }
         catch
@@ -83,6 +83,7 @@ private readonly AuthClient _authClient;
         try
         {
             await _authClient.RevokeApiKeyAsync(User.GetUserId(), keyId);
+            _ = _controlPlaneClient.RevokeUserIntegrationKeyAsync(keyId);
             return RedirectToPage();
         }
         catch

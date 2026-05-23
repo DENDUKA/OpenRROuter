@@ -5,35 +5,35 @@ namespace OpenRussiaRouter.BillingService.Application.Services;
 
 public interface IBillingRepository
 {
+    Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default);
 
-    LedgerEntry AddLedgerEntry(LedgerEntry entry);
+    Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default);
 
-    (IReadOnlyCollection<LedgerEntry> Items, bool HasMore) ListTopUps(string userId, int limit);
+    Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default);
 
-    MoneyAmount GetBalance(string userId);
+    Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default);
 
-    void UpsertModel(ModelPrice model);
+    Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default);
 
-    ModelPrice? GetEnabledModel(string modelId);
+    Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default);
 
-    (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListEnabledModels(int limit, string? afterModelId = null);
+    Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListAllModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default);
 
-    (IReadOnlyCollection<ModelPrice> Items, bool HasMore) ListAllModels(int limit, string? afterModelId = null);
+    Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default);
 
-    UsageRecord AddUsage(UsageRecord record);
+    Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default);
 
-    UsageRecord? GetUsage(string requestId);
+    Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default);
 
-    (IReadOnlyCollection<UsageRecord> Items, bool HasMore) ListUsage(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null);
+    Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default);
 
-    ActivityByTokenRecord AddActivityByToken(ActivityByTokenRecord record);
-
-    (IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore) ListActivityByToken(
+    Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
-        DateTimeOffset? afterCreatedAtUtc = null);
+        DateTimeOffset? afterCreatedAtUtc = null,
+        CancellationToken ct = default);
 
-    void AddAnomaly(BillingAnomaly anomaly);
+    Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default);
 
-    (IReadOnlyCollection<BillingAnomaly> Items, bool HasMore) ListAnomalies(int limit, DateTimeOffset? afterCreatedAtUtc = null);
+    Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default);
 }

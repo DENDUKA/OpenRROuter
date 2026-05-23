@@ -61,6 +61,73 @@ public static class Startup
         return app;
     }
 
+    private static ILogger GetLogger(HttpContext context, string category)
+        => context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger(category);
+
+    private sealed record GatewayAuthorizedContext(
+        string ApiKey,
+        string UserId,
+        string ApiKeyId,
+        string ApiKeyPrefix,
+        string RouterModelId,
+        GatewayRouterLease Lease);
+
+    // Общий пайплайн: валидация модели → auth → balance → выбор ноды.
+    // Возвращает null и записывает ошибку в ответ если что-то не прошло.
+    private static async Task<GatewayAuthorizedContext?> AuthorizeAndAcquireLeaseAsync(
+        HttpContext context,
+        string? model,
+        string requestId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            await WriteJsonErrorAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
+            return null;
+        }
+
+        if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
+        {
+            await WriteJsonErrorAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
+            return null;
+        }
+
+        var authenticator = context.RequestServices.GetRequiredService<IApiKeyAuthenticator>();
+        var authResult = await authenticator.AuthenticateAsync(apiKey, cancellationToken);
+        if (!authResult.Succeeded)
+        {
+            await WriteJsonErrorAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
+            return null;
+        }
+
+        var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
+        var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, model, cancellationToken);
+        if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
+        {
+            var errorType = balanceResult.ErrorCode == ErrorCodes.InsufficientBalance
+                ? "billing_error"
+                : "invalid_request_error";
+            await WriteJsonErrorAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, "Balance check failed", requestId);
+            return null;
+        }
+
+        var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
+        var lease = await controlPlane.SelectRouterNodeAsync(model, requestId, cancellationToken);
+        if (lease is null)
+        {
+            await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            return null;
+        }
+
+        return new GatewayAuthorizedContext(
+            apiKey,
+            authResult.UserId!,
+            authResult.ApiKeyId!,
+            authResult.ApiKeyPrefix!,
+            balanceResult.RouterModelId,
+            lease);
+    }
+
     private static async Task HandleChatCompletionsAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
@@ -68,79 +135,38 @@ public static class Startup
         try
         {
             var body = await ChatCompletionRequestReader.ReadBodyAsync(context.Request.Body, context.RequestAborted);
-            var metadata = body.Metadata;
 
-            if (metadata.Stream)
+            if (body.Metadata.Stream)
             {
                 await ExecuteStreamingAsync(context, body, requestId);
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(metadata.Model))
-            {
-                context.Response.StatusCode = 400;
-                await WriteJsonErrorAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
-                return;
-            }
+            var auth = await AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+            if (auth is null) return;
 
-            if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
-            {
-                await WriteJsonErrorAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
-                return;
-            }
-
-            var authenticator = context.RequestServices.GetRequiredService<IApiKeyAuthenticator>();
-            var authResult = await authenticator.AuthenticateAsync(apiKey, context.RequestAborted);
-            if (!authResult.Succeeded)
-            {
-                context.Response.StatusCode = 401;
-                await WriteJsonErrorAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
-                return;
-            }
-
-            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
-            var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, metadata.Model, context.RequestAborted);
-            if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
-            {
-                var statusCode = balanceResult.ErrorCode == ErrorCodes.InsufficientBalance ? 402 : 400;
-                context.Response.StatusCode = statusCode;
-                await WriteJsonErrorAsync(context, "billing_error", balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, "Balance check failed", requestId);
-                return;
-            }
-
-            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
-            var lease = await controlPlane.SelectRouterNodeAsync(metadata.Model, requestId, context.RequestAborted);
-            if (lease is null)
-            {
-                await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
-                return;
-            }
-
-            var patchedJson = SseRequestPatcher.PatchModel(body.Json, balanceResult.RouterModelId);
+            var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
             var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
-            var startedAt = DateTimeOffset.UtcNow;
-            var response = await routerProxy.SendChatCompletionAsync(lease, patchedJson, requestId, apiKey, context.RequestAborted);
+            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
+            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
 
+            var startedAt = DateTimeOffset.UtcNow;
+            var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
             var completedAt = DateTimeOffset.UtcNow;
-            await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
+
+            await controlPlane.ReleaseRouterNodeAsync(auth.Lease.LeaseId, response.StatusCode >= 500 ? "failed" : "completed", context.RequestAborted);
 
             var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
-            var status = response.StatusCode >= 500
-                ? "failed"
-                : hasUsage ? "completed" : "usage_missing";
+            var status = response.StatusCode >= 500 ? "failed" : hasUsage ? "completed" : "usage_missing";
 
-            var usageEvent = new GatewayUsageEvent(
-                requestId,
-                authResult.UserId!,
-                authResult.ApiKeyId!,
-                authResult.ApiKeyPrefix!,
-                metadata.Model,
-                lease.NodeId,
-                usage,
-                status,
-                startedAt,
-                completedAt);
-            _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
+            _ = billingClient.RecordUsageAsync(
+                new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
+                    body.Metadata.Model!, auth.Lease.NodeId, usage, status, startedAt, completedAt),
+                CancellationToken.None)
+                .ContinueWith(
+                    t => GetLogger(context, "OpenRussiaRouter.ApiGateway.Billing")
+                        .LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
+                    TaskContinuationOptions.OnlyOnFaulted);
 
             context.Response.StatusCode = response.StatusCode;
             context.Response.ContentType = response.ContentType;
@@ -148,8 +174,8 @@ public static class Startup
         }
         catch (Exception ex)
         {
-            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("OpenRussiaRouter.ApiGateway.ChatCompletions");
-            logger.LogWarning(ex, "Chat completion handling failed. RequestId: {RequestId}", requestId);
+            GetLogger(context, "OpenRussiaRouter.ApiGateway.ChatCompletions")
+                .LogWarning(ex, "Chat completion handling failed. RequestId: {RequestId}", requestId);
             await WriteJsonErrorAsync(context, "internal_error", ErrorCodes.InternalError, "Internal server error", requestId);
         }
     }
@@ -166,55 +192,17 @@ public static class Startup
     {
         try
         {
-            var metadata = body.Metadata;
-
-            if (string.IsNullOrWhiteSpace(metadata.Model))
-            {
-                context.Response.StatusCode = 400;
-                await WriteJsonErrorAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
-                return;
-            }
-
-            if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
-            {
-                context.Response.StatusCode = 401;
-                await WriteJsonErrorAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
-                return;
-            }
-
-            var authenticator = context.RequestServices.GetRequiredService<IApiKeyAuthenticator>();
-            var authResult = await authenticator.AuthenticateAsync(apiKey, context.RequestAborted);
-            if (!authResult.Succeeded)
-            {
-                context.Response.StatusCode = 401;
-                await WriteJsonErrorAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
-                return;
-            }
-
-            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
-            var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, metadata.Model, context.RequestAborted);
-            if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
-            {
-                var statusCode = balanceResult.ErrorCode == ErrorCodes.InsufficientBalance ? 402 : 400;
-                context.Response.StatusCode = statusCode;
-                await WriteJsonErrorAsync(context, "billing_error", balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, "Balance check failed", requestId);
-                return;
-            }
-
-            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
-            var lease = await controlPlane.SelectRouterNodeAsync(metadata.Model, requestId, context.RequestAborted);
-            if (lease is null)
-            {
-                context.Response.StatusCode = 503;
-                await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
-                return;
-            }
+            var auth = await AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+            if (auth is null) return;
 
             var patchedJson = SseRequestPatcher.InjectStreamOptions(
-                SseRequestPatcher.PatchModel(body.Json, balanceResult.RouterModelId));
+                SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId));
+            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
+            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
             var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
+            var lease = auth.Lease;
 
-            var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, apiKey, context.RequestAborted);
+            var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
 
             // GATEWAY-004: single retry on a different node before any bytes reach the client
             if (!session.IsSuccess)
@@ -222,22 +210,20 @@ public static class Startup
                 await session.DisposeAsync();
                 await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
 
-                var fallbackLease = await controlPlane.SelectRouterNodeAsync(metadata.Model, requestId, context.RequestAborted);
+                var fallbackLease = await controlPlane.SelectRouterNodeAsync(body.Metadata.Model!, requestId, context.RequestAborted);
                 if (fallbackLease is null)
                 {
-                    context.Response.StatusCode = 503;
                     await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
                     return;
                 }
 
-                session = await routerProxy.BeginStreamChatCompletionAsync(fallbackLease, patchedJson, requestId, apiKey, context.RequestAborted);
+                session = await routerProxy.BeginStreamChatCompletionAsync(fallbackLease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
                 lease = fallbackLease;
 
                 if (!session.IsSuccess)
                 {
                     await session.DisposeAsync();
                     await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
-                    context.Response.StatusCode = 503;
                     await WriteJsonErrorAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "Router nodes unavailable", requestId);
                     return;
                 }
@@ -259,18 +245,14 @@ public static class Startup
             await controlPlane.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
 
             var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
-            var usageEvent = new GatewayUsageEvent(
-                requestId,
-                authResult.UserId!,
-                authResult.ApiKeyId!,
-                authResult.ApiKeyPrefix!,
-                metadata.Model,
-                lease.NodeId,
-                usage,
-                status,
-                startedAt,
-                completedAt);
-            _ = billingClient.RecordUsageAsync(usageEvent, CancellationToken.None);
+            _ = billingClient.RecordUsageAsync(
+                new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
+                    body.Metadata.Model!, lease.NodeId, usage, status, startedAt, completedAt),
+                CancellationToken.None)
+                .ContinueWith(
+                    t => GetLogger(context, "OpenRussiaRouter.ApiGateway.Billing")
+                        .LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
+                    TaskContinuationOptions.OnlyOnFaulted);
         }
         catch (OperationCanceledException)
         {
@@ -278,9 +260,8 @@ public static class Startup
         }
         catch (Exception ex)
         {
-            var logger = context.RequestServices.GetRequiredService<ILoggerFactory>()
-                .CreateLogger("OpenRussiaRouter.ApiGateway.ChatCompletionsStream");
-            logger.LogWarning(ex, "Streaming chat completion failed. RequestId: {RequestId}", requestId);
+            GetLogger(context, "OpenRussiaRouter.ApiGateway.ChatCompletionsStream")
+                .LogWarning(ex, "Streaming chat completion failed. RequestId: {RequestId}", requestId);
 
             if (!context.Response.HasStarted)
                 await WriteJsonErrorAsync(context, "internal_error", ErrorCodes.InternalError, "Internal server error", requestId);

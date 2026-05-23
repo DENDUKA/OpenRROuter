@@ -1,3 +1,5 @@
+using FluentAssertions;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
@@ -12,193 +14,193 @@ namespace OpenRussiaRouter.BillingService.Tests.Application;
 public sealed class BillingApplicationServiceTests
 {
     [Fact]
-    public void CreateVirtualTopUp_PositiveRub_IncreasesBalance()
+    public async Task CreateVirtualTopUp_PositiveRub_IncreasesBalance()
     {
         var service = CreateService();
 
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        Assert.Equal(MoneyAmount.Rub(100), service.GetBalance("user-1"));
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(100));
     }
 
     [Fact]
-    public void CreateVirtualTopUp_SameIdempotencyKey_DoesNotIncreaseBalanceTwice()
+    public async Task CreateVirtualTopUp_SameIdempotencyKey_DoesNotIncreaseBalanceTwice()
     {
         var service = CreateService();
         var now = DateTimeOffset.UtcNow;
 
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", now);
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", now);
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", now);
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", now);
 
-        Assert.Equal(MoneyAmount.Rub(100), service.GetBalance("user-1"));
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(100));
     }
 
     [Fact]
-    public void CheckBalanceAndModel_PositiveBalanceAndEnabledModel_ReturnsAllowed()
+    public async Task CheckBalanceAndModel_PositiveBalanceAndEnabledModel_ReturnsAllowed()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        var result = service.CheckBalanceAndModel("user-1", "gpt-test");
+        var result = await service.CheckBalanceAndModelAsync("user-1", "gpt-test");
 
-        Assert.True(result.Allowed);
-        Assert.Equal("price-v1", result.PriceVersion);
-        Assert.Null(result.ErrorCode);
+        result.Allowed.Should().BeTrue();
+        result.PriceVersion.Should().Be("price-v1");
+        result.ErrorCode.Should().BeNull();
     }
 
     [Fact]
-    public void CheckBalanceAndModel_ZeroBalance_ReturnsInsufficientBalance()
+    public async Task CheckBalanceAndModel_ZeroBalance_ReturnsInsufficientBalance()
     {
-        var service = CreateServiceWithModel();
+        var service = await CreateServiceWithModelAsync();
 
-        var result = service.CheckBalanceAndModel("user-1", "gpt-test");
+        var result = await service.CheckBalanceAndModelAsync("user-1", "gpt-test");
 
-        Assert.False(result.Allowed);
-        Assert.Equal(ErrorCodes.InsufficientBalance, result.ErrorCode);
+        result.Allowed.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.InsufficientBalance);
     }
 
     [Fact]
-    public void CheckBalanceAndModel_UnknownModel_ReturnsModelUnavailable()
-    {
-        var service = CreateService();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
-
-        var result = service.CheckBalanceAndModel("user-1", "unknown");
-
-        Assert.False(result.Allowed);
-        Assert.Equal(ErrorCodes.ModelUnavailable, result.ErrorCode);
-    }
-
-    [Fact]
-    public void ListPublicModels_OnlyEnabledModels_ReturnsEnabledModels()
+    public async Task CheckBalanceAndModel_UnknownModel_ReturnsModelUnavailable()
     {
         var service = CreateService();
-        service.UpsertModel(CreateModel("enabled", enabled: true));
-        service.UpsertModel(CreateModel("disabled", enabled: false));
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        var models = service.ListPublicModels();
+        var result = await service.CheckBalanceAndModelAsync("user-1", "unknown");
 
-        var model = Assert.Single(models);
-        Assert.Equal("enabled", model.Id);
+        result.Allowed.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ModelUnavailable);
     }
 
     [Fact]
-    public void RecordUsage_ValidUsage_CreatesChargeAndDecreasesBalance()
+    public async Task ListPublicModels_OnlyEnabledModels_ReturnsEnabledModels()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = CreateService();
+        await service.UpsertModelAsync(CreateModel("enabled", enabled: true));
+        await service.UpsertModelAsync(CreateModel("disabled", enabled: false));
 
-        var result = service.RecordUsage(CreateUsageEvent("req-1", new TokenUsage(1_000_000, 1_000_000, 0)), DateTimeOffset.UtcNow);
+        var models = await service.ListPublicModelsAsync();
 
-        Assert.True(result.Accepted);
-        Assert.Equal(MoneyAmount.Rub(70), service.GetBalance("user-1"));
+        var model = models.Should().ContainSingle().Which;
+        model.Id.Should().Be("enabled");
     }
 
     [Fact]
-    public void RecordUsage_SameRequestId_DoesNotChargeTwice()
+    public async Task RecordUsage_ValidUsage_CreatesChargeAndDecreasesBalance()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        var result = await service.RecordUsageAsync(CreateUsageEvent("req-1", new TokenUsage(1_000_000, 1_000_000, 0)), DateTimeOffset.UtcNow);
+
+        result.Accepted.Should().BeTrue();
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(70));
+    }
+
+    [Fact]
+    public async Task RecordUsage_SameRequestId_DoesNotChargeTwice()
+    {
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
         var usage = CreateUsageEvent("req-1", new TokenUsage(1_000_000, 1_000_000, 0));
 
-        service.RecordUsage(usage, DateTimeOffset.UtcNow);
-        service.RecordUsage(usage, DateTimeOffset.UtcNow);
+        await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
+        await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
 
-        Assert.Equal(MoneyAmount.Rub(70), service.GetBalance("user-1"));
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(70));
     }
 
     [Fact]
-    public void RecordUsage_ValidUsage_WritesActivityByToken()
+    public async Task RecordUsage_ValidUsage_WritesActivityByToken()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        service.RecordUsage(CreateUsageEvent("req-activity", new TokenUsage(10, 20, 3)), DateTimeOffset.UtcNow);
+        await service.RecordUsageAsync(CreateUsageEvent("req-activity", new TokenUsage(10, 20, 3)), DateTimeOffset.UtcNow);
 
-        var activity = Assert.Single(service.ListActivityByToken(["key-1"]));
-        Assert.Equal("req-activity", activity.RequestId);
-        Assert.Equal("key-1", activity.ApiKeyId);
-        Assert.Equal("sk-or-test", activity.ApiKeyPrefix);
-        Assert.Equal(10, activity.Usage.InputTokens);
-        Assert.Equal(20, activity.Usage.OutputTokens);
-        Assert.Equal(3, activity.Usage.CacheTokens);
+        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle().Which;
+        activity.RequestId.Should().Be("req-activity");
+        activity.ApiKeyId.Should().Be("key-1");
+        activity.ApiKeyPrefix.Should().Be("sk-or-test");
+        activity.Usage.InputTokens.Should().Be(10);
+        activity.Usage.OutputTokens.Should().Be(20);
+        activity.Usage.CacheTokens.Should().Be(3);
     }
 
     [Fact]
-    public void RecordUsage_UsageMissing_WritesActivityWithoutCharge()
+    public async Task RecordUsage_UsageMissing_WritesActivityWithoutCharge()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        var result = service.RecordUsage(CreateUsageEvent("req-missing", new TokenUsage(0, 0, 0), "usage_missing"), DateTimeOffset.UtcNow);
+        var result = await service.RecordUsageAsync(CreateUsageEvent("req-missing", new TokenUsage(0, 0, 0), "usage_missing"), DateTimeOffset.UtcNow);
 
-        Assert.True(result.Accepted);
-        Assert.Equal(MoneyAmount.Rub(100), service.GetBalance("user-1"));
-        var activity = Assert.Single(service.ListActivityByToken(["key-1"]));
-        Assert.Equal("usage_missing", activity.Status);
-        Assert.Equal(0, activity.Usage.TotalTokens);
+        result.Accepted.Should().BeTrue();
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(100));
+        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle().Which;
+        activity.Status.Should().Be("usage_missing");
+        activity.Usage.TotalTokens.Should().Be(0);
     }
 
     [Fact]
-    public void RecordUsage_SameRequestId_DoesNotDuplicateActivity()
+    public async Task RecordUsage_SameRequestId_DoesNotDuplicateActivity()
     {
-        var service = CreateServiceWithModel();
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
         var usage = CreateUsageEvent("req-idempotent", new TokenUsage(1, 1, 0));
 
-        service.RecordUsage(usage, DateTimeOffset.UtcNow);
-        service.RecordUsage(usage, DateTimeOffset.UtcNow);
+        await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
+        await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
 
-        Assert.Single(service.ListActivityByToken(["key-1"]));
+        (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle();
     }
 
     [Fact]
-    public void RecordUsage_UnknownModel_CreatesAnomaly()
+    public async Task RecordUsage_UnknownModel_CreatesAnomaly()
     {
         var service = CreateService();
 
-        var result = service.RecordUsage(CreateUsageEvent("req-1", new TokenUsage(1, 1, 0)), DateTimeOffset.UtcNow);
+        var result = await service.RecordUsageAsync(CreateUsageEvent("req-1", new TokenUsage(1, 1, 0)), DateTimeOffset.UtcNow);
 
-        Assert.True(result.Accepted);
-        Assert.Null(result.ErrorCode);
-        Assert.Equal(MoneyAmount.Rub(0), result.Cost);
-        Assert.Single(service.ListAnomalies());
+        result.Accepted.Should().BeTrue();
+        result.ErrorCode.Should().BeNull();
+        result.Cost.Should().Be(MoneyAmount.Rub(0));
+        (await service.ListAnomaliesAsync()).Should().ContainSingle();
     }
 
     [Fact]
-    public void RecordUsage_NegativeTokenCount_CreatesAnomaly()
+    public async Task RecordUsage_NegativeTokenCount_CreatesAnomaly()
     {
-        var service = CreateServiceWithModel();
+        var service = await CreateServiceWithModelAsync();
 
-        var result = service.RecordUsage(CreateUsageEvent("req-1", new TokenUsage(-1, 1, 0)), DateTimeOffset.UtcNow);
+        var result = await service.RecordUsageAsync(CreateUsageEvent("req-1", new TokenUsage(-1, 1, 0)), DateTimeOffset.UtcNow);
 
-        Assert.False(result.Accepted);
-        Assert.Equal("invalid_token_count", result.ErrorCode);
-        Assert.Single(service.ListAnomalies());
+        result.Accepted.Should().BeFalse();
+        result.ErrorCode.Should().Be("invalid_token_count");
+        (await service.ListAnomaliesAsync()).Should().ContainSingle();
     }
 
     [Fact]
-    public void ListTopUps_AfterTopUps_ReturnsTopUpsForUser()
+    public async Task ListTopUps_AfterTopUps_ReturnsTopUpsForUser()
     {
         var service = CreateService();
         var now = DateTimeOffset.UtcNow;
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "first", "key-1", now);
-        service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(200), "second", "key-2", now.AddSeconds(1));
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "first", "key-1", now);
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(200), "second", "key-2", now.AddSeconds(1));
 
-        var topUps = service.ListTopUps("user-1");
+        var topUps = await service.ListTopUpsAsync("user-1");
 
-        Assert.Equal(2, topUps.Count);
+        topUps.Should().HaveCount(2);
     }
 
     [Fact]
-    public void ListTopUps_OtherUserTopUps_NotReturned()
+    public async Task ListTopUps_OtherUserTopUps_NotReturned()
     {
         var service = CreateService();
-        service.CreateVirtualTopUp("admin-1", "user-2", MoneyAmount.Rub(100), "other", "key-3", DateTimeOffset.UtcNow);
+        await service.CreateVirtualTopUpAsync("admin-1", "user-2", MoneyAmount.Rub(100), "other", "key-3", DateTimeOffset.UtcNow);
 
-        var topUps = service.ListTopUps("user-1");
+        var topUps = await service.ListTopUpsAsync("user-1");
 
-        Assert.Empty(topUps);
+        topUps.Should().BeEmpty();
     }
 
     private static BillingApplicationService CreateService()
@@ -206,13 +208,14 @@ public sealed class BillingApplicationServiceTests
         return new BillingApplicationService(
             new InMemoryBillingRepository(),
             new UsageCostCalculator(),
-            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }));
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance);
     }
 
-    private static BillingApplicationService CreateServiceWithModel()
+    private static async Task<BillingApplicationService> CreateServiceWithModelAsync()
     {
         var service = CreateService();
-        service.UpsertModel(CreateModel("gpt-test", enabled: true));
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: true));
         return service;
     }
 
@@ -243,4 +246,3 @@ public sealed class BillingApplicationServiceTests
             now);
     }
 }
-

@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
@@ -14,11 +15,11 @@ public sealed class AuthPersistenceMapperTests
 
         var mapped = AuthPersistenceMapper.ToDomain(AuthPersistenceMapper.ToEntity(user));
 
-        Assert.Equal(user.Id, mapped.Id);
-        Assert.Equal("user@example.com", mapped.Email);
-        Assert.Equal(UserRole.Admin, mapped.Role);
-        Assert.Equal(UserStatus.Disabled, mapped.Status);
-        Assert.Equal("hash", mapped.PasswordHash);
+        mapped.Id.Should().Be(user.Id);
+        mapped.Email.Should().Be("user@example.com");
+        mapped.Role.Should().Be(UserRole.Admin);
+        mapped.Status.Should().Be(UserStatus.Disabled);
+        mapped.PasswordHash.Should().Be("hash");
     }
 
     [Fact]
@@ -37,8 +38,8 @@ public sealed class AuthPersistenceMapperTests
 
         var mapped = AuthPersistenceMapper.ToDomain(AuthPersistenceMapper.ToEntity(invite));
 
-        Assert.True(mapped.IsUsed);
-        Assert.Equal(usedAt, mapped.UsedAtUtc);
+        mapped.IsUsed.Should().BeTrue();
+        mapped.UsedAtUtc.Should().Be(usedAt);
     }
 
     [Fact]
@@ -51,13 +52,13 @@ public sealed class AuthPersistenceMapperTests
 
         var mapped = AuthPersistenceMapper.ToDomain(AuthPersistenceMapper.ToEntity(apiKey));
 
-        Assert.Equal(apiKey.Id, mapped.Id);
-        Assert.Equal(apiKey.UserId, mapped.UserId);
-        Assert.Equal(apiKey.Name, mapped.Name);
-        Assert.Equal(apiKey.Prefix, mapped.Prefix);
-        Assert.Equal(apiKey.SecretHash, mapped.SecretHash);
-        Assert.Equal(now, mapped.LastUsedAtUtc);
-        Assert.Equal(now.AddMinutes(1), mapped.RevokedAtUtc);
-        Assert.False(mapped.IsActive);
+        mapped.Id.Should().Be(apiKey.Id);
+        mapped.UserId.Should().Be(apiKey.UserId);
+        mapped.Name.Should().Be(apiKey.Name);
+        mapped.Prefix.Should().Be(apiKey.Prefix);
+        mapped.SecretHash.Should().Be(apiKey.SecretHash);
+        mapped.LastUsedAtUtc.Should().Be(now);
+        mapped.RevokedAtUtc.Should().Be(now.AddMinutes(1));
+        mapped.IsActive.Should().BeFalse();
     }
 }

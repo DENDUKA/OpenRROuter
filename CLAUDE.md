@@ -25,10 +25,17 @@ dotnet run --project src/OpenRussiaRouter.ControlPlane
 dotnet run --project src/OpenRussiaRouter.WebApp
 ```
 
-**PostgreSQL integration tests** are opt-in via environment variables:
-- `ORR_AUTH_POSTGRES_TEST_CONNECTION`
+**PostgreSQL integration tests** (Testcontainers, skip gracefully without Docker):
+- `ORR_AUTH_POSTGRES_TEST_CONNECTION` — override для AuthService (обычно не нужен, Testcontainers сам поднимает контейнер)
 - `ORR_BILLING_POSTGRES_TEST_CONNECTION`
 - `ORR_CONTROL_POSTGRES_TEST_CONNECTION`
+
+**E2E tests** (Playwright, opt-in):
+```powershell
+# До первого запуска установить браузеры:
+pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chromium
+# Конфиг: tests/OpenRussiaRouter.E2ETests/e2e.local.json (gitignored)
+```
 
 ## Architecture Overview
 
@@ -38,23 +45,32 @@ OpenRussiaRouter is an OpenAI-compatible LLM gateway with RUB billing, built as 
 
 | Service | Role | Default Port |
 |---|---|---|
-| **ApiGateway** | Public HTTP entry point, OpenAI-compatible API | HTTP |
+| **ApiGateway** | Public HTTP entry point, OpenAI-compatible API | HTTP 5000 |
 | **AuthService** | User accounts, sessions, API key lifecycle | gRPC 5001 |
 | **BillingService** | Balance ledger, model pricing, usage tracking | gRPC 5002 |
 | **ControlPlane** | 9Router node registry, health checks, leasing | gRPC 5003 |
-| **WebApp** | Blazor user cabinet & admin dashboard | 5004 |
+| **WebApp** | ASP.NET Core Razor Pages user cabinet & admin dashboard | HTTP 5004 |
 | **BuildingBlocks** | Shared library: Money, TokenUsage, errors, migrations | — |
 | **Contracts** | Shared DTOs + `.proto` files for all gRPC interfaces | — |
 
 ### API Gateway Request Flow
 
-`POST /v1/chat/completions`:
+`POST /v1/chat/completions` (non-streaming и streaming):
 1. Extract Bearer token → validate via AuthService gRPC
 2. Check balance + model availability via BillingService gRPC
-3. Select router node via ControlPlane gRPC
-4. Forward request to 9Router node via YARP reverse proxy
-5. Extract token usage from response
-6. Record usage event asynchronously (fire-and-forget)
+3. Select router node via ControlPlane gRPC (least-load)
+4. Patch request JSON: replace `model` with `router_model_id` from billing catalog
+5. Forward to 9Router node (non-streaming via YARP, streaming via `HttpCompletionOption.ResponseHeadersRead`)
+6. **Retry** on 5xx / network error before first byte reaches client (one attempt, different node)
+7. Extract token usage from response (JSON field or final SSE chunk with `include_usage`)
+8. Record usage event asynchronously (fire-and-forget gRPC call to BillingService)
+9. Release lease in ControlPlane
+
+Endpoints:
+- `POST /v1/chat/completions` — non-streaming и streaming (автодетект по полю `stream`)
+- `POST /v1/chat/completions/stream` — явный streaming alias
+- `GET /v1/models` — список enabled моделей из BillingService
+- `GET /health`, `GET /ready`
 
 ### Key Patterns
 
@@ -64,11 +80,13 @@ OpenRussiaRouter is an OpenAI-compatible LLM gateway with RUB billing, built as 
 - **gRPC contracts**: `.proto` files in `src/OpenRussiaRouter.Contracts/Protos/` — `auth.proto`, `billing.proto`, `control-plane.proto`
 - **No Entity Framework** — Dapper + Npgsql only
 - **Correlation IDs**: `X-Correlation-Id` header propagated via `CorrelationIdReader`, injected into Serilog context
+- **WebApp** — Razor Pages (`.cshtml` + `.cshtml.cs`), cookie auth, gRPC clients in `Services/`
 
 ### Shared BuildingBlocks
 
 - `MoneyAmount` — record struct with currency, arithmetic operators
 - `TokenUsage` + `UsageCostCalculator` — token billing math
+- `TokenUsageExtractor` — extracts usage from JSON/SSE (non-streaming and streaming paths)
 - `ApiError` + `ErrorCodes` — standardized error responses
 - `PostgresSqlMigrationRunner` — runs SQL migration scripts from embedded resources
 - Serilog extensions for Seq integration
@@ -90,6 +108,27 @@ gRPC service URLs and DB connection strings live in `appsettings.json` per servi
 ### Database Migrations
 
 SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `004_*.sql`).
+
+Current migration counts: auth (4), billing (5), control (3).
+
+### WebApp Pages
+
+```
+/login, /logout, /invite/{token}
+/                          — Workspace Index (balance overview)
+/workspace/api-keys        — Create / rename / revoke API keys
+/workspace/activity        — Usage records table
+/workspace/credits         — Balance + top-up history
+/workspace/settings        — stub (empty)
+/admin                     — Admin Index
+/admin/users               — List users, create invite, virtual top-up
+/admin/models              — CRUD model/pricing catalog
+/admin/nodes               — List nodes, add, disable/enable
+/admin/nodes/{id}          — Node details + integration keys
+/admin/nodes/{id}/limits   — Provider quota dashboard
+/admin/anomalies           — Billing anomalies
+/models, /models/{id}      — Public model catalog (user-facing)
+```
 
 ### 9Router Integration & Two Types of Tokens
 
@@ -119,5 +158,37 @@ SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatical
 - Формат: `sk-or-<random>` (требование 9Router)
 - Хранятся в AuthService (хеш в `auth.api_keys`)
 - При создании автоматически пушатся на все активные ноды через ControlPlane → `POST /api/integrations/keys`
+- При создании пушится на все активные ноды через ControlPlane → `POST /api/integrations/keys`; при отзыве деактивируется через `PATCH /api/integrations/keys/{id}/status`. Маппинг `(api_key_id, node_id, router_key_id)` хранится в `control.integration_key_sync`.
 - Используются для аутентификации при вызове LLM-моделей через 9Router proxy
 - Видны в дашборде 9Router (`/dashboard/endpoint`)
+
+## Current Status (MVP completeness)
+
+### Готово
+
+| Area | What's done |
+|---|---|
+| Platform | Solution, all projects build, shared contracts, migrations runner |
+| AuthService | Full domain + PostgreSQL persistence, all gRPC methods, unit + integration + PG tests |
+| BillingService | Ledger, model catalog, usage recording, all gRPC methods, unit + integration + PG tests |
+| ControlPlane | Node registry, health checks, lease management, 9Router admin API client, all gRPC methods |
+| ApiGateway | Non-streaming + SSE streaming, retry/failover, YARP proxy, OpenAI error shape |
+| WebApp | All user and admin Razor Pages, cookie auth, gRPC clients |
+| E2E Tests | Playwright: API key lifecycle, node lifecycle |
+| Infra | Docker Compose, Kubernetes/Kustomize/ArgoCD |
+
+### Не готово / заглушки
+
+| Area | Gap |
+|---|---|
+| WebApp `/workspace/settings` | Страница — пустая заглушка |
+| ~~API key revoke → nodes~~ | Реализовано: маппинг в `control.integration_key_sync`, revoke деактивирует на нодах |
+| gRPC error interceptors | Нет structured gRPC error details (PLATFORM-002) |
+| Metrics / tracing | Нет OpenTelemetry, нет метрик request count/latency (PLATFORM-003) |
+| Log redaction | Нет явного хелпера для redact sensitive fields в логах |
+| Invite delivery | Invite token виден только в admin create response, нет email и явного UI-отображения |
+| Immutable price history | В `billing.model_prices` один active row на модель, не versioned history (BILLING-003) |
+| Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox (BILLING-004) |
+| Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` (CONTROL-002) |
+| Capability-aware routing | Роутинг по least-load, без фильтра по model capabilities (CONTROL-003) |
+| Lease recovery | После рестарта ControlPlane in-flight счётчики сбрасываются, нет recovery (CONTROL-004) |

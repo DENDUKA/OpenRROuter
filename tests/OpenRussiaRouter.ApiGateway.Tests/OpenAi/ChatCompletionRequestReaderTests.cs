@@ -1,4 +1,5 @@
 using System.Text;
+using FluentAssertions;
 using OpenRussiaRouter.ApiGateway.OpenAi;
 
 namespace OpenRussiaRouter.ApiGateway.Tests.OpenAi;
@@ -12,8 +13,8 @@ public sealed class ChatCompletionRequestReaderTests
 
         var result = await ChatCompletionRequestReader.ReadAsync(body, CancellationToken.None);
 
-        Assert.Equal("gpt-test", result.Model);
-        Assert.True(result.Stream);
+        result.Model.Should().Be("gpt-test");
+        result.Stream.Should().BeTrue();
     }
 
     [Fact]
@@ -24,9 +25,9 @@ public sealed class ChatCompletionRequestReaderTests
 
         var result = await ChatCompletionRequestReader.ReadBodyAsync(body, CancellationToken.None);
 
-        Assert.Equal(json, result.Json);
-        Assert.Equal("gpt-test", result.Metadata.Model);
-        Assert.False(result.Metadata.Stream);
+        result.Json.Should().Be(json);
+        result.Metadata.Model.Should().Be("gpt-test");
+        result.Metadata.Stream.Should().BeFalse();
     }
 
     [Fact]
@@ -36,8 +37,8 @@ public sealed class ChatCompletionRequestReaderTests
 
         var result = await ChatCompletionRequestReader.ReadAsync(body, CancellationToken.None);
 
-        Assert.Null(result.Model);
-        Assert.False(result.Stream);
+        result.Model.Should().BeNull();
+        result.Stream.Should().BeFalse();
     }
 
     private static MemoryStream ToStream(string json)

@@ -1,5 +1,4 @@
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -7,13 +6,15 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 public sealed class RouterControlPlaneService(IControlPlaneRepository repository)
 {
     private static readonly TimeSpan DefaultLeaseTtl = TimeSpan.FromMinutes(5);
+    private const int MaxNodePageSize = 1000;
 
-    public RouterNode RegisterNode(
+    public async Task<RouterNode> RegisterNodeAsync(
         string name,
         Uri endpointUrl,
         string controlToken,
         int capacityWeight,
-        DateTimeOffset nowUtc)
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
     {
         var node = new RouterNode(
             Guid.NewGuid().ToString("N"),
@@ -23,52 +24,51 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             capacityWeight,
             nowUtc);
 
-        repository.UpsertNode(node);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
         return node;
     }
 
-    public void DisableNode(string nodeId)
+    public async Task DisableNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        var node = GetRequiredNode(nodeId);
+        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
         node.Disable();
-        repository.UpsertNode(node);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
     }
 
-    public void EnableNode(string nodeId)
+    public async Task EnableNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        var node = GetRequiredNode(nodeId);
+        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
         node.Enable();
-        repository.UpsertNode(node);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
     }
 
-    public void DeleteNode(string nodeId)
+    public async Task DeleteNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        if (!repository.RemoveNode(nodeId))
+        if (!await repository.RemoveNodeAsync(nodeId, ct).ConfigureAwait(false))
             throw new KeyNotFoundException("Router node was not found.");
     }
 
-    public void ApplyHealth(
+    public async Task ApplyHealthAsync(
         string nodeId,
         RouterNodeStatus status,
         DateTimeOffset checkedAtUtc,
         int? latencyMs = null,
-        string? errorCode = null)
+        string? errorCode = null,
+        CancellationToken ct = default)
     {
-        var node = GetRequiredNode(nodeId);
+        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
         node.ApplyHealth(status, checkedAtUtc, latencyMs, errorCode);
-        repository.UpsertNode(node);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
     }
 
-    public RouterNodeLease SelectRouterNode(string requestId, DateTimeOffset nowUtc)
+    public async Task<RouterNodeLease> SelectRouterNodeAsync(string requestId, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(requestId))
-        {
             throw new ArgumentException("Value cannot be empty.", nameof(requestId));
-        }
 
-        ReleaseExpiredLeases(nowUtc);
+        await ReleaseExpiredLeasesAsync(nowUtc, ct).ConfigureAwait(false);
 
-        var node = repository.ListNodes(1000, null)
+        var node = (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
             .Items
             .Where(candidate => candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy)
             .OrderBy(candidate => (decimal)candidate.InFlightRequests / candidate.CapacityWeight)
@@ -77,41 +77,37 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             .FirstOrDefault();
 
         if (node is null)
-        {
             throw new InvalidOperationException("No healthy router nodes are available.");
-        }
 
         node.Lease();
-        repository.UpsertNode(node);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
         var lease = new RouterLease(
             Guid.NewGuid().ToString("N"),
             node.Id,
             requestId.Trim(),
             nowUtc.Add(DefaultLeaseTtl),
             nowUtc);
-        repository.AddLease(lease);
+        await repository.AddLeaseAsync(lease, ct).ConfigureAwait(false);
 
         return new RouterNodeLease(lease.Id, node.Id, node.EndpointUrl, node.ControlToken);
     }
 
-    public void ReleaseRouterNode(string leaseId)
+    public async Task ReleaseRouterNodeAsync(string leaseId, CancellationToken ct = default)
     {
-        var lease = repository.RemoveLease(leaseId);
+        var lease = await repository.RemoveLeaseAsync(leaseId, ct).ConfigureAwait(false);
         if (lease is null)
-        {
             return;
-        }
 
-        if (repository.GetNode(lease.NodeId) is { } node)
+        if (await repository.GetNodeAsync(lease.NodeId, ct).ConfigureAwait(false) is { } node)
         {
             node.Release();
-            repository.UpsertNode(node);
+            await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
         }
     }
 
-    public IReadOnlyCollection<RouterNodeSummary> ListRouterNodes()
+    public async Task<IReadOnlyCollection<RouterNodeSummary>> ListRouterNodesAsync(CancellationToken ct = default)
     {
-        return repository.ListNodes(1000, null)
+        return (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
             .Items
             .Select(node => new RouterNodeSummary(
                 node.Id,
@@ -123,35 +119,32 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
             .ToArray();
     }
 
-    public RouterNode? GetRouterNode(string nodeId)
+    public async Task<RouterNode?> GetRouterNodeAsync(string nodeId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(nodeId))
-        {
             return null;
-        }
 
-        return repository.GetNode(nodeId.Trim());
+        return await repository.GetNodeAsync(nodeId.Trim(), ct).ConfigureAwait(false);
     }
 
-    public IReadOnlyCollection<RouterNode> ListNodesForHealthChecks()
+    public async Task<IReadOnlyCollection<RouterNode>> ListNodesForHealthChecksAsync(CancellationToken ct = default)
     {
-        return repository.ListNodes(1000, null).Items;
+        return (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false)).Items;
     }
 
-    public void ReleaseExpiredLeases(DateTimeOffset nowUtc)
+    public async Task ReleaseExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
     {
-        var expiredLeases = repository.RemoveExpiredLeases(nowUtc);
+        var expiredLeases = await repository.RemoveExpiredLeasesAsync(nowUtc, ct).ConfigureAwait(false);
         if (expiredLeases.Count == 0)
-        {
             return;
-        }
 
         var nodeIds = expiredLeases.Select(l => l.NodeId).Distinct().ToArray();
-        repository.ReleaseNodes(nodeIds);
+        await repository.ReleaseNodesAsync(nodeIds, ct).ConfigureAwait(false);
     }
 
-    private RouterNode GetRequiredNode(string nodeId)
+    private async Task<RouterNode> GetRequiredNodeAsync(string nodeId, CancellationToken ct)
     {
-        return repository.GetNode(nodeId) ?? throw new KeyNotFoundException("Router node was not found.");
+        return await repository.GetNodeAsync(nodeId, ct).ConfigureAwait(false)
+            ?? throw new KeyNotFoundException("Router node was not found.");
     }
 }

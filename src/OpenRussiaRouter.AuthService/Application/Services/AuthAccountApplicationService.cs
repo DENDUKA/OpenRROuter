@@ -1,7 +1,7 @@
-using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
+using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
@@ -11,75 +11,75 @@ public sealed class AuthAccountApplicationService(
     ApiKeyFactory apiKeyFactory,
     Sha256SecretHasher secretHasher)
 {
+    private const int DefaultPageSize = 1000;
 
-    public CreatedInvite CreateInvite(
+    public async Task<CreatedInvite> CreateInviteAsync(
         string email,
         UserRole role,
         string createdByAdminId,
         DateTimeOffset expiresAtUtc,
-        DateTimeOffset nowUtc)
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
     {
         var created = inviteRegistration.CreateInvite(email, role, createdByAdminId, expiresAtUtc, nowUtc);
-        repository.AddInvite(created.Invite);
+        await repository.AddInviteAsync(created.Invite, ct).ConfigureAwait(false);
         return created;
     }
 
-    public UserAccount CompleteInvite(string rawToken, string password, DateTimeOffset nowUtc)
+    public async Task<UserAccount> CompleteInviteAsync(string rawToken, string password, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         var tokenHash = secretHasher.Hash(rawToken);
-        var invite = repository.GetInviteByTokenHash(tokenHash)
+        var invite = await repository.GetInviteByTokenHashAsync(tokenHash, ct).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Invite token is invalid.");
         var user = inviteRegistration.CompleteInvite(invite, rawToken, password, nowUtc);
-        repository.AddUserAndMarkInviteUsed(user, invite);
+        await repository.AddUserAndMarkInviteUsedAsync(user, invite, ct).ConfigureAwait(false);
         return user;
     }
 
-    public CreatedApiKey CreateApiKey(string userId, string name, DateTimeOffset nowUtc)
+    public async Task<CreatedApiKey> CreateApiKeyAsync(string userId, string name, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
-        if (repository.GetUser(userId) is not { Status: UserStatus.Active })
-        {
+        if (await repository.GetUserAsync(userId, ct).ConfigureAwait(false) is not { Status: UserStatus.Active })
             throw new InvalidOperationException("User is not active.");
-        }
 
         var created = apiKeyFactory.Create(userId, name, nowUtc);
-        repository.AddApiKey(created.ApiKey);
+        await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
         return created;
     }
 
-    public void RenameApiKey(string userId, string apiKeyId, string name)
+    public async Task RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
     {
-        var probe = new ApiKey(apiKeyId, userId, name, "prefix", "hash", DateTimeOffset.UtcNow);
-        if (!repository.RenameApiKey(probe.UserId, probe.Id, probe.Name))
+        if (!await repository.RenameApiKeyAsync(
+                Preconditions.RequireValue(userId, nameof(userId)),
+                Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
+                Preconditions.RequireValue(name, nameof(name)),
+                ct).ConfigureAwait(false))
         {
             throw new KeyNotFoundException("API key was not found.");
         }
     }
 
-    public void RevokeApiKey(string userId, string apiKeyId, DateTimeOffset revokedAtUtc)
+    public async Task RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
     {
-        if (!repository.RevokeApiKey(RequireValue(userId, nameof(userId)), RequireValue(apiKeyId, nameof(apiKeyId)), revokedAtUtc))
+        if (!await repository.RevokeApiKeyAsync(
+                Preconditions.RequireValue(userId, nameof(userId)),
+                Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
+                revokedAtUtc,
+                ct).ConfigureAwait(false))
         {
             throw new KeyNotFoundException("API key was not found.");
         }
     }
 
-    public IReadOnlyCollection<ApiKey> ListApiKeys(string userId)
+    public async Task<IReadOnlyCollection<ApiKey>> ListApiKeysAsync(string userId, CancellationToken ct = default)
     {
-        return repository.ListApiKeys(RequireValue(userId, nameof(userId)));
+        return (await repository.ListApiKeysAsync(
+            Preconditions.RequireValue(userId, nameof(userId)),
+            DefaultPageSize,
+            ct).ConfigureAwait(false)).Items;
     }
 
-    public IReadOnlyCollection<UserAccount> ListUsers()
+    public async Task<IReadOnlyCollection<UserAccount>> ListUsersAsync(CancellationToken ct = default)
     {
-        return repository.ListUsers();
-    }
-
-    private static string RequireValue(string value, string name)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            throw new ArgumentException("Value cannot be empty.", name);
-        }
-
-        return value.Trim();
+        return (await repository.ListUsersAsync(DefaultPageSize, ct).ConfigureAwait(false)).Items;
     }
 }

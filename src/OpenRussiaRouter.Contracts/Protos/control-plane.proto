@@ -14,6 +14,7 @@ service RouterControlPlane {
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
+  rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
   rpc ListAvailableNodeModels (ListAvailableNodeModelsRequest) returns (ListAvailableNodeModelsResponse);
 }
 
@@ -138,10 +139,19 @@ message PushUserIntegrationKeyRequest {
   string raw_key = 2;
   string machine_id = 3;
   string node_id = 4; // если задан — пуш только на эту ноду; если пусто — на все
+  string api_key_id = 5; // наш внутренний ID ключа для отслеживания маппинга
 }
 
 message PushUserIntegrationKeyResponse {
   int32 pushed_count = 1;
+}
+
+message RevokeUserIntegrationKeyRequest {
+  string api_key_id = 1; // наш внутренний ID ключа
+}
+
+message RevokeUserIntegrationKeyResponse {
+  int32 revoked_count = 1;
 }
 
 message ListAvailableNodeModelsRequest {}

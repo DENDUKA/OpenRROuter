@@ -1,4 +1,5 @@
 using Dapper;
+using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Enums;
@@ -33,11 +34,11 @@ public sealed class AuthRepositoryPostgresTests
             secretHasher);
         var now = DateTimeOffset.UtcNow;
 
-        var invite = service.CreateInvite("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
-        var user = service.CompleteInvite(invite.RawToken, "StrongPassword123!", now.AddMinutes(1));
-        var apiKey = service.CreateApiKey(user.Id, "default", now.AddMinutes(2));
-        service.RenameApiKey(user.Id, apiKey.ApiKey.Id, "renamed");
-        service.RevokeApiKey(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3));
+        var invite = await service.CreateInviteAsync("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
+        var user = await service.CompleteInviteAsync(invite.RawToken, "StrongPassword123!", now.AddMinutes(1));
+        var apiKey = await service.CreateApiKeyAsync(user.Id, "default", now.AddMinutes(2));
+        await service.RenameApiKeyAsync(user.Id, apiKey.ApiKey.Id, "renamed");
+        await service.RevokeApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3));
 
         Assert.Equal(1, connection.ExecuteScalar<int>("select count(*) from auth.users;"));
         Assert.NotNull(connection.ExecuteScalar<DateTime?>("select used_at_utc from auth.invites limit 1;"));

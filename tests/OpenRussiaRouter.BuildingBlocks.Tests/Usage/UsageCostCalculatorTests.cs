@@ -1,3 +1,4 @@
+using FluentAssertions;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
@@ -29,8 +30,8 @@ public sealed class UsageCostCalculatorTests
 
         var result = _calculator.Calculate(usage, price);
 
-        Assert.Equal(Currency.Rub, result.Currency);
-        Assert.Equal(expected, result.Amount);
+        result.Currency.Should().Be(Currency.Rub);
+        result.Amount.Should().Be(expected);
     }
 
     [Theory]
@@ -45,7 +46,7 @@ public sealed class UsageCostCalculatorTests
             MoneyAmount.Rub(20),
             MoneyAmount.Rub(1));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => _calculator.Calculate(usage, price));
+        ((Action)(() => _calculator.Calculate(usage, price))).Should().Throw<ArgumentOutOfRangeException>();
     }
 
     [Fact]
@@ -57,7 +58,6 @@ public sealed class UsageCostCalculatorTests
             MoneyAmount.Rub(20),
             MoneyAmount.Rub(1));
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => _calculator.Calculate(usage, price));
+        ((Action)(() => _calculator.Calculate(usage, price))).Should().Throw<ArgumentOutOfRangeException>();
     }
 }
-

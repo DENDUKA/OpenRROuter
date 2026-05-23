@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
@@ -71,6 +72,15 @@ public class LoginModel : PageModelBase
         }
 
         return Page();
+    }
+
+    public IActionResult OnPostGoogle()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
+
+        var props = new AuthenticationProperties { RedirectUri = "/Login/ExternalCallback" };
+        return Challenge(props, GoogleDefaults.AuthenticationScheme);
     }
 
     private IActionResult RedirectTo(string? role) =>

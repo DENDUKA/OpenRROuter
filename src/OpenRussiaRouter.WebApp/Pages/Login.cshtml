@@ -26,6 +26,10 @@
         </div>
         <button type="submit" class="btn btn-primary w-100">Login</button>
     </form>
+    <div class="auth-divider">или</div>
+    <form method="post" asp-page-handler="Google">
+        <button type="submit" class="btn btn-outline-secondary w-100">Войти через Google</button>
+    </form>
 </div>
 
 <style>
@@ -34,4 +38,5 @@
     .auth-wordmark { font-size: 16px; font-weight: 500; letter-spacing: 2px; color: var(--color-ink); margin-bottom: var(--spacing-lg); }
     .auth-title { font-size: 38px; font-weight: 400; color: var(--color-ink); }
     .form-group { margin-bottom: var(--spacing-lg); }
+    .auth-divider { text-align: center; margin: var(--spacing-lg) 0; color: var(--color-muted, #888); font-size: 13px; }
 </style>

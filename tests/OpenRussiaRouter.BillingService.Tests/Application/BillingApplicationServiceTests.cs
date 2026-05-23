@@ -117,7 +117,7 @@ public sealed class BillingApplicationServiceTests
 
         await service.RecordUsageAsync(CreateUsageEvent("req-activity", new TokenUsage(10, 20, 3)), DateTimeOffset.UtcNow);
 
-        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle().Which;
+        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Items.Should().ContainSingle().Which;
         activity.RequestId.Should().Be("req-activity");
         activity.ApiKeyId.Should().Be("key-1");
         activity.ApiKeyPrefix.Should().Be("sk-or-test");
@@ -136,7 +136,7 @@ public sealed class BillingApplicationServiceTests
 
         result.Accepted.Should().BeTrue();
         (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(100));
-        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle().Which;
+        var activity = (await service.ListActivityByTokenAsync(["key-1"])).Items.Should().ContainSingle().Which;
         activity.Status.Should().Be("usage_missing");
         activity.Usage.TotalTokens.Should().Be(0);
     }
@@ -151,7 +151,7 @@ public sealed class BillingApplicationServiceTests
         await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
         await service.RecordUsageAsync(usage, DateTimeOffset.UtcNow);
 
-        (await service.ListActivityByTokenAsync(["key-1"])).Should().ContainSingle();
+        (await service.ListActivityByTokenAsync(["key-1"])).Items.Should().ContainSingle();
     }
 
     [Fact]

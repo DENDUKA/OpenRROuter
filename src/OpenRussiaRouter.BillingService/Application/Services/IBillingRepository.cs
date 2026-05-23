@@ -30,7 +30,17 @@ public interface IBillingRepository
     Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        string? modelIdFilter = null,
+        string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
+        CancellationToken ct = default);
+
+    Task<ActivitySummary> GetActivitySummaryAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
         CancellationToken ct = default);
 
     Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default);

@@ -232,27 +232,80 @@ public sealed class GrpcBillingService(
         ListActivityByTokenRequest request,
         ServerCallContext context)
     {
-        var response = new ListActivityByTokenResponse();
-        response.Records.AddRange(
-            (await billing.ListActivityByTokenAsync(request.ApiKeyIds.ToArray(), context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
-            .Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var (items, hasMore) = await billing.ListActivityByTokenAsync(
+            request.ApiKeyIds.ToArray(),
+            fromUtc: ParseOptionalTimestamp(request.FromUtc),
+            toUtc: ParseOptionalTimestamp(request.ToUtc),
+            modelIdFilter: string.IsNullOrEmpty(request.ModelIdFilter) ? null : request.ModelIdFilter,
+            apiKeyIdFilter: string.IsNullOrEmpty(request.ApiKeyIdFilter) ? null : request.ApiKeyIdFilter,
+            afterCreatedAtUtc: ParseOptionalTimestamp(request.AfterCreatedAtUtc),
+            pageSize: request.PageSize > 0 ? request.PageSize : null,
+            ct: ct).ConfigureAwait(false);
+
+        var response = new ListActivityByTokenResponse { HasMore = hasMore };
+        if (hasMore && items.Count > 0)
+            response.NextCursor = items.Last().CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+
+        response.Records.AddRange(items.Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
+        {
+            RequestId = activity.RequestId,
+            ApiKeyId = activity.ApiKeyId,
+            ApiKeyPrefix = activity.ApiKeyPrefix,
+            ModelId = activity.ModelId,
+            RouterNodeId = activity.RouterNodeId,
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage
             {
-                RequestId = activity.RequestId,
-                ApiKeyId = activity.ApiKeyId,
-                ApiKeyPrefix = activity.ApiKeyPrefix,
-                ModelId = activity.ModelId,
-                RouterNodeId = activity.RouterNodeId,
-                Usage = new Contracts.Grpc.Billing.V1.TokenUsage
-                {
-                    InputTokens = activity.Usage.InputTokens,
-                    OutputTokens = activity.Usage.OutputTokens,
-                    CacheTokens = activity.Usage.CacheTokens
-                },
-                Status = activity.Status,
-                CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-                CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-                CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
-            }));
+                InputTokens = activity.Usage.InputTokens,
+                OutputTokens = activity.Usage.OutputTokens,
+                CacheTokens = activity.Usage.CacheTokens
+            },
+            Status = activity.Status,
+            CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+            CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+        }));
+        return response;
+    }
+
+    public override async Task<GetActivitySummaryResponse> GetActivitySummary(
+        GetActivitySummaryRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var summary = await billing.GetActivitySummaryAsync(
+            request.ApiKeyIds.ToArray(),
+            fromUtc: ParseOptionalTimestamp(request.FromUtc),
+            toUtc: ParseOptionalTimestamp(request.ToUtc),
+            ct: ct).ConfigureAwait(false);
+
+        var response = new GetActivitySummaryResponse
+        {
+            TotalRequests = summary.TotalRequests,
+            TotalInputTokens = summary.TotalInputTokens,
+            TotalOutputTokens = summary.TotalOutputTokens,
+            TotalCacheTokens = summary.TotalCacheTokens,
+            TotalCostRub = summary.TotalCost.Amount.ToString(CultureInfo.InvariantCulture)
+        };
+        response.Models.AddRange(summary.Models.Select(m => new Contracts.Grpc.Billing.V1.ActivityModelSummary
+        {
+            ModelId = m.ModelId,
+            Requests = m.Requests,
+            InputTokens = m.InputTokens,
+            OutputTokens = m.OutputTokens,
+            CacheTokens = m.CacheTokens,
+            CostRub = m.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+        }));
+        response.Keys.AddRange(summary.Keys.Select(k => new Contracts.Grpc.Billing.V1.ActivityKeySummary
+        {
+            ApiKeyId = k.ApiKeyId,
+            ApiKeyPrefix = k.ApiKeyPrefix,
+            Requests = k.Requests,
+            InputTokens = k.InputTokens,
+            OutputTokens = k.OutputTokens,
+            CacheTokens = k.CacheTokens,
+            CostRub = k.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+        }));
         return response;
     }
 
@@ -280,5 +333,13 @@ public sealed class GrpcBillingService(
 
         logger.LogWarning("Failed to parse timestamp '{Value}'; using UtcNow as fallback.", value);
         return DateTimeOffset.UtcNow;
+    }
+
+    private static DateTimeOffset? ParseOptionalTimestamp(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return null;
+        return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
+            ? parsed.ToUniversalTime()
+            : null;
     }
 }

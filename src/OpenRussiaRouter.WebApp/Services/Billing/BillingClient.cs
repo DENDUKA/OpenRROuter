@@ -71,20 +71,32 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
         return response.Accepted ? null : response.ErrorCode;
     }
 
-    public async Task<IReadOnlyList<ActivityByTokenInfo>> ListActivityByTokenAsync(
+    public async Task<(IReadOnlyList<ActivityByTokenInfo> Items, bool HasMore, string? NextCursor)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        string? modelIdFilter = null,
+        string? apiKeyIdFilter = null,
+        DateTimeOffset? afterCreatedAtUtc = null,
+        int pageSize = 0,
         CancellationToken cancellationToken = default)
     {
         if (apiKeyIds.Count == 0)
-        {
-            return [];
-        }
+            return ([], false, null);
 
-        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListActivityByTokenRequest();
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListActivityByTokenRequest
+        {
+            FromUtc = fromUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            ModelIdFilter = modelIdFilter ?? string.Empty,
+            ApiKeyIdFilter = apiKeyIdFilter ?? string.Empty,
+            AfterCreatedAtUtc = afterCreatedAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            PageSize = pageSize
+        };
         request.ApiKeyIds.AddRange(apiKeyIds);
         var response = await client.ListActivityByTokenAsync(request, cancellationToken: cancellationToken);
 
-        return response.Records.Select(r => new ActivityByTokenInfo(
+        var items = response.Records.Select(r => new ActivityByTokenInfo(
             r.RequestId,
             r.ApiKeyId,
             r.ApiKeyPrefix,
@@ -93,10 +105,43 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
             r.Usage?.InputTokens ?? 0,
             r.Usage?.OutputTokens ?? 0,
             r.Usage?.CacheTokens ?? 0,
-            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, System.Globalization.CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, CultureInfo.InvariantCulture),
             r.Status,
-            DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture),
-            DateTimeOffset.Parse(r.CompletedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+            DateTimeOffset.Parse(r.CreatedAtUtc, CultureInfo.InvariantCulture),
+            DateTimeOffset.Parse(r.CompletedAtUtc, CultureInfo.InvariantCulture))).ToList();
+
+        return (items, response.HasMore, string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+    }
+
+    public async Task<ActivitySummaryInfo> GetActivitySummaryAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (apiKeyIds.Count == 0)
+            return new ActivitySummaryInfo(0, 0, 0, 0, 0m, [], []);
+
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetActivitySummaryRequest
+        {
+            FromUtc = fromUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+        };
+        request.ApiKeyIds.AddRange(apiKeyIds);
+        var response = await client.GetActivitySummaryAsync(request, cancellationToken: cancellationToken);
+
+        return new ActivitySummaryInfo(
+            response.TotalRequests,
+            response.TotalInputTokens,
+            response.TotalOutputTokens,
+            response.TotalCacheTokens,
+            string.IsNullOrEmpty(response.TotalCostRub) ? 0m : decimal.Parse(response.TotalCostRub, CultureInfo.InvariantCulture),
+            response.Models.Select(m => new ActivityModelSummaryInfo(
+                m.ModelId, m.Requests, m.InputTokens, m.OutputTokens, m.CacheTokens,
+                string.IsNullOrEmpty(m.CostRub) ? 0m : decimal.Parse(m.CostRub, CultureInfo.InvariantCulture))).ToList(),
+            response.Keys.Select(k => new ActivityKeySummaryInfo(
+                k.ApiKeyId, k.ApiKeyPrefix, k.Requests, k.InputTokens, k.OutputTokens, k.CacheTokens,
+                string.IsNullOrEmpty(k.CostRub) ? 0m : decimal.Parse(k.CostRub, CultureInfo.InvariantCulture))).ToList());
     }
 
     public async Task<IReadOnlyList<TopUpInfo>> ListTopUpsAsync(string userId, CancellationToken cancellationToken = default)

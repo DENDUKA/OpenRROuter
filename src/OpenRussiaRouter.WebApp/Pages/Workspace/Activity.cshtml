@@ -4,7 +4,7 @@
 
 <div class="ws-section-header">
     <h2>Activity</h2>
-    <p class="ws-section-desc">Recent API usage and token consumption.</p>
+    <p class="ws-section-desc">API usage history and token consumption statistics.</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -12,39 +12,196 @@
     <div class="alert alert-danger">@Model.ErrorMessage</div>
 }
 
-<div class="ws-panel">
-    <div class="ws-panel-header">Recent Activity</div>
-    <div class="ws-panel-body">
-        @if (Model.Activity.Count == 0)
-        {
-            <p class="text-muted">No activity records yet.</p>
-        }
-        else
-        {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Date</th><th>Token</th><th>Model</th><th>Input</th><th>Output</th><th>Cache</th><th>Cost</th><th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in Model.Activity)
-                    {
-                        <tr>
-                            <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
-                            <td><code>@($"{r.ApiKeyPrefix}***")</code></td>
-                            <td><code>@r.ModelId</code></td>
-                            <td class="num">@r.InputTokens.ToString("N0")</td>
-                            <td class="num">@r.OutputTokens.ToString("N0")</td>
-                            <td class="num">@r.CacheTokens.ToString("N0")</td>
-                            <td class="num">@r.CostRub.ToString("N4") ₽</td>
-                            <td>
-                                <span class="badge @(r.Status == "completed" ? "badge-success" : "badge-warning")">@r.Status</span>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        }
-    </div>
+<div class="act-tabs">
+    <a class="act-tab @(Model.Tab == "details" ? "act-tab--active" : "")" href="/workspace/activity?tab=details">Details</a>
+    <a class="act-tab @(Model.Tab == "overview" ? "act-tab--active" : "")" href="/workspace/activity?tab=overview">Overview</a>
 </div>
+
+@if (Model.Tab == "overview")
+{
+    <div class="act-period-bar">
+        <a class="act-period-btn @(Model.Period == "today" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("today")">Сегодня</a>
+        <a class="act-period-btn @(Model.Period == "24h" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("24h")">24 ч</a>
+        <a class="act-period-btn @(Model.Period == "7d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("7d")">7 дней</a>
+        <a class="act-period-btn @(Model.Period == "30d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("30d")">30 дней</a>
+    </div>
+
+    @if (Model.Summary != null)
+    {
+        <div class="act-stat-row">
+            <div class="act-stat-card">
+                <div class="act-stat-label">Requests</div>
+                <div class="act-stat-value">@Model.Summary.TotalRequests.ToString("N0")</div>
+            </div>
+            <div class="act-stat-card">
+                <div class="act-stat-label">Input tokens</div>
+                <div class="act-stat-value">@Model.Summary.TotalInputTokens.ToString("N0")</div>
+            </div>
+            <div class="act-stat-card">
+                <div class="act-stat-label">Output tokens</div>
+                <div class="act-stat-value">@Model.Summary.TotalOutputTokens.ToString("N0")</div>
+            </div>
+            <div class="act-stat-card">
+                <div class="act-stat-label">Total cost</div>
+                <div class="act-stat-value">@Model.Summary.TotalCostRub.ToString("N4") ₽</div>
+            </div>
+        </div>
+
+        <div class="ws-panel">
+            <div class="ws-panel-header">By model</div>
+            <div class="ws-panel-body" style="padding:0">
+                @if (Model.Summary.Models.Count == 0)
+                {
+                    <p class="text-muted" style="padding:16px">No data for this period.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Model</th><th class="num">Requests</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in Model.Summary.Models)
+                            {
+                                <tr>
+                                    <td><code>@m.ModelId</code></td>
+                                    <td class="num">@m.Requests.ToString("N0")</td>
+                                    <td class="num">@m.InputTokens.ToString("N0")</td>
+                                    <td class="num">@m.OutputTokens.ToString("N0")</td>
+                                    <td class="num">@m.CacheTokens.ToString("N0")</td>
+                                    <td class="num">@m.CostRub.ToString("N4") ₽</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+
+        <div class="ws-panel">
+            <div class="ws-panel-header">By API key</div>
+            <div class="ws-panel-body" style="padding:0">
+                @if (Model.Summary.Keys.Count == 0)
+                {
+                    <p class="text-muted" style="padding:16px">No data for this period.</p>
+                }
+                else
+                {
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Key</th><th class="num">Requests</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var k in Model.Summary.Keys)
+                            {
+                                <tr>
+                                    <td><code>@($"{k.ApiKeyPrefix}***")</code></td>
+                                    <td class="num">@k.Requests.ToString("N0")</td>
+                                    <td class="num">@k.InputTokens.ToString("N0")</td>
+                                    <td class="num">@k.OutputTokens.ToString("N0")</td>
+                                    <td class="num">@k.CacheTokens.ToString("N0")</td>
+                                    <td class="num">@k.CostRub.ToString("N4") ₽</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="ws-panel">
+        <div class="ws-panel-header">Filters</div>
+        <div class="ws-panel-body">
+            <form method="get" action="/workspace/activity" class="act-filter-form">
+                <input type="hidden" name="tab" value="details" />
+                <div class="act-filter-row">
+                    <div class="act-filter-field">
+                        <label class="form-label" for="f-from">From</label>
+                        <input type="date" id="f-from" name="from" class="form-control act-filter-date" value="@Model.FromDate" />
+                    </div>
+                    <div class="act-filter-field">
+                        <label class="form-label" for="f-to">To</label>
+                        <input type="date" id="f-to" name="to" class="form-control act-filter-date" value="@Model.ToDate" />
+                    </div>
+                    <div class="act-filter-field act-filter-field--wide">
+                        <label class="form-label" for="f-model">Model</label>
+                        <select id="f-model" name="model" class="form-select">
+                            <option value="">All models</option>
+                            @foreach (var m in Model.AvailableModels)
+                            {
+                                <option value="@m" selected="@(Model.ModelFilter == m ? "selected" : null)">@m</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="act-filter-field act-filter-field--wide">
+                        <label class="form-label" for="f-key">API key</label>
+                        <select id="f-key" name="key" class="form-select">
+                            <option value="">All keys</option>
+                            @foreach (var k in Model.ApiKeys)
+                            {
+                                <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="act-filter-actions">
+                        <label class="form-label">&nbsp;</label>
+                        <div class="d-flex" style="gap:8px">
+                            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+                            <a href="/workspace/activity?tab=details" class="btn btn-secondary btn-sm">Reset</a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="ws-panel">
+        <div class="ws-panel-header">Usage records</div>
+        <div class="ws-panel-body" style="padding:0">
+            @if (Model.Activity.Count == 0)
+            {
+                <p class="text-muted" style="padding:16px">No activity records found.</p>
+            }
+            else
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th><th>Key</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th><th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Activity)
+                        {
+                            <tr>
+                                <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
+                                <td><code>@($"{r.ApiKeyPrefix}***")</code></td>
+                                <td><code>@r.ModelId</code></td>
+                                <td class="num">@r.InputTokens.ToString("N0")</td>
+                                <td class="num">@r.OutputTokens.ToString("N0")</td>
+                                <td class="num">@r.CacheTokens.ToString("N0")</td>
+                                <td class="num">@r.CostRub.ToString("N4") ₽</td>
+                                <td>
+                                    <span class="badge @(r.Status == "completed" ? "badge-success" : "badge-warning")">@r.Status</span>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+                @if (Model.HasMore && Model.NextCursor != null)
+                {
+                    <div class="act-pagination">
+                        <a class="btn btn-secondary btn-sm" href="@Model.BuildDetailsUrl(Model.NextCursor)">Next page →</a>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}

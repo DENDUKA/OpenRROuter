@@ -108,13 +108,29 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        string? modelIdFilter = null,
+        string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         CancellationToken ct = default)
     {
         var keySet = apiKeyIds.ToHashSet(StringComparer.Ordinal);
-        var items = _activityByRequestId.Values
-            .Where(item => keySet.Contains(item.ApiKeyId))
-            .Where(item => afterCreatedAtUtc is null || item.CreatedAtUtc > afterCreatedAtUtc)
+        var query = _activityByRequestId.Values
+            .Where(item => keySet.Contains(item.ApiKeyId));
+
+        if (fromUtc.HasValue)
+            query = query.Where(item => item.CreatedAtUtc >= fromUtc.Value);
+        if (toUtc.HasValue)
+            query = query.Where(item => item.CreatedAtUtc <= toUtc.Value);
+        if (!string.IsNullOrEmpty(modelIdFilter))
+            query = query.Where(item => item.ModelId == modelIdFilter);
+        if (!string.IsNullOrEmpty(apiKeyIdFilter))
+            query = query.Where(item => item.ApiKeyId == apiKeyIdFilter);
+        if (afterCreatedAtUtc.HasValue)
+            query = query.Where(item => item.CreatedAtUtc < afterCreatedAtUtc.Value);
+
+        var items = query
             .OrderByDescending(item => item.CreatedAtUtc)
             .Take(limit + 1)
             .ToArray();
@@ -122,6 +138,66 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         var hasMore = items.Length > limit;
         if (hasMore) items = items.Take(limit).ToArray();
         return Task.FromResult<(IReadOnlyCollection<ActivityByTokenRecord>, bool)>((items, hasMore));
+    }
+
+    public Task<ActivitySummary> GetActivitySummaryAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        var keySet = apiKeyIds.ToHashSet(StringComparer.Ordinal);
+        var query = _activityByRequestId.Values
+            .Where(item => keySet.Contains(item.ApiKeyId));
+
+        if (fromUtc.HasValue)
+            query = query.Where(item => item.CreatedAtUtc >= fromUtc.Value);
+        if (toUtc.HasValue)
+            query = query.Where(item => item.CreatedAtUtc <= toUtc.Value);
+
+        var all = query.ToArray();
+
+        var costByRequest = _usageByRequestId.Values
+            .ToDictionary(u => u.RequestId, u => u.Cost.Amount, StringComparer.Ordinal);
+
+        decimal TotalCostFor(IEnumerable<ActivityByTokenRecord> records) =>
+            records.Sum(r => costByRequest.TryGetValue(r.RequestId, out var c) ? c : 0m);
+
+        var models = all
+            .GroupBy(r => r.ModelId, StringComparer.Ordinal)
+            .Select(g => new ActivityModelSummary(
+                g.Key,
+                g.LongCount(),
+                g.Sum(r => r.Usage.InputTokens),
+                g.Sum(r => r.Usage.OutputTokens),
+                g.Sum(r => r.Usage.CacheTokens),
+                MoneyAmount.Rub(TotalCostFor(g))))
+            .OrderByDescending(m => m.Requests)
+            .ToList();
+
+        var keys = all
+            .GroupBy(r => r.ApiKeyId, StringComparer.Ordinal)
+            .Select(g => new ActivityKeySummary(
+                g.Key,
+                g.First().ApiKeyPrefix,
+                g.LongCount(),
+                g.Sum(r => r.Usage.InputTokens),
+                g.Sum(r => r.Usage.OutputTokens),
+                g.Sum(r => r.Usage.CacheTokens),
+                MoneyAmount.Rub(TotalCostFor(g))))
+            .OrderByDescending(k => k.Requests)
+            .ToList();
+
+        var summary = new ActivitySummary(
+            all.Length,
+            all.Sum(r => r.Usage.InputTokens),
+            all.Sum(r => r.Usage.OutputTokens),
+            all.Sum(r => r.Usage.CacheTokens),
+            MoneyAmount.Rub(TotalCostFor(all)),
+            models,
+            keys);
+
+        return Task.FromResult(summary);
     }
 
     public Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default)

@@ -310,6 +310,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        string? modelIdFilter = null,
+        string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         CancellationToken ct = default)
     {
@@ -320,16 +324,18 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var parameters = new DynamicParameters();
         parameters.Add("ApiKeyIds", apiKeyIds.ToArray());
         parameters.Add("Limit", limit + 1);
-        var afterCondition = "";
-        if (afterCreatedAtUtc.HasValue)
-        {
-            afterCondition = "  and a.created_at_utc > @AfterCreatedAtUtc\n";
-            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
-        }
+
+        var conditions = new List<string> { "a.api_key_id = any(@ApiKeyIds)" };
+
+        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
+        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
+        if (!string.IsNullOrEmpty(modelIdFilter)) { conditions.Add("a.model_id = @ModelIdFilter"); parameters.Add("ModelIdFilter", modelIdFilter); }
+        if (!string.IsNullOrEmpty(apiKeyIdFilter)) { conditions.Add("a.api_key_id = @ApiKeyIdFilter"); parameters.Add("ApiKeyIdFilter", apiKeyIdFilter); }
+        if (afterCreatedAtUtc.HasValue) { conditions.Add("a.created_at_utc < @AfterCreatedAtUtc"); parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value); }
 
         var items = (await connection.QueryAsync<ActivityByTokenEntity>(
                 ActivityByTokenSelectSql +
-                "where a.api_key_id = any(@ApiKeyIds)\n" + afterCondition +
+                "where " + string.Join(" and ", conditions) + "\n" +
                 "order by a.created_at_utc desc\nlimit @Limit;",
                 parameters).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
@@ -338,6 +344,86 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var hasMore = items.Length > limit;
         if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
+    }
+
+    public async Task<ActivitySummary> GetActivitySummaryAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        if (apiKeyIds.Count == 0)
+            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Rub(0), [], []);
+
+        using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("ApiKeyIds", apiKeyIds.ToArray());
+
+        var dateConditions = new List<string> { "a.api_key_id = any(@ApiKeyIds)" };
+        if (fromUtc.HasValue) { dateConditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
+        if (toUtc.HasValue) { dateConditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
+        var whereClause = "where " + string.Join(" and ", dateConditions);
+
+        var totals = await connection.QuerySingleAsync<(long Requests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostRub)>(
+            $"""
+            select
+                count(*) as Requests,
+                coalesce(sum(a.input_tokens), 0) as InputTokens,
+                coalesce(sum(a.output_tokens), 0) as OutputTokens,
+                coalesce(sum(a.cache_tokens), 0) as CacheTokens,
+                coalesce(sum(u.cost_amount), 0) as CostRub
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause};
+            """, parameters).ConfigureAwait(false);
+
+        var models = (await connection.QueryAsync<ActivityModelSummaryEntity>(
+            $"""
+            select
+                a.model_id as ModelId,
+                count(*) as Requests,
+                coalesce(sum(a.input_tokens), 0) as InputTokens,
+                coalesce(sum(a.output_tokens), 0) as OutputTokens,
+                coalesce(sum(a.cache_tokens), 0) as CacheTokens,
+                coalesce(sum(u.cost_amount), 0) as CostRub
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause}
+            group by a.model_id
+            order by count(*) desc;
+            """, parameters).ConfigureAwait(false))
+            .Select(e => new ActivityModelSummary(
+                e.ModelId, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
+            .ToList();
+
+        var keys = (await connection.QueryAsync<ActivityKeySummaryEntity>(
+            $"""
+            select
+                a.api_key_id as ApiKeyId,
+                a.api_key_prefix as ApiKeyPrefix,
+                count(*) as Requests,
+                coalesce(sum(a.input_tokens), 0) as InputTokens,
+                coalesce(sum(a.output_tokens), 0) as OutputTokens,
+                coalesce(sum(a.cache_tokens), 0) as CacheTokens,
+                coalesce(sum(u.cost_amount), 0) as CostRub
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause}
+            group by a.api_key_id, a.api_key_prefix
+            order by count(*) desc;
+            """, parameters).ConfigureAwait(false))
+            .Select(e => new ActivityKeySummary(
+                e.ApiKeyId, e.ApiKeyPrefix, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
+            .ToList();
+
+        return new ActivitySummary(
+            totals.Requests,
+            totals.InputTokens,
+            totals.OutputTokens,
+            totals.CacheTokens,
+            MoneyAmount.Rub(totals.CostRub),
+            models,
+            keys);
     }
 
     public async Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default)

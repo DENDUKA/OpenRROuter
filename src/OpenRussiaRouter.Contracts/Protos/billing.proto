@@ -15,6 +15,7 @@ service BillingService {
   rpc ListBillingAnomalies (ListBillingAnomaliesRequest) returns (ListBillingAnomaliesResponse);
   rpc ListModels (ListModelsRequest) returns (ListModelsResponse);
   rpc ListActivityByToken (ListActivityByTokenRequest) returns (ListActivityByTokenResponse);
+  rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
 }
 
@@ -165,6 +166,12 @@ message ListUsageResponse {
 
 message ListActivityByTokenRequest {
   repeated string api_key_ids = 1;
+  string from_utc = 2;
+  string to_utc = 3;
+  string model_id_filter = 4;
+  string api_key_id_filter = 5;
+  string after_created_at_utc = 6;
+  int32 page_size = 7;
 }
 
 message ActivityByTokenRecord {
@@ -182,6 +189,43 @@ message ActivityByTokenRecord {
 
 message ListActivityByTokenResponse {
   repeated ActivityByTokenRecord records = 1;
+  bool has_more = 2;
+  string next_cursor = 3;
+}
+
+message GetActivitySummaryRequest {
+  repeated string api_key_ids = 1;
+  string from_utc = 2;
+  string to_utc = 3;
+}
+
+message ActivityModelSummary {
+  string model_id = 1;
+  int64 requests = 2;
+  int64 input_tokens = 3;
+  int64 output_tokens = 4;
+  int64 cache_tokens = 5;
+  string cost_rub = 6;
+}
+
+message ActivityKeySummary {
+  string api_key_id = 1;
+  string api_key_prefix = 2;
+  int64 requests = 3;
+  int64 input_tokens = 4;
+  int64 output_tokens = 5;
+  int64 cache_tokens = 6;
+  string cost_rub = 7;
+}
+
+message GetActivitySummaryResponse {
+  int64 total_requests = 1;
+  int64 total_input_tokens = 2;
+  int64 total_output_tokens = 3;
+  int64 total_cache_tokens = 4;
+  string total_cost_rub = 5;
+  repeated ActivityModelSummary models = 6;
+  repeated ActivityKeySummary keys = 7;
 }
 
 message ListBillingAnomaliesResponse {

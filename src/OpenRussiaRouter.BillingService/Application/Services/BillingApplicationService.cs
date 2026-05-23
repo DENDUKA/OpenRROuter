@@ -169,13 +169,34 @@ public sealed class BillingApplicationService(
         return (await repository.ListUsageAsync(pageSize, null, userId, ct).ConfigureAwait(false)).Items;
     }
 
-    public async Task<IReadOnlyCollection<ActivityByTokenRecord>> ListActivityByTokenAsync(IReadOnlyCollection<string> apiKeyIds, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        string? modelIdFilter = null,
+        string? apiKeyIdFilter = null,
+        DateTimeOffset? afterCreatedAtUtc = null,
+        int? pageSize = null,
+        CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-            return Array.Empty<ActivityByTokenRecord>();
+            return (Array.Empty<ActivityByTokenRecord>(), false);
 
-        var pageSize = paginationOptions.Value.EffectivePageSize;
-        return (await repository.ListActivityByTokenAsync(apiKeyIds, pageSize, ct: ct).ConfigureAwait(false)).Items;
+        var limit = pageSize ?? paginationOptions.Value.EffectivePageSize;
+        return await repository.ListActivityByTokenAsync(
+            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, ct).ConfigureAwait(false);
+    }
+
+    public async Task<ActivitySummary> GetActivitySummaryAsync(
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        if (apiKeyIds.Count == 0)
+            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Rub(0), [], []);
+
+        return await repository.GetActivitySummaryAsync(apiKeyIds, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
 
     private static void ValidatePositiveRub(MoneyAmount amount, string name)

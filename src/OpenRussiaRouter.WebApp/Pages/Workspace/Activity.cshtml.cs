@@ -88,9 +88,9 @@ public class ActivityModel : PageModelBase
             var models = await modelsTask;
             AvailableModels = models.Select(m => m.Id).OrderBy(id => id).ToList();
         }
-        catch
+        catch (Exception ex)
         {
-            ErrorMessage = "Failed to load activity data.";
+            ErrorMessage = $"Failed to load activity data: {ex.Message}";
         }
     }
 

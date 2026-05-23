@@ -90,6 +90,29 @@ public sealed record NodeModelInfo
     public string Id { get; init; } = string.Empty;
 }
 
+public sealed record RouterProviderListResponse
+{
+    public IReadOnlyList<RouterProviderConnectionSummary> Connections { get; init; } = [];
+}
+
+public sealed record RouterProviderConnectionSummary
+{
+    public string Id { get; init; } = string.Empty;
+    public string Provider { get; init; } = string.Empty;
+    public string AuthType { get; init; } = string.Empty;
+    public string Name { get; init; } = string.Empty;
+    public bool IsActive { get; init; }
+    public string? TestStatus { get; init; }
+    public RouterProviderSpecificDataSummary? ProviderSpecificData { get; init; }
+}
+
+public sealed record RouterProviderSpecificDataSummary
+{
+    public string? Prefix { get; init; }
+    public string? BaseUrl { get; init; }
+    public string? NodeName { get; init; }
+}
+
 public sealed class RouterNodeProviderException : Exception
 {
     public RouterNodeProviderException(

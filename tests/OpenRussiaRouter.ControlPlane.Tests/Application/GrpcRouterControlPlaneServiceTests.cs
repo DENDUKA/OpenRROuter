@@ -328,6 +328,11 @@ public sealed class GrpcRouterControlPlaneServiceTests
             RouterNode node,
             CancellationToken cancellationToken) =>
             Task.FromResult(new NodeModelsResponse());
+
+        public Task<RouterProviderListResponse> ListProvidersAsync(
+            RouterNode node,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new RouterProviderListResponse());
     }
 
     private sealed class ThrowingProviderClient : IRouterNodeProviderClient
@@ -359,6 +364,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public Task<NodeModelsResponse> ListModelsAsync(
             RouterNode node, CancellationToken cancellationToken) =>
             Task.FromResult(new NodeModelsResponse());
+
+        public Task<RouterProviderListResponse> ListProvidersAsync(
+            RouterNode node, CancellationToken cancellationToken) =>
+            throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
     }
 
     private sealed class StubProviderClient : IRouterNodeProviderClient
@@ -446,5 +455,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
             {
                 Data = [new NodeModelInfo { Id = "minimax/MiniMax-M2.7" }]
             });
+
+        public Task<RouterProviderListResponse> ListProvidersAsync(
+            RouterNode node,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

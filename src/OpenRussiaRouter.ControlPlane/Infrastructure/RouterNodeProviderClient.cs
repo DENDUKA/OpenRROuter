@@ -107,6 +107,13 @@ public sealed class RouterNodeProviderClient(HttpClient httpClient)
         return SendAsync<NodeModelsResponse>(node, HttpMethod.Get, "/v1/models", content: null, cancellationToken);
     }
 
+    public Task<RouterProviderListResponse> ListProvidersAsync(
+        RouterNode node,
+        CancellationToken cancellationToken)
+    {
+        return SendAsync<RouterProviderListResponse>(node, HttpMethod.Get, "/api/providers", content: null, cancellationToken);
+    }
+
     private async Task<TResponse> SendAsync<TResponse>(
         RouterNode node,
         HttpMethod method,

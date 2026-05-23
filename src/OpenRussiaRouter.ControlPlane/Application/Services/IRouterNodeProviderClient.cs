@@ -41,4 +41,8 @@ public interface IRouterNodeProviderClient
     Task<NodeModelsResponse> ListModelsAsync(
         RouterNode node,
         CancellationToken cancellationToken);
+
+    Task<RouterProviderListResponse> ListProvidersAsync(
+        RouterNode node,
+        CancellationToken cancellationToken);
 }

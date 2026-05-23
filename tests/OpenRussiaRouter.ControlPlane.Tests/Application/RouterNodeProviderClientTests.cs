@@ -199,6 +199,91 @@ public sealed class RouterNodeProviderClientTests
         ex.Which.Message.Should().NotContain("control-token");
     }
 
+    [Fact]
+    public async Task ListProvidersAsync_SendsGetToProvidersEndpoint()
+    {
+        var handler = new CapturingHandler(JsonResponse("""
+            {
+              "connections": [
+                {
+                  "id": "conn-1",
+                  "provider": "minimax",
+                  "authType": "apikey",
+                  "name": "MiniMax account",
+                  "isActive": true,
+                  "testStatus": "active",
+                  "providerSpecificData": {
+                    "prefix": "minimax"
+                  }
+                }
+              ]
+            }
+            """));
+        var client = CreateClient(handler);
+
+        var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
+
+        handler.LastMethod.Should().Be(HttpMethod.Get);
+        handler.LastUri.Should().Be("https://router.example/api/providers");
+        handler.Authorization.Should().Be("Bearer control-token");
+        var conn = result.Connections.Should().ContainSingle().Which;
+        conn.Id.Should().Be("conn-1");
+        conn.Provider.Should().Be("minimax");
+        conn.AuthType.Should().Be("apikey");
+        conn.Name.Should().Be("MiniMax account");
+        conn.IsActive.Should().BeTrue();
+        conn.TestStatus.Should().Be("active");
+        conn.ProviderSpecificData!.Prefix.Should().Be("minimax");
+    }
+
+    [Fact]
+    public async Task ListProvidersAsync_DeserializesProviderSpecificDataAllFields()
+    {
+        var handler = new CapturingHandler(JsonResponse("""
+            {
+              "connections": [
+                {
+                  "id": "compatible-conn",
+                  "provider": "openai-compatible-uuid",
+                  "authType": "apikey",
+                  "name": "Local OpenAI-compatible node",
+                  "isActive": true,
+                  "testStatus": "active",
+                  "providerSpecificData": {
+                    "prefix": "myllm",
+                    "baseUrl": "http://localhost:1234/v1",
+                    "nodeName": "Local LLM"
+                  }
+                }
+              ]
+            }
+            """));
+        var client = CreateClient(handler);
+
+        var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
+
+        var conn = result.Connections.Should().ContainSingle().Which;
+        conn.ProviderSpecificData.Should().NotBeNull();
+        conn.ProviderSpecificData!.Prefix.Should().Be("myllm");
+        conn.ProviderSpecificData.BaseUrl.Should().Be("http://localhost:1234/v1");
+        conn.ProviderSpecificData.NodeName.Should().Be("Local LLM");
+    }
+
+    [Fact]
+    public async Task ListProvidersAsync_ErrorResponse_ThrowsProviderException()
+    {
+        var handler = new CapturingHandler(JsonResponse(
+            """{ "error": "Failed to fetch providers" }""",
+            HttpStatusCode.InternalServerError));
+        var client = CreateClient(handler);
+
+        var ex = await ((Func<Task>)(() => client.ListProvidersAsync(CreateNode(), CancellationToken.None)))
+            .Should().ThrowAsync<RouterNodeProviderException>();
+
+        ex.Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
+        ex.Which.RouterError.Should().Be("Failed to fetch providers");
+    }
+
     private static RouterNodeProviderClient CreateClient(CapturingHandler handler)
     {
         return new RouterNodeProviderClient(new HttpClient(handler));

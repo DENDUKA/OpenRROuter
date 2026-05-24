@@ -372,10 +372,10 @@ public sealed class GrpcRouterControlPlaneService(
 
     private async Task<NodeCatalogResult> CollectNodeCatalogAsync(RouterNode node, CancellationToken cancellationToken)
     {
-        RouterProviderListResponse providers;
+        RouterProviderQuotaResponse quota;
         try
         {
-            providers = await providerClient.ListProvidersAsync(node, cancellationToken).ConfigureAwait(false);
+            quota = await providerClient.GetProviderQuotaAsync(node, includeInactive: false, cancellationToken).ConfigureAwait(false);
         }
         catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -383,13 +383,13 @@ public sealed class GrpcRouterControlPlaneService(
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "ListProviders failed for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "GetProviderQuota failed for router node. NodeId: {NodeId}", node.Id);
             return new NodeCatalogResult(node.Id, Unreachable: true, []);
         }
 
-        var providerKeys = providers.Connections
-            .Where(c => c.IsActive && !string.IsNullOrWhiteSpace(c.Provider))
-            .Select(c => c.Provider)
+        var providerKeys = quota.Providers
+            .Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.Provider))
+            .Select(p => p.Provider)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 

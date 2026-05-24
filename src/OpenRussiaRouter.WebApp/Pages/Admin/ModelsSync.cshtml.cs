@@ -17,6 +17,7 @@ public class ModelsSyncModel(
     public IReadOnlyList<ModelInfo> MissingFromNodes { get; private set; } = [];
     public IReadOnlyList<ModelInfo> BillingOnlyModels { get; private set; } = [];
     public IReadOnlyList<string> UnreachableNodeIds { get; private set; } = [];
+    public IReadOnlyList<UnreachableNodeDetail> UnreachableNodes { get; private set; } = [];
     public HashSet<string> SelectedUpstreamIds { get; private set; } = new(StringComparer.Ordinal);
     public List<string> WarningMessages { get; } = [];
     public string? ErrorMessage { get; private set; }
@@ -164,6 +165,7 @@ public class ModelsSyncModel(
     private void BuildDiff(NodeModelCatalogResult catalog, IReadOnlyList<ModelInfo> billingModels)
     {
         UnreachableNodeIds = catalog.UnreachableNodeIds;
+        UnreachableNodes = catalog.UnreachableNodes;
         CatalogUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
         if (CatalogUnavailable)
         {

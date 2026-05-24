@@ -25,7 +25,24 @@
 @if (Model.UnreachableNodeIds.Count > 0)
 {
     <div class="alert alert-warning" role="alert">
-        Unreachable nodes: @string.Join(", ", Model.UnreachableNodeIds)
+        <strong>Unreachable nodes:</strong> @string.Join(", ", Model.UnreachableNodeIds)
+        @if (Model.UnreachableNodes.Count > 0)
+        {
+            <div style="margin-top:0.75rem">
+                @foreach (var detail in Model.UnreachableNodes)
+                {
+                    <details style="margin-top:0.5rem">
+                        <summary><code>@detail.NodeId</code></summary>
+                        <div style="margin-top:0.5rem">
+                            <div><strong>Request:</strong></div>
+                            <pre style="white-space:pre-wrap;word-break:break-all;margin:0.25rem 0;font-size:0.85em">@(string.IsNullOrWhiteSpace(detail.Request) ? "(not captured)" : detail.Request)</pre>
+                            <div style="margin-top:0.5rem"><strong>Response:</strong></div>
+                            <pre style="white-space:pre-wrap;word-break:break-all;margin:0.25rem 0;font-size:0.85em">@(string.IsNullOrWhiteSpace(detail.Response) ? "(no response — connection failed)" : detail.Response)</pre>
+                        </div>
+                    </details>
+                }
+            </div>
+        }
     </div>
 }
 @if (Model.ShowAddNodeMessage)

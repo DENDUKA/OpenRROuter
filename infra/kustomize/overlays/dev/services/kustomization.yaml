@@ -27,6 +27,6 @@ images:
 - name: ghcr.io/denduka/control-plane
   newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
 - name: ghcr.io/denduka/webapp
-  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+  newTag: sha-e41d6e4c590053abc7f5699a93190ffcfbb2d1fa
 - name: ghcr.io/inc64/f9router
   newTag: dev-latest

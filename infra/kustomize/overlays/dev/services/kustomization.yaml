@@ -10,6 +10,7 @@ resources:
 
 patches:
   - path: webapp-google-patch.yaml
+  - path: f9router-env-patch.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"

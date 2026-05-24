@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: f9router
+  namespace: orr-dev
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      targetPort: 20128
+      nodePort: 30128
+  selector:
+    app: f9router

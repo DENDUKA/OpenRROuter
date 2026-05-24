@@ -6,6 +6,7 @@ resources:
   - webapp-localhost-ingress.yaml
   - api-gateway-localhost-ingress.yaml
   - f9router-localhost-ingress.yaml
+  - f9router-nodeport.yaml
   - mock-llm-node.yaml
 
 patches:

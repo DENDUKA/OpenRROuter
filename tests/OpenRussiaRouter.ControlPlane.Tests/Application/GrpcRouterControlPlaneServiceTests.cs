@@ -121,21 +121,40 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
-    public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
+    public async Task RegisterRouterNode_InvalidScheme_ReturnsValidationFailed()
     {
+        // ftp:// is not a valid scheme; http:// and https:// are both allowed
         var repo = new InMemoryControlPlaneRepository();
         var service = CreateService(new RouterControlPlaneService(repo), repo);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
             Name = "node-a",
-            EndpointUrl = "http://router-a.example",
+            EndpointUrl = "ftp://router-a.example",
             ControlToken = "secret-a",
             CapacityWeight = 1
         }, context: null!);
 
         response.Registered.Should().BeFalse();
         response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task RegisterRouterNode_HttpEndpoint_Succeeds()
+    {
+        // HTTP endpoints are allowed for internal k8s services
+        var repo = new InMemoryControlPlaneRepository();
+        var service = CreateService(new RouterControlPlaneService(repo), repo);
+
+        var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
+        {
+            Name = "node-k8s",
+            EndpointUrl = "http://f9router",
+            ControlToken = "secret-a",
+            CapacityWeight = 1
+        }, context: null!);
+
+        response.Registered.Should().BeTrue();
     }
 
     [Fact]

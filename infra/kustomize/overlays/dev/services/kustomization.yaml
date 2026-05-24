@@ -6,12 +6,12 @@ resources:
   - webapp-localhost-ingress.yaml
   - api-gateway-localhost-ingress.yaml
   - f9router-localhost-ingress.yaml
-  - f9router-nodeport.yaml
   - mock-llm-node.yaml
 
 patches:
   - path: webapp-google-patch.yaml
   - path: f9router-env-patch.yaml
+  - path: f9router-nodeport.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"

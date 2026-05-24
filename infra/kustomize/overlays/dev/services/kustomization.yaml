@@ -13,6 +13,7 @@ patches:
   - path: f9router-env-patch.yaml
   - path: f9router-nodeport.yaml
   - path: control-plane-env-patch.yaml
+  - path: webapp-env-patch.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"

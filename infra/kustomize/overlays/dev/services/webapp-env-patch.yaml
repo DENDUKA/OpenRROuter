@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: webapp
+          env:
+            - name: RouterNodeTokens__devLocal
+              value: "GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM"

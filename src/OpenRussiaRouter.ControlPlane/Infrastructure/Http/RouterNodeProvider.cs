@@ -128,14 +128,15 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
             throw new InvalidOperationException($"Control token is not set for node '{node.Id}'.");
         }
 
-        using var request = new HttpRequestMessage(method, new Uri(node.EndpointUrl, relativePathAndQuery));
+        var absoluteUri = new Uri(node.EndpointUrl, relativePathAndQuery);
+        using var request = new HttpRequestMessage(method, absoluteUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
         request.Content = content;
 
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
-            await ThrowProviderExceptionAsync(response, cancellationToken).ConfigureAwait(false);
+            await ThrowProviderExceptionAsync(response, method, absoluteUri, cancellationToken).ConfigureAwait(false);
         }
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
@@ -144,7 +145,11 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
         return value ?? throw new InvalidOperationException("Router provider response body was empty.");
     }
 
-    private static async Task ThrowProviderExceptionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    private static async Task ThrowProviderExceptionAsync(
+        HttpResponseMessage response,
+        HttpMethod method,
+        Uri requestUri,
+        CancellationToken cancellationToken)
     {
         var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
         var routerError = TryReadError(body);
@@ -152,7 +157,13 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
             ? $"Router provider request failed with HTTP {(int)response.StatusCode}."
             : $"Router provider request failed with HTTP {(int)response.StatusCode}: {routerError}";
 
-        throw new RouterNodeProviderException(response.StatusCode, routerError, message);
+        throw new RouterNodeProviderException(
+            response.StatusCode,
+            routerError,
+            message,
+            requestMethod: method.Method,
+            requestUri: requestUri.ToString(),
+            responseBody: body);
     }
 
     private static string? TryReadError(string body)

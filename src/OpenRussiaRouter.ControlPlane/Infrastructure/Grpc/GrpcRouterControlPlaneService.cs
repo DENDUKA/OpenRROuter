@@ -365,8 +365,16 @@ public sealed class GrpcRouterControlPlaneService(
             response.Entries.Add(entry);
         }
 
-        foreach (var nodeId in nodeResults.Where(r => r.Unreachable).Select(r => r.NodeId).OrderBy(s => s, StringComparer.Ordinal))
-            response.UnreachableNodeIds.Add(nodeId);
+        foreach (var result in nodeResults.Where(r => r.Unreachable).OrderBy(r => r.NodeId, StringComparer.Ordinal))
+        {
+            response.UnreachableNodeIds.Add(result.NodeId);
+            response.UnreachableNodes.Add(new UnreachableNodeInfo
+            {
+                NodeId = result.NodeId,
+                Request = result.Request ?? string.Empty,
+                Response = result.Response ?? string.Empty
+            });
+        }
 
         return response;
     }
@@ -385,7 +393,12 @@ public sealed class GrpcRouterControlPlaneService(
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
             logger.LogWarning(ex, "GetProviderQuota failed for router node. NodeId: {NodeId}", node.Id);
-            return new NodeCatalogResult(node.Id, Unreachable: true, []);
+            return new NodeCatalogResult(
+                node.Id,
+                Unreachable: true,
+                [],
+                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/integrations/providers/quota").ToString()),
+                FormatResponse(ex));
         }
 
         var providerKeys = quota.Providers
@@ -430,7 +443,7 @@ public sealed class GrpcRouterControlPlaneService(
             }
         }
 
-        return new NodeCatalogResult(node.Id, Unreachable: false, observations);
+        return new NodeCatalogResult(node.Id, Unreachable: false, observations, null, null);
     }
 
     private async Task<NodeCatalogResult> CollectFallbackModelsAsync(RouterNode node, CancellationToken cancellationToken)
@@ -450,18 +463,62 @@ public sealed class GrpcRouterControlPlaneService(
                     Rank = 1
                 })
                 .ToList();
-            return new NodeCatalogResult(node.Id, Unreachable: false, observations);
+            return new NodeCatalogResult(node.Id, Unreachable: false, observations, null, null);
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
             logger.LogWarning(ex, "Fallback /v1/models failed for router node. NodeId: {NodeId}", node.Id);
-            return new NodeCatalogResult(node.Id, Unreachable: true, []);
+            return new NodeCatalogResult(
+                node.Id,
+                Unreachable: true,
+                [],
+                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/v1/models").ToString()),
+                FormatResponse(ex));
         }
     }
 
     private static bool IsTransientProviderError(Exception ex, CancellationToken cancellationToken) =>
         ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
         (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested);
+
+    private static string FormatRequest(Exception ex, string fallbackMethod, string fallbackUri)
+    {
+        if (ex is RouterNodeProviderException provider &&
+            !string.IsNullOrWhiteSpace(provider.RequestMethod) &&
+            !string.IsNullOrWhiteSpace(provider.RequestUri))
+        {
+            return $"{provider.RequestMethod} {provider.RequestUri}";
+        }
+        return $"{fallbackMethod} {fallbackUri}";
+    }
+
+    private static string FormatResponse(Exception ex)
+    {
+        if (ex is RouterNodeProviderException provider)
+        {
+            var body = provider.ResponseBody;
+            const int maxBody = 1024;
+            if (!string.IsNullOrEmpty(body) && body.Length > maxBody)
+            {
+                body = body[..maxBody] + "… (truncated)";
+            }
+            var statusLine = $"HTTP {(int)provider.StatusCode} {provider.StatusCode}";
+            return string.IsNullOrWhiteSpace(body) ? statusLine : $"{statusLine}\n{body}";
+        }
+
+        if (ex is TaskCanceledException tce)
+            return tce.InnerException is TimeoutException
+                ? "TimeoutException: request timed out"
+                : $"TaskCanceledException: {tce.Message}";
+
+        if (ex is HttpRequestException hre)
+            return $"HttpRequestException: {hre.Message}";
+
+        if (ex is InvalidOperationException ioe)
+            return $"InvalidOperationException: {ioe.Message}";
+
+        return $"{ex.GetType().Name}: {ex.Message}";
+    }
 
     private static (string Value, int Rank) ChooseField(string current, int currentRank, string incoming, int incomingRank)
     {
@@ -477,7 +534,12 @@ public sealed class GrpcRouterControlPlaneService(
         return (current, currentRank);
     }
 
-    private sealed record NodeCatalogResult(string NodeId, bool Unreachable, IReadOnlyList<ModelObservation> Observations);
+    private sealed record NodeCatalogResult(
+        string NodeId,
+        bool Unreachable,
+        IReadOnlyList<ModelObservation> Observations,
+        string? Request,
+        string? Response);
 
     private sealed class ModelObservation
     {

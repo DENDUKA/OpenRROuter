@@ -172,7 +172,14 @@ message UpstreamModelEntry {
   repeated string node_ids = 6;
 }
 
+message UnreachableNodeInfo {
+  string node_id = 1;
+  string request = 2;
+  string response = 3;
+}
+
 message ListNodeModelCatalogResponse {
   repeated UpstreamModelEntry entries = 1;
   repeated string unreachable_node_ids = 2;
+  repeated UnreachableNodeInfo unreachable_nodes = 3;
 }

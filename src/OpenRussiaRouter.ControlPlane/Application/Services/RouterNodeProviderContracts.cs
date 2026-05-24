@@ -118,14 +118,26 @@ public sealed class RouterNodeProviderException : Exception
     public RouterNodeProviderException(
         HttpStatusCode statusCode,
         string? routerError,
-        string message)
+        string message,
+        string? requestMethod = null,
+        string? requestUri = null,
+        string? responseBody = null)
         : base(message)
     {
         StatusCode = statusCode;
         RouterError = routerError;
+        RequestMethod = requestMethod;
+        RequestUri = requestUri;
+        ResponseBody = responseBody;
     }
 
     public HttpStatusCode StatusCode { get; }
 
     public string? RouterError { get; }
+
+    public string? RequestMethod { get; }
+
+    public string? RequestUri { get; }
+
+    public string? ResponseBody { get; }
 }

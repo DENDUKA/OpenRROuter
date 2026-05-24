@@ -138,6 +138,10 @@ public sealed class ControlPlaneProvider(
                     SourceProviders: e.SourceProviders.ToList(),
                     NodeIds: e.NodeIds.ToList())).ToList(),
                 UnreachableNodeIds: response.UnreachableNodeIds.ToList(),
+                UnreachableNodes: response.UnreachableNodes.Select(u => new UnreachableNodeDetail(
+                    NodeId: u.NodeId,
+                    Request: u.Request,
+                    Response: u.Response)).ToList(),
                 Error: null);
         }
         catch (Exception ex)
@@ -146,6 +150,7 @@ public sealed class ControlPlaneProvider(
             return new NodeModelCatalogResult(
                 Entries: [],
                 UnreachableNodeIds: [],
+                UnreachableNodes: [],
                 Error: $"Failed to load node model catalog: {ex.Message}");
         }
     }

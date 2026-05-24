@@ -3,6 +3,7 @@ namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 public sealed record NodeModelCatalogResult(
     IReadOnlyList<NodeModelCatalogEntry> Entries,
     IReadOnlyList<string> UnreachableNodeIds,
+    IReadOnlyList<UnreachableNodeDetail> UnreachableNodes,
     string? Error);
 
 public sealed record NodeModelCatalogEntry(
@@ -12,3 +13,8 @@ public sealed record NodeModelCatalogEntry(
     string ModelType,
     IReadOnlyList<string> SourceProviders,
     IReadOnlyList<string> NodeIds);
+
+public sealed record UnreachableNodeDetail(
+    string NodeId,
+    string Request,
+    string Response);

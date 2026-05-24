@@ -60,7 +60,7 @@ public class ModelsModel(
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             return await ControlPlaneProvider.ListNodeModelCatalogAsync(cancellationToken);
-        }) ?? new NodeModelCatalogResult([], [], "Cached catalog is empty.");
+        }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
 
     private static PublicModelRow MapModel(ModelInfo model, NodeModelCatalogEntry? catalogEntry)

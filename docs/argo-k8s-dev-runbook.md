@@ -16,8 +16,7 @@ This runbook recreates the local dev Kubernetes cluster, exposes Argo CD and Seq
 
 Recommended PAT permissions:
 
-- Repository `DENDUKA/OpenRussiaRouter`: `Contents: Read`.
-- If Argo CD Image Updater will write back to git: `Contents: Read and write`.
+- Repository `DENDUKA/OpenRussiaRouter`: `Contents: Read and write` (обязательно — Image Updater коммитит `.argocd-source-orr-services.yaml` с digest'ами образов).
 - Packages/GHCR: read access to required package images.
 
 ## 1. Recreate kind cluster
@@ -341,6 +340,134 @@ Expected:
 ```
 
 If missing, cluster was not created with `infra/kind/orr-dev.yaml`. Recreate it with that config.
+
+## Обновление контейнеров
+
+### Автоматический поток (штатный)
+
+```
+git push → main
+  └─ GitHub Actions: test → build-image
+       └─ ghcr.io/denduka/<service>:sha-<commit>
+          ghcr.io/denduka/<service>:dev-latest
+            └─ ArgoCD Image Updater (poll каждые 2 мин)
+                 └─ новый digest на dev-latest
+                      └─ коммит .argocd-source-orr-services.yaml в main
+                           └─ ArgoCD детектирует изменение → sync → rolling update
+```
+
+Образы собираются только при пуше в `main` (не в PR) и только для сервисов, у которых изменились файлы в `src/**`. Общие изменения (`BuildingBlocks`, `Contracts`, solution-файлы) пересобирают все пять сервисов.
+
+`write-back-method: git` — Image Updater коммитит файл `.argocd-source-orr-services.yaml` в `infra/kustomize/overlays/dev/services/` на ветку `main`. Файл содержит `kustomize.images` с закреплёнными digest'ами. ArgoCD читает его при каждом sync и деплоит точные образы. Git всегда отражает реально задеплоенное состояние.
+
+Для работы write-back PAT в секрете `argocd/repo-openrussiarouter` должен иметь `Contents: Read and write` на репозиторий.
+
+### Проверить, что обновление применилось
+
+```powershell
+# Текущий image digest подов
+kubectl get pods -n orr-dev -o jsonpath='{range .items[*]}{.metadata.name}{"  "}{.spec.containers[0].image}{"\n"}{end}'
+
+# История rollout конкретного сервиса
+kubectl rollout history deployment/api-gateway -n orr-dev
+```
+
+### Принудительный запуск Image Updater
+
+Если не хочется ждать 2 минуты:
+
+```powershell
+kubectl delete pod -n argocd -l control-plane=argocd-image-updater-controller
+kubectl wait --namespace argocd --for=condition=ready pod -l control-plane=argocd-image-updater-controller --timeout=60s
+```
+
+Логи Image Updater:
+
+```powershell
+kubectl logs -n argocd -l control-plane=argocd-image-updater-controller --tail=50
+```
+
+### Принудительный sync ArgoCD
+
+Если Image Updater обновил параметры, но ArgoCD не засинхронизировался:
+
+```powershell
+kubectl -n argocd annotate application orr-services argocd.argoproj.io/refresh=hard --overwrite
+```
+
+Или через CLI:
+
+```powershell
+argocd app sync orr-services --force
+```
+
+### Ручное обновление образа (обход CI)
+
+Используется для экстренного деплоя или тестирования конкретного SHA без пуша в main.
+
+```powershell
+# Например, откатиться к предыдущему образу api-gateway
+kubectl set image deployment/api-gateway api-gateway=ghcr.io/denduka/api-gateway:sha-<commit> -n orr-dev
+
+# Вернуть управление Image Updater (снять ручной override)
+# Перезапустить Image Updater — он перепишет параметр своим значением из реестра
+kubectl delete pod -n argocd -l control-plane=argocd-image-updater-controller
+```
+
+### Откат деплоя
+
+```powershell
+# Откат на предыдущую ревизию Kubernetes
+kubectl rollout undo deployment/api-gateway -n orr-dev
+
+# Проверить статус после отката
+kubectl rollout status deployment/api-gateway -n orr-dev
+```
+
+После отката вручную Image Updater при следующем цикле опроса снова подтянет последний digest из реестра и перезапишет ручное изменение. Чтобы заморозить версию, временно удалите аннотацию `argocd-image-updater.argoproj.io/image-list` из приложения ArgoCD:
+
+```powershell
+kubectl -n argocd patch application orr-services --type=json \
+  -p='[{"op":"remove","path":"/metadata/annotations/argocd-image-updater.argoproj.io~1image-list"}]'
+```
+
+Восстановить аннотацию — re-apply манифеста:
+
+```powershell
+kubectl apply -f infra/argocd/orr-dev-app.yaml
+```
+
+### Обновление f9router
+
+`f9router` (`ghcr.io/inc64/f9router:dev-latest`) управляется тем же Image Updater. Новый тег или digest на стороне `inc64` автоматически подхватывается при следующем цикле опроса.
+
+Если нужно обновить вручную:
+
+```powershell
+kubectl set image deployment/f9router f9router=ghcr.io/inc64/f9router:dev-latest -n orr-dev
+kubectl rollout status deployment/f9router -n orr-dev
+```
+
+### Диагностика зависшего обновления
+
+```powershell
+# Статус деплоя
+kubectl rollout status deployment/<service> -n orr-dev --timeout=120s
+
+# Описание пода (причина ошибки)
+kubectl describe pod -n orr-dev -l app=<service>
+
+# Логи нового пода
+kubectl logs -n orr-dev -l app=<service> --tail=100
+
+# Проверить ImagePullBackOff
+kubectl get events -n orr-dev --sort-by='.lastTimestamp' | tail -20
+```
+
+Типичные причины:
+- `ImagePullBackOff` — истёк PAT или секрет `ghcr-pull-secret` не привязан к ServiceAccount (см. шаг 7).
+- `CrashLoopBackOff` — новый контейнер падает; смотреть логи пода.
+- ArgoCD в `OutOfSync` после обновления Image Updater — вручную нажать Sync или запустить `argocd app sync orr-services`.
 
 ## Security notes
 

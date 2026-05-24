@@ -5,7 +5,7 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider) : PageModelBase
+public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<RequestsModel> logger) : PageModelBase
 {
     public IReadOnlyList<AdminRequestInfo> Records { get; set; } = [];
     public Dictionary<string, string> NodeNames { get; set; } = [];
@@ -59,6 +59,7 @@ public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            logger.LogError(ex, "Failed to load admin requests.");
             ErrorMessage = "Failed to load requests.";
         }
     }

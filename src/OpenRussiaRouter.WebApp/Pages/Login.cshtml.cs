@@ -11,6 +11,7 @@ namespace OpenRussiaRouter.WebApp.Pages;
 public class LoginModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
+    private readonly ILogger<LoginModel> _logger;
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
@@ -20,7 +21,11 @@ public class LoginModel : PageModelBase
 
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(AuthProvider AuthProvider) => _authClient = AuthProvider;
+    public LoginModel(AuthProvider AuthProvider, ILogger<LoginModel> logger)
+    {
+        _authClient = AuthProvider;
+        _logger = logger;
+    }
 
     public IActionResult OnGet(string? returnUrl = null)
     {
@@ -66,8 +71,9 @@ public class LoginModel : PageModelBase
                 _ => "Login failed. Please try again."
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error during login. Email={Email}", Input.Email);
             ErrorMessage = "An error occurred. Please try again.";
         }
 

@@ -9,8 +9,9 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 [Authorize]
 public class ApiKeysModel : PageModelBase
 {
-private readonly AuthProvider _authClient;
+    private readonly AuthProvider _authClient;
     private readonly ControlPlaneProvider _controlPlaneClient;
+    private readonly ILogger<ApiKeysModel> _logger;
 
     public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -22,16 +23,21 @@ private readonly AuthProvider _authClient;
     [BindProperty] public CreateKeyInput Create { get; set; } = new();
     [BindProperty] public RenameKeyInput Rename { get; set; } = new();
 
-    public ApiKeysModel(AuthProvider AuthProvider, ControlPlaneProvider ControlPlaneProvider)
+    public ApiKeysModel(AuthProvider AuthProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<ApiKeysModel> logger)
     {
         _authClient = AuthProvider;
         _controlPlaneClient = ControlPlaneProvider;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
     {
         try { Keys = await _authClient.ListApiKeysAsync(User.GetUserId()); }
-        catch { ErrorMessage = "Failed to load API keys."; }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load API keys. UserId={UserId}", User.GetUserId());
+            ErrorMessage = "Failed to load API keys.";
+        }
     }
 
     public async Task<IActionResult> OnPostCreateAsync()
@@ -49,8 +55,9 @@ private readonly AuthProvider _authClient;
             _ = _controlPlaneClient.PushUserIntegrationKeyAsync(Create.Name, result.RawKey, User.GetUserId(), result.ApiKeyId);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create API key. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
             ErrorMessage = "Failed to create API key.";
             await OnGetAsync();
             return Page();
@@ -70,8 +77,9 @@ private readonly AuthProvider _authClient;
             await _authClient.RenameApiKeyAsync(User.GetUserId(), keyId, Rename.Name);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to rename API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = "Failed to rename key.";
             await OnGetAsync();
             return Page();
@@ -86,8 +94,9 @@ private readonly AuthProvider _authClient;
             _ = _controlPlaneClient.RevokeUserIntegrationKeyAsync(keyId);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to revoke API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = "Failed to revoke key.";
             await OnGetAsync();
             return Page();

@@ -12,6 +12,7 @@ public class UsersModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly BillingProvider _billingClient;
+    private readonly ILogger<UsersModel> _logger;
 
     public IReadOnlyList<UserInfo> Users { get; set; } = [];
     public Dictionary<string, decimal> UserBalances { get; set; } = new();
@@ -24,10 +25,11 @@ public class UsersModel : PageModelBase
     [BindProperty] public InviteInput Invite { get; set; } = new();
     [BindProperty] public TopUpInput TopUp { get; set; } = new();
 
-    public UsersModel(AuthProvider AuthProvider, BillingProvider BillingProvider)
+    public UsersModel(AuthProvider AuthProvider, BillingProvider BillingProvider, ILogger<UsersModel> logger)
     {
         _authClient = AuthProvider;
         _billingClient = BillingProvider;
+        _logger = logger;
     }
 
     public async Task OnGetAsync() => await LoadUsers();
@@ -46,8 +48,9 @@ public class UsersModel : PageModelBase
             await LoadUsers();
             return Page();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to create invite. Email={Email} Role={Role}", Invite.Email, Invite.Role);
             ErrorMessage = "Failed to create invite.";
             await LoadUsers();
             return Page();
@@ -61,8 +64,9 @@ public class UsersModel : PageModelBase
             await _billingClient.CreateVirtualTopUpAsync(User.GetUserId(), userId, TopUp.Amount, TopUp.Reason);
             return RedirectToPage();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to top up balance. AdminId={AdminId} UserId={UserId} Amount={Amount}", User.GetUserId(), userId, TopUp.Amount);
             ErrorMessage = "Failed to top up balance.";
             await LoadUsers();
             return Page();
@@ -77,10 +81,18 @@ public class UsersModel : PageModelBase
             foreach (var user in Users)
             {
                 try { var b = await _billingClient.GetBalanceAsync(user.Id); UserBalances[user.Id] = b.Amount; }
-                catch { UserBalances[user.Id] = 0; }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to load balance for user. UserId={UserId}", user.Id);
+                    UserBalances[user.Id] = 0;
+                }
             }
         }
-        catch { ErrorMessage = "Failed to load users."; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load users list.");
+            ErrorMessage = "Failed to load users.";
+        }
     }
 
     public class InviteInput

@@ -5,22 +5,27 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 
 [Authorize]
-public class CreditsModel : PageModelBase
+public class CreditsModel(BillingProvider BillingProvider, ILogger<CreditsModel> logger) : PageModelBase
 {
-    private readonly BillingProvider _billingClient;
+    private readonly BillingProvider _billingClient = BillingProvider;
 
     public BalanceInfo? Balance { get; set; }
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public CreditsModel(BillingProvider BillingProvider) => _billingClient = BillingProvider;
-
     public async Task OnGetAsync()
     {
         try { Balance = await _billingClient.GetBalanceAsync(User.GetUserId()); }
-        catch { ErrorMessage = "Failed to load balance."; }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to load balance. UserId={UserId}", User.GetUserId());
+            ErrorMessage = "Failed to load balance.";
+        }
 
         try { TopUps = await _billingClient.ListTopUpsAsync(User.GetUserId()); }
-        catch { /* show empty table on error */ }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to load top-ups. UserId={UserId}", User.GetUserId());
+        }
     }
 }

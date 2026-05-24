@@ -7,7 +7,8 @@ namespace OpenRussiaRouter.WebApp.Pages;
 public class ModelsModel(
     BillingProvider BillingProvider,
     ControlPlaneProvider ControlPlaneProvider,
-    IMemoryCache memoryCache) : PageModelBase
+    IMemoryCache memoryCache,
+    ILogger<ModelsModel> logger) : PageModelBase
 {
     private const string CatalogCacheKey = "public-models-node-catalog";
 
@@ -40,7 +41,8 @@ public class ModelsModel(
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            logger.LogError(ex, "Failed to load public model catalog.");
+            ErrorMessage = "Failed to load models.";
         }
     }
 

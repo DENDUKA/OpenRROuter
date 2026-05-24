@@ -109,7 +109,11 @@ public class NodesModel(
     public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
         try { Nodes = await ControlPlaneProvider.ListRouterNodesAsync(); }
-        catch { return new JsonResult(Array.Empty<string>()); }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to load router nodes for node models lookup. NodeId={NodeId}", nodeId);
+            return new JsonResult(Array.Empty<string>());
+        }
 
         var node = Nodes.FirstOrDefault(n => n.NodeId == nodeId);
         if (node is null)
@@ -140,8 +144,9 @@ public class NodesModel(
 
             return new JsonResult(Array.Empty<string>());
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to fetch models from router node. NodeId={NodeId}", nodeId);
             return new JsonResult(Array.Empty<string>());
         }
     }
@@ -219,6 +224,7 @@ public class NodesModel(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Test request to router node failed. NodeId={NodeId} Model={Model}", TestInput.NodeId, TestInput.Model);
             TestResult = new TestFormResult(false, ex.Message);
         }
 
@@ -313,6 +319,7 @@ public class NodesModel(
         }
         catch (Exception ex)
         {
+            logger.LogError(ex, "Streaming test request to router node failed. NodeId={NodeId} Model={Model}", StreamingTestInput.NodeId, StreamingTestInput.Model);
             if (!Response.HasStarted)
                 return await WriteStreamingErrorAsync(StatusCodes.Status500InternalServerError, ex.Message);
 
@@ -400,7 +407,9 @@ public class NodesModel(
         if (string.IsNullOrWhiteSpace(controlToken))
             return string.Empty;
 
-        return configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? string.Empty;
+        // Explicit override (e.g. an sk-or-* key) takes priority;
+        // fall back to the control token itself so every node works without extra config.
+        return configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? controlToken;
     }
 
     public static string GetStatusBadge(string status) => status switch

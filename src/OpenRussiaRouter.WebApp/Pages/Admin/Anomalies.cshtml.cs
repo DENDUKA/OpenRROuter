@@ -4,18 +4,20 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class AnomaliesModel : PageModelBase
+public class AnomaliesModel(BillingProvider BillingProvider, ILogger<AnomaliesModel> logger) : PageModelBase
 {
-    private readonly BillingProvider _billingClient;
+    private readonly BillingProvider _billingClient = BillingProvider;
 
     public IReadOnlyList<AnomalyInfo> Anomalies { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public AnomaliesModel(BillingProvider BillingProvider) => _billingClient = BillingProvider;
-
     public async Task OnGetAsync()
     {
         try { Anomalies = await _billingClient.ListAnomaliesAsync(); }
-        catch { ErrorMessage = "Failed to load anomalies."; }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Failed to load anomalies.");
+            ErrorMessage = "Failed to load anomalies.";
+        }
     }
 }

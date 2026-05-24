@@ -11,6 +11,7 @@ public class ModelsModel : PageModelBase
 {
     private readonly BillingProvider _billingClient;
     private readonly ControlPlaneProvider _controlPlaneClient;
+    private readonly ILogger<ModelsModel> _logger;
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
@@ -25,10 +26,11 @@ public class ModelsModel : PageModelBase
 
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
-    public ModelsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider)
+    public ModelsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<ModelsModel> logger)
     {
         _billingClient = BillingProvider;
         _controlPlaneClient = ControlPlaneProvider;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
@@ -63,7 +65,10 @@ public class ModelsModel : PageModelBase
                         Enabled = m.Enabled
                     };
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load model for edit form. ModelId={ModelId}", EditModelId);
+            }
         }
 
         await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
@@ -111,6 +116,7 @@ public class ModelsModel : PageModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to save model. ModelId={ModelId} IsNew={IsNew}", Form.Id, isNew);
             ErrorMessage = $"Failed to save model: {ex.Message}";
             await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
             return Page();
@@ -138,6 +144,7 @@ public class ModelsModel : PageModelBase
         }
         catch (Exception ex)
         {
+            _logger.LogError(ex, "Failed to toggle model enabled. ModelId={ModelId}", modelId);
             ErrorMessage = $"Failed to toggle model: {ex.Message}";
             await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
             return Page();
@@ -147,7 +154,11 @@ public class ModelsModel : PageModelBase
     private async Task LoadModels()
     {
         try { Models = await _billingClient.ListModelsAsync(); }
-        catch { ErrorMessage ??= "Failed to load models."; }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load models list.");
+            ErrorMessage ??= "Failed to load models.";
+        }
     }
 
     private async Task LoadAvailableNodeModels()

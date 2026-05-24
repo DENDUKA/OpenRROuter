@@ -6,6 +6,8 @@ metadata:
 data:
   interval: 2m
   log.level: info
+  git.user: argocd-image-updater
+  git.email: argocd-image-updater@users.noreply.github.com
   registries.conf: |
     registries:
       - name: "GitHub Container Registry"

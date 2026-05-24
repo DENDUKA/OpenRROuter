@@ -7,6 +7,7 @@ namespace OpenRussiaRouter.WebApp.Pages;
 public class InviteModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
+    private readonly ILogger<InviteModel> _logger;
 
     [BindProperty(SupportsGet = true)]
     public string Token { get; set; } = "";
@@ -17,7 +18,11 @@ public class InviteModel : PageModelBase
     public bool IsSuccess { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public InviteModel(AuthProvider AuthProvider) => _authClient = AuthProvider;
+    public InviteModel(AuthProvider AuthProvider, ILogger<InviteModel> logger)
+    {
+        _authClient = AuthProvider;
+        _logger = logger;
+    }
 
     public void OnGet() { }
 
@@ -39,8 +44,9 @@ public class InviteModel : PageModelBase
                 _ => "Registration failed. Please try again."
             };
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogError(ex, "Unexpected error completing invite. Token={Token}", Token);
             ErrorMessage = "An error occurred. Please try again.";
         }
 

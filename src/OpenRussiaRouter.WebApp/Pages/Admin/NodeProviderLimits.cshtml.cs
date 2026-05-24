@@ -40,14 +40,14 @@ public class NodeProviderLimitsModel(
     public static string GetStatusBadge(bool isActive) =>
         isActive ? "badge-success" : "badge-secondary";
 
-    private static ProviderLimitView ParseProvider(RouterProviderQuotaInfo p)
+    private ProviderLimitView ParseProvider(RouterProviderQuotaInfo p)
     {
-        var quotas = ParseQuotas(p.UsageJson);
+        var quotas = ParseQuotas(p.UsageJson, p.ConnectionId);
         return new ProviderLimitView(p.ConnectionId, p.Provider, p.Name, p.IsActive,
             p.QuotaSupported, p.Error, quotas);
     }
 
-    private static IReadOnlyList<QuotaView> ParseQuotas(string? usageJson)
+    private IReadOnlyList<QuotaView> ParseQuotas(string? usageJson, string connectionId)
     {
         if (string.IsNullOrWhiteSpace(usageJson))
             return [];
@@ -81,8 +81,9 @@ public class NodeProviderLimitsModel(
             }
             return result;
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to parse quota JSON from router node. ConnectionId={ConnectionId}", connectionId);
             return [];
         }
     }

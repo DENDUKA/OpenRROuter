@@ -8,13 +8,13 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace OpenRussiaRouter.ApiGateway.Tests.Router;
 
-public sealed class YarpRouterProxyClientTests
+public sealed class YarpRouterProxyProviderTests
 {
     [Fact]
     public async Task SendChatCompletionAsync_SendsExpectedInternalRequest()
     {
         var forwarder = new CapturingForwarder();
-        var client = new YarpRouterProxyClient(forwarder);
+        var client = new YarpRouterProxyProvider(forwarder);
         var lease = new GatewayRouterLease(
             "lease-1",
             "node-1",

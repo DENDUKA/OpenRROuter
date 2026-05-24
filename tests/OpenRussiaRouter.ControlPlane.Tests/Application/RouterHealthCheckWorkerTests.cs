@@ -48,7 +48,7 @@ public sealed class RouterHealthCheckWorkerTests
         summary.Status.Should().Be(RouterNodeStatus.Disabled);
     }
 
-    private sealed class StubHealthClient(RouterNodeHealthResult result) : IRouterNodeHealthClient
+    private sealed class StubHealthClient(RouterNodeHealthResult result) : IRouterNodeHealthProvider
     {
         public Task<RouterNodeHealthResult> CheckAsync(RouterNode node, CancellationToken cancellationToken)
         {
@@ -56,7 +56,7 @@ public sealed class RouterHealthCheckWorkerTests
         }
     }
 
-    private sealed class CountingHealthClient : IRouterNodeHealthClient
+    private sealed class CountingHealthClient : IRouterNodeHealthProvider
     {
         public int CallCount { get; private set; }
 

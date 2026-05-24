@@ -56,7 +56,7 @@ builder.Services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
 });
-builder.Services.AddScoped<AuthClient>();
+builder.Services.AddScoped<AuthProvider>();
 
 var billingGrpcUrl = builder.Configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
 builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
@@ -72,7 +72,7 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
 });
-builder.Services.AddScoped<BillingClient>();
+builder.Services.AddScoped<BillingProvider>();
 
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
 builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
@@ -88,7 +88,7 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
 });
-builder.Services.AddScoped<ControlPlaneClient>();
+builder.Services.AddScoped<ControlPlaneProvider>();
 
 builder.Services.AddHttpClient("RouterNode", client =>
 {

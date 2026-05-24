@@ -6,7 +6,7 @@ namespace OpenRussiaRouter.WebApp.Pages;
 
 public class InviteModel : PageModelBase
 {
-    private readonly AuthClient _authClient;
+    private readonly AuthProvider _authClient;
 
     [BindProperty(SupportsGet = true)]
     public string Token { get; set; } = "";
@@ -17,7 +17,7 @@ public class InviteModel : PageModelBase
     public bool IsSuccess { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public InviteModel(AuthClient authClient) => _authClient = authClient;
+    public InviteModel(AuthProvider AuthProvider) => _authClient = AuthProvider;
 
     public void OnGet() { }
 

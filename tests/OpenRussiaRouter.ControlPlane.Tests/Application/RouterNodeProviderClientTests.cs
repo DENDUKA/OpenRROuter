@@ -6,7 +6,7 @@ using OpenRussiaRouter.ControlPlane.Infrastructure;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
-public sealed class RouterNodeProviderClientTests
+public sealed class RouterNodeProviderTests
 {
     [Fact]
     public async Task GetProviderQuotaAsync_IncludeInactive_SendsAuthorizedRequestAndDeserializesProviders()
@@ -284,9 +284,9 @@ public sealed class RouterNodeProviderClientTests
         ex.Which.RouterError.Should().Be("Failed to fetch providers");
     }
 
-    private static RouterNodeProviderClient CreateClient(CapturingHandler handler)
+    private static RouterNodeProvider CreateClient(CapturingHandler handler)
     {
-        return new RouterNodeProviderClient(new HttpClient(handler));
+        return new RouterNodeProvider(new HttpClient(handler));
     }
 
     private static RouterNode CreateNode(string controlToken = "control-token")

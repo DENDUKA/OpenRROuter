@@ -9,8 +9,8 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 [Authorize]
 public class ApiKeysModel : PageModelBase
 {
-private readonly AuthClient _authClient;
-    private readonly ControlPlaneClient _controlPlaneClient;
+private readonly AuthProvider _authClient;
+    private readonly ControlPlaneProvider _controlPlaneClient;
 
     public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -22,10 +22,10 @@ private readonly AuthClient _authClient;
     [BindProperty] public CreateKeyInput Create { get; set; } = new();
     [BindProperty] public RenameKeyInput Rename { get; set; } = new();
 
-    public ApiKeysModel(AuthClient authClient, ControlPlaneClient controlPlaneClient)
+    public ApiKeysModel(AuthProvider AuthProvider, ControlPlaneProvider ControlPlaneProvider)
     {
-        _authClient = authClient;
-        _controlPlaneClient = controlPlaneClient;
+        _authClient = AuthProvider;
+        _controlPlaneClient = ControlPlaneProvider;
     }
 
     public async Task OnGetAsync()

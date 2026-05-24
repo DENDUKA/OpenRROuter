@@ -8,11 +8,11 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-public sealed class HttpRouterNodeHealthClient(
+public sealed class RouterNodeHealthProvider(
     HttpClient httpClient,
     IOptionsMonitor<RouterHealthCheckOptions> options,
-    ILogger<HttpRouterNodeHealthClient>? logger = null)
-    : IRouterNodeHealthClient
+    ILogger<RouterNodeHealthProvider>? logger = null)
+    : IRouterNodeHealthProvider
 {
 
     public async Task<RouterNodeHealthResult> CheckAsync(RouterNode node, CancellationToken cancellationToken)

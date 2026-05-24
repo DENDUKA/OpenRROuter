@@ -12,7 +12,7 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
     IControlPlaneRepository repository,
-    IRouterNodeProviderClient providerClient,
+    IRouterNodeProvider providerClient,
     ILogger<GrpcRouterControlPlaneService> logger)
     : ControlGrpc.RouterControlPlaneBase
 {

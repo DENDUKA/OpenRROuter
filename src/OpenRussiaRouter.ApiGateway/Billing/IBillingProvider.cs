@@ -1,6 +1,6 @@
 namespace OpenRussiaRouter.ApiGateway.Billing;
 
-public interface IBillingGatewayClient
+public interface IBillingProvider
 {
 
     Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken cancellationToken);

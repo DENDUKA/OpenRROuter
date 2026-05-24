@@ -12,9 +12,9 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
 public class NodesModel(
-    ControlPlaneClient controlPlaneClient,
-    AuthClient authClient,
-    BillingClient billingClient,
+    ControlPlaneProvider ControlPlaneProvider,
+    AuthProvider AuthProvider,
+    BillingProvider BillingProvider,
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     ILogger<NodesModel> logger) : PageModelBase
@@ -34,7 +34,7 @@ public class NodesModel(
 
     public async Task OnGetAsync()
     {
-        try { Nodes = await controlPlaneClient.ListRouterNodesAsync(); }
+        try { Nodes = await ControlPlaneProvider.ListRouterNodesAsync(); }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load router nodes.");
@@ -46,7 +46,7 @@ public class NodesModel(
     {
         try
         {
-            await controlPlaneClient.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.ControlToken, Form.CapacityWeight);
+            await ControlPlaneProvider.RegisterRouterNodeAsync(Form.Name, Form.EndpointUrl, Form.ControlToken, Form.CapacityWeight);
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -62,7 +62,7 @@ public class NodesModel(
     {
         try
         {
-            await controlPlaneClient.DisableRouterNodeAsync(nodeId);
+            await ControlPlaneProvider.DisableRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -78,7 +78,7 @@ public class NodesModel(
     {
         try
         {
-            await controlPlaneClient.DeleteRouterNodeAsync(nodeId);
+            await ControlPlaneProvider.DeleteRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -94,7 +94,7 @@ public class NodesModel(
     {
         try
         {
-            await controlPlaneClient.EnableRouterNodeAsync(nodeId);
+            await ControlPlaneProvider.EnableRouterNodeAsync(nodeId);
             return RedirectToPage();
         }
         catch (Exception ex)
@@ -108,7 +108,7 @@ public class NodesModel(
 
     public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
-        try { Nodes = await controlPlaneClient.ListRouterNodesAsync(); }
+        try { Nodes = await ControlPlaneProvider.ListRouterNodesAsync(); }
         catch { return new JsonResult(Array.Empty<string>()); }
 
         var node = Nodes.FirstOrDefault(n => n.NodeId == nodeId);
@@ -163,7 +163,7 @@ public class NodesModel(
         TestInput.NodeId = node.NodeId;
 
         var userId = User.GetUserId();
-        var userKeys = await authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        var userKeys = await AuthProvider.ListApiKeysAsync(userId, HttpContext.RequestAborted);
         var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
         if (activeKey is null)
         {
@@ -172,7 +172,7 @@ public class NodesModel(
             return Page();
         }
 
-        var rawKey = await authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
 
         if (string.IsNullOrWhiteSpace(rawKey))
         {
@@ -183,7 +183,7 @@ public class NodesModel(
 
         try
         {
-            await controlPlaneClient.PushUserIntegrationKeyAsync(
+            await ControlPlaneProvider.PushUserIntegrationKeyAsync(
                 $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
                 cancellationToken: HttpContext.RequestAborted);
 
@@ -242,18 +242,18 @@ public class NodesModel(
         StreamingTestInput.NodeId = node.NodeId;
 
         var userId = User.GetUserId();
-        var userKeys = await authClient.ListApiKeysAsync(userId, HttpContext.RequestAborted);
+        var userKeys = await AuthProvider.ListApiKeysAsync(userId, HttpContext.RequestAborted);
         var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
         if (activeKey is null)
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No personal API keys. Create an API key in Workspace -> API Keys.");
 
-        var rawKey = await authClient.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No active API key with a stored raw value. Recreate the key in Workspace -> API Keys.");
 
         try
         {
-            await controlPlaneClient.PushUserIntegrationKeyAsync(
+            await ControlPlaneProvider.PushUserIntegrationKeyAsync(
                 $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
                 cancellationToken: HttpContext.RequestAborted);
 
@@ -340,7 +340,7 @@ public class NodesModel(
 
         try
         {
-            var errorCode = await billingClient.RecordUsageAsync(
+            var errorCode = await BillingProvider.RecordUsageAsync(
                 Guid.NewGuid().ToString("N"),
                 userId,
                 apiKey.Id,

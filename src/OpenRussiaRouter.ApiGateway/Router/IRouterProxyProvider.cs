@@ -2,7 +2,7 @@ using OpenRussiaRouter.ApiGateway.ControlPlane;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-public interface IRouterProxyClient
+public interface IRouterProxyProvider
 {
     Task<RouterProxyResponse> SendChatCompletionAsync(
         GatewayRouterLease lease,

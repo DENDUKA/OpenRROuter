@@ -54,7 +54,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     [Fact]
     public async Task NonStreaming_InsufficientBalance_Returns402()
     {
-        var billing = new StubBillingClient
+        var billing = new StubBillingProvider
         {
             CheckResult = new GatewayBalanceCheckResult(false, "gpt-4", "gpt-4", null, MoneyAmount.Rub(0), ErrorCodes.InsufficientBalance)
         };
@@ -69,7 +69,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     [Fact]
     public async Task NonStreaming_UnknownModel_ReturnsBillingError()
     {
-        var billing = new StubBillingClient
+        var billing = new StubBillingProvider
         {
             CheckResult = new GatewayBalanceCheckResult(false, "unknown-model", "unknown-model", null, MoneyAmount.Rub(100), ErrorCodes.ValidationFailed)
         };
@@ -87,7 +87,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     public async Task NonStreaming_NoHealthyNodes_Returns503()
     {
         var control = new StubControlPlane { Lease = null };
-        var client = CreateClient(new StubAuthenticator(), new StubBillingClient(), control);
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control);
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
@@ -102,7 +102,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[{"message":{"content":"Hi"}}],"usage":{"prompt_tokens":5,"completion_tokens":3}}""";
         var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
-        var client = CreateClient(new StubAuthenticator(), new StubBillingClient(), new StubControlPlane(), router);
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), new StubControlPlane(), router);
 
         var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
@@ -116,7 +116,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var router = new StubRouterProxy { Response = new RouterProxyResponse(500, "application/json", """{"error":"upstream"}""") };
         var control = new StubControlPlane();
-        var client = CreateClient(new StubAuthenticator(), new StubBillingClient(), control, router);
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control, router);
 
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
 
@@ -128,7 +128,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
         var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
-        var billing = new StubBillingClient();
+        var billing = new StubBillingProvider();
         var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
 
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
@@ -143,7 +143,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
         var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
-        var billing = new StubBillingClient();
+        var billing = new StubBillingProvider();
         var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
 
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
@@ -158,7 +158,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[{"message":{"content":"Hi"}}]}""";
         var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
-        var billing = new StubBillingClient();
+        var billing = new StubBillingProvider();
         var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
 
         await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
@@ -174,7 +174,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":7,"completion_tokens":4}}""";
         var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
-        var billing = new StubBillingClient();
+        var billing = new StubBillingProvider();
         var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
 
         await PostChatAsync(client, """{"model":"gpt-4","messages":[{"role":"user","content":"secret prompt"}]}""", bearer: "sk-ok_key");
@@ -199,7 +199,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     [Fact]
     public async Task ListModels_ValidToken_Returns200WithObjectList()
     {
-        var billing = new StubBillingClient
+        var billing = new StubBillingProvider
         {
             PublicModels = new[] { new GatewayPublicModel("gpt-4", "openai") }
         };
@@ -216,17 +216,17 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     // --- Helpers ---
 
     private HttpClient CreateClient(
-        IApiKeyAuthenticator? auth = null,
-        IBillingGatewayClient? billing = null,
-        IControlPlaneGatewayClient? control = null,
-        IRouterProxyClient? router = null)
+        IApiKeyProvider? auth = null,
+        IBillingProvider? billing = null,
+        IControlPlaneProvider? control = null,
+        IRouterProxyProvider? router = null)
     {
         return factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
         {
-            services.AddScoped<IApiKeyAuthenticator>(_ => auth ?? new StubAuthenticator());
-            services.AddScoped<IBillingGatewayClient>(_ => billing ?? new StubBillingClient());
-            services.AddScoped<IControlPlaneGatewayClient>(_ => control ?? new StubControlPlane());
-            services.AddScoped<IRouterProxyClient>(_ => router ?? new StubRouterProxy());
+            services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
+            services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
+            services.AddScoped<IControlPlaneProvider>(_ => control ?? new StubControlPlane());
+            services.AddScoped<IRouterProxyProvider>(_ => router ?? new StubRouterProxy());
         })).CreateClient();
     }
 
@@ -251,7 +251,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
     // --- Test doubles ---
 
-    private sealed class StubAuthenticator : IApiKeyAuthenticator
+    private sealed class StubAuthenticator : IApiKeyProvider
     {
         public ApiKeyAuthenticationResult Result { get; set; } = ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test");
 
@@ -259,7 +259,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             => Task.FromResult(Result);
     }
 
-    private sealed class StubBillingClient : IBillingGatewayClient
+    private sealed class StubBillingProvider : IBillingProvider
     {
         public GatewayBalanceCheckResult CheckResult { get; set; } =
             new(true, "gpt-4", "gpt-4", "v1", MoneyAmount.Rub(100), null);
@@ -282,7 +282,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         }
     }
 
-    private sealed class StubControlPlane : IControlPlaneGatewayClient
+    private sealed class StubControlPlane : IControlPlaneProvider
     {
         public GatewayRouterLease? Lease { get; set; } =
             new("lease-1", "node-1", new Uri("https://router.example"), "secret");
@@ -299,7 +299,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         }
     }
 
-    private sealed class StubRouterProxy : IRouterProxyClient
+    private sealed class StubRouterProxy : IRouterProxyProvider
     {
         public RouterProxyResponse Response { get; set; } =
             new(200, "application/json", """{"id":"chatcmpl-1","choices":[]}""");

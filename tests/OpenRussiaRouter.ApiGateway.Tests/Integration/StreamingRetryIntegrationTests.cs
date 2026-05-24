@@ -100,7 +100,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     [Fact]
     public async Task Streaming_NoUsageInStream_RecordsUsageMissingActivity()
     {
-        var billing = new StubBillingClient();
+        var billing = new StubBillingProvider();
         var router = new SequentialStreamingProxy(CreateSuccessSession("data: {\"choices\":[]}\n\ndata: [DONE]\n\n"));
         var client = CreateStreamingClient(billing: billing, router: router);
 
@@ -117,17 +117,17 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     // --- Helpers ---
 
     private HttpClient CreateStreamingClient(
-        IApiKeyAuthenticator? auth = null,
-        IBillingGatewayClient? billing = null,
+        IApiKeyProvider? auth = null,
+        IBillingProvider? billing = null,
         RetryTrackingControlPlane? control = null,
         SequentialStreamingProxy? router = null)
     {
         return factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
         {
-            services.AddScoped<IApiKeyAuthenticator>(_ => auth ?? new StubAuthenticator());
-            services.AddScoped<IBillingGatewayClient>(_ => billing ?? new StubBillingClient());
-            services.AddScoped<IControlPlaneGatewayClient>(_ => control ?? new RetryTrackingControlPlane());
-            services.AddScoped<IRouterProxyClient>(_ => router ?? new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n")));
+            services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
+            services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
+            services.AddScoped<IControlPlaneProvider>(_ => control ?? new RetryTrackingControlPlane());
+            services.AddScoped<IRouterProxyProvider>(_ => router ?? new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n")));
         })).CreateClient();
     }
 
@@ -161,13 +161,13 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
     // --- Test doubles ---
 
-    private sealed class StubAuthenticator : IApiKeyAuthenticator
+    private sealed class StubAuthenticator : IApiKeyProvider
     {
         public Task<ApiKeyAuthenticationResult> AuthenticateAsync(string rawApiKey, CancellationToken ct)
             => Task.FromResult(ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test"));
     }
 
-    private sealed class StubBillingClient : IBillingGatewayClient
+    private sealed class StubBillingProvider : IBillingProvider
     {
         public GatewayUsageEvent? LastUsageEvent { get; private set; }
 
@@ -184,7 +184,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         }
     }
 
-    private sealed class RetryTrackingControlPlane : IControlPlaneGatewayClient
+    private sealed class RetryTrackingControlPlane : IControlPlaneProvider
     {
         private int leaseCounter;
         public bool AlwaysReturnNull { get; init; }
@@ -204,7 +204,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
             => Task.CompletedTask;
     }
 
-    private sealed class SequentialStreamingProxy : IRouterProxyClient
+    private sealed class SequentialStreamingProxy : IRouterProxyProvider
     {
         private readonly Queue<RouterStreamSession> sessions;
         public int CallCount { get; private set; }

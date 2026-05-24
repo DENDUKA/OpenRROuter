@@ -6,12 +6,12 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class AnomaliesModel : PageModelBase
 {
-    private readonly BillingClient _billingClient;
+    private readonly BillingProvider _billingClient;
 
     public IReadOnlyList<AnomalyInfo> Anomalies { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public AnomaliesModel(BillingClient billingClient) => _billingClient = billingClient;
+    public AnomaliesModel(BillingProvider BillingProvider) => _billingClient = BillingProvider;
 
     public async Task OnGetAsync()
     {

@@ -92,7 +92,7 @@ public static class Startup
             return null;
         }
 
-        var authenticator = context.RequestServices.GetRequiredService<IApiKeyAuthenticator>();
+        var authenticator = context.RequestServices.GetRequiredService<IApiKeyProvider>();
         var authResult = await authenticator.AuthenticateAsync(apiKey, cancellationToken);
         if (!authResult.Succeeded)
         {
@@ -100,7 +100,7 @@ public static class Startup
             return null;
         }
 
-        var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
+        var billingClient = context.RequestServices.GetRequiredService<IBillingProvider>();
         var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, model, cancellationToken);
         if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
         {
@@ -111,7 +111,7 @@ public static class Startup
             return null;
         }
 
-        var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
+        var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneProvider>();
         var lease = await controlPlane.SelectRouterNodeAsync(model, requestId, cancellationToken);
         if (lease is null)
         {
@@ -146,9 +146,9 @@ public static class Startup
             if (auth is null) return;
 
             var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
-            var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
-            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
-            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
+            var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyProvider>();
+            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneProvider>();
+            var billingClient = context.RequestServices.GetRequiredService<IBillingProvider>();
 
             var startedAt = DateTimeOffset.UtcNow;
             var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
@@ -198,9 +198,9 @@ public static class Startup
 
             var patchedJson = SseRequestPatcher.InjectStreamOptions(
                 SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId));
-            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneGatewayClient>();
-            var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
-            var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyClient>();
+            var controlPlane = context.RequestServices.GetRequiredService<IControlPlaneProvider>();
+            var billingClient = context.RequestServices.GetRequiredService<IBillingProvider>();
+            var routerProxy = context.RequestServices.GetRequiredService<IRouterProxyProvider>();
             var lease = auth.Lease;
 
             var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
@@ -285,7 +285,7 @@ public static class Startup
             return;
         }
 
-        var billingClient = context.RequestServices.GetRequiredService<IBillingGatewayClient>();
+        var billingClient = context.RequestServices.GetRequiredService<IBillingProvider>();
         var models = await billingClient.ListPublicModelsAsync(context.RequestAborted);
 
         var response = new { @object = "list", data = models.Select(m => new { id = m.Id, @object = "model", created = 0, owned_by = "openrussiarouter" }) };

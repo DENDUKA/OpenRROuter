@@ -12,7 +12,7 @@ namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
 public sealed class GrpcRouterControlPlaneServiceTests
 {
-    private static readonly IRouterNodeProviderClient NoOpProviderClient = new NoOpRouterNodeProviderClient();
+    private static readonly IRouterNodeProvider NoOpProviderClient = new NoOpRouterNodeProvider();
 
     [Fact]
     public async Task SelectRouterNode_HealthyNode_ReturnsLease()
@@ -712,7 +712,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public NodeModelsResponse Build() => new() { Data = _models };
     }
 
-    private sealed class CatalogProviderStub : IRouterNodeProviderClient
+    private sealed class CatalogProviderStub : IRouterNodeProvider
     {
         public Dictionary<string, Func<CancellationToken, Task<RouterProviderListResponse>>> ProvidersByNode { get; } = new();
         public Dictionary<(string nodeId, string provider), Func<CancellationToken, Task<RouterProviderModelsResponse>>> ProviderModelsByKey { get; } = new();
@@ -799,7 +799,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private static GrpcRouterControlPlaneService CreateService(
         RouterControlPlaneService control,
         IControlPlaneRepository? repo = null,
-        IRouterNodeProviderClient? providerClient = null)
+        IRouterNodeProvider? providerClient = null)
     {
         return new GrpcRouterControlPlaneService(
             control,
@@ -821,7 +821,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         return control;
     }
 
-    private sealed class NoOpRouterNodeProviderClient : IRouterNodeProviderClient
+    private sealed class NoOpRouterNodeProvider : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,
@@ -874,7 +874,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             Task.FromResult(new RouterProviderListResponse());
     }
 
-    private sealed class ThrowingProviderClient : IRouterNodeProviderClient
+    private sealed class ThrowingProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
@@ -909,7 +909,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
     }
 
-    private sealed class StubProviderClient : IRouterNodeProviderClient
+    private sealed class StubProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,

@@ -5,8 +5,8 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure;
 
-public sealed class RouterNodeProviderClient(HttpClient httpClient)
-    : IRouterNodeProviderClient
+public sealed class RouterNodeProvider(HttpClient httpClient)
+    : IRouterNodeProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

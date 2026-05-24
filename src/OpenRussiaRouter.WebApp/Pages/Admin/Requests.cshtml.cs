@@ -5,7 +5,7 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class RequestsModel(BillingClient billingClient, ControlPlaneClient controlPlaneClient) : PageModelBase
+public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider) : PageModelBase
 {
     public IReadOnlyList<AdminRequestInfo> Records { get; set; } = [];
     public Dictionary<string, string> NodeNames { get; set; } = [];
@@ -38,14 +38,14 @@ public class RequestsModel(BillingClient billingClient, ControlPlaneClient contr
         try
         {
             var (billingTask, nodesTask) = (
-                billingClient.ListAdminRequestsAsync(
+                BillingProvider.ListAdminRequestsAsync(
                     afterCursor: cursor,
                     pageSize: 50,
                     modelFilter: model,
                     providerFilter: provider,
                     fromUtc: fromParsed,
                     toUtc: toParsed),
-                controlPlaneClient.ListRouterNodesAsync());
+                ControlPlaneProvider.ListRouterNodesAsync());
 
             await Task.WhenAll(billingTask, nodesTask);
 

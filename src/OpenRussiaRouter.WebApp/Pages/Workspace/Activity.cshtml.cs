@@ -10,8 +10,8 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 [Authorize]
 public class ActivityModel : PageModelBase
 {
-    private readonly BillingClient _billingClient;
-    private readonly AuthClient _authClient;
+    private readonly BillingProvider _billingClient;
+    private readonly AuthProvider _authClient;
 
     // Tab & filters
     [FromQuery(Name = "tab")] public string Tab { get; set; } = "details";
@@ -35,10 +35,10 @@ public class ActivityModel : PageModelBase
     public IReadOnlyList<string> AvailableModels { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public ActivityModel(BillingClient billingClient, AuthClient authClient)
+    public ActivityModel(BillingProvider BillingProvider, AuthProvider AuthProvider)
     {
-        _billingClient = billingClient;
-        _authClient = authClient;
+        _billingClient = BillingProvider;
+        _authClient = AuthProvider;
     }
 
     public async Task OnGetAsync()

@@ -6,7 +6,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
 public class NodeProviderLimitsModel(
-    ControlPlaneClient controlPlaneClient,
+    ControlPlaneProvider ControlPlaneProvider,
     ILogger<NodeProviderLimitsModel> logger) : PageModelBase
 {
     public string NodeId { get; private set; } = string.Empty;
@@ -19,7 +19,7 @@ public class NodeProviderLimitsModel(
         NodeId = nodeId;
         try
         {
-            var details = await controlPlaneClient.GetRouterNodeDetailsAsync(nodeId);
+            var details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId);
             NodeName = details.Node.Name;
             Providers = details.Providers.Select(ParseProvider).ToList();
         }

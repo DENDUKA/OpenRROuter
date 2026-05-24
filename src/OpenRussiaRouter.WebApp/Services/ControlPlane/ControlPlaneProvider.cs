@@ -3,9 +3,9 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 
-public sealed class ControlPlaneClient(
+public sealed class ControlPlaneProvider(
     ControlGrpc.RouterControlPlaneClient client,
-    ILogger<ControlPlaneClient> logger)
+    ILogger<ControlPlaneProvider> logger)
 {
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {

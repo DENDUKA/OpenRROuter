@@ -10,7 +10,7 @@ namespace OpenRussiaRouter.WebApp.Pages;
 
 public class LoginModel : PageModelBase
 {
-    private readonly AuthClient _authClient;
+    private readonly AuthProvider _authClient;
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
@@ -20,7 +20,7 @@ public class LoginModel : PageModelBase
 
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(AuthClient authClient) => _authClient = authClient;
+    public LoginModel(AuthProvider AuthProvider) => _authClient = AuthProvider;
 
     public IActionResult OnGet(string? returnUrl = null)
     {

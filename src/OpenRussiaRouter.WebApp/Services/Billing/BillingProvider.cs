@@ -4,7 +4,7 @@ using BillingTokenUsage = OpenRussiaRouter.Contracts.Grpc.Billing.V1.TokenUsage;
 
 namespace OpenRussiaRouter.WebApp.Services.Billing;
 
-public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
+public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
 {
     public async Task<BalanceInfo> GetBalanceAsync(string userId, CancellationToken cancellationToken = default)
     {

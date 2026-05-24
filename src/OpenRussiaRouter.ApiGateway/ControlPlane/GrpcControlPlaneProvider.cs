@@ -6,10 +6,10 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.ApiGateway.ControlPlane;
 
-public sealed class GrpcControlPlaneGatewayClient(
+public sealed class GrpcControlPlaneProvider(
     ControlGrpc.RouterControlPlaneClient controlClient,
-    ILogger<GrpcControlPlaneGatewayClient> logger)
-    : IControlPlaneGatewayClient
+    ILogger<GrpcControlPlaneProvider> logger)
+    : IControlPlaneProvider
 {
 
     public async Task<GatewayRouterLease?> SelectRouterNodeAsync(

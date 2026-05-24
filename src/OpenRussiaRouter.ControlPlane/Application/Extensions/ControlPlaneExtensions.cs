@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application.Services;
-using OpenRussiaRouter.ControlPlane.Infrastructure;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 

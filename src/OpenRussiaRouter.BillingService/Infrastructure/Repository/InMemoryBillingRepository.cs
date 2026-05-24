@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
+using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
-namespace OpenRussiaRouter.BillingService.Application.Services;
+namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
 public sealed class InMemoryBillingRepository : IBillingRepository
 {

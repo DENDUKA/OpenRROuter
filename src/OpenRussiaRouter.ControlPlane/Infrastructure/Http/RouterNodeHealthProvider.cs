@@ -6,7 +6,7 @@ using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Services;
+namespace OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 
 public sealed class RouterNodeHealthProvider(
     HttpClient httpClient,

@@ -1,6 +1,7 @@
 using FluentAssertions;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 

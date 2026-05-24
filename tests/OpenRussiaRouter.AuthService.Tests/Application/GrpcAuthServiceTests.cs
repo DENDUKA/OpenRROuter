@@ -1,6 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Grpc;
+using OpenRussiaRouter.AuthService.Infrastructure.Repository;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;

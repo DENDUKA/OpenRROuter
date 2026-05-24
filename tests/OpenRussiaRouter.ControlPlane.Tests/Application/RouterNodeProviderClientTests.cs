@@ -2,7 +2,7 @@ using System.Net;
 using FluentAssertions;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
-using OpenRussiaRouter.ControlPlane.Infrastructure;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 

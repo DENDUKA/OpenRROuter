@@ -4,10 +4,11 @@ using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Services;
+namespace OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
 
 public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,

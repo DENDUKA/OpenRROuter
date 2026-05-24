@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
+using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
 
-namespace OpenRussiaRouter.AuthService.Application.Services;
+namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
 public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
 {

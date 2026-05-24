@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace OpenRussiaRouter.ControlPlane.Application;
+namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public sealed class RouterLeaseCleanupOptions
 {

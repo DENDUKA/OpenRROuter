@@ -259,7 +259,7 @@ spec:
           protocol: TCP
 
 ---
-# f9router accepts HTTP from any pod in namespace (ClusterIP only, no Ingress).
+# f9router accepts HTTP from any pod in namespace and from ingress-nginx.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -274,6 +274,16 @@ spec:
   ingress:
     - from:
         - podSelector: {}
+      ports:
+        - port: 20128
+          protocol: TCP
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ingress-nginx
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
       ports:
         - port: 20128
           protocol: TCP

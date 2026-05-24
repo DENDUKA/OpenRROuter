@@ -2,31 +2,31 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: orr-dev
 resources:
-  - ../../../base/services
-  - webapp-localhost-ingress.yaml
-  - api-gateway-localhost-ingress.yaml
-  - f9router-localhost-ingress.yaml
-  - mock-llm-node.yaml
+- ../../../base/services
+- webapp-localhost-ingress.yaml
+- api-gateway-localhost-ingress.yaml
+- f9router-localhost-ingress.yaml
+- mock-llm-node.yaml
 
 patches:
-  - path: webapp-google-patch.yaml
-  - path: f9router-env-patch.yaml
-  - path: f9router-nodeport.yaml
-  - path: control-plane-env-patch.yaml
-  - path: webapp-env-patch.yaml
+- path: webapp-google-patch.yaml
+- path: f9router-env-patch.yaml
+- path: f9router-nodeport.yaml
+- path: control-plane-env-patch.yaml
+- path: webapp-env-patch.yaml
 commonAnnotations:
-  orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "1"
+  orr.dev/version: dev
 images:
-  - name: ghcr.io/denduka/api-gateway
-    newTag: dev-latest
-  - name: ghcr.io/denduka/auth-service
-    newTag: dev-latest
-  - name: ghcr.io/denduka/billing-service
-    newTag: dev-latest
-  - name: ghcr.io/denduka/control-plane
-    newTag: dev-latest
-  - name: ghcr.io/denduka/webapp
-    newTag: dev-latest
-  - name: ghcr.io/inc64/f9router
-    newTag: dev-latest
+- name: ghcr.io/denduka/api-gateway
+  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+- name: ghcr.io/denduka/auth-service
+  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+- name: ghcr.io/denduka/billing-service
+  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+- name: ghcr.io/denduka/control-plane
+  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+- name: ghcr.io/denduka/webapp
+  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+- name: ghcr.io/inc64/f9router
+  newTag: dev-latest

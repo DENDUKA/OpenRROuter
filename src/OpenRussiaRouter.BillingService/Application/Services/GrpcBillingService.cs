@@ -36,13 +36,25 @@ public sealed class GrpcBillingService(
         ListPublicModelsRequest request,
         ServerCallContext context)
     {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var publicModels = await billing.ListPublicModelsAsync(ct).ConfigureAwait(false);
+        var pricesByModelId = (await billing.ListAllModelsAsync(ct).ConfigureAwait(false))
+            .ToDictionary(model => model.ModelId, StringComparer.Ordinal);
+
         var response = new ListPublicModelsResponse();
         response.Models.AddRange(
-            (await billing.ListPublicModelsAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
-            .Select(model => new Contracts.Grpc.Billing.V1.PublicModel
+            publicModels.Select(model =>
             {
-                Id = model.Id,
-                DisplayName = model.DisplayName
+                pricesByModelId.TryGetValue(model.Id, out var price);
+
+                return new Contracts.Grpc.Billing.V1.PublicModel
+                {
+                    Id = model.Id,
+                    DisplayName = model.DisplayName,
+                    UpstreamModelId = price?.RouterModelId ?? string.Empty,
+                    InputPricePer1MRub = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    OutputPricePer1MRub = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty
+                };
             }));
         return response;
     }

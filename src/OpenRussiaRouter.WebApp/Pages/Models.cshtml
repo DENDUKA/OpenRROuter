@@ -31,7 +31,7 @@
                 <div class="toolbar-label">All models</div>
                 <div class="toolbar-count" id="model-count">@Model.Models.Count model@(Model.Models.Count == 1 ? "" : "s") available</div>
             </div>
-            <div class="toolbar-note">OpenAI-compatible API</div>
+            <div class="toolbar-note">Prices in RUB per 1M tokens</div>
         </div>
 
         @if (Model.ErrorMessage != null)
@@ -54,23 +54,24 @@
                     <thead>
                         <tr>
                             <th scope="col">Model</th>
-                            <th scope="col">Provider</th>
-                            <th scope="col">Capability</th>
-                            <th scope="col">Status</th>
+                            <th scope="col">Upstream</th>
+                            <th scope="col">Providers</th>
+                            <th scope="col">Type</th>
+                            <th scope="col" class="num">Input</th>
+                            <th scope="col" class="num">Output</th>
                             <th scope="col" class="num">Context</th>
+                            <th scope="col">Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var m in Model.Models)
                         {
-                            var provider = ModelsModel.GetProvider(m);
-                            var capability = ModelsModel.GetCapability(m);
                             var initials = ModelsModel.GetInitials(m.DisplayName);
                             var detailUrl = m.Id.Contains('/')
                                 ? $"/models/{m.Id}"
                                 : $"/models/model/{Uri.EscapeDataString(m.Id)}";
                             <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
-                                data-provider="@provider.ToLower()" data-capability="@capability.ToLower()"
+                                data-provider="@m.Provider.ToLower()" data-capability="@m.Capability.ToLower()"
                                 onclick="location.href='@detailUrl'" tabindex="0" role="link"
                                 onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                 <td>
@@ -82,10 +83,13 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td>@provider</td>
-                                <td><span class="badge">@capability</span></td>
+                                <td><code class="model-slug">@m.UpstreamModelId</code></td>
+                                <td>@m.Provider</td>
+                                <td><span class="badge">@m.Capability</span></td>
+                                <td class="num">@ModelsModel.FormatPrice(m.InputPrice)</td>
+                                <td class="num">@ModelsModel.FormatPrice(m.OutputPrice)</td>
+                                <td class="num">@m.Context</td>
                                 <td><span class="badge badge-success">Available</span></td>
-                                <td class="num">128K</td>
                             </tr>
                         }
                     </tbody>
@@ -145,8 +149,10 @@
             const name = row.dataset.name || '';
             const id = row.dataset.id || '';
             const provider = row.dataset.provider || '';
+            const capability = row.dataset.capability || '';
             const textMatch = !q || name.includes(q) || id.includes(q);
             const catMatch = activeCategory === 'All' || provider.includes(activeCategory.toLowerCase())
+                || capability.includes(activeCategory.toLowerCase())
                 || name.includes(activeCategory.toLowerCase()) || id.includes(activeCategory.toLowerCase());
             const show = textMatch && catMatch;
             row.style.display = show ? '' : 'none';

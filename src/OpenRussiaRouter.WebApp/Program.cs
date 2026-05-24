@@ -18,6 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSeqLogging("webapp");
 
 builder.Services.AddRazorPages();
+builder.Services.AddMemoryCache();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

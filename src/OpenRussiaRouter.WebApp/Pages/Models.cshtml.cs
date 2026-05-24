@@ -1,42 +1,47 @@
+using Microsoft.Extensions.Caching.Memory;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
-public class ModelsModel : PageModelBase
+public class ModelsModel(
+    BillingClient billingClient,
+    ControlPlaneClient controlPlaneClient,
+    IMemoryCache memoryCache) : PageModelBase
 {
-    private readonly BillingClient _billingClient;
+    private const string CatalogCacheKey = "public-models-node-catalog";
 
-    public IReadOnlyList<ModelInfo> Models { get; set; } = [];
-    public string? ErrorMessage { get; set; }
+    public IReadOnlyList<PublicModelRow> Models { get; private set; } = [];
+    public string? ErrorMessage { get; private set; }
+    public bool CatalogMetadataUnavailable { get; private set; }
 
-    public static readonly string[] Categories = ["All", "OpenAI", "Anthropic", "Google", "Meta", "Coding"];
-
-    public ModelsModel(BillingClient billingClient) => _billingClient = billingClient;
+    public static readonly string[] Categories = ["All", "OpenAI", "Anthropic", "Google", "Meta", "Text", "Vision", "Coding"];
 
     public async Task OnGetAsync()
     {
-        try { Models = await _billingClient.ListPublicModelsAsync(); }
-        catch (Exception ex) { ErrorMessage = ex.Message; }
-    }
+        try
+        {
+            var billingModels = await billingClient.ListPublicModelsAsync(HttpContext.RequestAborted);
+            var catalog = await GetCachedCatalogAsync(HttpContext.RequestAborted);
+            CatalogMetadataUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
 
-    public static string GetProvider(ModelInfo model)
-    {
-        var text = $"{model.Id} {model.DisplayName}";
-        if (text.Contains("claude", StringComparison.OrdinalIgnoreCase) || text.Contains("anthropic", StringComparison.OrdinalIgnoreCase)) return "Anthropic";
-        if (text.Contains("gpt", StringComparison.OrdinalIgnoreCase) || text.Contains("openai", StringComparison.OrdinalIgnoreCase)) return "OpenAI";
-        if (text.Contains("gemini", StringComparison.OrdinalIgnoreCase) || text.Contains("google", StringComparison.OrdinalIgnoreCase)) return "Google";
-        if (text.Contains("llama", StringComparison.OrdinalIgnoreCase) || text.Contains("meta", StringComparison.OrdinalIgnoreCase)) return "Meta";
-        if (model.Id.Contains('/', StringComparison.Ordinal)) return model.Id.Split('/')[0];
-        return "Model";
-    }
+            var catalogByUpstream = catalog.Entries
+                .Where(e => !string.IsNullOrWhiteSpace(e.UpstreamId))
+                .GroupBy(e => e.UpstreamId, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
-    public static string GetCapability(ModelInfo model)
-    {
-        var text = $"{model.Id} {model.DisplayName}";
-        if (text.Contains("vision", StringComparison.OrdinalIgnoreCase)) return "Vision";
-        if (text.Contains("code", StringComparison.OrdinalIgnoreCase) || text.Contains("coder", StringComparison.OrdinalIgnoreCase)) return "Coding";
-        if (text.Contains("reason", StringComparison.OrdinalIgnoreCase) || text.Contains("thinking", StringComparison.OrdinalIgnoreCase)) return "Reasoning";
-        return "Text generation";
+            Models = billingModels
+                .Select(model =>
+                {
+                    catalogByUpstream.TryGetValue(model.UpstreamModelId, out var catalogEntry);
+                    return MapModel(model, catalogEntry);
+                })
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
     }
 
     public static string GetInitials(string name)
@@ -45,4 +50,62 @@ public class ModelsModel : PageModelBase
         if (parts.Length == 0) return "AI";
         return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
     }
+
+    public static string FormatPrice(decimal price) =>
+        $"{price:0.##} RUB / 1M";
+
+    private async Task<NodeModelCatalogResult> GetCachedCatalogAsync(CancellationToken cancellationToken)
+    {
+        return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            return await controlPlaneClient.ListNodeModelCatalogAsync(cancellationToken);
+        }) ?? new NodeModelCatalogResult([], [], "Cached catalog is empty.");
+    }
+
+    private static PublicModelRow MapModel(ModelInfo model, NodeModelCatalogEntry? catalogEntry)
+    {
+        var sourceProviders = catalogEntry?.SourceProviders
+            .Where(p => !string.IsNullOrWhiteSpace(p))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList() ?? [];
+
+        var provider = sourceProviders.Count == 0
+            ? "Unknown"
+            : string.Join(", ", sourceProviders);
+        var capability = string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
+            ? "Unknown"
+            : ToTitle(catalogEntry.ModelType);
+
+        return new PublicModelRow(
+            model.Id,
+            model.DisplayName,
+            model.UpstreamModelId,
+            model.InputPrice,
+            model.OutputPrice,
+            provider,
+            capability,
+            "Unknown");
+    }
+
+    private static string ToTitle(string value)
+    {
+        var parts = value.Replace('-', ' ').Replace('_', ' ')
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        return parts.Length == 0
+            ? "Unknown"
+            : string.Join(' ', parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+    }
+
+    public sealed record PublicModelRow(
+        string Id,
+        string DisplayName,
+        string UpstreamModelId,
+        decimal InputPrice,
+        decimal OutputPrice,
+        string Provider,
+        string Capability,
+        string Context);
 }

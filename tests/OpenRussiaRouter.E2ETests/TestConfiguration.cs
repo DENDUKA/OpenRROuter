@@ -17,6 +17,14 @@ static class TestConfiguration
 
     public static bool IsConfigured => UserEmail is not null && UserPassword is not null;
 
+    /// <summary>
+    /// Address (host or IP) the ControlPlane process can reach to connect to the E2E stub server.
+    /// Defaults to "localhost" for local dev. In Docker/K8s set to "host.docker.internal" or
+    /// the appropriate container network alias via ORR_E2E_STUB_ADDRESS.
+    /// </summary>
+    public static string StubAddress =>
+        Env("ORR_E2E_STUB_ADDRESS") ?? _local.Value?.StubAddress ?? "localhost";
+
     private static string? Env(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;
 
@@ -38,5 +46,6 @@ static class TestConfiguration
         public string? BaseUrl { get; init; }
         public string? UserEmail { get; init; }
         public string? UserPassword { get; init; }
+        public string? StubAddress { get; init; }
     }
 }

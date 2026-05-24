@@ -175,7 +175,15 @@ public sealed class BillingClient(BillingGrpc.BillingServiceClient client)
     public async Task<IReadOnlyList<ModelInfo>> ListPublicModelsAsync(CancellationToken cancellationToken = default)
     {
         var response = await client.ListPublicModelsAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListPublicModelsRequest(), cancellationToken: cancellationToken);
-        return response.Models.Select(m => new ModelInfo(m.Id, m.DisplayName, "", "", 0m, 0m, 0m, true)).ToList();
+        return response.Models.Select(m => new ModelInfo(
+            m.Id,
+            m.DisplayName,
+            m.UpstreamModelId,
+            "",
+            string.IsNullOrEmpty(m.InputPricePer1MRub) ? 0m : decimal.Parse(m.InputPricePer1MRub, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(m.OutputPricePer1MRub) ? 0m : decimal.Parse(m.OutputPricePer1MRub, CultureInfo.InvariantCulture),
+            0m,
+            true)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)

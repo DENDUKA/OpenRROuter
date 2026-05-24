@@ -67,6 +67,9 @@ message ListPublicModelsRequest {
 message PublicModel {
   string id = 1;
   string display_name = 2;
+  string upstream_model_id = 3;
+  string input_price_per_1m_rub = 4;
+  string output_price_per_1m_rub = 5;
 }
 
 message ListPublicModelsResponse {

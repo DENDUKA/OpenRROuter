@@ -93,6 +93,7 @@ public sealed class RouterNode
         }
     }
 
+    // HTTP is allowed for internal cluster services (e.g. k8s ClusterIP endpoints).
     private static Uri ValidateEndpoint(Uri endpointUrl)
     {
         ArgumentNullException.ThrowIfNull(endpointUrl);

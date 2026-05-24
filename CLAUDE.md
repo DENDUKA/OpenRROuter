@@ -136,20 +136,17 @@ Current migration counts: auth (4), billing (5), control (3).
 
 #### 1. Токен ноды (Control Token)
 
-Задаётся в настройках ноды при регистрации (поле **Control Token Secret** в Admin → Nodes).
+Задаётся в настройках ноды при регистрации (поле **Control Token** в Admin → Nodes).
 
 - Это `ROUTER_CONTROL_TOKEN` из конфига 9Router
 - Используется ControlPlane для аутентификации к admin API 9Router (`/api/integrations/*`)
 - Позволяет пушить/отзывать пользовательские ключи на ноду
-- Хранится в `control.router_nodes.token_secret_name` как **имя секрета**
-- Реальное значение резолвится из конфига ControlPlane: `RouterHealthChecks:NodeTokens:{tokenSecretName}`
-- В Kubernetes задаётся вручную на кластере — каждая нода имеет свой токен:
-  ```bash
-  kubectl set env deployment/control-plane \
-    "RouterHealthChecks__NodeTokens__{tokenSecretName}={tokenValue}" \
-    -n orr-dev
-  ```
-  Не хранится в репозитории.
+- Хранится в `control.router_nodes.control_token` как **фактическое значение токена** (не имя секрета)
+- `RouterNodeProvider` отправляет его напрямую как `Authorization: Bearer <control_token>` — никакого разрешения через config нет
+- В k8s задаётся через `f9router-secret` (поле `ROUTER_CONTROL_TOKEN`), значение вводится вручную при регистрации ноды
+- **Не хранится в репозитории** — только в k8s Secret и в БД ControlPlane
+
+> **Важно**: В CLAUDE.md ранее было описано, что control_token хранит «имя секрета» и резолвится через `RouterHealthChecks:NodeTokens`. Это **неверно** — в коде `RouterNodeProvider.cs` нет такой логики. Поле `control_token` хранит сам токен.
 
 #### 2. Пользовательские API-ключи
 
@@ -161,6 +158,112 @@ Current migration counts: auth (4), billing (5), control (3).
 - При создании пушится на все активные ноды через ControlPlane → `POST /api/integrations/keys`; при отзыве деактивируется через `PATCH /api/integrations/keys/{id}/status`. Маппинг `(api_key_id, node_id, router_key_id)` хранится в `control.integration_key_sync`.
 - Используются для аутентификации при вызове LLM-моделей через 9Router proxy
 - Видны в дашборде 9Router (`/dashboard/endpoint`)
+
+### Регистрация новой ноды 9Router в Kubernetes
+
+Полная пошаговая процедура. Применима при первоначальной настройке кластера или добавлении новой ноды.
+
+#### Предварительные условия
+
+- Кластер `kind` поднят, ArgoCD синхронизирован.
+- f9router pod запущен (`kubectl get pods -n orr-dev -l app=f9router`).
+- Есть доступ к `http://localhost/admin/nodes` (admin@example.com / StrongPassword123!).
+
+#### 1. Создать / обновить f9router-secret
+
+```powershell
+# Сгенерировать токен (40 символов)
+$ct = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 40 | % { [char]$_ })
+
+kubectl create secret generic f9router-secret -n orr-dev `
+  --from-literal=ROUTER_CONTROL_TOKEN="$ct" `
+  --from-literal=OPENROUTER_API_KEY="sk-or-v2-..." `
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# Перезапустить pod, чтобы подхватил новый секрет
+kubectl rollout restart deployment/f9router -n orr-dev
+kubectl rollout status deployment/f9router -n orr-dev
+```
+
+#### 2. Определить endpoint URL
+
+Для постоянной регистрации — k8s Service DNS:
+```
+http://f9router/
+```
+Service `f9router` слушает `:80` → проксирует на `containerPort 20128`.
+
+Для разовой отладки — pod IP:
+```powershell
+kubectl get pod -n orr-dev -l app=f9router -o jsonpath='{.items[0].status.podIP}'
+# → http://<pod-ip>:20128/
+```
+
+#### 3. Зарегистрировать ноду в Admin UI
+
+`http://localhost/admin/nodes` → **Add Node**:
+- **Endpoint URL**: `http://f9router/`
+- **Control Token**: значение `$ct` из шага 1 (сам токен, не алиас)
+
+После добавления нода должна стать `Healthy` за 30–60 сек — ControlPlane проверяет `GET /api/health` (без авторизации, HTTP 200).
+
+#### 4. Убедиться, что HealthPath = `/api/health`
+
+Базовый дефолт в `infra/kustomize/base/services/control-plane.yaml` — `/v1/models` (требует auth, 401).
+Dev overlay патч `infra/kustomize/overlays/dev/services/control-plane-env-patch.yaml` переопределяет на `/api/health`.
+Если нода не становится Healthy — проверить:
+
+```powershell
+kubectl get deployment -n orr-dev control-plane `
+  -o jsonpath='{.spec.template.spec.containers[0].env}' `
+  | ConvertFrom-Json | Where-Object name -eq RouterHealthChecks__HealthPath
+# Должно быть: /api/health
+```
+
+#### 5. Настроить маппинг токенов для WebApp
+
+WebApp запрашивает `/v1/models` у ноды, используя `sk-or-*` ключ (f9router требует его для запросов с IP, отличных от 127.0.0.1).
+
+Маппинг: `RouterNodeTokens:{controlToken}` → `sk-or-*` API ключ.
+
+Добавить в `infra/kustomize/overlays/dev/services/webapp-env-patch.yaml`:
+
+```yaml
+env:
+  - name: RouterNodeTokens__<ЗНАЧЕНИЕ_CONTROL_TOKEN>
+    value: "sk-or-<активный-api-ключ>"
+```
+
+Пример:
+```yaml
+- name: RouterNodeTokens__GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM
+  value: "sk-or-SEAiRlwrPc0KVJoOCwYB1DmMfn_lQfDfj7qWZ5vHcaCg4EQC"
+```
+
+**Обязательно закоммитить и запушить** — ArgoCD (`selfHeal: true`) откатит `kubectl set env`.
+
+#### 6. Пушнуть API ключ на ноду вручную (если нужно)
+
+Ключ автоматически пушится на ноды при создании в WebApp. Если нода добавлена позже — пуш вручную:
+
+```powershell
+# Из pod control-plane (имеет доступ в кластер)
+kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
+  --header="Authorization: Bearer <CONTROL_TOKEN>" `
+  --header="Content-Type: application/json" `
+  --post-data='{"key":"sk-or-<key>","name":"admin-seed"}' `
+  http://f9router/api/integrations/keys
+# Ожидаемый ответ: HTTP 201 + JSON с router_key_id
+```
+
+#### Ключевые заблуждения (не повторять)
+
+| Неверно | Верно |
+|---|---|
+| `control_token` в БД = имя секрета | `control_token` = реальное значение токена |
+| `RouterHealthChecks:NodeTokens:{name}` резолвит токен | Такой логики в коде нет — `RouterNodeProvider` использует `node.ControlToken` напрямую |
+| `kubectl set env` — безопасный способ настройки | ArgoCD откатит через ~1–2 мин; менять только через kustomize + git |
+| HealthPath `/v1/models` работает | 401 от f9router; нужно `/api/health` |
 
 ## Current Status (MVP completeness)
 

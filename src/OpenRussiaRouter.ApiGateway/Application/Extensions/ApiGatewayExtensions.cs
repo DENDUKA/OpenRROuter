@@ -45,7 +45,7 @@ public static class ApiGatewayExtensions
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
         });
-        services.AddScoped<IApiKeyAuthenticator, GrpcApiKeyAuthenticator>();
+        services.AddScoped<IApiKeyProvider, GrpcApiKeyProvider>();
 
         var billingGrpcUrl = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
         services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
@@ -61,7 +61,7 @@ public static class ApiGatewayExtensions
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
         });
-        services.AddScoped<IBillingGatewayClient, GrpcBillingGatewayClient>();
+        services.AddScoped<IBillingProvider, GrpcBillingProvider>();
 
         var controlPlaneGrpcUrl = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
         services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
@@ -77,7 +77,7 @@ public static class ApiGatewayExtensions
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
         });
-        services.AddScoped<IControlPlaneGatewayClient, GrpcControlPlaneGatewayClient>();
+        services.AddScoped<IControlPlaneProvider, GrpcControlPlaneProvider>();
 
         return services;
     }
@@ -85,7 +85,7 @@ public static class ApiGatewayExtensions
     public static IServiceCollection AddGatewayRouter(this IServiceCollection services)
     {
         services.AddReverseProxy();
-        services.AddScoped<IRouterProxyClient, YarpRouterProxyClient>();
+        services.AddScoped<IRouterProxyProvider, YarpRouterProxyProvider>();
 
         return services;
     }

@@ -2,13 +2,13 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
-public sealed class HttpRouterNodeHealthClientTests
+public sealed class RouterNodeHealthProviderTests
 {
     [Fact]
     public async Task CheckAsync_ConfiguredToken_SendsTokenAndParsesStatus()
@@ -40,7 +40,7 @@ public sealed class HttpRouterNodeHealthClientTests
         result.ErrorCode.Should().Be("http_503");
     }
 
-    private static HttpRouterNodeHealthClient CreateClient(HttpMessageHandler handler)
+    private static RouterNodeHealthProvider CreateClient(HttpMessageHandler handler)
     {
         var options = TestOptionsMonitor.Create(new RouterHealthCheckOptions
         {
@@ -48,7 +48,7 @@ public sealed class HttpRouterNodeHealthClientTests
             NodeTokenHeader = "X-ORR-Node-Token",
             Timeout = TimeSpan.FromSeconds(5)
         });
-        return new HttpRouterNodeHealthClient(new HttpClient(handler), options);
+        return new RouterNodeHealthProvider(new HttpClient(handler), options);
     }
 
     private static RouterNode CreateNode(string controlToken = "secret-a")

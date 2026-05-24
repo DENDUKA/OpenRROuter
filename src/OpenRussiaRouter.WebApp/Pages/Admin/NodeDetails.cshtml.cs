@@ -5,7 +5,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
 public class NodeDetailsModel(
-    ControlPlaneClient controlPlaneClient,
+    ControlPlaneProvider ControlPlaneProvider,
     ILogger<NodeDetailsModel> logger) : PageModelBase
 {
     public RouterNodeDetails? Details { get; private set; }
@@ -16,7 +16,7 @@ public class NodeDetailsModel(
     {
         try
         {
-            Details = await controlPlaneClient.GetRouterNodeDetailsAsync(nodeId);
+            Details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId);
         }
         catch (Exception ex)
         {

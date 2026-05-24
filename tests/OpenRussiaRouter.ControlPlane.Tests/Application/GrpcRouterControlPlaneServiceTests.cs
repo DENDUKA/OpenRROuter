@@ -6,13 +6,15 @@ using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
 public sealed class GrpcRouterControlPlaneServiceTests
 {
-    private static readonly IRouterNodeProviderClient NoOpProviderClient = new NoOpRouterNodeProviderClient();
+    private static readonly IRouterNodeProvider NoOpProviderClient = new NoOpRouterNodeProvider();
 
     [Fact]
     public async Task SelectRouterNode_HealthyNode_ReturnsLease()
@@ -121,21 +123,40 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
-    public async Task RegisterRouterNode_InvalidEndpoint_ReturnsValidationFailed()
+    public async Task RegisterRouterNode_InvalidScheme_ReturnsValidationFailed()
     {
+        // ftp:// is not a valid scheme; http:// and https:// are both allowed
         var repo = new InMemoryControlPlaneRepository();
         var service = CreateService(new RouterControlPlaneService(repo), repo);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
             Name = "node-a",
-            EndpointUrl = "http://router-a.example",
+            EndpointUrl = "ftp://router-a.example",
             ControlToken = "secret-a",
             CapacityWeight = 1
         }, context: null!);
 
         response.Registered.Should().BeFalse();
         response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task RegisterRouterNode_HttpEndpoint_Succeeds()
+    {
+        // HTTP endpoints are allowed for internal k8s services
+        var repo = new InMemoryControlPlaneRepository();
+        var service = CreateService(new RouterControlPlaneService(repo), repo);
+
+        var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
+        {
+            Name = "node-k8s",
+            EndpointUrl = "http://f9router",
+            ControlToken = "secret-a",
+            CapacityWeight = 1
+        }, context: null!);
+
+        response.Registered.Should().BeTrue();
     }
 
     [Fact]
@@ -693,7 +714,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public NodeModelsResponse Build() => new() { Data = _models };
     }
 
-    private sealed class CatalogProviderStub : IRouterNodeProviderClient
+    private sealed class CatalogProviderStub : IRouterNodeProvider
     {
         public Dictionary<string, Func<CancellationToken, Task<RouterProviderQuotaResponse>>> QuotaByNode { get; } = new();
         public Dictionary<(string nodeId, string provider), Func<CancellationToken, Task<RouterProviderModelsResponse>>> ProviderModelsByKey { get; } = new();
@@ -780,7 +801,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private static GrpcRouterControlPlaneService CreateService(
         RouterControlPlaneService control,
         IControlPlaneRepository? repo = null,
-        IRouterNodeProviderClient? providerClient = null)
+        IRouterNodeProvider? providerClient = null)
     {
         return new GrpcRouterControlPlaneService(
             control,
@@ -802,7 +823,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         return control;
     }
 
-    private sealed class NoOpRouterNodeProviderClient : IRouterNodeProviderClient
+    private sealed class NoOpRouterNodeProvider : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,
@@ -855,7 +876,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             Task.FromResult(new RouterProviderListResponse());
     }
 
-    private sealed class ThrowingProviderClient : IRouterNodeProviderClient
+    private sealed class ThrowingProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
@@ -890,7 +911,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
     }
 
-    private sealed class StubProviderClient : IRouterNodeProviderClient
+    private sealed class StubProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,

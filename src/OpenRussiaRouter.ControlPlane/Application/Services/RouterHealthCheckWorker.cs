@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public sealed class RouterHealthCheckWorker(
     RouterControlPlaneService controlPlane,
-    IRouterNodeHealthClient healthClient,
+    IRouterNodeHealthProvider healthClient,
     IOptionsMonitor<RouterHealthCheckOptions> options,
     ILogger<RouterHealthCheckWorker> logger)
     : BackgroundService

@@ -2,7 +2,7 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-public interface IRouterNodeProviderClient
+public interface IRouterNodeProvider
 {
     Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
         RouterNode node,

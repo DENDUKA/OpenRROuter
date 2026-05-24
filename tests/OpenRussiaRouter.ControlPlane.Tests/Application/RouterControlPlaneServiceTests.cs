@@ -1,18 +1,31 @@
 using FluentAssertions;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
 public sealed class RouterControlPlaneServiceTests
 {
     [Fact]
-    public async Task RegisterNode_HttpEndpoint_Throws()
+    public async Task RegisterNode_HttpEndpoint_Succeeds()
+    {
+        // HTTP endpoints are allowed (e.g. internal k8s services)
+        var service = CreateService();
+
+        var node = await service.RegisterNodeAsync("node-a", new Uri("http://router.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+
+        node.Should().NotBeNull();
+        node.EndpointUrl.Should().Be(new Uri("http://router.example"));
+    }
+
+    [Fact]
+    public async Task RegisterNode_InvalidSchemeEndpoint_Throws()
     {
         var service = CreateService();
 
         await ((Func<Task>)(() =>
-            service.RegisterNodeAsync("node-a", new Uri("http://router.example"), "secret-a", 1, DateTimeOffset.UtcNow))).Should().ThrowAsync<ArgumentException>();
+            service.RegisterNodeAsync("node-a", new Uri("ftp://router.example"), "secret-a", 1, DateTimeOffset.UtcNow))).Should().ThrowAsync<ArgumentException>();
     }
 
     [Fact]

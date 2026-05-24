@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-plane
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: control-plane
+          env:
+            - name: RouterHealthChecks__HealthPath
+              value: "/api/health"

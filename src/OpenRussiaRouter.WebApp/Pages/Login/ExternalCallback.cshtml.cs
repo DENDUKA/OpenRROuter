@@ -7,7 +7,7 @@ using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages.Login;
 
-public sealed class ExternalCallbackModel(AuthClient authClient) : PageModel
+public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
 {
     public async Task<IActionResult> OnGetAsync()
     {
@@ -21,7 +21,7 @@ public sealed class ExternalCallbackModel(AuthClient authClient) : PageModel
         if (googleSub is null || email is null)
             return RedirectToPage("/Login");
 
-        var loginResult = await authClient.LoginOrRegisterWithGoogleAsync(googleSub, email);
+        var loginResult = await AuthProvider.LoginOrRegisterWithGoogleAsync(googleSub, email);
         if (loginResult is null)
             return RedirectToPage("/Login");
 

@@ -3,7 +3,7 @@ using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.WebApp.Services.Auth;
 
-public sealed class AuthClient(AuthGrpc.AuthServiceClient client)
+public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
 {
     public async Task<LoginResponse> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {

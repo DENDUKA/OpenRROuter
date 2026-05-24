@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application.Services;
-using OpenRussiaRouter.ControlPlane.Infrastructure;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
@@ -29,8 +29,8 @@ public static class ControlPlaneExtensions
     public static IServiceCollection AddControlPlaneApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<RouterControlPlaneService>();
-        services.AddHttpClient<IRouterNodeHealthClient, HttpRouterNodeHealthClient>();
-        services.AddHttpClient<IRouterNodeProviderClient, RouterNodeProviderClient>();
+        services.AddHttpClient<IRouterNodeHealthProvider, RouterNodeHealthProvider>();
+        services.AddHttpClient<IRouterNodeProvider, RouterNodeProvider>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
 

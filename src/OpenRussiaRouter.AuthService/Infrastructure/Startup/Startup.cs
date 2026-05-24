@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.AuthService.Application.Extensions;
-using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Health;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 

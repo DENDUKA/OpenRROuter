@@ -1,6 +1,6 @@
 namespace OpenRussiaRouter.ApiGateway.ControlPlane;
 
-public interface IControlPlaneGatewayClient
+public interface IControlPlaneProvider
 {
 
     Task<GatewayRouterLease?> SelectRouterNodeAsync(

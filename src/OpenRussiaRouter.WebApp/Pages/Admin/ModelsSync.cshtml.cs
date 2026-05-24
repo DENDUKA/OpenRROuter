@@ -8,8 +8,8 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
 public class ModelsSyncModel(
-    BillingClient billingClient,
-    ControlPlaneClient controlPlaneClient,
+    BillingProvider BillingProvider,
+    ControlPlaneProvider ControlPlaneProvider,
     ILogger<ModelsSyncModel> logger) : PageModelBase
 {
     public IReadOnlyList<NodeModelCatalogEntry> NewOnNodes { get; private set; } = [];
@@ -39,7 +39,7 @@ public class ModelsSyncModel(
             .ToHashSet(StringComparer.Ordinal);
         Form.Prefix = Form.Prefix?.Trim() ?? string.Empty;
 
-        var catalog = await controlPlaneClient.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+        var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         if (!string.IsNullOrWhiteSpace(catalog.Error))
         {
             ErrorMessage = $"Catalog unavailable — import cancelled: {catalog.Error}";
@@ -50,7 +50,7 @@ public class ModelsSyncModel(
         IReadOnlyList<ModelInfo> billingModels;
         try
         {
-            billingModels = await billingClient.ListModelsAsync(HttpContext.RequestAborted);
+            billingModels = await BillingProvider.ListModelsAsync(HttpContext.RequestAborted);
         }
         catch (Exception ex)
         {
@@ -112,7 +112,7 @@ public class ModelsSyncModel(
 
             try
             {
-                await billingClient.UpsertModelAsync(model, HttpContext.RequestAborted);
+                await BillingProvider.UpsertModelAsync(model, HttpContext.RequestAborted);
                 byBillingId[model.Id] = model;
                 byUpstream[model.UpstreamModelId] = model;
                 imported++;
@@ -140,7 +140,7 @@ public class ModelsSyncModel(
 
         if (preloadedCatalog is null)
         {
-            catalog = await controlPlaneClient.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+            catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         }
         else
         {
@@ -149,7 +149,7 @@ public class ModelsSyncModel(
 
         try
         {
-            billingModels = await billingClient.ListModelsAsync(HttpContext.RequestAborted);
+            billingModels = await BillingProvider.ListModelsAsync(HttpContext.RequestAborted);
         }
         catch (Exception ex)
         {

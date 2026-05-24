@@ -93,13 +93,16 @@ public sealed class RouterNode
         }
     }
 
+    // HTTP is allowed for internal cluster services (e.g. k8s ClusterIP endpoints).
     private static Uri ValidateEndpoint(Uri endpointUrl)
     {
         ArgumentNullException.ThrowIfNull(endpointUrl);
         var scheme = endpointUrl.Scheme;
-        if (!string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        var isHttps = string.Equals(scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+        var isHttp = string.Equals(scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase);
+        if (!isHttps && !isHttp)
         {
-            throw new ArgumentException("Router node endpoint must use HTTPS.", nameof(endpointUrl));
+            throw new ArgumentException("Router node endpoint must use HTTP or HTTPS.", nameof(endpointUrl));
         }
 
         return endpointUrl;

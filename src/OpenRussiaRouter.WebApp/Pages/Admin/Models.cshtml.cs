@@ -9,8 +9,8 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class ModelsModel : PageModelBase
 {
-    private readonly BillingClient _billingClient;
-    private readonly ControlPlaneClient _controlPlaneClient;
+    private readonly BillingProvider _billingClient;
+    private readonly ControlPlaneProvider _controlPlaneClient;
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
@@ -25,10 +25,10 @@ public class ModelsModel : PageModelBase
 
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
-    public ModelsModel(BillingClient billingClient, ControlPlaneClient controlPlaneClient)
+    public ModelsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider)
     {
-        _billingClient = billingClient;
-        _controlPlaneClient = controlPlaneClient;
+        _billingClient = BillingProvider;
+        _controlPlaneClient = ControlPlaneProvider;
     }
 
     public async Task OnGetAsync()

@@ -3,10 +3,10 @@ using System.Text.Json;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
-namespace OpenRussiaRouter.ControlPlane.Infrastructure;
+namespace OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 
-public sealed class RouterNodeProviderClient(HttpClient httpClient)
-    : IRouterNodeProviderClient
+public sealed class RouterNodeProvider(HttpClient httpClient)
+    : IRouterNodeProvider
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

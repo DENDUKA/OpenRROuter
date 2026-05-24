@@ -2,8 +2,9 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
@@ -48,7 +49,7 @@ public sealed class RouterHealthCheckWorkerTests
         summary.Status.Should().Be(RouterNodeStatus.Disabled);
     }
 
-    private sealed class StubHealthClient(RouterNodeHealthResult result) : IRouterNodeHealthClient
+    private sealed class StubHealthClient(RouterNodeHealthResult result) : IRouterNodeHealthProvider
     {
         public Task<RouterNodeHealthResult> CheckAsync(RouterNode node, CancellationToken cancellationToken)
         {
@@ -56,7 +57,7 @@ public sealed class RouterHealthCheckWorkerTests
         }
     }
 
-    private sealed class CountingHealthClient : IRouterNodeHealthClient
+    private sealed class CountingHealthClient : IRouterNodeHealthProvider
     {
         public int CallCount { get; private set; }
 

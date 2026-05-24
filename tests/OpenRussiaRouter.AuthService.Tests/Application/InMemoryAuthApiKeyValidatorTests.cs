@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Infrastructure.Repository;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 

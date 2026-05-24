@@ -1,6 +1,7 @@
 using System.Globalization;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -9,7 +10,7 @@ using OpenRussiaRouter.Contracts.Billing;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
-namespace OpenRussiaRouter.BillingService.Application.Services;
+namespace OpenRussiaRouter.BillingService.Infrastructure.Grpc;
 
 public sealed class GrpcBillingService(
     BillingApplicationService billing,

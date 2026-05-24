@@ -6,7 +6,7 @@ using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
-namespace OpenRussiaRouter.AuthService.Application.Services;
+namespace OpenRussiaRouter.AuthService.Infrastructure.Grpc;
 
 public sealed class GrpcAuthService(
     IAuthApiKeyValidator apiKeyValidator,

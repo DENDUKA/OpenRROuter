@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.BillingService.Application.Extensions;
-using OpenRussiaRouter.BillingService.Application.Services;
+using OpenRussiaRouter.BillingService.Infrastructure.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Startup;

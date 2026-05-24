@@ -1,6 +1,7 @@
+using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 
-namespace OpenRussiaRouter.AuthService.Application.Services;
+namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
 public sealed class InMemoryAuthRepository : IAuthRepository
 {

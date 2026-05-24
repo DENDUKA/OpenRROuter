@@ -5,8 +5,8 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class ModelsModel(
-    BillingClient billingClient,
-    ControlPlaneClient controlPlaneClient,
+    BillingProvider BillingProvider,
+    ControlPlaneProvider ControlPlaneProvider,
     IMemoryCache memoryCache) : PageModelBase
 {
     private const string CatalogCacheKey = "public-models-node-catalog";
@@ -21,7 +21,7 @@ public class ModelsModel(
     {
         try
         {
-            var billingModels = await billingClient.ListPublicModelsAsync(HttpContext.RequestAborted);
+            var billingModels = await BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
             var catalog = await GetCachedCatalogAsync(HttpContext.RequestAborted);
             CatalogMetadataUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
 
@@ -59,7 +59,7 @@ public class ModelsModel(
         return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await controlPlaneClient.ListNodeModelCatalogAsync(cancellationToken);
+            return await ControlPlaneProvider.ListNodeModelCatalogAsync(cancellationToken);
         }) ?? new NodeModelCatalogResult([], [], "Cached catalog is empty.");
     }
 

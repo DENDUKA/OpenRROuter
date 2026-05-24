@@ -9,9 +9,9 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.ApiGateway.Billing;
 
-public sealed class GrpcBillingGatewayClient(
+public sealed class GrpcBillingProvider(
     BillingGrpc.BillingServiceClient billingClient,
-    ILogger<GrpcBillingGatewayClient> logger) : IBillingGatewayClient
+    ILogger<GrpcBillingProvider> logger) : IBillingProvider
 {
 
     public async Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken cancellationToken)

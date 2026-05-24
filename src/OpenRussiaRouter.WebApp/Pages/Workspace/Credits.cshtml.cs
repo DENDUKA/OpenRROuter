@@ -7,13 +7,13 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 [Authorize]
 public class CreditsModel : PageModelBase
 {
-    private readonly BillingClient _billingClient;
+    private readonly BillingProvider _billingClient;
 
     public BalanceInfo? Balance { get; set; }
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public CreditsModel(BillingClient billingClient) => _billingClient = billingClient;
+    public CreditsModel(BillingProvider BillingProvider) => _billingClient = BillingProvider;
 
     public async Task OnGetAsync()
     {

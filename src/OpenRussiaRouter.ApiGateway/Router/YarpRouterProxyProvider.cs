@@ -9,8 +9,8 @@ using Yarp.ReverseProxy.Forwarder;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
 
-public sealed class YarpRouterProxyClient(IHttpForwarder forwarder)
-    : IRouterProxyClient
+public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
+    : IRouterProxyProvider
 {
     private static readonly HttpMessageInvoker ForwardingHttpClient = new(new SocketsHttpHandler
     {

@@ -30,7 +30,9 @@ public static class ControlPlaneExtensions
     {
         services.AddSingleton<RouterControlPlaneService>();
         services.AddHttpClient<IRouterNodeHealthProvider, RouterNodeHealthProvider>();
-        services.AddHttpClient<IRouterNodeProvider, RouterNodeProvider>();
+        services.AddSingleton<RouterNodeProviderCacheStore>();
+        services.AddHttpClient<RouterNodeProvider>();
+        services.AddTransient<IRouterNodeProvider, CachedRouterNodeProvider>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
 

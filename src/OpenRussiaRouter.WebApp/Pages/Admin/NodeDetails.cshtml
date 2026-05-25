@@ -46,14 +46,26 @@
     <div class="adm-card" data-testid="control-token-card">
         <div class="adm-card-header">Update Control Token</div>
         <div class="adm-card-body">
-            <form method="post" asp-page-handler="UpdateControlToken" asp-route-nodeId="@details.Node.NodeId" data-testid="form-update-control-token">
+            @if (Model.AvailabilityCheckResult is { } checkResult)
+            {
+                <div class="alert @(checkResult.Success ? "alert-success" : "alert-danger")" role="status" data-testid="control-token-check-result">
+                    <div><strong>@(checkResult.Success ? "Integration API is reachable." : "Integration API check failed.")</strong></div>
+                    <div><code>@checkResult.RequestLine</code></div>
+                    <pre style="white-space:pre-wrap;word-break:break-word;margin:0.5rem 0 0;font-size:0.85em">@checkResult.ResponseLine</pre>
+                </div>
+            }
+
+            <form method="post" asp-route-nodeId="@details.Node.NodeId" data-testid="form-update-control-token">
                 <div class="form-group">
                     <label asp-for="TokenForm.ControlToken" class="form-label">Control Token</label>
                     <input asp-for="TokenForm.ControlToken" class="form-control" autocomplete="off"
                            data-testid="input-control-token" />
                 </div>
                 <div class="adm-btn-row">
-                    <button type="submit" class="btn btn-primary" data-testid="btn-save-control-token">Save token</button>
+                    <button type="submit" class="btn btn-secondary" asp-page-handler="CheckControlToken"
+                            data-testid="btn-check-control-token">Check availability</button>
+                    <button type="submit" class="btn btn-primary" asp-page-handler="UpdateControlToken"
+                            data-testid="btn-save-control-token">Save token</button>
                 </div>
             </form>
         </div>

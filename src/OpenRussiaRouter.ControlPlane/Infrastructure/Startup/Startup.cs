@@ -20,6 +20,9 @@ public static class Startup
         services.AddOptions<RouterHealthCheckOptions>()
             .Bind(configuration.GetSection("RouterHealthChecks"))
             .ValidateDataAnnotations();
+        services.AddOptions<RouterNodeProviderCacheOptions>()
+            .Bind(configuration.GetSection("RouterNodeProviderCache"))
+            .ValidateDataAnnotations();
         services.AddOptions<RouterLeaseCleanupOptions>()
             .Bind(configuration.GetSection("RouterLeaseCleanup"))
             .ValidateDataAnnotations();

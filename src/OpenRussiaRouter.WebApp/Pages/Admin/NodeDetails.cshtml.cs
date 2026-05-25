@@ -7,11 +7,14 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class NodeDetailsModel(
     ControlPlaneProvider ControlPlaneProvider,
+    RouterNodeApiProvider RouterNodeApiProvider,
     ILogger<NodeDetailsModel> logger) : PageModelBase
 {
     public RouterNodeDetails? Details { get; private set; }
 
     public string? ErrorMessage { get; private set; }
+
+    public RouterNodeAvailabilityCheckResult? AvailabilityCheckResult { get; private set; }
 
     [TempData]
     public string? SuccessMessage { get; set; }
@@ -23,13 +26,46 @@ public class NodeDetailsModel(
     {
         try
         {
-            Details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId);
-            TokenForm.ControlToken = Details.Node.ControlToken;
+            await LoadDetailsAsync(nodeId, populateTokenForm: true);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load router node details. NodeId: {NodeId}", nodeId);
             ErrorMessage = "Failed to load router node details.";
+        }
+    }
+
+    public async Task<IActionResult> OnPostCheckControlTokenAsync(string nodeId)
+    {
+        try
+        {
+            await LoadDetailsAsync(nodeId, populateTokenForm: false);
+            if (Details is null)
+            {
+                ErrorMessage = "Failed to load router node details.";
+                return Page();
+            }
+
+            AvailabilityCheckResult = await RouterNodeApiProvider.CheckIntegrationApiAvailabilityAsync(
+                Details.Node,
+                TokenForm.ControlToken,
+                HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to check router node control token. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to check control token.";
+        }
+
+        return Page();
+    }
+
+    private async Task LoadDetailsAsync(string nodeId, bool populateTokenForm)
+    {
+        Details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId);
+        if (populateTokenForm)
+        {
+            TokenForm.ControlToken = Details.Node.ControlToken;
         }
     }
 

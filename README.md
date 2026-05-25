@@ -37,6 +37,45 @@ dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1
 
 `-nr:false -m:1` is used because some sandboxed Windows environments can fail MSBuild node reuse/parallel restore without a useful error message.
 
+## Dev Kubernetes image autodelivery
+
+The dev cluster uses Argo CD Image Updater for automatic delivery of images built by GitHub Actions.
+
+Ownership model:
+
+- GitHub Actions restores, builds, tests, and pushes images to GHCR.
+- GitHub Actions publishes both `sha-<commit>` and `dev-latest` tags.
+- GitHub Actions must not update Kubernetes manifests or call Argo CD.
+- Argo CD Image Updater runs inside the cluster, watches `dev-latest`, resolves it to immutable digests, writes the selected image overrides, and lets Argo CD sync `orr-services`.
+
+When recreating or bootstrapping the cluster, always apply the Image Updater Argo CD Application:
+
+```powershell
+kubectl apply -f infra/argocd/orr-image-updater-app.yaml
+kubectl -n argocd annotate application orr-argocd-image-updater argocd.argoproj.io/refresh=hard --overwrite
+```
+
+Verify that the updater is visible in Argo CD and running:
+
+```powershell
+kubectl get applications -n argocd
+kubectl get deployment -n argocd argocd-image-updater-controller
+kubectl get pods -n argocd -l control-plane=argocd-image-updater-controller
+kubectl logs -n argocd -l control-plane=argocd-image-updater-controller --tail=100
+```
+
+Expected Argo CD applications after bootstrap:
+
+```text
+orr-argocd-image-updater   Synced   Healthy
+orr-infra                  Synced   Healthy
+orr-services               Synced   Healthy
+```
+
+If Image Updater changes image overrides, `orr-services` can temporarily show `OutOfSync` or `Progressing` while Argo CD rolls the updated deployments.
+
+The full local runbook is in `docs/argo-k8s-dev-runbook.md`.
+
 ## 9Router node setup in Kubernetes
 
 This section describes how to register a new 9Router (f9router) node in the local kind cluster and connect it to ORR Control Plane.

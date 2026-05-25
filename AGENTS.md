@@ -90,3 +90,30 @@ gRPC service URLs and DB connection strings live in `appsettings.json` per servi
 ### Database Migrations
 
 SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `004_*.sql`).
+
+## Deployment Memory
+
+Dev Kubernetes image delivery is owned by Argo CD Image Updater, not GitHub Actions.
+
+When recreating or bootstrapping the cluster:
+
+```powershell
+kubectl apply -f infra/argocd/orr-image-updater-app.yaml
+kubectl -n argocd annotate application orr-argocd-image-updater argocd.argoproj.io/refresh=hard --overwrite
+```
+
+Then verify:
+
+```powershell
+kubectl get applications -n argocd
+kubectl get deployment -n argocd argocd-image-updater-controller
+kubectl get pods -n argocd -l control-plane=argocd-image-updater-controller
+```
+
+Expected Argo CD apps include `orr-argocd-image-updater`, `orr-infra`, and `orr-services`.
+
+Keep the ownership boundary clear:
+
+- GitHub Actions only restores, builds, tests, and pushes GHCR images with `sha-<commit>` and `dev-latest` tags.
+- Argo CD Image Updater watches `dev-latest`, resolves digests, writes image overrides, and lets Argo CD sync `orr-services`.
+- Do not reintroduce a GitHub Actions job that commits image tags into Kustomize manifests.

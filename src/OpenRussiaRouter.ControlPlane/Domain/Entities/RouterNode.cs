@@ -54,6 +54,11 @@ public sealed class RouterNode
         CapacityWeight = capacityWeight > 0 ? capacityWeight : throw new ArgumentOutOfRangeException(nameof(capacityWeight));
     }
 
+    public void UpdateControlToken(string controlToken)
+    {
+        ControlToken = Preconditions.RequireValue(controlToken, nameof(controlToken));
+    }
+
     public void Enable() => Enabled = true;
 
     public void Disable()

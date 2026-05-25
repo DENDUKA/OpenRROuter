@@ -90,6 +90,25 @@ public sealed class GrpcRouterControlPlaneService(
         }
     }
 
+    public override async Task<UpdateRouterNodeControlTokenResponse> UpdateRouterNodeControlToken(
+        UpdateRouterNodeControlTokenRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await controlPlane.UpdateNodeControlTokenAsync(
+                request.NodeId,
+                request.ControlToken,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new UpdateRouterNodeControlTokenResponse { Updated = true };
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
+        {
+            logger.LogWarning(ex, "UpdateRouterNodeControlToken failed. NodeId: {NodeId}", request.NodeId);
+            return new UpdateRouterNodeControlTokenResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
     public override async Task<DeleteRouterNodeResponse> DeleteRouterNode(
         DeleteRouterNodeRequest request,
         ServerCallContext context)

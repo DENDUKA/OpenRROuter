@@ -86,6 +86,40 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task UpdateRouterNodeControlToken_ExistingNode_ReturnsUpdatedAndDetailsShowNewToken()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+
+        var updated = await service.UpdateRouterNodeControlToken(
+            new UpdateRouterNodeControlTokenRequest { NodeId = nodeId, ControlToken = "secret-b" },
+            context: null!);
+        var details = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = nodeId },
+            context: null!);
+
+        updated.Updated.Should().BeTrue();
+        updated.ErrorCode.Should().Be(string.Empty);
+        details.Node.ControlToken.Should().Be("secret-b");
+    }
+
+    [Fact]
+    public async Task UpdateRouterNodeControlToken_MissingToken_ReturnsValidationFailed()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+
+        var response = await service.UpdateRouterNodeControlToken(
+            new UpdateRouterNodeControlTokenRequest { NodeId = nodeId, ControlToken = "" },
+            context: null!);
+
+        response.Updated.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
     public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();

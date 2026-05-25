@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
@@ -12,16 +13,44 @@ public class NodeDetailsModel(
 
     public string? ErrorMessage { get; private set; }
 
+    [TempData]
+    public string? SuccessMessage { get; set; }
+
+    [BindProperty]
+    public ControlTokenInput TokenForm { get; set; } = new();
+
     public async Task OnGetAsync(string nodeId)
     {
         try
         {
             Details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId);
+            TokenForm.ControlToken = Details.Node.ControlToken;
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load router node details. NodeId: {NodeId}", nodeId);
             ErrorMessage = "Failed to load router node details.";
+        }
+    }
+
+    public async Task<IActionResult> OnPostUpdateControlTokenAsync(string nodeId)
+    {
+        try
+        {
+            await ControlPlaneProvider.UpdateRouterNodeControlTokenAsync(
+                nodeId,
+                TokenForm.ControlToken,
+                HttpContext.RequestAborted);
+            SuccessMessage = "Control token updated.";
+            return RedirectToPage(new { nodeId });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to update router node control token. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to update control token.";
+            await OnGetAsync(nodeId);
+            TokenForm.ControlToken = "";
+            return Page();
         }
     }
 
@@ -55,5 +84,10 @@ public class NodeDetailsModel(
         {
             return json;
         }
+    }
+
+    public sealed class ControlTokenInput
+    {
+        public string ControlToken { get; set; } = "";
     }
 }

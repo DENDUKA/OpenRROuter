@@ -28,6 +28,13 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         return node;
     }
 
+    public async Task UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default)
+    {
+        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
+        node.UpdateControlToken(controlToken);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
+    }
+
     public async Task DisableNodeAsync(string nodeId, CancellationToken ct = default)
     {
         var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);

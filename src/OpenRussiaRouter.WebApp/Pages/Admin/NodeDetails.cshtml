@@ -16,6 +16,11 @@
     <div class="alert alert-danger" role="alert" data-testid="error-message">@Model.ErrorMessage</div>
 }
 
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status" data-testid="success-message">@Model.SuccessMessage</div>
+}
+
 @if (Model.Details is { } details)
 {
     <div class="adm-card" data-testid="node-details-card">
@@ -35,6 +40,22 @@
                     <tr><th>Last health error</th><td>@(string.IsNullOrWhiteSpace(details.Node.LastHealthErrorCode) ? "None" : details.Node.LastHealthErrorCode)</td></tr>
                 </tbody>
             </table>
+        </div>
+    </div>
+
+    <div class="adm-card" data-testid="control-token-card">
+        <div class="adm-card-header">Update Control Token</div>
+        <div class="adm-card-body">
+            <form method="post" asp-page-handler="UpdateControlToken" asp-route-nodeId="@details.Node.NodeId" data-testid="form-update-control-token">
+                <div class="form-group">
+                    <label asp-for="TokenForm.ControlToken" class="form-label">Control Token</label>
+                    <input asp-for="TokenForm.ControlToken" class="form-control" autocomplete="off"
+                           data-testid="input-control-token" />
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-control-token">Save token</button>
+                </div>
+            </form>
         </div>
     </div>
 

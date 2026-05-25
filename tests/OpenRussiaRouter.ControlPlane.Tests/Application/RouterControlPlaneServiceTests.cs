@@ -43,6 +43,28 @@ public sealed class RouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task UpdateNodeControlToken_ExistingNode_ChangesTokenUsedForLease()
+    {
+        var service = CreateService();
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+
+        await service.UpdateNodeControlTokenAsync(node.Id, "secret-b");
+        var lease = await service.SelectRouterNodeAsync("req-1", DateTimeOffset.UtcNow);
+
+        lease.ControlToken.Should().Be("secret-b");
+    }
+
+    [Fact]
+    public async Task UpdateNodeControlToken_MissingToken_Throws()
+    {
+        var service = CreateService();
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+
+        await ((Func<Task>)(() => service.UpdateNodeControlTokenAsync(node.Id, ""))).Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
     public async Task SelectRouterNode_UnhealthyNode_Throws()
     {
         var service = CreateService();

@@ -8,6 +8,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
     private const string ClientName = "RouterNode";
     private const string ChatCompletionsPath = "/v1/chat/completions";
     private const string ProvidersPath = "/api/integrations/providers";
+    private const string IntegrationKeysPath = "/api/integrations/keys";
 
     public async Task<RouterNodeApiResponse> SendChatCompletionAsync(
         RouterNodeInfo node,
@@ -68,7 +69,53 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         }
     }
 
+    public async Task<RouterNodeAvailabilityCheckResult> CheckIntegrationApiAvailabilityAsync(
+        RouterNodeInfo node,
+        string controlToken,
+        CancellationToken cancellationToken)
+    {
+        var requestLine = DescribeIntegrationKeysRequest(node);
+
+        if (string.IsNullOrWhiteSpace(controlToken))
+        {
+            return new RouterNodeAvailabilityCheckResult(false, requestLine, "Control token is empty.");
+        }
+
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(node, IntegrationKeysPath));
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + controlToken);
+            request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", controlToken);
+
+            using var response = await CreateClient().SendAsync(request, cancellationToken).ConfigureAwait(false);
+            var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            const int maxBody = 1024;
+            if (body.Length > maxBody)
+            {
+                body = body[..maxBody] + "... (truncated)";
+            }
+
+            var responseLine = string.IsNullOrWhiteSpace(body)
+                ? $"HTTP {(int)response.StatusCode} {response.StatusCode}"
+                : $"HTTP {(int)response.StatusCode} {response.StatusCode}\n{body}";
+
+            return new RouterNodeAvailabilityCheckResult(
+                response.IsSuccessStatusCode,
+                requestLine,
+                responseLine);
+        }
+        catch (Exception ex)
+        {
+            return new RouterNodeAvailabilityCheckResult(
+                false,
+                requestLine,
+                $"{ex.GetType().Name}: {ex.Message}");
+        }
+    }
+
     private string DescribeProvidersRequest(RouterNodeInfo node) => $"GET {BuildUri(node, ProvidersPath)}";
+
+    private string DescribeIntegrationKeysRequest(RouterNodeInfo node) => $"GET {BuildUri(node, IntegrationKeysPath)}";
 
     private HttpClient CreateClient() => httpClientFactory.CreateClient(ClientName);
 
@@ -103,3 +150,5 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
 public sealed record RouterNodeApiResponse(HttpStatusCode StatusCode, bool IsSuccessStatusCode, string Body);
 
 public sealed record RouterNodeProbeResult(string RequestLine, string ResponseLine);
+
+public sealed record RouterNodeAvailabilityCheckResult(bool Success, string RequestLine, string ResponseLine);

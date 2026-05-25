@@ -7,6 +7,8 @@ public sealed class ControlPlaneProvider(
     ControlGrpc.RouterControlPlaneClient client,
     ILogger<ControlPlaneProvider> logger)
 {
+    private static readonly TimeSpan NodeModelDropdownTimeout = TimeSpan.FromSeconds(5);
+
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {
         var response = await client.ListRouterNodesAsync(new ListRouterNodesRequest(), cancellationToken: cancellationToken);
@@ -110,9 +112,12 @@ public sealed class ControlPlaneProvider(
     {
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(NodeModelDropdownTimeout);
+
             var response = await client.ListAvailableNodeModelsAsync(
                 new ListAvailableNodeModelsRequest(),
-                cancellationToken: cancellationToken);
+                cancellationToken: timeoutCts.Token);
             return response.ModelIds.ToList();
         }
         catch

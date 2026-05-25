@@ -71,7 +71,14 @@ public class ModelsModel : PageModelBase
             }
         }
 
-        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+        if (ShowForm)
+        {
+            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+        }
+        else
+        {
+            await LoadModels();
+        }
     }
 
     public async Task<IActionResult> OnPostSaveAsync(bool isNew)
@@ -81,7 +88,7 @@ public class ModelsModel : PageModelBase
 
         if (!ModelState.IsValid)
         {
-            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+            await LoadFormData();
             return Page();
         }
         try
@@ -92,7 +99,7 @@ public class ModelsModel : PageModelBase
             if (isNew && orig != null)
             {
                 ModelState.AddModelError("Form.Id", $"Model '{Form.Id}' already exists.");
-                await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+                await LoadFormData();
                 return Page();
             }
 
@@ -118,7 +125,7 @@ public class ModelsModel : PageModelBase
         {
             _logger.LogError(ex, "Failed to save model. ModelId={ModelId} IsNew={IsNew}", Form.Id, isNew);
             ErrorMessage = $"Failed to save model: {ex.Message}";
-            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+            await LoadFormData();
             return Page();
         }
     }
@@ -135,7 +142,7 @@ public class ModelsModel : PageModelBase
             {
                 TempData["SuccessMessage"] = null;
                 ErrorMessage = $"Model '{modelId}' not found.";
-                await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+                await LoadModels();
                 return Page();
             }
             await _billingClient.UpsertModelAsync(m with { Enabled = !m.Enabled });
@@ -146,9 +153,14 @@ public class ModelsModel : PageModelBase
         {
             _logger.LogError(ex, "Failed to toggle model enabled. ModelId={ModelId}", modelId);
             ErrorMessage = $"Failed to toggle model: {ex.Message}";
-            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+            await LoadModels();
             return Page();
         }
+    }
+
+    private async Task LoadFormData()
+    {
+        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
     }
 
     private async Task LoadModels()

@@ -343,22 +343,27 @@ If missing, cluster was not created with `infra/kind/orr-dev.yaml`. Recreate it 
 
 ## Обновление контейнеров
 
-### Автоматический поток (штатный)
+### Автоматический поток
 
+```text
+git push -> main
+  -> GitHub Actions: restore, build, test
+  -> GitHub Actions: build changed images
+  -> GHCR:
+     ghcr.io/denduka/<service>:sha-<commit>
+     ghcr.io/denduka/<service>:dev-latest
+  -> Argo CD Image Updater polls GHCR every 2 minutes
+  -> Image Updater resolves dev-latest to a digest
+  -> Image Updater commits the digest override to Git
+  -> Argo CD syncs orr-services
+  -> Kubernetes rolls the changed deployments
 ```
-git push → main
-  └─ GitHub Actions: test → build-image
-       └─ ghcr.io/denduka/<service>:sha-<commit>
-          ghcr.io/denduka/<service>:dev-latest
-            └─ ArgoCD Image Updater (poll каждые 2 мин)
-                 └─ новый digest на dev-latest
-                      └─ коммит .argocd-source-orr-services.yaml в main
-                           └─ ArgoCD детектирует изменение → sync → rolling update
-```
 
-Образы собираются только при пуше в `main` (не в PR) и только для сервисов, у которых изменились файлы в `src/**`. Общие изменения (`BuildingBlocks`, `Contracts`, solution-файлы) пересобирают все пять сервисов.
+Образы собираются только при push в `main`, не в PR. Сервисные изменения пересобирают только затронутые сервисы; общие изменения в `BuildingBlocks`, `Contracts` или solution-файлах пересобирают все пять сервисов.
 
-`write-back-method: git` — Image Updater коммитит файл `.argocd-source-orr-services.yaml` в `infra/kustomize/overlays/dev/services/` на ветку `main`. Файл содержит `kustomize.images` с закреплёнными digest'ами. ArgoCD читает его при каждом sync и деплоит точные образы. Git всегда отражает реально задеплоенное состояние.
+GitHub Actions не обновляет Kubernetes manifests и не вызывает Argo CD. Image Updater является единственным автоматическим writer'ом версий образов для деплоя.
+
+`write-back-method: git` означает, что Image Updater коммитит Argo CD source overrides в репозиторий после выбора нового digest. Git остаётся audit log'ом точного image digest, выбранного cluster-side updater'ом.
 
 Для работы write-back PAT в секрете `argocd/repo-openrussiarouter` должен иметь `Contents: Read and write` на репозиторий.
 
@@ -387,9 +392,9 @@ kubectl wait --namespace argocd --for=condition=ready pod -l control-plane=argoc
 kubectl logs -n argocd -l control-plane=argocd-image-updater-controller --tail=50
 ```
 
-### Принудительный sync ArgoCD
+### Принудительный sync Argo CD
 
-Если Image Updater обновил параметры, но ArgoCD не засинхронизировался:
+Если Image Updater обновил параметры, но Argo CD ещё не засинхронизировался:
 
 ```powershell
 kubectl -n argocd annotate application orr-services argocd.argoproj.io/refresh=hard --overwrite
@@ -401,16 +406,15 @@ kubectl -n argocd annotate application orr-services argocd.argoproj.io/refresh=h
 argocd app sync orr-services --force
 ```
 
-### Ручное обновление образа (обход CI)
+### Ручное обновление образа
 
-Используется для экстренного деплоя или тестирования конкретного SHA без пуша в main.
+Используется для экстренного деплоя или тестирования конкретного SHA. Это временный обход GitOps-потока: следующий цикл Image Updater снова применит digest из registry и Git write-back.
 
 ```powershell
 # Например, откатиться к предыдущему образу api-gateway
 kubectl set image deployment/api-gateway api-gateway=ghcr.io/denduka/api-gateway:sha-<commit> -n orr-dev
 
-# Вернуть управление Image Updater (снять ручной override)
-# Перезапустить Image Updater — он перепишет параметр своим значением из реестра
+# Вернуть управление Image Updater
 kubectl delete pod -n argocd -l control-plane=argocd-image-updater-controller
 ```
 
@@ -424,14 +428,14 @@ kubectl rollout undo deployment/api-gateway -n orr-dev
 kubectl rollout status deployment/api-gateway -n orr-dev
 ```
 
-После отката вручную Image Updater при следующем цикле опроса снова подтянет последний digest из реестра и перезапишет ручное изменение. Чтобы заморозить версию, временно удалите аннотацию `argocd-image-updater.argoproj.io/image-list` из приложения ArgoCD:
+После ручного отката Image Updater при следующем цикле опроса снова подтянет последний digest из registry и перезапишет ручное изменение. Чтобы заморозить версию, временно удалите аннотацию `argocd-image-updater.argoproj.io/image-list` из Argo CD Application:
 
 ```powershell
 kubectl -n argocd patch application orr-services --type=json \
   -p='[{"op":"remove","path":"/metadata/annotations/argocd-image-updater.argoproj.io~1image-list"}]'
 ```
 
-Восстановить аннотацию — re-apply манифеста:
+Восстановить аннотацию:
 
 ```powershell
 kubectl apply -f infra/argocd/orr-dev-app.yaml
@@ -439,7 +443,7 @@ kubectl apply -f infra/argocd/orr-dev-app.yaml
 
 ### Обновление f9router
 
-`f9router` (`ghcr.io/inc64/f9router:dev-latest`) управляется тем же Image Updater. Новый тег или digest на стороне `inc64` автоматически подхватывается при следующем цикле опроса.
+`f9router` (`ghcr.io/inc64/f9router:dev-latest`) управляется тем же Image Updater. Новый digest на стороне `inc64` автоматически подхватывается при следующем цикле опроса.
 
 Если нужно обновить вручную:
 
@@ -454,7 +458,7 @@ kubectl rollout status deployment/f9router -n orr-dev
 # Статус деплоя
 kubectl rollout status deployment/<service> -n orr-dev --timeout=120s
 
-# Описание пода (причина ошибки)
+# Описание пода с причиной ошибки
 kubectl describe pod -n orr-dev -l app=<service>
 
 # Логи нового пода
@@ -465,9 +469,9 @@ kubectl get events -n orr-dev --sort-by='.lastTimestamp' | tail -20
 ```
 
 Типичные причины:
-- `ImagePullBackOff` — истёк PAT или секрет `ghcr-pull-secret` не привязан к ServiceAccount (см. шаг 7).
-- `CrashLoopBackOff` — новый контейнер падает; смотреть логи пода.
-- ArgoCD в `OutOfSync` после обновления Image Updater — вручную нажать Sync или запустить `argocd app sync orr-services`.
+- `ImagePullBackOff` - истёк PAT или секрет `ghcr-pull-secret` не привязан к ServiceAccount, см. шаг 7.
+- `CrashLoopBackOff` - новый контейнер падает; см. логи пода.
+- Argo CD в `OutOfSync` после обновления Image Updater - вручную нажать Sync или запустить `argocd app sync orr-services`.
 
 ## Security notes
 

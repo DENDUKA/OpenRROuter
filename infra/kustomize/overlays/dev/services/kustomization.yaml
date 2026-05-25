@@ -19,14 +19,14 @@ commonAnnotations:
   orr.dev/version: dev
 images:
 - name: ghcr.io/denduka/api-gateway
-  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+  newTag: dev-latest
 - name: ghcr.io/denduka/auth-service
-  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+  newTag: dev-latest
 - name: ghcr.io/denduka/billing-service
-  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+  newTag: dev-latest
 - name: ghcr.io/denduka/control-plane
-  newTag: sha-2e038050767e76f90f4c89fc36ec9f0b97cbb886
+  newTag: dev-latest
 - name: ghcr.io/denduka/webapp
-  newTag: sha-e41d6e4c590053abc7f5699a93190ffcfbb2d1fa
+  newTag: dev-latest
 - name: ghcr.io/inc64/f9router
   newTag: dev-latest

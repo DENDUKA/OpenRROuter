@@ -14,12 +14,10 @@ public class NodesModel(
     ControlPlaneProvider ControlPlaneProvider,
     AuthProvider AuthProvider,
     BillingProvider BillingProvider,
-    IHttpClientFactory httpClientFactory,
+    RouterNodeApiProvider RouterNodeApiProvider,
     ILogger<NodesModel> logger) : PageModelBase
 {
     private const string ModelPriceMissingErrorCode = "model_price_missing";
-
-    private readonly HttpClient _httpClient = httpClientFactory.CreateClient("RouterNode");
 
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -183,13 +181,11 @@ public class NodesModel(
             });
 
             var startedAtUtc = DateTimeOffset.UtcNow;
-            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
-            using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
-            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
-            req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
-
-            using var resp = await _httpClient.SendAsync(req, HttpContext.RequestAborted);
-            var body = await resp.Content.ReadAsStringAsync();
+            var response = await RouterNodeApiProvider.SendChatCompletionAsync(
+                node,
+                rawKey,
+                requestBody,
+                HttpContext.RequestAborted);
             var completedAtUtc = DateTimeOffset.UtcNow;
 
             var warning = await RecordTestActivityAsync(
@@ -197,14 +193,14 @@ public class NodesModel(
                 activeKey,
                 TestInput.Model,
                 node.NodeId,
-                body,
-                resp.IsSuccessStatusCode,
+                response.Body,
+                response.IsSuccessStatusCode,
                 startedAtUtc,
                 completedAtUtc);
 
             TestResult = new TestFormResult(
-                resp.IsSuccessStatusCode && warning is null,
-                AppendWarning(body, warning));
+                response.IsSuccessStatusCode && warning is null,
+                AppendWarning(response.Body, warning));
         }
         catch (Exception ex)
         {
@@ -255,21 +251,17 @@ public class NodesModel(
             });
 
             var startedAtUtc = DateTimeOffset.UtcNow;
-            var chatUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/chat/completions";
-            using var req = new HttpRequestMessage(HttpMethod.Post, chatUrl);
-            req.Headers.TryAddWithoutValidation("Authorization", $"Bearer {rawKey}");
-            req.Content = new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json");
-
-            using var resp = await _httpClient.SendAsync(
-                req,
-                HttpCompletionOption.ResponseHeadersRead,
+            using var response = await RouterNodeApiProvider.SendStreamingChatCompletionAsync(
+                node,
+                rawKey,
+                requestBody,
                 HttpContext.RequestAborted);
 
-            Response.StatusCode = (int)resp.StatusCode;
-            Response.ContentType = resp.Content.Headers.ContentType?.ToString() ?? "text/plain; charset=utf-8";
+            Response.StatusCode = (int)response.StatusCode;
+            Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "text/plain; charset=utf-8";
             await Response.StartAsync(HttpContext.RequestAborted);
 
-            await using var stream = await resp.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
+            await using var stream = await response.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
             var buffer = new byte[8192];
             var capturedBody = new System.Text.StringBuilder();
             while (true)
@@ -289,7 +281,7 @@ public class NodesModel(
                 StreamingTestInput.Model,
                 node.NodeId,
                 capturedBody.ToString(),
-                resp.IsSuccessStatusCode,
+                response.IsSuccessStatusCode,
                 startedAtUtc,
                 DateTimeOffset.UtcNow);
 

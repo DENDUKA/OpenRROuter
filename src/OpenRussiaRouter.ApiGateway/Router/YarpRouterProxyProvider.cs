@@ -12,6 +12,8 @@ namespace OpenRussiaRouter.ApiGateway.Router;
 public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
     : IRouterProxyProvider
 {
+    private const string ChatCompletionsPath = "/v1/chat/completions";
+
     private static readonly HttpMessageInvoker ForwardingHttpClient = new(new SocketsHttpHandler
     {
         UseProxy = false,
@@ -51,7 +53,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         context.Request.Method = HttpMethods.Post;
         context.Request.Scheme = lease.EndpointUrl.Scheme;
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
-        context.Request.Path = "/v1/chat/completions";
+        context.Request.Path = ChatCompletionsPath;
         context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
         context.Request.Headers[CorrelationIds.HeaderName] = requestId;
         context.Request.ContentType = "application/json";
@@ -90,7 +92,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
     {
         ArgumentNullException.ThrowIfNull(lease);
 
-        var requestUri = new Uri(lease.EndpointUrl, "/v1/chat/completions");
+        var requestUri = new Uri(lease.EndpointUrl, ChatCompletionsPath);
         var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
         request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);

@@ -89,6 +89,7 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
     };
 });
 builder.Services.AddScoped<ControlPlaneProvider>();
+builder.Services.AddScoped<RouterNodeApiProvider>();
 
 builder.Services.AddHttpClient("RouterNode", client =>
 {

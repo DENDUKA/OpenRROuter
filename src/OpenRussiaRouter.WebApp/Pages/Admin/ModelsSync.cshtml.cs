@@ -10,7 +10,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class ModelsSyncModel(
     BillingProvider BillingProvider,
     ControlPlaneProvider ControlPlaneProvider,
-    IHttpClientFactory httpClientFactory,
+    RouterNodeApiProvider RouterNodeApiProvider,
     ILogger<ModelsSyncModel> logger) : PageModelBase
 {
     public IReadOnlyList<NodeModelCatalogEntry> NewOnNodes { get; private set; } = [];
@@ -154,8 +154,6 @@ public class ModelsSyncModel(
 
         var byId = nodes.ToDictionary(n => n.NodeId, StringComparer.Ordinal);
         var probed = new List<UnreachableNodeDetail>();
-        using var http = httpClientFactory.CreateClient();
-        http.Timeout = TimeSpan.FromSeconds(15);
 
         foreach (var nodeId in UnreachableNodeIds)
         {
@@ -165,38 +163,8 @@ public class ModelsSyncModel(
                 continue;
             }
 
-            var endpoint = node.EndpointUrl?.TrimEnd('/') ?? string.Empty;
-            var url = $"{endpoint}/api/providers";
-            var requestLine = $"GET {url}";
-
-            if (string.IsNullOrWhiteSpace(node.ControlToken))
-            {
-                probed.Add(new UnreachableNodeDetail(
-                    nodeId,
-                    requestLine,
-                    "Control token is empty in OpenRussiaRouter DB — open this node in /admin/nodes and re-create it with the Control Token from 9Router's .env (ROUTER_CONTROL_TOKEN)."));
-                continue;
-            }
-
-            try
-            {
-                using var req = new HttpRequestMessage(HttpMethod.Get, url);
-                req.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
-                using var resp = await http.SendAsync(req, HttpContext.RequestAborted);
-                var body = await resp.Content.ReadAsStringAsync(HttpContext.RequestAborted);
-                const int maxBody = 1024;
-                if (body.Length > maxBody)
-                    body = body[..maxBody] + "… (truncated)";
-                var responseLine = $"HTTP {(int)resp.StatusCode} {resp.StatusCode}\n{body}";
-                probed.Add(new UnreachableNodeDetail(nodeId, requestLine, responseLine));
-            }
-            catch (Exception ex)
-            {
-                probed.Add(new UnreachableNodeDetail(
-                    nodeId,
-                    requestLine,
-                    $"{ex.GetType().Name}: {ex.Message}"));
-            }
+            var result = await RouterNodeApiProvider.ProbeProvidersAsync(node, HttpContext.RequestAborted);
+            probed.Add(new UnreachableNodeDetail(nodeId, result.RequestLine, result.ResponseLine));
         }
 
         UnreachableNodes = probed;

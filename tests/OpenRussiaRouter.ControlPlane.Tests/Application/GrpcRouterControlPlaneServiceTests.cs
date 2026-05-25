@@ -724,6 +724,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public List<string> ListModelsCalls { get; } = new();
         public List<CancellationToken> ReceivedTokens { get; } = new();
 
+        public string DescribeListProvidersRequest(RouterNode node) => $"GET provider-list:{node.Id}";
+
+        public string DescribeListModelsRequest(RouterNode node) => $"GET model-list:{node.Id}";
+
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node, bool includeInactive, CancellationToken ct)
         {
@@ -843,6 +847,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
     private sealed class NoOpRouterNodeProvider : IRouterNodeProvider
     {
+        public string DescribeListProvidersRequest(RouterNode node) => $"GET provider-list:{node.Id}";
+
+        public string DescribeListModelsRequest(RouterNode node) => $"GET model-list:{node.Id}";
+
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,
             bool includeInactive,
@@ -896,6 +904,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
     private sealed class ThrowingProviderClient : IRouterNodeProvider
     {
+        public string DescribeListProvidersRequest(RouterNode node) => $"GET provider-list:{node.Id}";
+
+        public string DescribeListModelsRequest(RouterNode node) => $"GET model-list:{node.Id}";
+
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
@@ -931,6 +943,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
     private sealed class StubProviderClient : IRouterNodeProvider
     {
+        public string DescribeListProvidersRequest(RouterNode node) => $"GET provider-list:{node.Id}";
+
+        public string DescribeListModelsRequest(RouterNode node) => $"GET model-list:{node.Id}";
+
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
             RouterNode node,
             bool includeInactive,

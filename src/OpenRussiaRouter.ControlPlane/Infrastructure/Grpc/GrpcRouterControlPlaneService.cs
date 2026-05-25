@@ -388,7 +388,7 @@ public sealed class GrpcRouterControlPlaneService(
                 node.Id,
                 Unreachable: true,
                 [],
-                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/providers").ToString()),
+                FormatRequest(ex, providerClient.DescribeListProvidersRequest(node)),
                 FormatResponse(ex));
         }
 
@@ -458,12 +458,12 @@ public sealed class GrpcRouterControlPlaneService(
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "Fallback /v1/models failed for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "Fallback model listing failed for router node. NodeId: {NodeId}", node.Id);
             return new NodeCatalogResult(
                 node.Id,
                 Unreachable: true,
                 [],
-                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/v1/models").ToString()),
+                FormatRequest(ex, providerClient.DescribeListModelsRequest(node)),
                 FormatResponse(ex));
         }
     }
@@ -472,7 +472,7 @@ public sealed class GrpcRouterControlPlaneService(
         ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
         (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested);
 
-    private static string FormatRequest(Exception ex, string fallbackMethod, string fallbackUri)
+    private static string FormatRequest(Exception ex, string fallbackRequest)
     {
         if (ex is RouterNodeProviderException provider &&
             !string.IsNullOrWhiteSpace(provider.RequestMethod) &&
@@ -480,7 +480,7 @@ public sealed class GrpcRouterControlPlaneService(
         {
             return $"{provider.RequestMethod} {provider.RequestUri}";
         }
-        return $"{fallbackMethod} {fallbackUri}";
+        return fallbackRequest;
     }
 
     private static string FormatResponse(Exception ex)

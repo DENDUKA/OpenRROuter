@@ -35,6 +35,7 @@ public sealed class RouterNodeProviderTests
         handler.LastMethod.Should().Be(HttpMethod.Get);
         handler.LastUri.Should().Be("https://router.example/api/integrations/providers/quota?includeInactive=true");
         handler.Authorization.Should().Be("Bearer control-token");
+        handler.NodeToken.Should().Be("control-token");
         var provider = result.Providers.Should().ContainSingle().Which;
         provider.ConnectionId.Should().Be("conn-1");
         provider.Usage?.GetProperty("message").GetString().Should().Be("ok");
@@ -226,6 +227,7 @@ public sealed class RouterNodeProviderTests
         handler.LastMethod.Should().Be(HttpMethod.Get);
         handler.LastUri.Should().Be("https://router.example/api/providers");
         handler.Authorization.Should().Be("Bearer control-token");
+        handler.NodeToken.Should().Be("control-token");
         var conn = result.Connections.Should().ContainSingle().Which;
         conn.Id.Should().Be("conn-1");
         conn.Provider.Should().Be("minimax");
@@ -289,6 +291,26 @@ public sealed class RouterNodeProviderTests
         return new RouterNodeProvider(new HttpClient(handler));
     }
 
+    [Fact]
+    public void DescribeListProvidersRequest_ReturnsRequestLine()
+    {
+        var client = CreateClient(new CapturingHandler(JsonResponse("""{}""")));
+
+        var request = client.DescribeListProvidersRequest(CreateNode());
+
+        request.Should().Be("GET https://router.example/api/providers");
+    }
+
+    [Fact]
+    public void DescribeListModelsRequest_ReturnsRequestLine()
+    {
+        var client = CreateClient(new CapturingHandler(JsonResponse("""{}""")));
+
+        var request = client.DescribeListModelsRequest(CreateNode());
+
+        request.Should().Be("GET https://router.example/v1/models");
+    }
+
     private static RouterNode CreateNode(string controlToken = "control-token")
     {
         return new RouterNode(
@@ -316,6 +338,7 @@ public sealed class RouterNodeProviderTests
         public HttpMethod? LastMethod { get; private set; }
         public string? LastUri { get; private set; }
         public string? Authorization { get; private set; }
+        public string? NodeToken { get; private set; }
         public string? Body { get; private set; }
 
         protected override async Task<HttpResponseMessage> SendAsync(
@@ -326,6 +349,9 @@ public sealed class RouterNodeProviderTests
             LastMethod = request.Method;
             LastUri = request.RequestUri?.ToString();
             Authorization = request.Headers.Authorization?.ToString();
+            NodeToken = request.Headers.TryGetValues("X-ORR-Node-Token", out var values)
+                ? values.SingleOrDefault()
+                : null;
             Body = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);

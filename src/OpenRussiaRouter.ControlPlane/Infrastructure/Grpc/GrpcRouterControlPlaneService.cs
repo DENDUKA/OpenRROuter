@@ -389,16 +389,24 @@ public sealed class GrpcRouterControlPlaneService(
         return response;
     }
 
+    private static readonly TimeSpan NodeCatalogPerNodeTimeout = TimeSpan.FromSeconds(10);
+
     private async Task<NodeCatalogResult> CollectNodeCatalogAsync(RouterNode node, CancellationToken cancellationToken)
     {
+        // Per-node timeout so one unresponsive node cannot block the parallel Task.WhenAll
+        // beyond the bound, regardless of HttpClient-level timeouts on individual calls.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(NodeCatalogPerNodeTimeout);
+        var nodeToken = timeoutCts.Token;
+
         RouterProviderListResponse providerList;
         try
         {
-            providerList = await providerClient.ListProvidersAsync(node, cancellationToken).ConfigureAwait(false);
+            providerList = await providerClient.ListProvidersAsync(node, nodeToken).ConfigureAwait(false);
         }
         catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            return await CollectFallbackModelsAsync(node, cancellationToken).ConfigureAwait(false);
+            return await CollectFallbackModelsAsync(node, nodeToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
@@ -423,7 +431,7 @@ public sealed class GrpcRouterControlPlaneService(
             try
             {
                 var providerModels = await providerClient.ListProviderModelsAsync(
-                    node, providerKey, source: null, includeCompatible: true, cancellationToken).ConfigureAwait(false);
+                    node, providerKey, source: null, includeCompatible: true, nodeToken).ConfigureAwait(false);
 
                 foreach (var model in providerModels.Models)
                 {

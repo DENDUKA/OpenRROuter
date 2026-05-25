@@ -225,7 +225,7 @@ public sealed class RouterNodeProviderTests
         var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
 
         handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/providers");
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers");
         handler.Authorization.Should().Be("Bearer control-token");
         handler.NodeToken.Should().Be("control-token");
         var conn = result.Connections.Should().ContainSingle().Which;
@@ -298,7 +298,7 @@ public sealed class RouterNodeProviderTests
 
         var request = client.DescribeListProvidersRequest(CreateNode());
 
-        request.Should().Be("GET https://router.example/api/providers");
+        request.Should().Be("GET https://router.example/api/integrations/providers");
     }
 
     [Fact]

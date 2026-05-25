@@ -8,6 +8,7 @@ public sealed class ControlPlaneProvider(
     ILogger<ControlPlaneProvider> logger)
 {
     private static readonly TimeSpan NodeModelDropdownTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan NodeModelCatalogTimeout = TimeSpan.FromSeconds(30);
 
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {
@@ -147,9 +148,12 @@ public sealed class ControlPlaneProvider(
     {
         try
         {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(NodeModelCatalogTimeout);
+
             var response = await client.ListNodeModelCatalogAsync(
                 new ListNodeModelCatalogRequest(),
-                cancellationToken: cancellationToken);
+                cancellationToken: timeoutCts.Token);
 
             return new NodeModelCatalogResult(
                 Entries: response.Entries.Select(e => new NodeModelCatalogEntry(

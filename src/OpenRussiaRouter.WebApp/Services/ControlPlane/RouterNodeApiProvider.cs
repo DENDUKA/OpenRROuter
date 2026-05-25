@@ -7,7 +7,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
 {
     private const string ClientName = "RouterNode";
     private const string ChatCompletionsPath = "/v1/chat/completions";
-    private const string ProvidersPath = "/api/providers";
+    private const string ProvidersPath = "/api/integrations/providers";
 
     public async Task<RouterNodeApiResponse> SendChatCompletionAsync(
         RouterNodeInfo node,
@@ -91,7 +91,12 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
             throw new InvalidOperationException("Router node endpoint URL is empty.");
         }
 
-        return new Uri(node.EndpointUrl.TrimEnd('/') + path);
+        // Use Uri-based resolution so an absolute-path 'path' (starting with '/')
+        // replaces any subpath in EndpointUrl (e.g. '/v1') instead of being appended.
+        // Without this, an endpoint like 'https://node/v1' + '/api/integrations/providers'
+        // would hit the LLM API guard at /v1/... and return 401.
+        var baseUri = new Uri(node.EndpointUrl, UriKind.Absolute);
+        return new Uri(baseUri, path);
     }
 }
 

@@ -137,7 +137,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
     /// Minimal in-process HTTP server that impersonates a 9Router node.
     /// Implements:
     ///   GET /healthz                                       → {"status":"healthy"}
-    ///   GET /api/providers                                 → one active minimax connection
+    ///   GET /api/integrations/providers                    → one active minimax connection
     ///   GET /api/integrations/providers/by-type/e2e/models → two test models
     ///   GET /v1/models                                     → same two model IDs
     ///   POST /api/integrations/keys                        → stub key-create response
@@ -275,7 +275,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
                 {
                     json = """{"status":"healthy"}""";
                 }
-                else if (method == "GET" && path == "/api/providers")
+                else if (method == "GET" && path == "/api/integrations/providers")
                 {
                     if (!Authorize(ctx))
                         return;

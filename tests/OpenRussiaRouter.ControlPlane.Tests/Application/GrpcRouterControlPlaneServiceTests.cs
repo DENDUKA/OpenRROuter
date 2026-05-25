@@ -721,7 +721,11 @@ public sealed class GrpcRouterControlPlaneServiceTests
         await responseTask;
 
         stub.ReceivedTokens.Should().NotBeEmpty();
-        stub.ReceivedTokens.Should().OnlyContain(t => t == cts.Token);
+        // Token identity is no longer asserted: CollectNodeCatalogAsync wraps the caller token
+        // in a per-node linked CancellationTokenSource (with CancelAfter), so what providers
+        // receive is a derived token. We assert it is still cancellable (i.e., not None),
+        // which is the contract callers actually depend on.
+        stub.ReceivedTokens.Should().OnlyContain(t => t.CanBeCanceled);
     }
 
     private async Task<(RouterControlPlaneService Control, string FirstId, string SecondId)> CreateTwoEnabledNodesAsync(

@@ -14,7 +14,7 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
     private const string IntegrationKeysPath = "/api/integrations/keys";
     private const string IntegrationKeyStatusPathTemplate = "/api/integrations/keys/{0}/status";
     private const string ModelsPath = "/v1/models";
-    private const string ProvidersPath = "/api/providers";
+    private const string ProvidersPath = "/api/integrations/providers";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 

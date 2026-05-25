@@ -753,8 +753,26 @@ public sealed class GrpcRouterControlPlaneServiceTests
                 : Task.FromResult(new NodeModelsResponse());
         }
 
-        public Task<RouterProviderListResponse> ListProvidersAsync(RouterNode node, CancellationToken ct) =>
-            Task.FromResult(new RouterProviderListResponse());
+        public async Task<RouterProviderListResponse> ListProvidersAsync(RouterNode node, CancellationToken ct)
+        {
+            lock (ReceivedTokens) ReceivedTokens.Add(ct);
+            var quota = QuotaByNode.TryGetValue(node.Id, out var fn)
+                ? await fn(ct)
+                : new RouterProviderQuotaResponse();
+
+            return new RouterProviderListResponse
+            {
+                Connections = quota.Providers.Select(provider => new RouterProviderConnectionSummary
+                {
+                    Id = provider.ConnectionId,
+                    Provider = provider.Provider,
+                    AuthType = provider.AuthType,
+                    Name = provider.Name,
+                    IsActive = provider.IsActive,
+                    TestStatus = provider.TestStatus
+                }).ToList()
+            };
+        }
 
         public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
             RouterNode node, CancellationToken ct) =>

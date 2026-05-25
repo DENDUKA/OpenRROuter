@@ -276,23 +276,14 @@ public sealed class GrpcRouterControlPlaneService(
         var nodes = (await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false))
             .Where(n => n.Enabled);
 
-        var tasks = nodes.Select(async node =>
-        {
-            try
-            {
-                var result = await providerClient.ListModelsAsync(node, cancellationToken).ConfigureAwait(false);
-                return result.Data.Select(m => m.Id).ToList();
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Failed to list models from node {NodeId}", node.Id);
-                return (IEnumerable<string>)[];
-            }
-        });
+        var nodeResults = await Task.WhenAll(
+            nodes.Select(node => CollectNodeCatalogAsync(node, cancellationToken))
+        ).ConfigureAwait(false);
 
-        var allIds = await Task.WhenAll(tasks).ConfigureAwait(false);
-        var modelIds = allIds
-            .SelectMany(ids => ids)
+        var modelIds = nodeResults
+            .Where(result => !result.Unreachable)
+            .SelectMany(result => result.Observations)
+            .Select(observation => observation.UpstreamId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet()
             .Order()
@@ -381,10 +372,10 @@ public sealed class GrpcRouterControlPlaneService(
 
     private async Task<NodeCatalogResult> CollectNodeCatalogAsync(RouterNode node, CancellationToken cancellationToken)
     {
-        RouterProviderQuotaResponse quota;
+        RouterProviderListResponse providerList;
         try
         {
-            quota = await providerClient.GetProviderQuotaAsync(node, includeInactive: false, cancellationToken).ConfigureAwait(false);
+            providerList = await providerClient.ListProvidersAsync(node, cancellationToken).ConfigureAwait(false);
         }
         catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -392,18 +383,18 @@ public sealed class GrpcRouterControlPlaneService(
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "GetProviderQuota failed for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "ListProviders failed for router node. NodeId: {NodeId}", node.Id);
             return new NodeCatalogResult(
                 node.Id,
                 Unreachable: true,
                 [],
-                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/integrations/providers/quota").ToString()),
+                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/integrations/providers").ToString()),
                 FormatResponse(ex));
         }
 
-        var providerKeys = quota.Providers
-            .Where(p => p.IsActive && !string.IsNullOrWhiteSpace(p.Provider))
-            .Select(p => p.Provider)
+        var providerKeys = providerList.Connections
+            .Where(connection => connection.IsActive && !string.IsNullOrWhiteSpace(connection.Provider))
+            .Select(connection => connection.Provider)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 

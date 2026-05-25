@@ -293,7 +293,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         var nodes = (await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false))
-            .Where(n => n.Enabled);
+            .Where(IsRoutableForCatalog);
 
         var nodeResults = await Task.WhenAll(
             nodes.Select(node => CollectNodeCatalogAsync(node, cancellationToken))
@@ -319,7 +319,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
         var nodes = (await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false))
-            .Where(n => n.Enabled)
+            .Where(IsRoutableForCatalog)
             .ToList();
 
         var response = new ListNodeModelCatalogResponse();
@@ -498,6 +498,14 @@ public sealed class GrpcRouterControlPlaneService(
     private static bool IsTransientProviderError(Exception ex, CancellationToken cancellationToken) =>
         ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
         (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested);
+
+    // A node is included in catalog polling if it's enabled AND either (a) hasn't been
+    // health-checked yet — keep best-effort behaviour right after control-plane restart —
+    // or (b) the most recent health check did not mark it Unhealthy. Excluding confirmed-
+    // unhealthy nodes avoids paying the per-node timeout for dead endpoints on every sync.
+    private static bool IsRoutableForCatalog(RouterNode node) =>
+        node.Enabled &&
+        (!node.LastCheckedAtUtc.HasValue || node.Status != RouterNodeStatus.Unhealthy);
 
     private static string FormatRequest(Exception ex, string fallbackRequest)
     {

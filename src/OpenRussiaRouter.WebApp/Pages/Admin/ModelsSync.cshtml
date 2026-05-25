@@ -98,7 +98,8 @@
             }
             else
             {
-                <form method="post" asp-page-handler="Import">
+                <form method="post" action="/admin/models/sync?handler=Import">
+                    @Html.AntiForgeryToken()
                     <div asp-validation-summary="ModelOnly" class="validation-message"></div>
                     <div class="adm-form-row">
                         <div class="form-group">
@@ -163,7 +164,7 @@
                         </tbody>
                     </table>
                     <div class="adm-btn-row">
-                        <button type="submit" class="btn btn-primary" data-testid="models-sync-submit">Import Selected</button>
+                        <button type="submit" class="btn btn-primary" formnovalidate data-testid="models-sync-submit">Import Selected</button>
                         <a class="btn btn-secondary" href="/admin/models">Back to Models</a>
                     </div>
                 </form>

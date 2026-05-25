@@ -41,6 +41,10 @@ public class ModelsSyncModel(
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.Ordinal);
         Form.Prefix = Form.Prefix?.Trim() ?? string.Empty;
+        logger.LogInformation(
+            "Models sync import POST received. SelectedCount={SelectedCount}; SelectedUpstreamIds={SelectedUpstreamIds}",
+            SelectedUpstreamIds.Count,
+            string.Join(", ", SelectedUpstreamIds.OrderBy(id => id, StringComparer.Ordinal)));
 
         var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         if (!string.IsNullOrWhiteSpace(catalog.Error))
@@ -65,6 +69,12 @@ public class ModelsSyncModel(
         }
 
         BuildDiff(catalog, billingModels);
+
+        if (SelectedUpstreamIds.Count == 0)
+        {
+            ModelState.AddModelError(string.Empty, "Select at least one model to import.");
+            return Page();
+        }
 
         if (!ModelState.IsValid)
         {
@@ -132,6 +142,11 @@ public class ModelsSyncModel(
         {
             TempData["WarningMessages"] = string.Join(Environment.NewLine, warnings);
         }
+
+        logger.LogInformation(
+            "Models sync import completed. ImportedCount={ImportedCount}; WarningCount={WarningCount}",
+            imported,
+            warnings.Count);
 
         return RedirectToPage("/Admin/Models");
     }

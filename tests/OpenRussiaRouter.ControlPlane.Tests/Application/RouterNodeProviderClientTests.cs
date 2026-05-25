@@ -224,7 +224,7 @@ public sealed class RouterNodeProviderTests
         var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
 
         handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/integrations/providers");
+        handler.LastUri.Should().Be("https://router.example/api/providers");
         handler.Authorization.Should().Be("Bearer control-token");
         var conn = result.Connections.Should().ContainSingle().Which;
         conn.Id.Should().Be("conn-1");

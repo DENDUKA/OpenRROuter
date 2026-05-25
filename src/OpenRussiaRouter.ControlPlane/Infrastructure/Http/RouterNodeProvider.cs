@@ -114,7 +114,7 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
         return SendAsync<RouterProviderListResponse>(
             node,
             HttpMethod.Get,
-            "/api/integrations/providers",
+            "/api/providers",
             content: null,
             cancellationToken);
     }

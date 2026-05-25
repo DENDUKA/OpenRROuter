@@ -166,7 +166,7 @@ public class ModelsSyncModel(
             }
 
             var endpoint = node.EndpointUrl?.TrimEnd('/') ?? string.Empty;
-            var url = $"{endpoint}/api/integrations/providers/quota";
+            var url = $"{endpoint}/api/providers";
             var requestLine = $"GET {url}";
 
             if (string.IsNullOrWhiteSpace(node.ControlToken))

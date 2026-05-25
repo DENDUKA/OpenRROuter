@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.WebApp.Services.Auth;
@@ -16,7 +15,6 @@ public class NodesModel(
     AuthProvider AuthProvider,
     BillingProvider BillingProvider,
     IHttpClientFactory httpClientFactory,
-    IConfiguration configuration,
     ILogger<NodesModel> logger) : PageModelBase
 {
     private const string ModelPriceMissingErrorCode = "model_price_missing";
@@ -119,36 +117,22 @@ public class NodesModel(
         if (node is null)
             return new JsonResult(Array.Empty<string>());
 
-        try
+        var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+        if (!string.IsNullOrWhiteSpace(catalog.Error))
         {
-            var modelsUrl = $"{node.EndpointUrl.TrimEnd('/')}/v1/models";
-            using var req = new HttpRequestMessage(HttpMethod.Get, modelsUrl);
-            AddNodeTokenHeaders(req, node);
-            using var resp = await _httpClient.SendAsync(req);
-
-            if (!resp.IsSuccessStatusCode)
-                return new JsonResult(Array.Empty<string>());
-
-            var body = await resp.Content.ReadAsStringAsync();
-            using var doc = System.Text.Json.JsonDocument.Parse(body);
-            if (doc.RootElement.TryGetProperty("data", out var dataEl))
-            {
-                var models = dataEl.EnumerateArray()
-                    .Where(m => m.TryGetProperty("id", out _))
-                    .Select(m => m.GetProperty("id").GetString() ?? "")
-                    .Where(id => !string.IsNullOrWhiteSpace(id))
-                    .OrderBy(id => id)
-                    .ToList();
-                return new JsonResult(models);
-            }
-
+            logger.LogWarning("Failed to fetch models from router node catalog. NodeId={NodeId}; Error={Error}", nodeId, catalog.Error);
             return new JsonResult(Array.Empty<string>());
         }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to fetch models from router node. NodeId={NodeId}", nodeId);
-            return new JsonResult(Array.Empty<string>());
-        }
+
+        var models = catalog.Entries
+            .Where(entry => entry.NodeIds.Contains(node.NodeId, StringComparer.Ordinal))
+            .Select(entry => entry.UpstreamId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .OrderBy(id => id, StringComparer.Ordinal)
+            .ToList();
+
+        return new JsonResult(models);
     }
 
     public async Task<IActionResult> OnPostTestAsync()
@@ -390,26 +374,6 @@ public class NodesModel(
         Response.ContentType = "text/plain; charset=utf-8";
         await Response.WriteAsync(message, HttpContext.RequestAborted);
         return new EmptyResult();
-    }
-
-    private void AddNodeTokenHeaders(HttpRequestMessage request, RouterNodeInfo node)
-    {
-        var nodeToken = ResolveNodeToken(node.ControlToken);
-        if (string.IsNullOrWhiteSpace(nodeToken))
-            return;
-
-        request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", nodeToken);
-        request.Headers.TryAddWithoutValidation("Authorization", $"Bearer {nodeToken}");
-    }
-
-    private string ResolveNodeToken(string controlToken)
-    {
-        if (string.IsNullOrWhiteSpace(controlToken))
-            return string.Empty;
-
-        // Explicit override (e.g. an sk-or-* key) takes priority;
-        // fall back to the control token itself so every node works without extra config.
-        return configuration[$"RouterNodeTokens:{controlToken.Trim()}"] ?? controlToken;
     }
 
     public static string GetStatusBadge(string status) => status switch

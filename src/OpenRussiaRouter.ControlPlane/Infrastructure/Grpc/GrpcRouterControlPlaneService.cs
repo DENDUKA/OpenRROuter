@@ -388,7 +388,7 @@ public sealed class GrpcRouterControlPlaneService(
                 node.Id,
                 Unreachable: true,
                 [],
-                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/integrations/providers").ToString()),
+                FormatRequest(ex, "GET", new Uri(node.EndpointUrl, "/api/providers").ToString()),
                 FormatResponse(ex));
         }
 

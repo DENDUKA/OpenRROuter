@@ -37,17 +37,6 @@ public sealed record RouterProviderConnectionInfo
     public JsonElement? ProviderSpecificData { get; init; }
 }
 
-public sealed record RouterProviderModelsResponse
-{
-    public string Provider { get; init; } = string.Empty;
-    public string Alias { get; init; } = string.Empty;
-    public string Source { get; init; } = string.Empty;
-    public string? Warning { get; init; }
-    public string? ConnectionId { get; init; }
-    public string? NodeType { get; init; }
-    public IReadOnlyList<RouterProviderModelInfo> Models { get; init; } = [];
-}
-
 public sealed record RouterProviderModelInfo
 {
     public string Id { get; init; } = string.Empty;
@@ -88,29 +77,6 @@ public sealed record NodeModelsResponse
 public sealed record NodeModelInfo
 {
     public string Id { get; init; } = string.Empty;
-}
-
-public sealed record RouterProviderListResponse
-{
-    public IReadOnlyList<RouterProviderConnectionSummary> Connections { get; init; } = [];
-}
-
-public sealed record RouterProviderConnectionSummary
-{
-    public string Id { get; init; } = string.Empty;
-    public string Provider { get; init; } = string.Empty;
-    public string AuthType { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public bool IsActive { get; init; }
-    public string? TestStatus { get; init; }
-    public RouterProviderSpecificDataSummary? ProviderSpecificData { get; init; }
-}
-
-public sealed record RouterProviderSpecificDataSummary
-{
-    public string? Prefix { get; init; }
-    public string? BaseUrl { get; init; }
-    public string? NodeName { get; init; }
 }
 
 public sealed record RouterProvidersWithModelsResponse

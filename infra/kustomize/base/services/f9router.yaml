@@ -27,7 +27,7 @@ spec:
     spec:
       containers:
         - name: f9router
-          image: ghcr.io/inc64/f9router:latest
+          image: ghcr.io/inc64/f9router:dev-latest
           ports:
             - containerPort: 20128
           env:

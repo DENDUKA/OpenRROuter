@@ -102,31 +102,9 @@
                     <div asp-validation-summary="ModelOnly" class="validation-message"></div>
                     <div class="adm-form-row">
                         <div class="form-group">
-                            <label asp-for="Form.InputPrice" class="form-label">Default Input Price (RUB/1M)</label>
-                            <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.01" data-testid="models-sync-input-price" />
-                            <span asp-validation-for="Form.InputPrice" class="validation-message"></span>
-                        </div>
-                        <div class="form-group">
-                            <label asp-for="Form.OutputPrice" class="form-label">Default Output Price (RUB/1M)</label>
-                            <input asp-for="Form.OutputPrice" class="form-control" type="number" step="0.01" data-testid="models-sync-output-price" />
-                            <span asp-validation-for="Form.OutputPrice" class="validation-message"></span>
-                        </div>
-                        <div class="form-group">
-                            <label asp-for="Form.CachePrice" class="form-label">Default Cache Price (RUB/1M)</label>
-                            <input asp-for="Form.CachePrice" class="form-control" type="number" step="0.01" data-testid="models-sync-cache-price" />
-                            <span asp-validation-for="Form.CachePrice" class="validation-message"></span>
-                        </div>
-                    </div>
-                    <div class="adm-form-row">
-                        <div class="form-group">
                             <label asp-for="Form.Prefix" class="form-label">Public ID Prefix</label>
                             <input asp-for="Form.Prefix" class="form-control" placeholder="myorg/" data-testid="models-sync-prefix" />
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">
-                                <input asp-for="Form.EnableOnImport" type="checkbox" data-testid="models-sync-enable" />
-                                Enable on import
-                            </label>
+                            <small class="text-muted">Applied to every Suggested Billing ID below.</small>
                         </div>
                     </div>
                     <table class="table" data-testid="models-sync-new-table">
@@ -137,27 +115,63 @@
                                 <th>Display Name</th>
                                 <th>Upstream</th>
                                 <th>Type</th>
+                                <th>Input&nbsp;RUB/1M</th>
+                                <th>Output&nbsp;RUB/1M</th>
+                                <th>Cache&nbsp;RUB/1M</th>
+                                <th>Enabled</th>
                                 <th>Providers</th>
                                 <th>Nodes</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var row in Model.NewOnNodes)
+                            @foreach (var display in Model.RowDisplays)
                             {
-                                <tr data-testid="models-sync-row" data-upstream-id="@row.UpstreamId">
+                                var i = display.FormIndex;
+                                var entry = display.Entry;
+                                <tr data-testid="models-sync-row" data-upstream-id="@entry.UpstreamId">
                                     <td>
-                                        <input type="checkbox"
-                                               name="selectedUpstreamIds"
-                                               value="@row.UpstreamId"
-                                               checked="@Model.SelectedUpstreamIds.Contains(row.UpstreamId)"
-                                               data-testid="models-sync-checkbox" />
+                                        <input asp-for="Form.Rows[i].UpstreamId" type="hidden" />
+                                        <input asp-for="Form.Rows[i].Selected" type="checkbox" data-testid="models-sync-checkbox" />
                                     </td>
-                                    <td><code>@(Model.Form.Prefix + row.PublicId)</code></td>
-                                    <td>@row.DisplayName</td>
-                                    <td><code>@row.UpstreamId</code></td>
-                                    <td>@row.ModelType</td>
-                                    <td>@string.Join(", ", row.SourceProviders)</td>
-                                    <td>@string.Join(", ", row.NodeIds)</td>
+                                    <td><code>@(Model.Form.Prefix + entry.PublicId)</code></td>
+                                    <td>@entry.DisplayName</td>
+                                    <td><code>@entry.UpstreamId</code></td>
+                                    <td>@entry.ModelType</td>
+                                    <td>
+                                        <input asp-for="Form.Rows[i].InputPrice"
+                                               type="number"
+                                               step="0.01"
+                                               min="0"
+                                               class="form-control"
+                                               style="width:7em"
+                                               data-testid="models-sync-row-input-price" />
+                                        <span asp-validation-for="Form.Rows[i].InputPrice" class="validation-message"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Form.Rows[i].OutputPrice"
+                                               type="number"
+                                               step="0.01"
+                                               min="0"
+                                               class="form-control"
+                                               style="width:7em"
+                                               data-testid="models-sync-row-output-price" />
+                                        <span asp-validation-for="Form.Rows[i].OutputPrice" class="validation-message"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Form.Rows[i].CachePrice"
+                                               type="number"
+                                               step="0.01"
+                                               min="0"
+                                               class="form-control"
+                                               style="width:7em"
+                                               data-testid="models-sync-row-cache-price" />
+                                        <span asp-validation-for="Form.Rows[i].CachePrice" class="validation-message"></span>
+                                    </td>
+                                    <td>
+                                        <input asp-for="Form.Rows[i].Enabled" type="checkbox" data-testid="models-sync-row-enabled" />
+                                    </td>
+                                    <td>@string.Join(", ", entry.SourceProviders)</td>
+                                    <td>@string.Join(", ", entry.NodeIds)</td>
                                 </tr>
                             }
                         </tbody>

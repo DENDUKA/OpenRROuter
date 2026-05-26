@@ -10,7 +10,7 @@ Additionally, the user-facing `/models` page guesses provider/capability/context
 
 ## Goal
 
-1. **Admin batch import**: a "Sync from 9Router" view that shows a diff (new on node / missing on node / in sync), lets admin select multiple models, set bulk default pricing, and upsert them in one POST.
+1. **Admin batch import**: a "Sync from 9Router" view that shows a diff (new on node / missing on node / in sync), lets admin select multiple models, set per-row pricing and enabled state, and upsert them in one POST.
 2. **Enrichment**: pre-fill `display_name`, `type` (text/vision/embedding), and source-provider info from the richer `/api/integrations/providers/by-type/{provider}/models` endpoint instead of the plain `/v1/models`.
 
 **Acceptance for the core feature (SYNC-1..6):** Goals 1 and 2 above. SYNC-0 discovery is already resolved in this spec. The user-facing `/models` page rewrite is explicitly *out of scope* — it lives in the Future section as SYNC-7 and may ship independently.
@@ -38,13 +38,13 @@ WebApp Admin/Models/Sync (GET)
     ← render selectable table
 
 WebApp Admin/Models/Sync (POST Import)
-    → for each selected entry:
+    → for each Form.Rows[i] where Selected == true:
         BillingService gRPC: UpsertModelPrice
             model_id           = (prefix ?? "") + entry.public_id
-            display_name       = entry.display_name
-            upstream_model_id  = entry.upstream_id
-            *_price_per_1m_rub = bulk defaults from form
-            enabled            = bulkDefaults.enableOnImport (form flag)
+            display_name       = entry.display_name           (re-derived server-side)
+            upstream_model_id  = entry.upstream_id            (re-derived server-side)
+            *_price_per_1m_rub = row.InputPrice / OutputPrice / CachePrice (per-row)
+            enabled            = row.Enabled                  (per-row)
     → redirect to /admin/models with success count
 ```
 
@@ -205,33 +205,44 @@ Routed at `/admin/models/sync`. Layout: `_AdminLayout`.
   - `NewOnNodes` — catalog entries where `byUpstream` does NOT contain `entry.upstream_id` AND `byBillingId` does NOT contain `entry.public_id`
   - `Configured` — catalog entries where `byUpstream` contains `entry.upstream_id` (informational, default unchecked, no checkbox)
   - `MissingFromNodes` — billing models whose `UpstreamModelId` is not in the catalog AND not in `unreachable_node_ids` context (warning row; can't tell apart "node down" vs "model truly removed" if any node was unreachable, so suppress this list when `unreachable_node_ids` is non-empty)
-- Render a table with checkbox per `NewOnNodes` row + bulk default fields:
-  - Default Input / Output / Cache price (RUB/1M)
-  - "Enable on import" checkbox
-  - Optional `public_id` prefix (e.g. `myorg/`) — applied if admin wants namespacing
+- Render a table with one row per `NewOnNodes` catalog entry. Each row has its own form inputs:
+  - `Selected` checkbox (whether to import this row)
+  - `InputPrice` / `OutputPrice` / `CachePrice` (RUB/1M, per-row, validated `[0, 1_000_000]`)
+  - `Enabled` checkbox (whether the imported model is enabled in billing)
+  - `UpstreamId` (hidden — identifies which catalog entry this row maps to)
+- Plus one form-wide field:
+  - Optional `public_id` prefix (e.g. `myorg/`) — applied to every Suggested Billing ID
 - Show `unreachable_node_ids` as a banner
 
-**POST Import** — *trust model: server-authoritative.*
+**POST Import** — *trust model: server-authoritative for metadata, client-supplied for pricing.*
 
-The form posts only `string[] selectedUpstreamIds` and the bulk-default fields (prices, enabled flag, optional public_id prefix). It does **not** post `display_name`, `public_id`, `model_type`, or any other per-entry metadata as hidden inputs.
+The form posts:
+
+- `Form.Prefix` (string, optional)
+- `Form.Rows[i].UpstreamId` (string — identifies the catalog entry)
+- `Form.Rows[i].Selected` (bool)
+- `Form.Rows[i].InputPrice` / `OutputPrice` / `CachePrice` (decimal, validated)
+- `Form.Rows[i].Enabled` (bool)
+
+It does **not** post `display_name`, `public_id`, `model_type`, or any other per-entry metadata as hidden inputs. Metadata is always re-derived server-side from the live catalog.
 
 Handler:
 
 1. Re-fetch catalog via `ListNodeModelCatalogAsync()` (do not trust browser snapshot).
-   - **If `result.Error` is non-null → abort the import entirely.** Do not enter the per-row loop. Render the Sync page again (no redirect) with a top-level banner: "Catalog unavailable — import cancelled: {Error}". `selectedUpstreamIds` are preserved so the admin can retry once nodes recover. This prevents the "model no longer on nodes" warning from being emitted for every single row on a transient gRPC failure.
+   - **If `result.Error` is non-null → abort the import entirely.** Do not enter the per-row loop. Render the Sync page again (no redirect) with a top-level banner: "Catalog unavailable — import cancelled: {Error}". Submitted `Form.Rows` (with prices, selections, enabled state) are preserved so the admin can retry once nodes recover. This prevents the "model no longer on nodes" warning from being emitted for every single row on a transient gRPC failure.
 2. Re-fetch existing billing via `ListModelsAsync()`; rebuild both `byBillingId` and `byUpstream` indexes. If this call fails → same abort behavior, banner: "Billing catalog unavailable — import cancelled."
-3. For each `upstream_id` in `selectedUpstreamIds`:
-   - Look up the catalog entry; if missing → skip with "model no longer on nodes" warning (now genuinely meaningful, since step 1 confirmed catalog was successfully refreshed)
+3. For each `Form.Rows[i]` where `Selected == true`:
+   - Look up the catalog entry by `UpstreamId`; if missing → skip with "model no longer on nodes" warning (now genuinely meaningful, since step 1 confirmed catalog was successfully refreshed)
    - Compute candidate `model_id = (prefix ?? "") + entry.public_id`
    - **Dedup check (both directions):**
      - If `byUpstream` already contains `entry.upstream_id` → skip with "already configured under '{existing.Id}'" warning (prevents importing a second public_id for the same upstream)
      - If `byBillingId` already contains `model_id` → skip with "billing ID '{model_id}' already used" warning (prevents overwriting an unrelated model)
-   - Build `ModelInfo` from `entry.display_name`, `entry.upstream_id`, candidate `model_id`, bulk prices, `enabled = bulkDefaults.enableOnImport`
+   - Build `ModelInfo` from `entry.display_name` and `entry.upstream_id` (from re-fetched catalog), candidate `model_id`, `row.InputPrice`/`OutputPrice`/`CachePrice`, `enabled = row.Enabled`
    - Call `BillingClient.UpsertModelAsync(modelInfo)`
 4. Count successes + collect per-row warnings/errors
 5. Redirect to `/admin/models` with `TempData["SuccessMessage"] = "Imported N models."` and `TempData["WarningMessages"]` for the rest
 
-The browser submits intent (which upstream_ids to import); the server independently derives the data that ends up in billing. No client-side field is treated as the source of truth.
+The browser submits intent (which rows to import + per-row pricing/enabled state); the server independently derives the catalog metadata (`display_name`, `public_id`, `upstream_id`). No client-supplied metadata field is treated as the source of truth.
 
 ### 6. `src/OpenRussiaRouter.WebApp/Pages/Admin/Models.cshtml`
 

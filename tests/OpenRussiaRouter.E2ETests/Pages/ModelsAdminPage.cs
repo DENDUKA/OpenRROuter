@@ -79,21 +79,23 @@ sealed class ModelsAdminPage(IPage page, string baseUrl)
             .CheckAsync();
     }
 
-    /// <summary>Fills the bulk input/output/cache price fields.</summary>
-    public async Task SetBulkPricesAsync(decimal inputPrice, decimal outputPrice, decimal cachePrice)
+    /// <summary>Fills the per-row input/output/cache price fields for the given upstream model.</summary>
+    public async Task SetRowPricesAsync(string upstreamId, decimal inputPrice, decimal outputPrice, decimal cachePrice)
     {
-        await page.FillAsync("[data-testid='models-sync-input-price']",
-            inputPrice.ToString("F2", CultureInfo.InvariantCulture));
-        await page.FillAsync("[data-testid='models-sync-output-price']",
-            outputPrice.ToString("F2", CultureInfo.InvariantCulture));
-        await page.FillAsync("[data-testid='models-sync-cache-price']",
-            cachePrice.ToString("F2", CultureInfo.InvariantCulture));
+        var row = page.Locator($"[data-testid='models-sync-row'][data-upstream-id='{upstreamId}']");
+        await row.Locator("[data-testid='models-sync-row-input-price']")
+            .FillAsync(inputPrice.ToString("F2", CultureInfo.InvariantCulture));
+        await row.Locator("[data-testid='models-sync-row-output-price']")
+            .FillAsync(outputPrice.ToString("F2", CultureInfo.InvariantCulture));
+        await row.Locator("[data-testid='models-sync-row-cache-price']")
+            .FillAsync(cachePrice.ToString("F2", CultureInfo.InvariantCulture));
     }
 
-    /// <summary>Checks or unchecks the "Enable on import" checkbox.</summary>
-    public async Task SetEnableOnImportAsync(bool enable)
+    /// <summary>Checks or unchecks the per-row Enabled checkbox for the given upstream model.</summary>
+    public async Task SetRowEnabledAsync(string upstreamId, bool enable)
     {
-        var cb = page.Locator("[data-testid='models-sync-enable']");
+        var cb = page.Locator(
+            $"[data-testid='models-sync-row'][data-upstream-id='{upstreamId}'] [data-testid='models-sync-row-enabled']");
         if (enable)
             await cb.CheckAsync();
         else

@@ -76,11 +76,13 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
             await modelsPage.SelectRowByUpstreamIdAsync(upstreamText);
             await modelsPage.SelectRowByUpstreamIdAsync(upstreamVision);
 
-            // ── 7. Fill bulk prices ──────────────────────────────────────────
-            await modelsPage.SetBulkPricesAsync(inputPrice: 10m, outputPrice: 20m, cachePrice: 5m);
+            // ── 7. Fill per-row prices ───────────────────────────────────────
+            await modelsPage.SetRowPricesAsync(upstreamText,   inputPrice: 10m, outputPrice: 20m, cachePrice: 5m);
+            await modelsPage.SetRowPricesAsync(upstreamVision, inputPrice: 15m, outputPrice: 30m, cachePrice: 8m);
 
-            // ── 8. Enable on import ──────────────────────────────────────────
-            await modelsPage.SetEnableOnImportAsync(true);
+            // ── 8. Per-row Enabled (defaults to true; assert explicit) ───────
+            await modelsPage.SetRowEnabledAsync(upstreamText,   true);
+            await modelsPage.SetRowEnabledAsync(upstreamVision, true);
 
             // ── 9. Submit ────────────────────────────────────────────────────
             await modelsPage.SubmitImportAsync();

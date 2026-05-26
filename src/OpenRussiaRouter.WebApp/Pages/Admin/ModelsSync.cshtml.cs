@@ -19,7 +19,7 @@ public class ModelsSyncModel(
     public IReadOnlyList<ModelInfo> BillingOnlyModels { get; private set; } = [];
     public IReadOnlyList<string> UnreachableNodeIds { get; private set; } = [];
     public IReadOnlyList<UnreachableNodeDetail> UnreachableNodes { get; private set; } = [];
-    public HashSet<string> SelectedUpstreamIds { get; private set; } = new(StringComparer.Ordinal);
+    public IReadOnlyList<RowDisplay> RowDisplays { get; private set; } = [];
     public List<string> WarningMessages { get; } = [];
     public string? ErrorMessage { get; private set; }
     public bool CatalogUnavailable { get; private set; }
@@ -33,24 +33,25 @@ public class ModelsSyncModel(
     {
         await LoadDiffAsync();
         await ProbeUnreachableNodesAsync();
+        BuildRowDisplays();
     }
 
-    public async Task<IActionResult> OnPostImportAsync([FromForm(Name = "selectedUpstreamIds")] string[] selectedUpstreamIds)
+    public async Task<IActionResult> OnPostImportAsync()
     {
-        SelectedUpstreamIds = selectedUpstreamIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
         Form.Prefix = Form.Prefix?.Trim() ?? string.Empty;
+        var submittedRows = Form.Rows ?? [];
+        var selectedCount = submittedRows.Count(r => r.Selected);
         logger.LogInformation(
-            "Models sync import POST received. SelectedCount={SelectedCount}; SelectedUpstreamIds={SelectedUpstreamIds}",
-            SelectedUpstreamIds.Count,
-            string.Join(", ", SelectedUpstreamIds.OrderBy(id => id, StringComparer.Ordinal)));
+            "Models sync import POST received. SubmittedRowCount={SubmittedRowCount}; SelectedCount={SelectedCount}",
+            submittedRows.Count,
+            selectedCount);
 
         var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         if (!string.IsNullOrWhiteSpace(catalog.Error))
         {
             ErrorMessage = $"Catalog unavailable — import cancelled: {catalog.Error}";
             await LoadDiffAsync(catalog);
+            BuildRowDisplays();
             return Page();
         }
 
@@ -65,19 +66,22 @@ public class ModelsSyncModel(
             ErrorMessage = "Billing catalog unavailable — import cancelled.";
             BillingUnavailable = true;
             BuildDiff(catalog, []);
+            BuildRowDisplays();
             return Page();
         }
 
         BuildDiff(catalog, billingModels);
 
-        if (SelectedUpstreamIds.Count == 0)
+        if (selectedCount == 0)
         {
             ModelState.AddModelError(string.Empty, "Select at least one model to import.");
+            BuildRowDisplays();
             return Page();
         }
 
         if (!ModelState.IsValid)
         {
+            BuildRowDisplays();
             return Page();
         }
 
@@ -92,11 +96,16 @@ public class ModelsSyncModel(
             .GroupBy(e => e.UpstreamId, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
-        foreach (var upstreamId in SelectedUpstreamIds.OrderBy(id => id, StringComparer.Ordinal))
+        var selectedRows = submittedRows
+            .Where(r => r.Selected && !string.IsNullOrWhiteSpace(r.UpstreamId))
+            .OrderBy(r => r.UpstreamId, StringComparer.Ordinal)
+            .ToList();
+
+        foreach (var row in selectedRows)
         {
-            if (!catalogByUpstream.TryGetValue(upstreamId, out var entry))
+            if (!catalogByUpstream.TryGetValue(row.UpstreamId, out var entry))
             {
-                warnings.Add($"{upstreamId}: model no longer on nodes.");
+                warnings.Add($"{row.UpstreamId}: model no longer on nodes.");
                 continue;
             }
 
@@ -118,10 +127,10 @@ public class ModelsSyncModel(
                 entry.DisplayName,
                 entry.UpstreamId,
                 "v1",
-                Form.InputPrice,
-                Form.OutputPrice,
-                Form.CachePrice,
-                Form.EnableOnImport);
+                row.InputPrice,
+                row.OutputPrice,
+                row.CachePrice,
+                row.Enabled);
 
             try
             {
@@ -279,18 +288,58 @@ public class ModelsSyncModel(
         ShowAddNodeMessage = catalog.Entries.Count == 0 && !CatalogUnavailable && catalog.UnreachableNodeIds.Count == 0;
     }
 
+    private void BuildRowDisplays()
+    {
+        var submitted = (Form.Rows ?? [])
+            .Where(r => !string.IsNullOrWhiteSpace(r.UpstreamId))
+            .GroupBy(r => r.UpstreamId, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
+
+        var rows = new List<ModelImportRow>(NewOnNodes.Count);
+        var displays = new List<RowDisplay>(NewOnNodes.Count);
+
+        for (var i = 0; i < NewOnNodes.Count; i++)
+        {
+            var entry = NewOnNodes[i];
+            var row = submitted.TryGetValue(entry.UpstreamId, out var existing)
+                ? existing
+                : new ModelImportRow { UpstreamId = entry.UpstreamId, Enabled = true };
+
+            row.UpstreamId = entry.UpstreamId;
+            displays.Add(new RowDisplay(i, entry));
+            rows.Add(row);
+        }
+
+        Form.Rows = rows;
+        RowDisplays = displays;
+    }
+
     public sealed class ImportFormInput
     {
-        [Range(0, 1000000)] public decimal InputPrice { get; set; }
-
-        [Range(0, 1000000)] public decimal OutputPrice { get; set; }
-
-        [Range(0, 1000000)] public decimal CachePrice { get; set; }
-
-        public bool EnableOnImport { get; set; } = true;
-
         public string Prefix { get; set; } = "";
+
+        public List<ModelImportRow> Rows { get; set; } = [];
     }
+
+    public sealed class ModelImportRow
+    {
+        public string UpstreamId { get; set; } = "";
+
+        public bool Selected { get; set; }
+
+        [Range(0, 1000000, ErrorMessage = "Input price must be between 0 and 1,000,000.")]
+        public decimal InputPrice { get; set; }
+
+        [Range(0, 1000000, ErrorMessage = "Output price must be between 0 and 1,000,000.")]
+        public decimal OutputPrice { get; set; }
+
+        [Range(0, 1000000, ErrorMessage = "Cache price must be between 0 and 1,000,000.")]
+        public decimal CachePrice { get; set; }
+
+        public bool Enabled { get; set; } = true;
+    }
+
+    public sealed record RowDisplay(int FormIndex, NodeModelCatalogEntry Entry);
 
     public sealed record ConfiguredModelRow(
         string BillingId,

@@ -77,6 +77,29 @@ public sealed class ControlPlaneProvider(
         }
     }
 
+    public async Task UpdateRouterNodeAsync(
+        string nodeId,
+        string name,
+        string endpointUrl,
+        string controlToken,
+        int capacityWeight,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.UpdateRouterNodeAsync(new UpdateRouterNodeRequest
+        {
+            NodeId = nodeId ?? string.Empty,
+            Name = name ?? string.Empty,
+            EndpointUrl = endpointUrl ?? string.Empty,
+            ControlToken = controlToken ?? string.Empty,
+            CapacityWeight = capacityWeight
+        }, cancellationToken: cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+        {
+            throw new InvalidOperationException($"UpdateRouterNode failed: {response.ErrorCode}");
+        }
+    }
+
     public async Task EnableRouterNodeAsync(string nodeId, CancellationToken cancellationToken = default)
     {
         await client.EnableRouterNodeAsync(new EnableRouterNodeRequest { NodeId = nodeId }, cancellationToken: cancellationToken);

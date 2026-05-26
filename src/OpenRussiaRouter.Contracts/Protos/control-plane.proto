@@ -8,6 +8,7 @@ service RouterControlPlane {
   rpc SelectRouterNode (SelectRouterNodeRequest) returns (SelectRouterNodeResponse);
   rpc ReleaseRouterNode (ReleaseRouterNodeRequest) returns (ReleaseRouterNodeResponse);
   rpc RegisterRouterNode (RegisterRouterNodeRequest) returns (RegisterRouterNodeResponse);
+  rpc UpdateRouterNode (UpdateRouterNodeRequest) returns (UpdateRouterNodeResponse);
   rpc UpdateRouterNodeControlToken (UpdateRouterNodeControlTokenRequest) returns (UpdateRouterNodeControlTokenResponse);
   rpc DisableRouterNode (DisableRouterNodeRequest) returns (DisableRouterNodeResponse);
   rpc EnableRouterNode (EnableRouterNodeRequest) returns (EnableRouterNodeResponse);
@@ -53,6 +54,19 @@ message RegisterRouterNodeResponse {
   bool registered = 1;
   string node_id = 2;
   string error_code = 3;
+}
+
+message UpdateRouterNodeRequest {
+  string node_id = 1;
+  string name = 2;
+  string endpoint_url = 3;
+  string control_token = 4;
+  int32 capacity_weight = 5;
+}
+
+message UpdateRouterNodeResponse {
+  bool updated = 1;
+  string error_code = 2;
 }
 
 message UpdateRouterNodeControlTokenRequest {

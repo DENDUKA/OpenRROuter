@@ -65,6 +65,22 @@ public sealed class RouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task UpdateNode_ExistingNode_ChangesEditableFields()
+    {
+        var service = CreateService();
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+
+        await service.UpdateNodeAsync(node.Id, "node-b", new Uri("http://f9router"), "secret-b", 3);
+
+        var updated = await service.GetRouterNodeAsync(node.Id);
+        updated.Should().NotBeNull();
+        updated!.Name.Should().Be("node-b");
+        updated.EndpointUrl.Should().Be(new Uri("http://f9router"));
+        updated.ControlToken.Should().Be("secret-b");
+        updated.CapacityWeight.Should().Be(3);
+    }
+
+    [Fact]
     public async Task SelectRouterNode_UnhealthyNode_Throws()
     {
         var service = CreateService();

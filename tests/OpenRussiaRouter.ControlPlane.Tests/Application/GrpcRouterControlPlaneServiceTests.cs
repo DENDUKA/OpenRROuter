@@ -120,6 +120,59 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task UpdateRouterNode_ExistingNode_ReturnsUpdatedAndListShowsNewValues()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+
+        var updated = await service.UpdateRouterNode(
+            new UpdateRouterNodeRequest
+            {
+                NodeId = nodeId,
+                Name = "node-b",
+                EndpointUrl = "http://f9router",
+                ControlToken = "secret-b",
+                CapacityWeight = 5
+            },
+            context: null!);
+        var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
+        var details = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = nodeId },
+            context: null!);
+
+        updated.Updated.Should().BeTrue();
+        updated.ErrorCode.Should().Be(string.Empty);
+        var node = nodes.Nodes.Should().ContainSingle().Which;
+        node.Name.Should().Be("node-b");
+        node.EndpointUrl.Should().Be("http://f9router/");
+        node.CapacityWeight.Should().Be(5);
+        details.Node.ControlToken.Should().Be("secret-b");
+    }
+
+    [Fact]
+    public async Task UpdateRouterNode_InvalidEndpoint_ReturnsValidationFailed()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var service = CreateService(control);
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+
+        var response = await service.UpdateRouterNode(
+            new UpdateRouterNodeRequest
+            {
+                NodeId = nodeId,
+                Name = "node-b",
+                EndpointUrl = "ftp://f9router",
+                ControlToken = "secret-b",
+                CapacityWeight = 5
+            },
+            context: null!);
+
+        response.Updated.Should().BeFalse();
+        response.ErrorCode.Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
     public async Task DisableRouterNode_ExistingNode_ReturnsDisabledAndListShowsDisabled()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
@@ -312,6 +365,25 @@ public sealed class GrpcRouterControlPlaneServiceTests
         response.ErrorCode.Should().Be(string.Empty);
         response.Node.NodeId.Should().Be(nodeId);
         response.ApiError.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task GetRouterNodeDetails_ProviderHangs_ReturnsNodeWithApiError()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var service = CreateService(control, providerClient: new HangingProviderClient());
+        var started = System.Diagnostics.Stopwatch.StartNew();
+
+        var response = await service.GetRouterNodeDetails(
+            new GetRouterNodeDetailsRequest { NodeId = nodeId },
+            context: null!);
+
+        started.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(8));
+        response.ErrorCode.Should().Be(string.Empty);
+        response.Node.NodeId.Should().Be(nodeId);
+        response.ApiError.Should().Contain("Provider quota unavailable");
+        response.ApiError.Should().Contain("Integration keys unavailable");
     }
 
     [Fact]
@@ -977,6 +1049,54 @@ public sealed class GrpcRouterControlPlaneServiceTests
         public Task<RouterProviderListResponse> ListProvidersAsync(
             RouterNode node, CancellationToken cancellationToken) =>
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
+    }
+
+    private sealed class HangingProviderClient : IRouterNodeProvider
+    {
+        public string DescribeListProvidersRequest(RouterNode node) => $"GET provider-list:{node.Id}";
+
+        public string DescribeListModelsRequest(RouterNode node) => $"GET model-list:{node.Id}";
+
+        public async Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
+            RouterNode node,
+            bool includeInactive,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new RouterProviderQuotaResponse();
+        }
+
+        public async Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
+            RouterNode node,
+            CancellationToken cancellationToken)
+        {
+            await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            return new RouterIntegrationKeysResponse();
+        }
+
+        public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
+            RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
+            RouterNode node, string provider, string? source, bool includeCompatible, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
+            RouterNode node, string name, string key, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
+            RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<NodeModelsResponse> ListModelsAsync(
+            RouterNode node, CancellationToken cancellationToken) =>
+            Task.FromResult(new NodeModelsResponse());
+
+        public Task<RouterProviderListResponse> ListProvidersAsync(
+            RouterNode node, CancellationToken cancellationToken) =>
+            Task.FromResult(new RouterProviderListResponse());
     }
 
     private sealed class StubProviderClient : IRouterNodeProvider

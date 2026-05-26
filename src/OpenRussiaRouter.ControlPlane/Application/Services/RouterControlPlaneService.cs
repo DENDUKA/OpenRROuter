@@ -35,6 +35,19 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
     }
 
+    public async Task UpdateNodeAsync(
+        string nodeId,
+        string name,
+        Uri endpointUrl,
+        string controlToken,
+        int capacityWeight,
+        CancellationToken ct = default)
+    {
+        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
+        node.Update(name, endpointUrl, controlToken, capacityWeight);
+        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
+    }
+
     public async Task DisableNodeAsync(string nodeId, CancellationToken ct = default)
     {
         var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);

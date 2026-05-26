@@ -1,0 +1,65 @@
+@page "/admin/nodes/{nodeId}/edit"
+@model Admin.NodeEditModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Edit Router Node - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Edit Router Node</h2>
+    <p>Update node connection settings.</p>
+</div>
+
+<div class="adm-btn-row">
+    <a class="btn btn-secondary" href="@(Model.Node is null ? "/admin/nodes" : $"/admin/nodes/{Model.Node.NodeId}")">Back to node</a>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert" data-testid="error-message">@Model.ErrorMessage</div>
+}
+
+@if (Model.Node is { } node)
+{
+    <div class="adm-card" data-testid="node-edit-card">
+        <div class="adm-card-header adm-card-header--split">
+            <span>@node.Name</span>
+            <span class="badge @Admin.NodeDetailsModel.GetNodeStatusBadge(node.Status)" data-testid="node-status">@node.Status</span>
+        </div>
+        <div class="adm-card-body">
+            @if (Model.AvailabilityCheckResult is { } checkResult)
+            {
+                <div class="alert @(checkResult.Success ? "alert-success" : "alert-danger")" role="status" data-testid="node-edit-check-result">
+                    <div><strong>@(checkResult.Success ? "Integration API is reachable." : "Integration API check failed.")</strong></div>
+                    <div><code>@checkResult.RequestLine</code></div>
+                    <pre style="white-space:pre-wrap;word-break:break-word;margin:0.5rem 0 0;font-size:0.85em">@checkResult.ResponseLine</pre>
+                </div>
+            }
+
+            <form method="post" asp-route-nodeId="@node.NodeId" data-testid="form-edit-node">
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Name" class="form-label">Name</label>
+                        <input asp-for="Form.Name" class="form-control" data-testid="input-node-name" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.EndpointUrl" class="form-label">F9Router URL</label>
+                        <input asp-for="Form.EndpointUrl" class="form-control" data-testid="input-node-endpoint-url" />
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.ControlToken" class="form-label">Control Token</label>
+                        <input asp-for="Form.ControlToken" class="form-control" autocomplete="off" data-testid="input-node-control-token" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.CapacityWeight" class="form-label">Capacity Weight</label>
+                        <input asp-for="Form.CapacityWeight" class="form-control" type="number" min="1" data-testid="input-node-capacity-weight" />
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-secondary" asp-page-handler="Check" data-testid="btn-check-node-edit">Check availability</button>
+                    <button type="submit" class="btn btn-primary" asp-page-handler="Save" data-testid="btn-save-node-edit">Save node</button>
+                    <a class="btn btn-secondary" href="/admin/nodes/@node.NodeId">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}

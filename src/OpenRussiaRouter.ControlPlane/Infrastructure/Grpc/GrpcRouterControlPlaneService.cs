@@ -17,6 +17,8 @@ public sealed class GrpcRouterControlPlaneService(
     ILogger<GrpcRouterControlPlaneService> logger)
     : ControlGrpc.RouterControlPlaneBase
 {
+    private static readonly TimeSpan NodeDetailsProviderTimeout = TimeSpan.FromSeconds(3);
+
     public override async Task<SelectRouterNodeResponse> SelectRouterNode(
         SelectRouterNodeRequest request,
         ServerCallContext context)
@@ -87,6 +89,28 @@ public sealed class GrpcRouterControlPlaneService(
         {
             logger.LogWarning(ex, "DisableRouterNode failed. NodeId: {NodeId}", request.NodeId);
             return new DisableRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<UpdateRouterNodeResponse> UpdateRouterNode(
+        UpdateRouterNodeRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await controlPlane.UpdateNodeAsync(
+                request.NodeId,
+                request.Name,
+                new Uri(request.EndpointUrl),
+                request.ControlToken,
+                request.CapacityWeight,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new UpdateRouterNodeResponse { Updated = true };
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException or UriFormatException)
+        {
+            logger.LogWarning(ex, "UpdateRouterNode failed. NodeId: {NodeId}; EndpointUrl: {EndpointUrl}", request.NodeId, request.EndpointUrl);
+            return new UpdateRouterNodeResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
 
@@ -166,10 +190,11 @@ public sealed class GrpcRouterControlPlaneService(
 
         try
         {
+            using var quotaTimeoutCts = CreateProviderTimeout(cancellationToken);
             var quota = await providerClient.GetProviderQuotaAsync(
                 node,
                 request.IncludeInactiveProviders,
-                cancellationToken).ConfigureAwait(false);
+                quotaTimeoutCts.Token).ConfigureAwait(false);
 
             response.Providers.AddRange(quota.Providers.Select(provider => new RouterProviderQuotaSummary
             {
@@ -184,9 +209,7 @@ public sealed class GrpcRouterControlPlaneService(
                 Error = provider.Error ?? string.Empty
             }));
         }
-        catch (Exception ex) when (
-            ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
-            ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (IsProviderDetailsError(ex, cancellationToken))
         {
             logger.LogWarning(ex, "Failed to load provider quota for router node. NodeId: {NodeId}", node.Id);
             apiErrors.Add("Provider quota unavailable: " + ex.Message);
@@ -194,9 +217,10 @@ public sealed class GrpcRouterControlPlaneService(
 
         try
         {
+            using var keysTimeoutCts = CreateProviderTimeout(cancellationToken);
             var keys = await providerClient.ListIntegrationKeysAsync(
                 node,
-                cancellationToken).ConfigureAwait(false);
+                keysTimeoutCts.Token).ConfigureAwait(false);
 
             response.Keys.AddRange(keys.Keys.Select(key => new RouterIntegrationKeySummary
             {
@@ -209,9 +233,7 @@ public sealed class GrpcRouterControlPlaneService(
                 CreatedAt = key.CreatedAt
             }));
         }
-        catch (Exception ex) when (
-            ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
-            ex is TaskCanceledException && !cancellationToken.IsCancellationRequested)
+        catch (Exception ex) when (IsProviderDetailsError(ex, cancellationToken))
         {
             logger.LogWarning(ex, "Failed to load integration keys for router node. NodeId: {NodeId}", node.Id);
             apiErrors.Add("Integration keys unavailable: " + ex.Message);
@@ -220,6 +242,17 @@ public sealed class GrpcRouterControlPlaneService(
         response.ApiError = string.Join(" ", apiErrors);
         return response;
     }
+
+    private static CancellationTokenSource CreateProviderTimeout(CancellationToken cancellationToken)
+    {
+        var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        cts.CancelAfter(NodeDetailsProviderTimeout);
+        return cts;
+    }
+
+    private static bool IsProviderDetailsError(Exception ex, CancellationToken requestCancellationToken) =>
+        ex is RouterNodeProviderException or InvalidOperationException or HttpRequestException ||
+        ex is OperationCanceledException && !requestCancellationToken.IsCancellationRequested;
 
     public override async Task<PushUserIntegrationKeyResponse> PushUserIntegrationKey(
         PushUserIntegrationKeyRequest request,

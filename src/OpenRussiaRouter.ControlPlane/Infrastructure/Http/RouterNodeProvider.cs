@@ -10,7 +10,7 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
 {
     private const string ProviderQuotaPath = "/api/integrations/providers/quota";
     private const string ProviderStatusPathTemplate = "/api/integrations/providers/{0}/status";
-    private const string ProviderModelsPathTemplate = "/api/integrations/providers/by-type/{0}/models";
+    private const string ProviderModelsByIdPathTemplate = "/api/integrations/providers/{0}/models";
     private const string IntegrationKeysPath = "/api/integrations/keys";
     private const string IntegrationKeyStatusPathTemplate = "/api/integrations/keys/{0}/status";
     private const string ModelsPath = "/v1/models";
@@ -57,25 +57,15 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
 
     public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
         RouterNode node,
-        string provider,
-        string? source,
-        bool includeCompatible,
+        string connectionId,
         CancellationToken cancellationToken)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(provider);
-
-        var query = new List<string>();
-        if (!string.IsNullOrWhiteSpace(source))
-            query.Add($"source={Uri.EscapeDataString(source.Trim())}");
-        if (includeCompatible)
-            query.Add("includeCompatible=true");
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
 
         var path = string.Format(
             System.Globalization.CultureInfo.InvariantCulture,
-            ProviderModelsPathTemplate,
-            Uri.EscapeDataString(provider.Trim()));
-        if (query.Count > 0)
-            path += "?" + string.Join("&", query);
+            ProviderModelsByIdPathTemplate,
+            Uri.EscapeDataString(connectionId.Trim()));
 
         return SendAsync<RouterProviderModelsResponse>(node, HttpMethod.Get, path, content: null, cancellationToken);
     }

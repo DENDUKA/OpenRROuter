@@ -21,9 +21,7 @@ public interface IRouterNodeProvider
 
     Task<RouterProviderModelsResponse> ListProviderModelsAsync(
         RouterNode node,
-        string provider,
-        string? source,
-        bool includeCompatible,
+        string connectionId,
         CancellationToken cancellationToken);
 
     Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(

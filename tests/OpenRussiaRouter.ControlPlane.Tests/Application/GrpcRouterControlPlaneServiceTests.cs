@@ -411,7 +411,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
                 new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true }
             ]
         });
-        stub.ProviderModelsByKey[(nodeId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -500,7 +500,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
                 new RouterProviderQuotaEntry { ConnectionId = "c-2", Provider = "openai", IsActive = true }
             ]
         });
-        stub.ProviderModelsByKey[(nodeId, "openai")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-2")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models = [new RouterProviderModelInfo { Id = "gpt-test", PublicId = "gpt-test", Enabled = true }]
         });
@@ -508,12 +508,12 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         var response = await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
 
-        stub.ListProviderModelsCalls.Should().ContainSingle().Which.Should().Be((nodeId, "openai"));
+        stub.ListProviderModelsCalls.Should().ContainSingle().Which.Should().Be((nodeId, "c-2"));
         response.Entries.Should().ContainSingle().Which.UpstreamId.Should().Be("gpt-test");
     }
 
     [Fact]
-    public async Task ListNodeModelCatalog_DuplicateActiveProviders_FanOutOnce()
+    public async Task ListNodeModelCatalog_TwoActiveConnections_BothFetchedByConnectionId()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
@@ -522,20 +522,25 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers =
             [
-                new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true },
-                new RouterProviderQuotaEntry { ConnectionId = "c-2", Provider = "MiniMax", IsActive = true }
+                new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "openrouter", IsActive = true },
+                new RouterProviderQuotaEntry { ConnectionId = "c-2", Provider = "openrouter", IsActive = true }
             ]
         });
-        stub.ProviderModelsByKey[(nodeId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models = [new RouterProviderModelInfo { Id = "m-1", PublicId = "m-1", Enabled = true }]
         });
+        stub.ProviderModelsByKey[(nodeId, "c-2")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        {
+            Models = [new RouterProviderModelInfo { Id = "m-2", PublicId = "m-2", Enabled = true }]
+        });
         var service = CreateService(control, providerClient: stub);
 
-        await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
+        var response = await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
 
-        stub.ListProviderModelsCalls.Should().ContainSingle();
-        stub.ListProviderModelsCalls[0].provider.Should().BeOneOf("minimax", "MiniMax");
+        stub.ListProviderModelsCalls.Should().HaveCount(2);
+        stub.ListProviderModelsCalls.Select(c => c.connectionId).Should().BeEquivalentTo(["c-1", "c-2"]);
+        response.Entries.Select(e => e.UpstreamId).Should().BeEquivalentTo(["m-1", "m-2"]);
     }
 
     [Fact]
@@ -552,9 +557,9 @@ public sealed class GrpcRouterControlPlaneServiceTests
                 new RouterProviderQuotaEntry { ConnectionId = "c-2", Provider = "openai", IsActive = true }
             ]
         });
-        stub.ProviderModelsByKey[(nodeId, "minimax")] = _ => Task.FromException<RouterProviderModelsResponse>(
+        stub.ProviderModelsByKey[(nodeId, "c-1")] = _ => Task.FromException<RouterProviderModelsResponse>(
             new RouterNodeProviderException(HttpStatusCode.NotFound, "not_found", "no models"));
-        stub.ProviderModelsByKey[(nodeId, "openai")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-2")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models = [new RouterProviderModelInfo { Id = "gpt-test", PublicId = "gpt-test", Enabled = true }]
         });
@@ -576,7 +581,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers = [new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true }]
         });
-        stub.ProviderModelsByKey[(nodeId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -601,7 +606,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers = [new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true }]
         });
-        stub.ProviderModelsByKey[(nodeId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(nodeId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -640,7 +645,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers = [new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true }]
         });
-        stub.ProviderModelsByKey[(richId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(richId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -677,7 +682,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers = [new RouterProviderQuotaEntry { ConnectionId = "c-1", Provider = "minimax", IsActive = true }]
         });
-        stub.ProviderModelsByKey[(firstId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(firstId, "c-1")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -696,7 +701,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         {
             Providers = [new RouterProviderQuotaEntry { ConnectionId = "c-2", Provider = "minimax", IsActive = true }]
         });
-        stub.ProviderModelsByKey[(secondId, "minimax")] = _ => Task.FromResult(new RouterProviderModelsResponse
+        stub.ProviderModelsByKey[(secondId, "c-2")] = _ => Task.FromResult(new RouterProviderModelsResponse
         {
             Models =
             [
@@ -746,8 +751,8 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         stub.QuotaByNode[firstId] = providers;
         stub.QuotaByNode[secondId] = providers;
-        stub.ProviderModelsByKey[(firstId, "minimax")] = models;
-        stub.ProviderModelsByKey[(secondId, "minimax")] = models;
+        stub.ProviderModelsByKey[(firstId, "c-1")] = models;
+        stub.ProviderModelsByKey[(secondId, "c-1")] = models;
 
         var service = CreateService(control, providerClient: stub);
         var response = await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
@@ -827,10 +832,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private sealed class CatalogProviderStub : IRouterNodeProvider
     {
         public Dictionary<string, Func<CancellationToken, Task<RouterProviderQuotaResponse>>> QuotaByNode { get; } = new();
-        public Dictionary<(string nodeId, string provider), Func<CancellationToken, Task<RouterProviderModelsResponse>>> ProviderModelsByKey { get; } = new();
+        public Dictionary<(string nodeId, string connectionId), Func<CancellationToken, Task<RouterProviderModelsResponse>>> ProviderModelsByKey { get; } = new();
         public Dictionary<string, Func<CancellationToken, Task<NodeModelsResponse>>> ModelsByNode { get; } = new();
         public List<string> GetProviderQuotaCalls { get; } = new();
-        public List<(string nodeId, string provider)> ListProviderModelsCalls { get; } = new();
+        public List<(string nodeId, string connectionId)> ListProviderModelsCalls { get; } = new();
         public List<string> ListModelsCalls { get; } = new();
         public List<CancellationToken> ReceivedTokens { get; } = new();
 
@@ -849,11 +854,11 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }
 
         public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-            RouterNode node, string provider, string? source, bool includeCompatible, CancellationToken ct)
+            RouterNode node, string connectionId, CancellationToken ct)
         {
-            lock (ListProviderModelsCalls) ListProviderModelsCalls.Add((node.Id, provider));
+            lock (ListProviderModelsCalls) ListProviderModelsCalls.Add((node.Id, connectionId));
             lock (ReceivedTokens) ReceivedTokens.Add(ct);
-            return ProviderModelsByKey.TryGetValue((node.Id, provider), out var fn)
+            return ProviderModelsByKey.TryGetValue((node.Id, connectionId), out var fn)
                 ? fn(ct)
                 : Task.FromResult(new RouterProviderModelsResponse());
         }
@@ -981,9 +986,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
             RouterNode node,
-            string provider,
-            string? source,
-            bool includeCompatible,
+            string connectionId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
@@ -1031,7 +1034,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             throw new NotSupportedException();
 
         public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-            RouterNode node, string provider, string? source, bool includeCompatible, CancellationToken cancellationToken) =>
+            RouterNode node, string connectionId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
@@ -1079,7 +1082,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             throw new NotSupportedException();
 
         public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-            RouterNode node, string provider, string? source, bool includeCompatible, CancellationToken cancellationToken) =>
+            RouterNode node, string connectionId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
@@ -1161,9 +1164,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
             RouterNode node,
-            string provider,
-            string? source,
-            bool includeCompatible,
+            string connectionId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

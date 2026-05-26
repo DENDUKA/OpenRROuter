@@ -452,19 +452,17 @@ public sealed class GrpcRouterControlPlaneService(
                 FormatResponse(ex));
         }
 
-        var providerKeys = providerList.Connections
-            .Where(connection => connection.IsActive && !string.IsNullOrWhiteSpace(connection.Provider))
-            .Select(connection => connection.Provider)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+        var activeConnections = providerList.Connections
+            .Where(connection => connection.IsActive && !string.IsNullOrWhiteSpace(connection.Id))
             .ToList();
 
         var observations = new List<ModelObservation>();
-        foreach (var providerKey in providerKeys)
+        foreach (var connection in activeConnections)
         {
             try
             {
                 var providerModels = await providerClient.ListProviderModelsAsync(
-                    node, providerKey, source: null, includeCompatible: true, nodeToken).ConfigureAwait(false);
+                    node, connection.Id, nodeToken).ConfigureAwait(false);
 
                 foreach (var model in providerModels.Models)
                 {
@@ -489,7 +487,7 @@ public sealed class GrpcRouterControlPlaneService(
             }
             catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
             {
-                logger.LogWarning(ex, "ListProviderModels failed. NodeId: {NodeId}; Provider: {Provider}", node.Id, providerKey);
+                logger.LogWarning(ex, "ListProviderModels failed. NodeId: {NodeId}; ConnectionId: {ConnectionId}", node.Id, connection.Id);
                 continue;
             }
         }

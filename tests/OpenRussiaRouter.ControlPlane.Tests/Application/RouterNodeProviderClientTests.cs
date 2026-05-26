@@ -70,13 +70,10 @@ public sealed class RouterNodeProviderTests
     }
 
     [Fact]
-    public async Task ListProviderModelsAsync_SourceAndCompatible_SendsExpectedQuery()
+    public async Task ListProviderModelsAsync_ByConnectionId_SendsGetToProviderModelsEndpoint()
     {
         var handler = new CapturingHandler(JsonResponse("""
             {
-              "provider": "minimax",
-              "alias": "minimax",
-              "source": "static",
               "models": [
                 {
                   "id": "MiniMax-M2.7",
@@ -92,13 +89,11 @@ public sealed class RouterNodeProviderTests
 
         var result = await client.ListProviderModelsAsync(
             CreateNode(),
-            "minimax",
-            source: "static",
-            includeCompatible: true,
+            "conn-openrouter-1",
             CancellationToken.None);
 
         handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/by-type/minimax/models?source=static&includeCompatible=true");
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/conn-openrouter-1/models");
         handler.Authorization.Should().Be("Bearer control-token");
         var model = result.Models.Should().ContainSingle().Which;
         model.Id.Should().Be("MiniMax-M2.7");

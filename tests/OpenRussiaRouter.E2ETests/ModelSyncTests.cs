@@ -138,11 +138,11 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
     /// <summary>
     /// Minimal in-process HTTP server that impersonates a 9Router node.
     /// Implements:
-    ///   GET /healthz                                       → {"status":"healthy"}
-    ///   GET /api/integrations/providers                    → one active minimax connection
-    ///   GET /api/integrations/providers/by-type/e2e/models → two test models
-    ///   GET /v1/models                                     → same two model IDs
-    ///   POST /api/integrations/keys                        → stub key-create response
+    ///   GET /healthz                                            → {"status":"healthy"}
+    ///   GET /api/integrations/providers                         → one active e2e connection (id: e2e-stub-conn)
+    ///   GET /api/integrations/providers/e2e-stub-conn/models    → two test models
+    ///   GET /v1/models                                          → same two model IDs
+    ///   POST /api/integrations/keys                             → stub key-create response
     ///
     /// Listens on a dynamic port on localhost (or "+" when StubAddress is a remote host).
     /// NodeUrl is the URL to register with ControlPlane and is reachable from it.
@@ -183,7 +183,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
 
             NodeUrl = $"http://{stubAddress}:{port}/";
 
-            // Provider is "e2e" so the path resolves to /api/integrations/providers/by-type/e2e/models
+            // Connection ID is "e2e-stub-conn" so the models path is /api/integrations/providers/e2e-stub-conn/models
             _providersJson = $$"""
                 {
                   "connections": [
@@ -284,7 +284,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
 
                     json = _providersJson;
                 }
-                else if (method == "GET" && path.StartsWith("/api/integrations/providers/by-type/e2e/models",
+                else if (method == "GET" && path.StartsWith("/api/integrations/providers/e2e-stub-conn/models",
                                                              StringComparison.OrdinalIgnoreCase))
                 {
                     if (!Authorize(ctx))

@@ -10,16 +10,15 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
 {
     private const string ProviderQuotaPath = "/api/integrations/providers/quota";
     private const string ProviderStatusPathTemplate = "/api/integrations/providers/{0}/status";
-    private const string ProviderModelsByIdPathTemplate = "/api/integrations/providers/{0}/models";
     private const string IntegrationKeysPath = "/api/integrations/keys";
     private const string IntegrationKeyStatusPathTemplate = "/api/integrations/keys/{0}/status";
     private const string ModelsPath = "/v1/models";
-    private const string ProvidersPath = "/api/integrations/providers";
+    private const string ProvidersWithModelsPath = "/api/integrations/providers/with-models";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public string DescribeListProvidersRequest(RouterNode node) =>
-        DescribeRequest(node, HttpMethod.Get, ProvidersPath);
+        DescribeRequest(node, HttpMethod.Get, ProvidersWithModelsPath);
 
     public string DescribeListModelsRequest(RouterNode node) =>
         DescribeRequest(node, HttpMethod.Get, ModelsPath);
@@ -53,21 +52,6 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
                 Uri.EscapeDataString(connectionId)),
             JsonContent.Create(new ProviderStatusRequest(isActive), options: JsonOptions),
             cancellationToken);
-    }
-
-    public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-        RouterNode node,
-        string connectionId,
-        CancellationToken cancellationToken)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(connectionId);
-
-        var path = string.Format(
-            System.Globalization.CultureInfo.InvariantCulture,
-            ProviderModelsByIdPathTemplate,
-            Uri.EscapeDataString(connectionId.Trim()));
-
-        return SendAsync<RouterProviderModelsResponse>(node, HttpMethod.Get, path, content: null, cancellationToken);
     }
 
     public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
@@ -120,14 +104,14 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
         return SendAsync<NodeModelsResponse>(node, HttpMethod.Get, ModelsPath, content: null, cancellationToken);
     }
 
-    public Task<RouterProviderListResponse> ListProvidersAsync(
+    public Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
         RouterNode node,
         CancellationToken cancellationToken)
     {
-        return SendAsync<RouterProviderListResponse>(
+        return SendAsync<RouterProvidersWithModelsResponse>(
             node,
             HttpMethod.Get,
-            ProvidersPath,
+            ProvidersWithModelsPath,
             content: null,
             cancellationToken);
     }

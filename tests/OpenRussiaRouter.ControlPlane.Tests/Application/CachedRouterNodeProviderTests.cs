@@ -9,7 +9,7 @@ namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 public sealed class CachedRouterNodeProviderTests
 {
     [Fact]
-    public async Task ListProvidersAsync_RepeatedCallWithinTtl_UsesCachedResponse()
+    public async Task ListProvidersWithModelsAsync_RepeatedCallWithinTtl_UsesCachedResponse()
     {
         var handler = new CountingHandler(_ => JsonResponse("""
             {
@@ -19,15 +19,18 @@ public sealed class CachedRouterNodeProviderTests
                   "provider": "minimax",
                   "authType": "apikey",
                   "name": "MiniMax account",
-                  "isActive": true
+                  "isActive": true,
+                  "models": [
+                    { "id": "minimax-m2", "publicId": "minimax/minimax-m2", "enabled": true }
+                  ]
                 }
               ]
             }
             """));
         var provider = CreateProvider(handler);
 
-        var first = await provider.ListProvidersAsync(CreateNode(), CancellationToken.None);
-        var second = await provider.ListProvidersAsync(CreateNode(), CancellationToken.None);
+        var first = await provider.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
+        var second = await provider.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
 
         handler.RequestCount.Should().Be(1);
         first.Connections.Should().ContainSingle().Which.Id.Should().Be("conn-1");
@@ -76,7 +79,8 @@ public sealed class CachedRouterNodeProviderTests
                   "provider": "minimax",
                   "authType": "apikey",
                   "name": "Old",
-                  "isActive": true
+                  "isActive": true,
+                  "models": []
                 }
               ]
             }
@@ -90,7 +94,8 @@ public sealed class CachedRouterNodeProviderTests
                   "provider": "minimax",
                   "authType": "apikey",
                   "name": "New",
-                  "isActive": false
+                  "isActive": false,
+                  "models": []
                 }
               ]
             }
@@ -100,9 +105,9 @@ public sealed class CachedRouterNodeProviderTests
         var provider = CreateProvider(handler);
         var node = CreateNode();
 
-        var first = await provider.ListProvidersAsync(node, CancellationToken.None);
+        var first = await provider.ListProvidersWithModelsAsync(node, CancellationToken.None);
         await provider.UpdateProviderStatusAsync(node, "conn-1", isActive: false, CancellationToken.None);
-        var second = await provider.ListProvidersAsync(node, CancellationToken.None);
+        var second = await provider.ListProvidersWithModelsAsync(node, CancellationToken.None);
 
         handler.RequestCount.Should().Be(3);
         first.Connections.Should().ContainSingle().Which.Name.Should().Be("Old");

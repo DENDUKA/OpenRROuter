@@ -138,11 +138,10 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
     /// <summary>
     /// Minimal in-process HTTP server that impersonates a 9Router node.
     /// Implements:
-    ///   GET /healthz                                            → {"status":"healthy"}
-    ///   GET /api/integrations/providers                         → one active e2e connection (id: e2e-stub-conn)
-    ///   GET /api/integrations/providers/e2e-stub-conn/models    → two test models
-    ///   GET /v1/models                                          → same two model IDs
-    ///   POST /api/integrations/keys                             → stub key-create response
+    ///   GET /healthz                                         → {"status":"healthy"}
+    ///   GET /api/integrations/providers/with-models          → one active e2e connection with two models embedded
+    ///   GET /v1/models                                       → same two model IDs (fallback)
+    ///   POST /api/integrations/keys                          → stub key-create response
     ///
     /// Listens on a dynamic port on localhost (or "+" when StubAddress is a remote host).
     /// NodeUrl is the URL to register with ControlPlane and is reachable from it.
@@ -154,8 +153,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
         private readonly Task _serveTask;
         private readonly string _controlToken;
 
-        private readonly string _providersJson;
-        private readonly string _modelsJson;
+        private readonly string _providersWithModelsJson;
         private readonly string _v1ModelsJson;
 
         public string NodeUrl { get; }
@@ -183,8 +181,8 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
 
             NodeUrl = $"http://{stubAddress}:{port}/";
 
-            // Connection ID is "e2e-stub-conn" so the models path is /api/integrations/providers/e2e-stub-conn/models
-            _providersJson = $$"""
+            // Combined endpoint: providers + their models in one response
+            _providersWithModelsJson = $$"""
                 {
                   "connections": [
                     {
@@ -194,31 +192,24 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
                       "name": "E2E Stub Provider",
                       "isActive": true,
                       "testStatus": "active",
-                      "providerSpecificData": { "prefix": "e2e" }
-                    }
-                  ]
-                }
-                """;
-
-            _modelsJson = $$"""
-                {
-                  "provider": "e2e",
-                  "models": [
-                    {
-                      "id": "{{upstreamText}}",
-                      "publicId": "{{publicText}}",
-                      "name": "E2E Text Model",
-                      "type": "text",
-                      "enabled": true,
-                      "sources": ["e2e"]
-                    },
-                    {
-                      "id": "{{upstreamVision}}",
-                      "publicId": "{{publicVision}}",
-                      "name": "E2E Vision Model",
-                      "type": "vision",
-                      "enabled": true,
-                      "sources": ["e2e"]
+                      "models": [
+                        {
+                          "id": "{{upstreamText}}",
+                          "publicId": "{{publicText}}",
+                          "name": "E2E Text Model",
+                          "type": "text",
+                          "enabled": true,
+                          "sources": ["e2e"]
+                        },
+                        {
+                          "id": "{{upstreamVision}}",
+                          "publicId": "{{publicVision}}",
+                          "name": "E2E Vision Model",
+                          "type": "vision",
+                          "enabled": true,
+                          "sources": ["e2e"]
+                        }
+                      ]
                     }
                   ]
                 }
@@ -277,20 +268,12 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
                 {
                     json = """{"status":"healthy"}""";
                 }
-                else if (method == "GET" && path == "/api/integrations/providers")
+                else if (method == "GET" && path == "/api/integrations/providers/with-models")
                 {
                     if (!Authorize(ctx))
                         return;
 
-                    json = _providersJson;
-                }
-                else if (method == "GET" && path.StartsWith("/api/integrations/providers/e2e-stub-conn/models",
-                                                             StringComparison.OrdinalIgnoreCase))
-                {
-                    if (!Authorize(ctx))
-                        return;
-
-                    json = _modelsJson;
+                    json = _providersWithModelsJson;
                 }
                 else if (method == "GET" && path == "/v1/models")
                 {

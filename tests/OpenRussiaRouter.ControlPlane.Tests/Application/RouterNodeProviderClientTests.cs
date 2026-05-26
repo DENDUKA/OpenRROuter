@@ -70,37 +70,6 @@ public sealed class RouterNodeProviderTests
     }
 
     [Fact]
-    public async Task ListProviderModelsAsync_ByConnectionId_SendsGetToProviderModelsEndpoint()
-    {
-        var handler = new CapturingHandler(JsonResponse("""
-            {
-              "models": [
-                {
-                  "id": "MiniMax-M2.7",
-                  "publicId": "minimax/MiniMax-M2.7",
-                  "name": "MiniMax M2.7",
-                  "type": "llm",
-                  "enabled": true
-                }
-              ]
-            }
-            """));
-        var client = CreateClient(handler);
-
-        var result = await client.ListProviderModelsAsync(
-            CreateNode(),
-            "conn-openrouter-1",
-            CancellationToken.None);
-
-        handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/conn-openrouter-1/models");
-        handler.Authorization.Should().Be("Bearer control-token");
-        var model = result.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("MiniMax-M2.7");
-        model.PublicId.Should().Be("minimax/MiniMax-M2.7");
-    }
-
-    [Fact]
     public async Task ListIntegrationKeysAsync_SendsExpectedRequestAndDeserializesKeys()
     {
         var handler = new CapturingHandler(JsonResponse("""
@@ -196,7 +165,7 @@ public sealed class RouterNodeProviderTests
     }
 
     [Fact]
-    public async Task ListProvidersAsync_SendsGetToProvidersEndpoint()
+    public async Task ListProvidersWithModelsAsync_SendsGetToWithModelsEndpoint()
     {
         var handler = new CapturingHandler(JsonResponse("""
             {
@@ -208,73 +177,45 @@ public sealed class RouterNodeProviderTests
                   "name": "MiniMax account",
                   "isActive": true,
                   "testStatus": "active",
-                  "providerSpecificData": {
-                    "prefix": "minimax"
-                  }
+                  "models": [
+                    {
+                      "id": "MiniMax-M2.7",
+                      "publicId": "minimax/MiniMax-M2.7",
+                      "name": "MiniMax M2.7",
+                      "type": "llm",
+                      "enabled": true
+                    }
+                  ]
                 }
               ]
             }
             """));
         var client = CreateClient(handler);
 
-        var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
+        var result = await client.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
 
         handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/integrations/providers");
+        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/with-models");
         handler.Authorization.Should().Be("Bearer control-token");
         handler.NodeToken.Should().Be("control-token");
         var conn = result.Connections.Should().ContainSingle().Which;
         conn.Id.Should().Be("conn-1");
         conn.Provider.Should().Be("minimax");
-        conn.AuthType.Should().Be("apikey");
-        conn.Name.Should().Be("MiniMax account");
         conn.IsActive.Should().BeTrue();
-        conn.TestStatus.Should().Be("active");
-        conn.ProviderSpecificData!.Prefix.Should().Be("minimax");
+        var model = conn.Models.Should().ContainSingle().Which;
+        model.Id.Should().Be("MiniMax-M2.7");
+        model.PublicId.Should().Be("minimax/MiniMax-M2.7");
     }
 
     [Fact]
-    public async Task ListProvidersAsync_DeserializesProviderSpecificDataAllFields()
-    {
-        var handler = new CapturingHandler(JsonResponse("""
-            {
-              "connections": [
-                {
-                  "id": "compatible-conn",
-                  "provider": "openai-compatible-uuid",
-                  "authType": "apikey",
-                  "name": "Local OpenAI-compatible node",
-                  "isActive": true,
-                  "testStatus": "active",
-                  "providerSpecificData": {
-                    "prefix": "myllm",
-                    "baseUrl": "http://localhost:1234/v1",
-                    "nodeName": "Local LLM"
-                  }
-                }
-              ]
-            }
-            """));
-        var client = CreateClient(handler);
-
-        var result = await client.ListProvidersAsync(CreateNode(), CancellationToken.None);
-
-        var conn = result.Connections.Should().ContainSingle().Which;
-        conn.ProviderSpecificData.Should().NotBeNull();
-        conn.ProviderSpecificData!.Prefix.Should().Be("myllm");
-        conn.ProviderSpecificData.BaseUrl.Should().Be("http://localhost:1234/v1");
-        conn.ProviderSpecificData.NodeName.Should().Be("Local LLM");
-    }
-
-    [Fact]
-    public async Task ListProvidersAsync_ErrorResponse_ThrowsProviderException()
+    public async Task ListProvidersWithModelsAsync_ErrorResponse_ThrowsProviderException()
     {
         var handler = new CapturingHandler(JsonResponse(
             """{ "error": "Failed to fetch providers" }""",
             HttpStatusCode.InternalServerError));
         var client = CreateClient(handler);
 
-        var ex = await ((Func<Task>)(() => client.ListProvidersAsync(CreateNode(), CancellationToken.None)))
+        var ex = await ((Func<Task>)(() => client.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None)))
             .Should().ThrowAsync<RouterNodeProviderException>();
 
         ex.Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
@@ -293,7 +234,7 @@ public sealed class RouterNodeProviderTests
 
         var request = client.DescribeListProvidersRequest(CreateNode());
 
-        request.Should().Be("GET https://router.example/api/integrations/providers");
+        request.Should().Be("GET https://router.example/api/integrations/providers/with-models");
     }
 
     [Fact]

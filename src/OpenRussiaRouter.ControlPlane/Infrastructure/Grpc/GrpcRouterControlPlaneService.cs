@@ -432,10 +432,10 @@ public sealed class GrpcRouterControlPlaneService(
         timeoutCts.CancelAfter(NodeCatalogPerNodeTimeout);
         var nodeToken = timeoutCts.Token;
 
-        RouterProviderListResponse providerList;
+        RouterProvidersWithModelsResponse providersWithModels;
         try
         {
-            providerList = await providerClient.ListProvidersAsync(node, nodeToken).ConfigureAwait(false);
+            providersWithModels = await providerClient.ListProvidersWithModelsAsync(node, nodeToken).ConfigureAwait(false);
         }
         catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
@@ -443,7 +443,7 @@ public sealed class GrpcRouterControlPlaneService(
         }
         catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "ListProviders failed for router node. NodeId: {NodeId}", node.Id);
+            logger.LogWarning(ex, "ListProvidersWithModels failed for router node. NodeId: {NodeId}", node.Id);
             return new NodeCatalogResult(
                 node.Id,
                 Unreachable: true,
@@ -452,43 +452,27 @@ public sealed class GrpcRouterControlPlaneService(
                 FormatResponse(ex));
         }
 
-        var activeConnections = providerList.Connections
-            .Where(connection => connection.IsActive && !string.IsNullOrWhiteSpace(connection.Id))
-            .ToList();
-
         var observations = new List<ModelObservation>();
-        foreach (var connection in activeConnections)
+        foreach (var connection in providersWithModels.Connections)
         {
-            try
-            {
-                var providerModels = await providerClient.ListProviderModelsAsync(
-                    node, connection.Id, nodeToken).ConfigureAwait(false);
+            if (!connection.IsActive || string.IsNullOrWhiteSpace(connection.Id))
+                continue;
 
-                foreach (var model in providerModels.Models)
+            foreach (var model in connection.Models)
+            {
+                if (string.IsNullOrWhiteSpace(model.Id) || !model.Enabled)
+                    continue;
+
+                var publicId = string.IsNullOrWhiteSpace(model.PublicId) ? string.Empty : model.PublicId;
+                observations.Add(new ModelObservation
                 {
-                    if (string.IsNullOrWhiteSpace(model.Id) || !model.Enabled)
-                        continue;
-
-                    var publicId = string.IsNullOrWhiteSpace(model.PublicId) ? string.Empty : model.PublicId;
-                    observations.Add(new ModelObservation
-                    {
-                        UpstreamId = model.Id,
-                        PublicId = publicId,
-                        DisplayName = model.Name ?? string.Empty,
-                        ModelType = model.Type ?? string.Empty,
-                        SourceProviders = model.Sources ?? [],
-                        Rank = 2
-                    });
-                }
-            }
-            catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-            {
-                continue;
-            }
-            catch (Exception ex) when (IsTransientProviderError(ex, cancellationToken))
-            {
-                logger.LogWarning(ex, "ListProviderModels failed. NodeId: {NodeId}; ConnectionId: {ConnectionId}", node.Id, connection.Id);
-                continue;
+                    UpstreamId = model.Id,
+                    PublicId = publicId,
+                    DisplayName = model.Name ?? string.Empty,
+                    ModelType = model.Type ?? string.Empty,
+                    SourceProviders = model.Sources ?? [],
+                    Rank = 2
+                });
             }
         }
 

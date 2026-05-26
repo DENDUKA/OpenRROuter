@@ -38,16 +38,6 @@ public sealed class CachedRouterNodeProvider(
         return response;
     }
 
-    public Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-        RouterNode node,
-        string connectionId,
-        CancellationToken cancellationToken) =>
-        GetOrCreateAsync(
-            node,
-            $"provider-models::{connectionId.Trim()}",
-            ct => inner.ListProviderModelsAsync(node, connectionId, ct),
-            cancellationToken);
-
     public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
         RouterNode node,
         CancellationToken cancellationToken) =>
@@ -90,13 +80,13 @@ public sealed class CachedRouterNodeProvider(
             ct => inner.ListModelsAsync(node, ct),
             cancellationToken);
 
-    public Task<RouterProviderListResponse> ListProvidersAsync(
+    public Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
         RouterNode node,
         CancellationToken cancellationToken) =>
         GetOrCreateAsync(
             node,
-            "providers",
-            ct => inner.ListProvidersAsync(node, ct),
+            "providers-with-models",
+            ct => inner.ListProvidersWithModelsAsync(node, ct),
             cancellationToken);
 
     private async Task<TResponse> GetOrCreateAsync<TResponse>(

@@ -19,11 +19,6 @@ public interface IRouterNodeProvider
         bool isActive,
         CancellationToken cancellationToken);
 
-    Task<RouterProviderModelsResponse> ListProviderModelsAsync(
-        RouterNode node,
-        string connectionId,
-        CancellationToken cancellationToken);
-
     Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
         RouterNode node,
         CancellationToken cancellationToken);
@@ -44,7 +39,7 @@ public interface IRouterNodeProvider
         RouterNode node,
         CancellationToken cancellationToken);
 
-    Task<RouterProviderListResponse> ListProvidersAsync(
+    Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
         RouterNode node,
         CancellationToken cancellationToken);
 }

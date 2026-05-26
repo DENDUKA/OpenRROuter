@@ -27,8 +27,8 @@ Additionally, the user-facing `/models` page guesses provider/capability/context
 WebApp Admin/Models/Sync (GET)
     → ControlPlane gRPC: ListNodeModelCatalog
         → for each enabled node:
-            1. GET {node}/v1/models                                   (id list)
-            2. (optional) GET {node}/api/providers                    (provider connections)
+            1. GET {node}/v1/models                                   (id list, fallback only)
+            2. GET {node}/api/integrations/providers                  (provider connections, primary path)
             3. for each provider:
                  GET {node}/api/integrations/providers/by-type/{p}/models
                                                                        (id, name, type, sources)
@@ -87,9 +87,11 @@ Add provider-discovery helper if missing:
 Task<RouterProviderListResponse> ListProvidersAsync(RouterNode node, CancellationToken ct);
 ```
 
-Endpoint: `GET /api/providers`. `ListProviderModelsAsync` already exists.
+Endpoint: `GET /api/integrations/providers`. `ListProviderModelsAsync` already exists.
 
-**SYNC-0 discovery result:** current 9RFork does **not** expose `GET /api/integrations/providers`. The existing provider-discovery endpoint is `GET /api/providers`, implemented in `9RFork/src/app/api/providers/route.js`. It returns safe provider connection metadata with secrets removed (`apiKey`, `accessToken`, `refreshToken`, `idToken` are set to `undefined` before serialization).
+**SYNC-0 discovery result (updated 2026-05-27):** the canonical endpoint for ORR is `GET /api/integrations/providers`, implemented in `9RFork/src/app/api/integrations/providers/route.js` (added in 9RFork commit `e03445d`, present in 9R `0.4.59` and later). It returns the same shape as the older `/api/providers` (safe provider connection metadata with secrets removed: `apiKey`, `accessToken`, `refreshToken`, `idToken` set to `undefined` before serialization).
+
+**Why not `/api/providers`?** `/api/providers` is now part of `PROTECTED_API_PATHS` in `9RFork/src/dashboardGuard.js` — it requires a dashboard JWT cookie or `requireLogin=false`. Bearer `ROUTER_CONTROL_TOKEN` is **rejected** there. Only `/api/integrations/*` accepts the integration token. The previous version of this spec (before 2026-05-27) called `/api/providers` because at that time `/api/integrations/providers` did not exist; switching to `/api/integrations/providers` is mandatory for any 9R 0.4.59+.
 
 ```json
 {
@@ -156,8 +158,9 @@ Add handler `ListNodeModelCatalog`:
 
 1. Load all enabled nodes from repository
 2. For each node, in parallel:
-   - Try `ListProvidersAsync(node)` (`GET /api/providers`).
-     - **404 / NotFound** → older 9Router without provider connections endpoint. Fall back: call `/v1/models` for this node and emit minimal entries (`upstream_id` only, `display_name = ""`, `model_type = ""`, `source_providers = []`). Mark each entry as `IsFallback = true` internally so the merge step can prefer richer data from other nodes. Do **not** mark node as unreachable.
+   - Try `ListProvidersAsync(node)` (`GET /api/integrations/providers`).
+     - **404 / NotFound** → 9Router predates the integration-providers endpoint (pre-`e03445d`). Fall back: call `/v1/models` for this node and emit minimal entries (`upstream_id` only, `display_name = ""`, `model_type = ""`, `source_providers = []`). Mark each entry as `IsFallback = true` internally so the merge step can prefer richer data from other nodes. Do **not** mark node as unreachable.
+     - **401 Unauthorized** → control token rejected. Add `node_id` to `unreachable_node_ids`. UI probe path should hint that the token was likely rotated in 9R dashboard (`POST /api/control-token` regenerates it) and the admin should re-paste it in `/admin/nodes`.
      - **Other HTTP error / timeout / network exception** → add `node_id` to `unreachable_node_ids`, skip the node entirely.
    - From `response.Connections`, **filter to `IsActive == true` only**. Inactive provider connections must not be used for fan-out.
    - Deduplicate the remaining active connections by `Provider`; multiple active accounts for the same provider should produce one `ListProviderModelsAsync` call because the by-type endpoint aggregates active connections internally.
@@ -265,8 +268,9 @@ Mark this as a separate task — it doesn't block the admin Sync feature.
 
 | Scenario | Behavior |
 |---|---|
-| Node connection timeout / DNS / TLS / non-404 5xx on `/api/providers` | Node added to `unreachable_node_ids`, skipped from catalog. UI shows banner. |
-| `/api/providers` returns 404 (older 9Router without provider connections endpoint) | Fall back to `/v1/models` for this node, emit minimal entries (id only). Node is NOT flagged unreachable. |
+| Node connection timeout / DNS / TLS / non-404 5xx on `/api/integrations/providers` | Node added to `unreachable_node_ids`, skipped from catalog. UI shows banner. |
+| `/api/integrations/providers` returns 401 | Control token rejected (commonly: token regenerated in 9R dashboard via `POST /api/control-token`). Node added to `unreachable_node_ids`. UI surfaces a token-rotation hint. |
+| `/api/integrations/providers` returns 404 (pre-`e03445d` 9R version) | Fall back to `/v1/models` for this node, emit minimal entries (id only). Node is NOT flagged unreachable. |
 | Single provider's `/by-type/{p}/models` returns 404 | Skip that provider, keep others for the same node. |
 | Single provider's `/by-type/{p}/models` returns other error | Log warning, skip that provider, keep others. Node NOT flagged unreachable. |
 | No enabled nodes | Catalog empty (no error), UI shows "Add a node first" |
@@ -283,8 +287,8 @@ Numbered for the backlog. Each is independently mergeable.
 
 | # | Task | Est. | Touches |
 |---|---|---|---|
-| SYNC-0 | **Done:** source-read 9RFork provider discovery contract. Current route is `GET /api/providers` with `{ connections: [...] }`; `GET /api/integrations/providers` does not exist. | 0d | docs/ |
-| SYNC-1 | Add `ListProvidersAsync` to `RouterNodeProviderClient` using the `GET /api/providers` contract above | 0.5d | ControlPlane.Infrastructure |
+| SYNC-0 | **Done (revised 2026-05-27):** canonical route is `GET /api/integrations/providers` with `{ connections: [...] }` (added in 9RFork commit `e03445d`, present in 9R 0.4.59+). `GET /api/providers` exists too but is gated by dashboard JWT (`PROTECTED_API_PATHS` in `dashboardGuard.js`) and **rejects** the integration Bearer token; do not use it. | 0d | docs/ |
+| SYNC-1 | Add `ListProvidersAsync` to `RouterNodeProviderClient` using the `GET /api/integrations/providers` contract above | 0.5d | ControlPlane.Infrastructure |
 | SYNC-2 | Add `ListNodeModelCatalog` RPC: proto + ControlPlane handler + merge logic + unit tests with in-memory provider-client stub | 1d | Contracts.Protos, ControlPlane.Application |
 | SYNC-3 | Add `ControlPlaneClient.ListNodeModelCatalogAsync` to WebApp + DTOs | 0.25d | WebApp.Services.ControlPlane |
 | SYNC-4 | New page `Admin/ModelsSync.cshtml(.cs)` with diff table, bulk defaults, Import handler | 1d | WebApp.Pages.Admin |

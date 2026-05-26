@@ -61,7 +61,24 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
                 body = body[..maxBody] + "... (truncated)";
             }
 
-            return new RouterNodeProbeResult(requestLine, $"HTTP {(int)response.StatusCode} {response.StatusCode}\n{body}");
+            var rawResponse = $"HTTP {(int)response.StatusCode} {response.StatusCode}\n{body}";
+
+            // 9R rejects the stored control token. Most common cause: the token was
+            // regenerated in the 9R dashboard (/dashboard/endpoint → Control Token →
+            // Regenerate), which writes a new value to settings.routerControlToken in
+            // the node's SQLite. Our DB still has the old value, so every authenticated
+            // call fails until an admin re-pastes the new token in /admin/nodes.
+            if ((int)response.StatusCode == 401)
+            {
+                var hint = "Control token rejected by node (HTTP 401).\n" +
+                           "Most likely the token was regenerated in 9R dashboard.\n" +
+                           "Open this node in /admin/nodes, paste the current token from\n" +
+                           "9R → /dashboard/endpoint → Control Token, then click Check.\n" +
+                           "\n--- raw response ---\n" + rawResponse;
+                return new RouterNodeProbeResult(requestLine, hint);
+            }
+
+            return new RouterNodeProbeResult(requestLine, rawResponse);
         }
         catch (Exception ex)
         {

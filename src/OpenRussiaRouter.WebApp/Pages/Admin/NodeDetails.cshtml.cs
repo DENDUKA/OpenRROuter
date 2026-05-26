@@ -16,6 +16,8 @@ public class NodeDetailsModel(
 
     public RouterNodeAvailabilityCheckResult? AvailabilityCheckResult { get; private set; }
 
+    public RouterNodeProbeResult? CatalogProbeResult { get; private set; }
+
     [TempData]
     public string? SuccessMessage { get; set; }
 
@@ -55,6 +57,30 @@ public class NodeDetailsModel(
         {
             logger.LogWarning(ex, "Failed to check router node control token. NodeId: {NodeId}", nodeId);
             ErrorMessage = "Failed to check control token.";
+        }
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostProbeCatalogAsync(string nodeId)
+    {
+        try
+        {
+            await LoadDetailsAsync(nodeId, populateTokenForm: false);
+            if (Details is null)
+            {
+                ErrorMessage = "Failed to load router node details.";
+                return Page();
+            }
+
+            CatalogProbeResult = await RouterNodeApiProvider.ProbeProvidersAsync(
+                Details.Node with { ControlToken = TokenForm.ControlToken },
+                HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to probe router node catalog endpoint. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to probe catalog endpoint.";
         }
 
         return Page();

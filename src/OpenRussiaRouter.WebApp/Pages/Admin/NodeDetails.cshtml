@@ -55,6 +55,20 @@
                 </div>
             }
 
+            @if (Model.CatalogProbeResult is { } probeResult)
+            {
+                var probeOk = probeResult.ResponseLine?.StartsWith("HTTP 2", StringComparison.Ordinal) == true;
+                <div class="alert @(probeOk ? "alert-success" : "alert-danger")" role="status" data-testid="control-token-probe-catalog-result">
+                    <div><strong>@(probeOk ? "Catalog endpoint is reachable." : "Catalog endpoint check failed.")</strong></div>
+                    <div class="text-muted" style="font-size:0.85em;margin-top:0.25rem">
+                        Probes <code>/api/integrations/providers</code> with the form's control token.
+                        This is what the Sync flow uses — distinct from Integration API (keys) check.
+                    </div>
+                    <div style="margin-top:0.5rem"><code>@probeResult.RequestLine</code></div>
+                    <pre style="white-space:pre-wrap;word-break:break-word;margin:0.5rem 0 0;font-size:0.85em">@probeResult.ResponseLine</pre>
+                </div>
+            }
+
             <form method="post" asp-route-nodeId="@details.Node.NodeId" data-testid="form-update-control-token">
                 <div class="form-group">
                     <label asp-for="TokenForm.ControlToken" class="form-label">Control Token</label>
@@ -63,7 +77,9 @@
                 </div>
                 <div class="adm-btn-row">
                     <button type="submit" class="btn btn-secondary" asp-page-handler="CheckControlToken"
-                            data-testid="btn-check-control-token">Check availability</button>
+                            data-testid="btn-check-control-token">Check Integration API</button>
+                    <button type="submit" class="btn btn-secondary" asp-page-handler="ProbeCatalog"
+                            data-testid="btn-probe-catalog-control-token">Probe Catalog</button>
                     <button type="submit" class="btn btn-primary" asp-page-handler="UpdateControlToken"
                             data-testid="btn-save-control-token">Save token</button>
                 </div>

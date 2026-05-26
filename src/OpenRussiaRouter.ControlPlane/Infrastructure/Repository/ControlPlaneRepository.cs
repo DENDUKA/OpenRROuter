@@ -11,7 +11,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     {
         ArgumentNullException.ThrowIfNull(node);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into control.router_nodes
                 (id, name, endpoint_url, control_token, capacity_weight, enabled, status,
@@ -33,23 +33,26 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 last_health_latency_ms = excluded.last_health_latency_ms,
                 last_health_error_code = excluded.last_health_error_code;
             """,
-            ToParameters(node)).ConfigureAwait(false);
+            ToParameters(node),
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         // leases have FK with ON DELETE CASCADE, so deleting the node removes them too
-        var affected = await connection.ExecuteAsync(
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
             "delete from control.router_nodes where id = @NodeId;",
-            new { NodeId = nodeId }).ConfigureAwait(false);
+            new { NodeId = nodeId },
+            cancellationToken: ct)).ConfigureAwait(false);
         return affected > 0;
     }
 
     public async Task<RouterNode?> GetNodeAsync(string nodeId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<RouterNodeEntity>(NodeByIdSql, new { NodeId = nodeId }).ConfigureAwait(false) is { } entity
+        return await connection.QuerySingleOrDefaultAsync<RouterNodeEntity>(new CommandDefinition(
+                NodeByIdSql, new { NodeId = nodeId }, cancellationToken: ct)).ConfigureAwait(false) is { } entity
             ? ControlPlanePersistenceMapper.ToDomain(entity)
             : null;
     }
@@ -66,9 +69,9 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             parameters.Add("AfterName", afterName);
         }
 
-        var items = (await connection.QueryAsync<RouterNodeEntity>(
+        var items = (await connection.QueryAsync<RouterNodeEntity>(new CommandDefinition(
                 NodeSelectSql + afterCondition + "order by name\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters, cancellationToken: ct)).ConfigureAwait(false))
             .Select(ControlPlanePersistenceMapper.ToDomain)
             .ToArray();
 
@@ -81,20 +84,21 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     {
         ArgumentNullException.ThrowIfNull(lease);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into control.router_leases
                 (id, node_id, request_id, expires_at_utc, created_at_utc)
             values
                 (@Id, @NodeId, @RequestId, @ExpiresAtUtc, @CreatedAtUtc);
             """,
-            lease).ConfigureAwait(false);
+            lease,
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<RouterLease?> RemoveLeaseAsync(string leaseId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<RouterLeaseEntity>(
+        return await connection.QuerySingleOrDefaultAsync<RouterLeaseEntity>(new CommandDefinition(
             """
             delete from control.router_leases
             where id = @LeaseId
@@ -105,7 +109,8 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 expires_at_utc as ExpiresAtUtc,
                 created_at_utc as CreatedAtUtc;
             """,
-            new { LeaseId = leaseId }).ConfigureAwait(false) is { } entity
+            new { LeaseId = leaseId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? ControlPlanePersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -113,7 +118,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     public async Task<IReadOnlyCollection<RouterLease>> RemoveExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return (await connection.QueryAsync<RouterLeaseEntity>(
+        return (await connection.QueryAsync<RouterLeaseEntity>(new CommandDefinition(
                 """
                 delete from control.router_leases
                 where expires_at_utc <= @NowUtc
@@ -124,7 +129,8 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                     expires_at_utc as ExpiresAtUtc,
                     created_at_utc as CreatedAtUtc;
                 """,
-                new { NowUtc = nowUtc }).ConfigureAwait(false))
+                new { NowUtc = nowUtc },
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(ControlPlanePersistenceMapper.ToDomain)
             .ToArray();
     }
@@ -135,19 +141,20 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             return;
 
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             update control.router_nodes
             set in_flight_requests = greatest(in_flight_requests - 1, 0)
             where id = any(@NodeIds);
             """,
-            new { NodeIds = nodeIds.ToArray() }).ConfigureAwait(false);
+            new { NodeIds = nodeIds.ToArray() },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task SaveIntegrationKeyMappingAsync(string apiKeyId, string nodeId, string routerKeyId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into control.integration_key_sync (api_key_id, node_id, router_key_id)
             values (@ApiKeyId, @NodeId, @RouterKeyId)
@@ -155,19 +162,21 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 router_key_id = excluded.router_key_id,
                 pushed_at_utc = now();
             """,
-            new { ApiKeyId = apiKeyId, NodeId = nodeId, RouterKeyId = routerKeyId }).ConfigureAwait(false);
+            new { ApiKeyId = apiKeyId, NodeId = nodeId, RouterKeyId = routerKeyId },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<(string NodeId, string RouterKeyId)>> GetIntegrationKeyMappingsAsync(string apiKeyId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return (await connection.QueryAsync<(string node_id, string router_key_id)>(
+        return (await connection.QueryAsync<(string node_id, string router_key_id)>(new CommandDefinition(
                 """
                 select node_id, router_key_id
                 from control.integration_key_sync
                 where api_key_id = @ApiKeyId;
                 """,
-                new { ApiKeyId = apiKeyId }).ConfigureAwait(false))
+                new { ApiKeyId = apiKeyId },
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(r => (r.node_id, r.router_key_id))
             .ToList();
     }
@@ -175,9 +184,10 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     public async Task RemoveIntegrationKeyMappingsAsync(string apiKeyId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             "delete from control.integration_key_sync where api_key_id = @ApiKeyId;",
-            new { ApiKeyId = apiKeyId }).ConfigureAwait(false);
+            new { ApiKeyId = apiKeyId },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     private static object ToParameters(RouterNode node) => new

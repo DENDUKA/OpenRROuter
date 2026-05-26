@@ -1,4 +1,5 @@
 using Dapper;
+using Npgsql;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
@@ -11,22 +12,24 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     {
         ArgumentNullException.ThrowIfNull(invite);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.invites
                 (id, email, role, token_hash, expires_at_utc, created_by_admin_id, created_at_utc, used_at_utc)
             values
                 (@Id, @Email, @Role, @TokenHash, @ExpiresAtUtc, @CreatedByAdminId, @CreatedAtUtc, @UsedAtUtc);
             """,
-            ToParameters(invite)).ConfigureAwait(false);
+            ToParameters(invite),
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<Invite?> GetInviteByTokenHashAsync(string tokenHash, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<InviteEntity>(
+        return await connection.QuerySingleOrDefaultAsync<InviteEntity>(new CommandDefinition(
             InviteSelectSql + " where token_hash = @TokenHash;",
-            new { TokenHash = tokenHash }).ConfigureAwait(false) is { } entity
+            new { TokenHash = tokenHash },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? AuthPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -41,10 +44,11 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         }
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.users
                 (id, email, role, status, password_hash, created_at_utc)
@@ -52,9 +56,10 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
             """,
             ToParameters(user),
-            transaction).ConfigureAwait(false);
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
 
-        var updated = await connection.ExecuteAsync(
+        var updated = await connection.ExecuteAsync(new CommandDefinition(
             """
             update auth.invites
             set used_at_utc = @UsedAtUtc
@@ -62,23 +67,22 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
               and used_at_utc is null;
             """,
             new { InviteId = invite.Id, invite.UsedAtUtc },
-            transaction).ConfigureAwait(false);
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
 
         if (updated != 1)
-        {
-            transaction.Rollback();
             throw new InvalidOperationException("Invite has already been used.");
-        }
 
-        transaction.Commit();
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<UserAccount?> GetUserAsync(string userId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<UserAccountEntity>(
+        return await connection.QuerySingleOrDefaultAsync<UserAccountEntity>(new CommandDefinition(
             UserSelectSql + " where id = @UserId;",
-            new { UserId = userId }).ConfigureAwait(false) is { } entity
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? AuthPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -86,9 +90,10 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     public async Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<UserAccountEntity>(
+        return await connection.QuerySingleOrDefaultAsync<UserAccountEntity>(new CommandDefinition(
             UserSelectSql + " where lower(email) = lower(@Email);",
-            new { Email = email }).ConfigureAwait(false) is { } entity
+            new { Email = email },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? AuthPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -96,9 +101,10 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     public async Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var items = (await connection.QueryAsync<UserAccountEntity>(
+        var items = (await connection.QueryAsync<UserAccountEntity>(new CommandDefinition(
                 UserSelectSql + " order by created_at_utc desc limit @Limit;",
-                new { Limit = limit + 1 }).ConfigureAwait(false))
+                new { Limit = limit + 1 },
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -111,22 +117,24 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     {
         ArgumentNullException.ThrowIfNull(apiKey);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.api_keys
                 (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, revoked_at_utc)
             values
                 (@Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @RevokedAtUtc);
             """,
-            ToParameters(apiKey)).ConfigureAwait(false);
+            ToParameters(apiKey),
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<ApiKeyEntity>(
+        return await connection.QuerySingleOrDefaultAsync<ApiKeyEntity>(new CommandDefinition(
             ApiKeySelectSql + " where id = @ApiKeyId;",
-            new { ApiKeyId = apiKeyId }).ConfigureAwait(false) is { } entity
+            new { ApiKeyId = apiKeyId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? AuthPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -134,9 +142,10 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     public async Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var items = (await connection.QueryAsync<ApiKeyEntity>(
+        var items = (await connection.QueryAsync<ApiKeyEntity>(new CommandDefinition(
                 ApiKeySelectSql + " where user_id = @UserId order by created_at_utc desc limit @Limit;",
-                new { UserId = userId, Limit = limit + 1 }).ConfigureAwait(false))
+                new { UserId = userId, Limit = limit + 1 },
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -148,7 +157,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     public async Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.ExecuteAsync(
+        return await connection.ExecuteAsync(new CommandDefinition(
             """
             update auth.api_keys
             set name = @Name
@@ -156,13 +165,14 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
               and user_id = @UserId
               and revoked_at_utc is null;
             """,
-            new { UserId = userId, ApiKeyId = apiKeyId, Name = name }).ConfigureAwait(false) == 1;
+            new { UserId = userId, ApiKeyId = apiKeyId, Name = name },
+            cancellationToken: ct)).ConfigureAwait(false) == 1;
     }
 
     public async Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.ExecuteAsync(
+        return await connection.ExecuteAsync(new CommandDefinition(
             """
             update auth.api_keys
             set revoked_at_utc = coalesce(revoked_at_utc, @RevokedAtUtc)
@@ -170,25 +180,27 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
               and user_id = @UserId
               and revoked_at_utc is null;
             """,
-            new { UserId = userId, ApiKeyId = apiKeyId, RevokedAtUtc = revokedAtUtc }).ConfigureAwait(false) == 1;
+            new { UserId = userId, ApiKeyId = apiKeyId, RevokedAtUtc = revokedAtUtc },
+            cancellationToken: ct)).ConfigureAwait(false) == 1;
     }
 
     public async Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return (await connection.QueryAsync<(string Prefix, string SecretHash)>(
+        return (await connection.QueryAsync<(string Prefix, string SecretHash)>(new CommandDefinition(
             """
             select prefix as Prefix, secret_hash as SecretHash
             from auth.api_keys
             where revoked_at_utc is null
             limit 10000;
-            """).ConfigureAwait(false)).ToArray();
+            """,
+            cancellationToken: ct)).ConfigureAwait(false)).ToArray();
     }
 
     public async Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<ApiKeyEntity>(
+        return await connection.QuerySingleOrDefaultAsync<ApiKeyEntity>(new CommandDefinition(
             """
             select
                 ak.id as Id,
@@ -207,7 +219,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
               and u.status = 'Active'
             limit 1;
             """,
-            new { SecretHash = secretHash }).ConfigureAwait(false) is { } entity
+            new { SecretHash = secretHash },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? AuthPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -215,20 +228,21 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     public async Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             update auth.api_keys
             set last_used_at_utc = @LastUsedAtUtc
             where id = @ApiKeyId
               and (last_used_at_utc is null or last_used_at_utc < @LastUsedAtUtc - interval '1 minute');
             """,
-            new { ApiKeyId = apiKeyId, LastUsedAtUtc = lastUsedAtUtc }).ConfigureAwait(false);
+            new { ApiKeyId = apiKeyId, LastUsedAtUtc = lastUsedAtUtc },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<string?>(
+        return await connection.QuerySingleOrDefaultAsync<string?>(new CommandDefinition(
             """
             select raw_key
             from auth.api_keys
@@ -238,7 +252,68 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             order by created_at_utc desc
             limit 1;
             """,
-            new { UserId = userId }).ConfigureAwait(false);
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<ExternalLoginEntity>(new CommandDefinition(
+            ExternalLoginSelectSql + " where provider = @Provider and provider_sub = @ProviderSub;",
+            new { Provider = provider, ProviderSub = providerSub },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
+    public async Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(login);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.external_logins
+                (id, user_id, provider, provider_sub, created_at_utc)
+            values
+                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
+            """,
+            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(login);
+        using var connection = connectionFactory.CreateConnection();
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.users
+                (id, email, role, status, password_hash, created_at_utc)
+            values
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+            """,
+            ToParameters(user),
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.external_logins
+                (id, user_id, provider, provider_sub, created_at_utc)
+            values
+                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
+            """,
+            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
     private static object ToParameters(UserAccount user) => new
@@ -313,61 +388,6 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             revoked_at_utc as RevokedAtUtc
         from auth.api_keys
         """;
-
-    public async Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
-    {
-        using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<ExternalLoginEntity>(
-            ExternalLoginSelectSql + " where provider = @Provider and provider_sub = @ProviderSub;",
-            new { Provider = provider, ProviderSub = providerSub }).ConfigureAwait(false) is { } entity
-                ? AuthPersistenceMapper.ToDomain(entity)
-                : null;
-    }
-
-    public async Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(login);
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
-            """
-            insert into auth.external_logins
-                (id, user_id, provider, provider_sub, created_at_utc)
-            values
-                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
-            """,
-            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc }).ConfigureAwait(false);
-    }
-
-    public async Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(user);
-        ArgumentNullException.ThrowIfNull(login);
-        using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-
-        await connection.ExecuteAsync(
-            """
-            insert into auth.users
-                (id, email, role, status, password_hash, created_at_utc)
-            values
-                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
-            """,
-            ToParameters(user),
-            transaction).ConfigureAwait(false);
-
-        await connection.ExecuteAsync(
-            """
-            insert into auth.external_logins
-                (id, user_id, provider, provider_sub, created_at_utc)
-            values
-                (@Id, @UserId, @Provider, @ProviderSub, @CreatedAtUtc);
-            """,
-            new { login.Id, login.UserId, login.Provider, login.ProviderSub, login.CreatedAtUtc },
-            transaction).ConfigureAwait(false);
-
-        transaction.Commit();
-    }
 
     private const string ExternalLoginSelectSql = """
         select

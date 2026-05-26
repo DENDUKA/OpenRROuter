@@ -11,14 +11,15 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var items = (await connection.QueryAsync<LedgerEntryEntity>(
+        var items = (await connection.QueryAsync<LedgerEntryEntity>(new CommandDefinition(
                 LedgerEntrySelectSql +
                 """
                 where user_id = @UserId and type = 'VirtualTopUp'
                 order by created_at_utc desc
                 limit @Limit;
                 """,
-                new { UserId = userId, Limit = limit + 1 }).ConfigureAwait(false))
+                new { UserId = userId, Limit = limit + 1 },
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -31,7 +32,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(entry);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<LedgerEntryEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<LedgerEntryEntity>(new CommandDefinition(
             """
             with ins as (
                 insert into billing.ledger_entries
@@ -62,15 +63,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 entry.IdempotencyKey,
                 entry.Reason,
                 entry.CreatedAtUtc
-            }).ConfigureAwait(false));
+            },
+            cancellationToken: ct)).ConfigureAwait(false));
     }
 
     public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        var amount = await connection.ExecuteScalarAsync<decimal>(
+        var amount = await connection.ExecuteScalarAsync<decimal>(new CommandDefinition(
             "select coalesce(sum(amount), 0) from billing.ledger_entries where user_id = @UserId;",
-            new { UserId = userId }).ConfigureAwait(false);
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false);
         return MoneyAmount.Rub(amount);
     }
 
@@ -78,7 +81,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(model);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into billing.model_prices
                 (model_id, display_name, router_model_id, price_version, input_per_million_amount,
@@ -107,15 +110,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 CachePerMillionAmount = model.Price.CachePerMillion.Amount,
                 Currency = model.Price.InputPerMillion.Currency.ToString(),
                 model.Enabled
-            }).ConfigureAwait(false);
+            },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(
+        return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
             ModelPriceSelectSql + "where model_id = @ModelId and enabled = true;",
-            new { ModelId = modelId }).ConfigureAwait(false) is { } entity
+            new { ModelId = modelId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -132,9 +137,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterModelId", afterModelId);
         }
 
-        var items = (await connection.QueryAsync<ModelPriceEntity>(
+        var items = (await connection.QueryAsync<ModelPriceEntity>(new CommandDefinition(
                 ModelPriceSelectSql + "where enabled = true\n" + afterCondition + "order by model_id\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters,
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -155,9 +161,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterModelId", afterModelId);
         }
 
-        var items = (await connection.QueryAsync<ModelPriceEntity>(
+        var items = (await connection.QueryAsync<ModelPriceEntity>(new CommandDefinition(
                 ModelPriceSelectSql + afterCondition + "order by model_id\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters,
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -170,7 +177,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<UsageRecordEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<UsageRecordEntity>(new CommandDefinition(
             """
             with ins as (
                 insert into billing.usage_records
@@ -218,15 +225,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 record.CreatedAtUtc,
                 ProviderName = record.ProviderName ?? (object)DBNull.Value,
                 ProviderAccount = record.ProviderAccount ?? (object)DBNull.Value
-            }).ConfigureAwait(false));
+            },
+            cancellationToken: ct)).ConfigureAwait(false));
     }
 
     public async Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<UsageRecordEntity>(
+        return await connection.QuerySingleOrDefaultAsync<UsageRecordEntity>(new CommandDefinition(
             UsageByRequestSql,
-            new { RequestId = requestId }).ConfigureAwait(false) is { } entity
+            new { RequestId = requestId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
     }
@@ -251,9 +260,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var whereClause = conditions.Count > 0
             ? "where " + string.Join(" and ", conditions) + "\n"
             : "";
-        var items = (await connection.QueryAsync<UsageRecordEntity>(
+        var items = (await connection.QueryAsync<UsageRecordEntity>(new CommandDefinition(
                 UsageSelectSql + whereClause + "order by created_at_utc\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters,
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -266,7 +276,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(record);
         using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<ActivityByTokenEntity>(
+        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<ActivityByTokenEntity>(new CommandDefinition(
             """
             with ins as (
                 insert into billing.activity_by_token
@@ -314,7 +324,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 record.CompletedAtUtc,
                 ProviderName = record.ProviderName ?? (object)DBNull.Value,
                 ProviderAccount = record.ProviderAccount ?? (object)DBNull.Value
-            }).ConfigureAwait(false));
+            },
+            cancellationToken: ct)).ConfigureAwait(false));
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
@@ -343,11 +354,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         if (!string.IsNullOrEmpty(apiKeyIdFilter)) { conditions.Add("a.api_key_id = @ApiKeyIdFilter"); parameters.Add("ApiKeyIdFilter", apiKeyIdFilter); }
         if (afterCreatedAtUtc.HasValue) { conditions.Add("a.created_at_utc < @AfterCreatedAtUtc"); parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value); }
 
-        var items = (await connection.QueryAsync<ActivityByTokenEntity>(
+        var items = (await connection.QueryAsync<ActivityByTokenEntity>(new CommandDefinition(
                 ActivityByTokenSelectSql +
                 "where " + string.Join(" and ", conditions) + "\n" +
                 "order by a.created_at_utc desc\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters,
+                cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -374,7 +386,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         if (toUtc.HasValue) { dateConditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
         var whereClause = "where " + string.Join(" and ", dateConditions);
 
-        var totals = await connection.QuerySingleAsync<(long Requests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostRub)>(
+        using var multi = await connection.QueryMultipleAsync(new CommandDefinition(
             $"""
             select
                 count(*) as Requests,
@@ -385,10 +397,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             from billing.activity_by_token a
             left join billing.usage_records u on u.request_id = a.request_id
             {whereClause};
-            """, parameters).ConfigureAwait(false);
 
-        var models = (await connection.QueryAsync<ActivityModelSummaryEntity>(
-            $"""
             select
                 a.model_id as ModelId,
                 count(*) as Requests,
@@ -401,13 +410,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             {whereClause}
             group by a.model_id
             order by count(*) desc;
-            """, parameters).ConfigureAwait(false))
-            .Select(e => new ActivityModelSummary(
-                e.ModelId, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
-            .ToList();
 
-        var keys = (await connection.QueryAsync<ActivityKeySummaryEntity>(
-            $"""
             select
                 a.api_key_id as ApiKeyId,
                 a.api_key_prefix as ApiKeyPrefix,
@@ -421,7 +424,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             {whereClause}
             group by a.api_key_id, a.api_key_prefix
             order by count(*) desc;
-            """, parameters).ConfigureAwait(false))
+            """,
+            parameters,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        var totals = await multi.ReadSingleAsync<(long Requests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostRub)>().ConfigureAwait(false);
+        var models = (await multi.ReadAsync<ActivityModelSummaryEntity>().ConfigureAwait(false))
+            .Select(e => new ActivityModelSummary(
+                e.ModelId, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
+            .ToList();
+        var keys = (await multi.ReadAsync<ActivityKeySummaryEntity>().ConfigureAwait(false))
             .Select(e => new ActivityKeySummary(
                 e.ApiKeyId, e.ApiKeyPrefix, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
             .ToList();
@@ -440,14 +452,15 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         ArgumentNullException.ThrowIfNull(anomaly);
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(
+        await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into billing.billing_anomalies
                 (id, request_id, type, message, created_at_utc)
             values
                 (@Id, @RequestId, @Type, @Message, @CreatedAtUtc);
             """,
-            anomaly).ConfigureAwait(false);
+            anomaly,
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
@@ -462,7 +475,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
-        var items = (await connection.QueryAsync<BillingAnomalyEntity>(
+        var items = (await connection.QueryAsync<BillingAnomalyEntity>(new CommandDefinition(
                 """
                 select
                     id as Id,
@@ -473,7 +486,66 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 from billing.billing_anomalies
 
                 """ + afterCondition + "order by created_at_utc\nlimit @Limit;",
-                parameters).ConfigureAwait(false))
+                parameters,
+                cancellationToken: ct)).ConfigureAwait(false))
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore) items = items.Take(limit).ToArray();
+        return (items, hasMore);
+    }
+
+    public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
+        int limit,
+        string? afterCursor = null,
+        string? modelFilter = null,
+        string? providerFilter = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+
+        var conditions = new List<string>();
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            conditions.Add("a.created_at_utc < @AfterCursor");
+            parameters.Add("AfterCursor", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
+        }
+        if (!string.IsNullOrEmpty(modelFilter)) { conditions.Add("a.model_id = @ModelFilter"); parameters.Add("ModelFilter", modelFilter); }
+        if (!string.IsNullOrEmpty(providerFilter)) { conditions.Add("a.provider_name = @ProviderFilter"); parameters.Add("ProviderFilter", providerFilter); }
+        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
+        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
+
+        var whereClause = conditions.Count > 0 ? "where " + string.Join(" and ", conditions) + "\n" : "";
+
+        var items = (await connection.QueryAsync<AdminRequestEntity>(new CommandDefinition(
+            $"""
+            select
+                a.request_id as RequestId,
+                coalesce(u.user_id, '') as UserId,
+                a.api_key_prefix as ApiKeyPrefix,
+                a.model_id as ModelId,
+                a.router_node_id as RouterNodeId,
+                a.provider_name as ProviderName,
+                a.provider_account as ProviderAccount,
+                a.input_tokens as InputTokens,
+                a.output_tokens as OutputTokens,
+                a.cache_tokens as CacheTokens,
+                coalesce(u.cost_amount, 0) as CostAmount,
+                a.status as Status,
+                a.created_at_utc as CreatedAtUtc,
+                a.completed_at_utc as CompletedAtUtc
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause}order by a.created_at_utc desc
+            limit @Limit;
+            """,
+            parameters,
+            cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
@@ -556,61 +628,4 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         left join billing.usage_records u on u.request_id = a.request_id
 
         """;
-
-    public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
-        int limit,
-        string? afterCursor = null,
-        string? modelFilter = null,
-        string? providerFilter = null,
-        DateTimeOffset? fromUtc = null,
-        DateTimeOffset? toUtc = null,
-        CancellationToken ct = default)
-    {
-        using var connection = connectionFactory.CreateConnection();
-        var parameters = new DynamicParameters();
-        parameters.Add("Limit", limit + 1);
-
-        var conditions = new List<string>();
-        if (!string.IsNullOrEmpty(afterCursor))
-        {
-            conditions.Add("a.created_at_utc < @AfterCursor");
-            parameters.Add("AfterCursor", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
-        }
-        if (!string.IsNullOrEmpty(modelFilter)) { conditions.Add("a.model_id = @ModelFilter"); parameters.Add("ModelFilter", modelFilter); }
-        if (!string.IsNullOrEmpty(providerFilter)) { conditions.Add("a.provider_name = @ProviderFilter"); parameters.Add("ProviderFilter", providerFilter); }
-        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
-        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
-
-        var whereClause = conditions.Count > 0 ? "where " + string.Join(" and ", conditions) + "\n" : "";
-
-        var items = (await connection.QueryAsync<AdminRequestEntity>(
-            $"""
-            select
-                a.request_id as RequestId,
-                coalesce(u.user_id, '') as UserId,
-                a.api_key_prefix as ApiKeyPrefix,
-                a.model_id as ModelId,
-                a.router_node_id as RouterNodeId,
-                a.provider_name as ProviderName,
-                a.provider_account as ProviderAccount,
-                a.input_tokens as InputTokens,
-                a.output_tokens as OutputTokens,
-                a.cache_tokens as CacheTokens,
-                coalesce(u.cost_amount, 0) as CostAmount,
-                a.status as Status,
-                a.created_at_utc as CreatedAtUtc,
-                a.completed_at_utc as CompletedAtUtc
-            from billing.activity_by_token a
-            left join billing.usage_records u on u.request_id = a.request_id
-            {whereClause}order by a.created_at_utc desc
-            limit @Limit;
-            """,
-            parameters).ConfigureAwait(false))
-            .Select(BillingPersistenceMapper.ToDomain)
-            .ToArray();
-
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return (items, hasMore);
-    }
 }

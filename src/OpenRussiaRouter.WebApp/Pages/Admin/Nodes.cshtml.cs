@@ -124,7 +124,7 @@ public class NodesModel(
 
         var models = catalog.Entries
             .Where(entry => entry.NodeIds.Contains(node.NodeId, StringComparer.Ordinal))
-            .Select(entry => entry.UpstreamId)
+            .Select(entry => string.IsNullOrWhiteSpace(entry.PublicId) ? entry.UpstreamId : entry.PublicId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(id => id, StringComparer.Ordinal)

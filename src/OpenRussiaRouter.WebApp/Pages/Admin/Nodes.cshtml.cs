@@ -1,11 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.WebApp.Services.Auth;
-using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
+using System.Text;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -13,11 +12,9 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class NodesModel(
     ControlPlaneProvider ControlPlaneProvider,
     AuthProvider AuthProvider,
-    BillingProvider BillingProvider,
-    RouterNodeApiProvider RouterNodeApiProvider,
+    IHttpClientFactory HttpClientFactory,
     ILogger<NodesModel> logger) : PageModelBase
 {
-    private const string ModelPriceMissingErrorCode = "model_price_missing";
 
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -137,74 +134,35 @@ public class NodesModel(
     {
         await OnGetAsync();
 
-        var node = string.IsNullOrWhiteSpace(TestInput.NodeId)
-            ? Nodes.FirstOrDefault(n => n.Status != "disabled")
-            : Nodes.FirstOrDefault(n => n.NodeId == TestInput.NodeId);
-
-        if (node is null)
-        {
-            TestResult = new TestFormResult(false, "Выберите ноду перед отправкой тестового запроса.");
-            return Page();
-        }
-
-        TestInput.NodeId = node.NodeId;
-
-        var userId = User.GetUserId();
-        var userKeys = await AuthProvider.ListApiKeysAsync(userId, HttpContext.RequestAborted);
-        var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
-        if (activeKey is null)
-        {
-            TestResult = new TestFormResult(false,
-                "Нет личных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
-            return Page();
-        }
-
-        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
-
+        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
         {
             TestResult = new TestFormResult(false,
-                "Нет активных API-ключей с сохранённым значением. Пересоздайте ключ в разделе Рабочее пространство → API Ключи.");
+                "Нет активных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
             return Page();
         }
 
         try
         {
-            await ControlPlaneProvider.PushUserIntegrationKeyAsync(
-                $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
-                cancellationToken: HttpContext.RequestAborted);
-
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
             {
                 model = TestInput.Model,
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            var startedAtUtc = DateTimeOffset.UtcNow;
-            var response = await RouterNodeApiProvider.SendChatCompletionAsync(
-                node,
-                rawKey,
-                requestBody,
-                HttpContext.RequestAborted);
-            var completedAtUtc = DateTimeOffset.UtcNow;
+            var client = HttpClientFactory.CreateClient("ApiGateway");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
+            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
 
-            var warning = await RecordTestActivityAsync(
-                userId,
-                activeKey,
-                TestInput.Model,
-                node.NodeId,
-                response.Body,
-                response.IsSuccessStatusCode,
-                startedAtUtc,
-                completedAtUtc);
+            using var response = await client.SendAsync(request, HttpContext.RequestAborted);
+            var body = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
 
-            TestResult = new TestFormResult(
-                response.IsSuccessStatusCode && warning is null,
-                AppendWarning(response.Body, warning));
+            TestResult = new TestFormResult(response.IsSuccessStatusCode, body);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Test request to router node failed. NodeId={NodeId} Model={Model}", TestInput.NodeId, TestInput.Model);
+            logger.LogError(ex, "Gateway test request failed. Model={Model}", TestInput.Model);
             TestResult = new TestFormResult(false, ex.Message);
         }
 
@@ -218,31 +176,13 @@ public class NodesModel(
         Response.ContentType = "text/plain; charset=utf-8";
         Response.Headers.CacheControl = "no-cache";
 
-        var node = string.IsNullOrWhiteSpace(StreamingTestInput.NodeId)
-            ? Nodes.FirstOrDefault(n => n.Status != "disabled")
-            : Nodes.FirstOrDefault(n => n.NodeId == StreamingTestInput.NodeId);
-
-        if (node is null)
-            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Select a node before sending a streaming test request.");
-
-        StreamingTestInput.NodeId = node.NodeId;
-
-        var userId = User.GetUserId();
-        var userKeys = await AuthProvider.ListApiKeysAsync(userId, HttpContext.RequestAborted);
-        var activeKey = userKeys.FirstOrDefault(k => k.IsActive);
-        if (activeKey is null)
-            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No personal API keys. Create an API key in Workspace -> API Keys.");
-
-        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(userId, HttpContext.RequestAborted);
+        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
-            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "No active API key with a stored raw value. Recreate the key in Workspace -> API Keys.");
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest,
+                "Нет активных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
 
         try
         {
-            await ControlPlaneProvider.PushUserIntegrationKeyAsync(
-                $"user:{userId}", rawKey, userId, apiKeyId: string.Empty, nodeId: node.NodeId,
-                cancellationToken: HttpContext.RequestAborted);
-
             var requestBody = System.Text.Json.JsonSerializer.Serialize(new
             {
                 model = StreamingTestInput.Model,
@@ -250,12 +190,12 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            var startedAtUtc = DateTimeOffset.UtcNow;
-            using var response = await RouterNodeApiProvider.SendStreamingChatCompletionAsync(
-                node,
-                rawKey,
-                requestBody,
-                HttpContext.RequestAborted);
+            var client = HttpClientFactory.CreateClient("ApiGateway");
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
+            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
+            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+
+            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
 
             Response.StatusCode = (int)response.StatusCode;
             Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "text/plain; charset=utf-8";
@@ -263,31 +203,12 @@ public class NodesModel(
 
             await using var stream = await response.Content.ReadAsStreamAsync(HttpContext.RequestAborted);
             var buffer = new byte[8192];
-            var capturedBody = new System.Text.StringBuilder();
             while (true)
             {
                 var read = await stream.ReadAsync(buffer, HttpContext.RequestAborted);
-                if (read == 0)
-                    break;
-
-                capturedBody.Append(System.Text.Encoding.UTF8.GetString(buffer, 0, read));
+                if (read == 0) break;
                 await Response.Body.WriteAsync(buffer.AsMemory(0, read), HttpContext.RequestAborted);
                 await Response.Body.FlushAsync(HttpContext.RequestAborted);
-            }
-
-            var warning = await RecordTestActivityAsync(
-                userId,
-                activeKey,
-                StreamingTestInput.Model,
-                node.NodeId,
-                capturedBody.ToString(),
-                response.IsSuccessStatusCode,
-                startedAtUtc,
-                DateTimeOffset.UtcNow);
-
-            if (warning is not null)
-            {
-                await Response.WriteAsync($"{Environment.NewLine}[activity warning] {warning}", HttpContext.RequestAborted);
             }
         }
         catch (OperationCanceledException) when (HttpContext.RequestAborted.IsCancellationRequested)
@@ -295,69 +216,13 @@ public class NodesModel(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Streaming test request to router node failed. NodeId={NodeId} Model={Model}", StreamingTestInput.NodeId, StreamingTestInput.Model);
+            logger.LogError(ex, "Gateway streaming test request failed. Model={Model}", StreamingTestInput.Model);
             if (!Response.HasStarted)
                 return await WriteStreamingErrorAsync(StatusCodes.Status500InternalServerError, ex.Message);
-
             await Response.WriteAsync($"{Environment.NewLine}[stream error] {ex.Message}", HttpContext.RequestAborted);
         }
 
         return new EmptyResult();
-    }
-
-    private async Task<string?> RecordTestActivityAsync(
-        string userId,
-        ApiKeyInfo apiKey,
-        string modelId,
-        string routerNodeId,
-        string responseBody,
-        bool isSuccessStatusCode,
-        DateTimeOffset startedAtUtc,
-        DateTimeOffset completedAtUtc)
-    {
-        var hasUsage = TokenUsageExtractor.TryExtractJson(responseBody, out var usage) ||
-                       TokenUsageExtractor.TryExtractStreamingSse(responseBody, out usage);
-        var status = isSuccessStatusCode
-            ? hasUsage ? "completed" : "usage_missing"
-            : "failed";
-
-        try
-        {
-            var errorCode = await BillingProvider.RecordUsageAsync(
-                Guid.NewGuid().ToString("N"),
-                userId,
-                apiKey.Id,
-                apiKey.Prefix,
-                modelId,
-                routerNodeId,
-                usage.InputTokens,
-                usage.OutputTokens,
-                usage.CacheTokens,
-                status,
-                startedAtUtc,
-                completedAtUtc,
-                HttpContext.RequestAborted);
-
-            return string.IsNullOrWhiteSpace(errorCode) || errorCode == ModelPriceMissingErrorCode
-                ? null
-                : $"BillingService returned {errorCode}.";
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to record admin node test activity. UserId={UserId} ApiKeyId={ApiKeyId} NodeId={NodeId} Model={Model}",
-                userId, apiKey.Id, routerNodeId, modelId);
-            return ex.Message;
-        }
-    }
-
-    private static string AppendWarning(string body, string? warning)
-    {
-        if (string.IsNullOrWhiteSpace(warning))
-        {
-            return body;
-        }
-
-        return $"[activity warning] {warning}{Environment.NewLine}{Environment.NewLine}{body}";
     }
 
     private async Task<IActionResult> WriteStreamingErrorAsync(int statusCode, string message)

@@ -11,3 +11,5 @@ spec:
           env:
             - name: RouterNodeTokens__devLocal
               value: "GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM"
+            - name: ApiGatewayUrl
+              value: "http://api-gateway"

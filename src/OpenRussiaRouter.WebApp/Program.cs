@@ -92,6 +92,17 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
 builder.Services.AddScoped<ControlPlaneProvider>();
 builder.Services.AddScoped<RouterNodeApiProvider>();
 
+var apiGatewayUrl = builder.Configuration["ApiGatewayUrl"] ?? "http://localhost:5000";
+builder.Services.AddHttpClient("ApiGateway", client =>
+{
+    client.BaseAddress = new Uri(apiGatewayUrl);
+    client.Timeout = TimeSpan.FromSeconds(120);
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    ConnectTimeout = TimeSpan.FromSeconds(10),
+    PooledConnectionIdleTimeout = TimeSpan.FromSeconds(60),
+});
+
 builder.Services.AddHttpClient("RouterNode", client =>
 {
     client.Timeout = TimeSpan.FromSeconds(20);

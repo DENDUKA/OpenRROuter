@@ -16,6 +16,8 @@ public class NodeEditModel(
 
     public RouterNodeAvailabilityCheckResult? AvailabilityCheckResult { get; private set; }
 
+    public RouterNodeProbeResult? CatalogProbeResult { get; private set; }
+
     [BindProperty]
     public NodeEditInput Form { get; set; } = new();
 
@@ -52,6 +54,30 @@ public class NodeEditModel(
         {
             logger.LogWarning(ex, "Failed to check router node edit form. NodeId: {NodeId}", nodeId);
             ErrorMessage = "Failed to check node availability.";
+        }
+
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostProbeCatalogAsync(string nodeId)
+    {
+        try
+        {
+            await LoadNodeAsync(nodeId, populateForm: false);
+            if (Node is null)
+            {
+                ErrorMessage = "Router node was not found.";
+                return Page();
+            }
+
+            CatalogProbeResult = await RouterNodeApiProvider.ProbeProvidersAsync(
+                Node with { EndpointUrl = Form.EndpointUrl, ControlToken = Form.ControlToken },
+                HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to probe router node catalog endpoint. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to probe catalog endpoint.";
         }
 
         return Page();

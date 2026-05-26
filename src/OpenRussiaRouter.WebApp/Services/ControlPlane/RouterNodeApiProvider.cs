@@ -50,7 +50,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(node, ProvidersPath));
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildRootRelativeUri(node, ProvidersPath));
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
             request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", node.ControlToken);
             using var response = await CreateClient().SendAsync(request, cancellationToken).ConfigureAwait(false);
@@ -83,7 +83,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
 
         try
         {
-            using var request = new HttpRequestMessage(HttpMethod.Get, BuildUri(node, IntegrationKeysPath));
+            using var request = new HttpRequestMessage(HttpMethod.Get, BuildRootRelativeUri(node, IntegrationKeysPath));
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + controlToken);
             request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", controlToken);
 
@@ -113,9 +113,9 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         }
     }
 
-    private string DescribeProvidersRequest(RouterNodeInfo node) => $"GET {BuildUri(node, ProvidersPath)}";
+    private string DescribeProvidersRequest(RouterNodeInfo node) => $"GET {BuildRootRelativeUri(node, ProvidersPath)}";
 
-    private string DescribeIntegrationKeysRequest(RouterNodeInfo node) => $"GET {BuildUri(node, IntegrationKeysPath)}";
+    private string DescribeIntegrationKeysRequest(RouterNodeInfo node) => $"GET {BuildRootRelativeUri(node, IntegrationKeysPath)}";
 
     private HttpClient CreateClient() => httpClientFactory.CreateClient(ClientName);
 
@@ -144,6 +144,17 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         // would hit the LLM API guard at /v1/... and return 401.
         var baseUri = new Uri(node.EndpointUrl, UriKind.Absolute);
         return new Uri(baseUri, path);
+    }
+
+    private static Uri BuildRootRelativeUri(RouterNodeInfo node, string path)
+    {
+        ArgumentNullException.ThrowIfNull(node);
+        if (string.IsNullOrWhiteSpace(node.EndpointUrl))
+        {
+            throw new InvalidOperationException("Router node endpoint URL is empty.");
+        }
+
+        return new Uri(new Uri(node.EndpointUrl), path);
     }
 }
 

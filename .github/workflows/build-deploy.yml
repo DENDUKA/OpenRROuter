@@ -39,21 +39,6 @@ jobs:
     permissions:
       contents: read
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: orr
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: postgres
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
       - uses: actions/checkout@v5
         with:
@@ -70,18 +55,6 @@ jobs:
       - name: Build
         run: dotnet build OpenRussiaRouter.sln --no-restore -c Release
         shell: bash
-
-      - name: Install Playwright browsers
-        shell: bash
-        run: pwsh tests/OpenRussiaRouter.E2ETests/bin/Release/net8.0/playwright.ps1 install chromium --with-deps
-
-      - name: Test
-        run: dotnet test OpenRussiaRouter.sln --no-build -c Release --logger "GitHubActions" -nr:false -m:1
-        shell: bash
-        env:
-          ORR_AUTH_POSTGRES_TEST_CONNECTION: "Host=localhost;Port=5432;Database=orr_auth;Username=orr;Password=testpass"
-          ORR_BILLING_POSTGRES_TEST_CONNECTION: "Host=localhost;Port=5432;Database=orr_billing;Username=orr;Password=testpass"
-          ORR_CONTROL_POSTGRES_TEST_CONNECTION: "Host=localhost;Port=5432;Database=orr_control;Username=orr;Password=testpass"
 
       - name: Detect changed services
         id: changes

@@ -98,8 +98,7 @@
             }
             else
             {
-                <form method="post" action="/admin/models/sync?handler=Import">
-                    @Html.AntiForgeryToken()
+                <form method="post" asp-page-handler="Import">
                     <div asp-validation-summary="ModelOnly" class="validation-message"></div>
                     <div class="adm-form-row">
                         <div class="form-group">

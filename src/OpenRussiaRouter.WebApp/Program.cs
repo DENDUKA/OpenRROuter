@@ -39,6 +39,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.CallbackPath = "/signin-google";
         options.Scope.Add("email");
     });
+	
 
 builder.Services.AddAuthorization();
 

@@ -19,6 +19,7 @@ service RouterControlPlane {
   rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
   rpc ListAvailableNodeModels (ListAvailableNodeModelsRequest) returns (ListAvailableNodeModelsResponse);
   rpc ListNodeModelCatalog (ListNodeModelCatalogRequest) returns (ListNodeModelCatalogResponse);
+  rpc GetNodeModels (GetNodeModelsRequest) returns (GetNodeModelsResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -207,4 +208,15 @@ message ListNodeModelCatalogResponse {
   repeated UpstreamModelEntry entries = 1;
   repeated string unreachable_node_ids = 2;
   repeated UnreachableNodeInfo unreachable_nodes = 3;
+}
+
+message GetNodeModelsRequest {
+  string node_id = 1;
+}
+
+message GetNodeModelsResponse {
+  // Public IDs ordered alphabetically. Empty on error or when the node has no models.
+  repeated string public_ids = 1;
+  // Non-empty when the node was unreachable or not found.
+  string error = 2;
 }

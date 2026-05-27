@@ -101,32 +101,7 @@ public class NodesModel(
 
     public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
-        try { Nodes = await ControlPlaneProvider.ListRouterNodesAsync(); }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to load router nodes for node models lookup. NodeId={NodeId}", nodeId);
-            return new JsonResult(Array.Empty<string>());
-        }
-
-        var node = Nodes.FirstOrDefault(n => n.NodeId == nodeId);
-        if (node is null)
-            return new JsonResult(Array.Empty<string>());
-
-        var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
-        if (!string.IsNullOrWhiteSpace(catalog.Error))
-        {
-            logger.LogWarning("Failed to fetch models from router node catalog. NodeId={NodeId}; Error={Error}", nodeId, catalog.Error);
-            return new JsonResult(Array.Empty<string>());
-        }
-
-        var models = catalog.Entries
-            .Where(entry => entry.NodeIds.Contains(node.NodeId, StringComparer.Ordinal))
-            .Select(entry => string.IsNullOrWhiteSpace(entry.PublicId) ? entry.UpstreamId : entry.PublicId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .OrderBy(id => id, StringComparer.Ordinal)
-            .ToList();
-
+        var models = await ControlPlaneProvider.GetNodeModelsAsync(nodeId, HttpContext.RequestAborted);
         return new JsonResult(models);
     }
 

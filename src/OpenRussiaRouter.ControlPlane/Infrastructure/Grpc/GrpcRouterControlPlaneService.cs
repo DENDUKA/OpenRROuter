@@ -346,6 +346,29 @@ public sealed class GrpcRouterControlPlaneService(
         return response;
     }
 
+    public override async Task<GetNodeModelsResponse> GetNodeModels(
+        GetNodeModelsRequest request,
+        ServerCallContext context)
+    {
+        var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, cancellationToken).ConfigureAwait(false);
+        if (node is null)
+            return new GetNodeModelsResponse { Error = "Node not found" };
+
+        var result = await CollectNodeCatalogAsync(node, cancellationToken).ConfigureAwait(false);
+        if (result.Unreachable)
+            return new GetNodeModelsResponse { Error = $"Node unreachable: {result.Response}" };
+
+        var response = new GetNodeModelsResponse();
+        response.PublicIds.AddRange(
+            result.Observations
+                .Select(o => string.IsNullOrWhiteSpace(o.PublicId) ? o.UpstreamId : o.PublicId)
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(id => id, StringComparer.Ordinal));
+        return response;
+    }
+
     public override async Task<ListNodeModelCatalogResponse> ListNodeModelCatalog(
         ListNodeModelCatalogRequest request,
         ServerCallContext context)

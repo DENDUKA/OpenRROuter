@@ -167,6 +167,28 @@ public sealed class ControlPlaneProvider(
         }
     }
 
+    public async Task<IReadOnlyList<string>> GetNodeModelsAsync(string nodeId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(NodeModelDropdownTimeout);
+
+            var response = await client.GetNodeModelsAsync(
+                new GetNodeModelsRequest { NodeId = nodeId ?? string.Empty },
+                cancellationToken: timeoutCts.Token);
+
+            return string.IsNullOrWhiteSpace(response.Error)
+                ? response.PublicIds.ToList()
+                : [];
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to get models for node {NodeId}", nodeId);
+            return [];
+        }
+    }
+
     public async Task<NodeModelCatalogResult> ListNodeModelCatalogAsync(CancellationToken cancellationToken = default)
     {
         try

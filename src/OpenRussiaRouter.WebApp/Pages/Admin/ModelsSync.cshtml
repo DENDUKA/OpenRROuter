@@ -145,7 +145,7 @@
                                             <input asp-for="Form.Rows[i].UpstreamId" type="hidden" />
                                             <input asp-for="Form.Rows[i].Selected" type="checkbox" data-testid="models-sync-checkbox" />
                                         </td>
-                                        <td><code>@(Model.Form.Prefix + entry.PublicId)</code></td>
+                                        <td><code>@(Model.Form.Prefix + entry.UpstreamId)</code></td>
                                         <td class="nowrap">@entry.DisplayName</td>
                                         <td><code>@entry.UpstreamId</code></td>
                                         <td>@entry.ModelType</td>

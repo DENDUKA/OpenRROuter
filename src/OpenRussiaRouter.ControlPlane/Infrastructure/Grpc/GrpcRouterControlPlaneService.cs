@@ -362,7 +362,7 @@ public sealed class GrpcRouterControlPlaneService(
         var response = new GetNodeModelsResponse();
         response.PublicIds.AddRange(
             result.Observations
-                .Select(o => string.IsNullOrWhiteSpace(o.PublicId) ? o.UpstreamId : o.PublicId)
+                .Select(o => o.UpstreamId)
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal));

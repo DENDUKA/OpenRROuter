@@ -14,7 +14,7 @@ public sealed class RouterHealthCheckWorkerTests
     [Fact]
     public async Task RunOnceAsync_HealthyResult_UpdatesNodeStatus()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
         var worker = new RouterHealthCheckWorker(
             controlPlane,
@@ -32,7 +32,7 @@ public sealed class RouterHealthCheckWorkerTests
     [Fact]
     public async Task RunOnceAsync_DisabledNode_DoesNotCallHealthClient()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var node = await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
         await controlPlane.DisableNodeAsync(node.Id);
         var healthClient = new CountingHealthClient();

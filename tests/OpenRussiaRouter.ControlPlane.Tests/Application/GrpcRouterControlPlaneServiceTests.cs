@@ -37,7 +37,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task SelectRouterNode_NoHealthyNodes_ReturnsRouterUnavailable()
     {
         var repo = new InMemoryControlPlaneRepository();
-        var service = CreateService(new RouterControlPlaneService(repo), repo);
+        var service = CreateService(new RouterControlPlaneService(repo, new NodeModelCapabilityStore()), repo);
 
         var response = await service.SelectRouterNode(
             new SelectRouterNodeRequest { RequestId = "req-1", ModelId = "gpt-test" },
@@ -51,7 +51,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var lease = await control.SelectRouterNodeAsync("req-1", DateTimeOffset.UtcNow);
+        var lease = await control.SelectRouterNodeAsync(null, "req-1", DateTimeOffset.UtcNow);
 
         var response = await service.ReleaseRouterNode(
             new ReleaseRouterNodeRequest { LeaseId = lease.LeaseId, Status = "succeeded" },
@@ -65,7 +65,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task RegisterAndListRouterNode_ValidRequest_ReturnsNodeSummary()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var registered = await service.RegisterRouterNode(new RegisterRouterNodeRequest
@@ -214,7 +214,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         // ftp:// is not a valid scheme; http:// and https:// are both allowed
         var repo = new InMemoryControlPlaneRepository();
-        var service = CreateService(new RouterControlPlaneService(repo), repo);
+        var service = CreateService(new RouterControlPlaneService(repo, new NodeModelCapabilityStore()), repo);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -233,7 +233,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         // HTTP endpoints are allowed for internal k8s services
         var repo = new InMemoryControlPlaneRepository();
-        var service = CreateService(new RouterControlPlaneService(repo), repo);
+        var service = CreateService(new RouterControlPlaneService(repo, new NodeModelCapabilityStore()), repo);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
         {
@@ -249,7 +249,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task RegisterRouterNode_MissingControlToken_ReturnsValidationFailed()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.RegisterRouterNode(new RegisterRouterNodeRequest
@@ -268,7 +268,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task DisableRouterNode_UnknownNode_ReturnsValidationFailed()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.DisableRouterNode(
@@ -297,7 +297,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task DeleteRouterNode_UnknownNode_ReturnsValidationFailed()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.DeleteRouterNode(
@@ -327,7 +327,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task EnableRouterNode_UnknownNode_ReturnsValidationFailed()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.EnableRouterNode(
@@ -341,7 +341,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task GetRouterNodeDetails_UnknownNode_ReturnsValidationFailed()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.GetRouterNodeDetails(
@@ -389,7 +389,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     [Fact]
     public async Task ListNodeModelCatalog_NoEnabledNodes_ReturnsEmpty()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var service = CreateService(control);
 
         var response = await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
@@ -851,7 +851,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private async Task<(RouterControlPlaneService Control, string FirstId, string SecondId)> CreateTwoEnabledNodesAsync(
         string firstName, string secondName)
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var first = await control.RegisterNodeAsync(
             firstName, new Uri($"https://{firstName}.example"), "secret", 1, DateTimeOffset.UtcNow);
         var second = await control.RegisterNodeAsync(
@@ -963,7 +963,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
     private static async Task<RouterControlPlaneService> CreateControlPlaneWithHealthyNodeAsync()
     {
-        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var control = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var node = await control.RegisterNodeAsync(
             "node-a",
             new Uri("https://router-a.example"),

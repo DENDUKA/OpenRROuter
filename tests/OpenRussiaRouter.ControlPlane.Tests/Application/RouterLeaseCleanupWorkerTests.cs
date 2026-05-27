@@ -11,11 +11,11 @@ public sealed class RouterLeaseCleanupWorkerTests
     [Fact]
     public async Task RunOnce_ExpiredLease_ReleasesLoad()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var now = DateTimeOffset.UtcNow;
         var node = await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         await controlPlane.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now);
-        await controlPlane.SelectRouterNodeAsync("req-1", now);
+        await controlPlane.SelectRouterNodeAsync(null, "req-1", now);
         var worker = new RouterLeaseCleanupWorker(
             controlPlane,
             TestOptionsMonitor.Create(new RouterLeaseCleanupOptions()),
@@ -30,11 +30,11 @@ public sealed class RouterLeaseCleanupWorkerTests
     [Fact]
     public async Task RunOnce_Disabled_DoesNotReleaseExpiredLease()
     {
-        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository());
+        var controlPlane = new RouterControlPlaneService(new InMemoryControlPlaneRepository(), new NodeModelCapabilityStore());
         var now = DateTimeOffset.UtcNow;
         var node = await controlPlane.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         await controlPlane.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now);
-        await controlPlane.SelectRouterNodeAsync("req-1", now);
+        await controlPlane.SelectRouterNodeAsync(null, "req-1", now);
         var worker = new RouterLeaseCleanupWorker(
             controlPlane,
             TestOptionsMonitor.Create(new RouterLeaseCleanupOptions { Enabled = false }),

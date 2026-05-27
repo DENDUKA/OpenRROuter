@@ -3,7 +3,9 @@ using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
-public sealed class RouterControlPlaneService(IControlPlaneRepository repository)
+public sealed class RouterControlPlaneService(
+    IControlPlaneRepository repository,
+    NodeModelCapabilityStore capabilityStore)
 {
     private static readonly TimeSpan DefaultLeaseTtl = TimeSpan.FromMinutes(5);
     private const int MaxNodePageSize = 1000;
@@ -81,23 +83,39 @@ public sealed class RouterControlPlaneService(IControlPlaneRepository repository
         await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
     }
 
-    public async Task<RouterNodeLease> SelectRouterNodeAsync(string requestId, DateTimeOffset nowUtc, CancellationToken ct = default)
+    public async Task<RouterNodeLease> SelectRouterNodeAsync(
+        string? modelId,
+        string requestId,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(requestId))
             throw new ArgumentException("Value cannot be empty.", nameof(requestId));
 
         await ReleaseExpiredLeasesAsync(nowUtc, ct).ConfigureAwait(false);
 
-        var node = (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
+        var all = (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
             .Items
-            .Where(candidate => candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy)
+            .Where(candidate => candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy);
+
+        // Filter by model capability when the store has been populated.
+        // If the store is still empty (e.g. right after startup, before the first Quartz job run),
+        // fall back to the old least-load behaviour so the first requests are not rejected.
+        IEnumerable<RouterNode> candidates = all;
+        if (!string.IsNullOrWhiteSpace(modelId) && !capabilityStore.IsEmpty)
+            candidates = all.Where(n => capabilityStore.NodeSupportsModel(n.Id, modelId));
+
+        var node = candidates
             .OrderBy(candidate => (decimal)candidate.InFlightRequests / candidate.CapacityWeight)
             .ThenBy(candidate => candidate.InFlightRequests)
             .ThenBy(candidate => candidate.Name, StringComparer.Ordinal)
             .FirstOrDefault();
 
         if (node is null)
-            throw new InvalidOperationException("No healthy router nodes are available.");
+            throw new InvalidOperationException(
+                string.IsNullOrWhiteSpace(modelId)
+                    ? "No healthy router nodes are available."
+                    : $"No healthy router nodes are available for model '{modelId}'.");
 
         node.Lease();
         await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);

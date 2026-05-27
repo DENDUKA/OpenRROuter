@@ -25,12 +25,13 @@ public sealed class ControlPlaneRepositoryPostgresTests
         using var connection = new NpgsqlConnection(connectionString);
         database.Truncate();
         var service = new RouterControlPlaneService(
-            new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(connectionString)));
+            new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(connectionString)),
+            new NodeModelCapabilityStore());
         var now = DateTimeOffset.UtcNow;
         var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now, 15, null);
 
-        var lease = await service.SelectRouterNodeAsync("req-1", now);
+        var lease = await service.SelectRouterNodeAsync(null, "req-1", now);
         await service.ReleaseExpiredLeasesAsync(now.AddMinutes(6));
 
         lease.NodeId.Should().Be(node.Id);

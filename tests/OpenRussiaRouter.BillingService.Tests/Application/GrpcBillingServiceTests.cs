@@ -40,7 +40,7 @@ public sealed class GrpcBillingServiceTests
         var response = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
 
         var model = response.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("gpt-test");
+        model.Id.Should().Be("router/gpt-test");
         model.DisplayName.Should().Be("GPT Test");
         model.UpstreamModelId.Should().Be("router/gpt-test");
         model.InputPricePer1MRub.Should().Be("10");
@@ -168,7 +168,7 @@ public sealed class GrpcBillingServiceTests
         response.Upserted.Should().BeTrue();
         response.ModelId.Should().Be("gpt-admin");
         var model = models.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("gpt-admin");
+        model.Id.Should().Be("router/gpt-admin");
         model.UpstreamModelId.Should().Be("router/gpt-admin");
         model.InputPricePer1MRub.Should().Be("10");
         model.OutputPricePer1MRub.Should().Be("20");

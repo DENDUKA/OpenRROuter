@@ -39,14 +39,14 @@ public sealed class GrpcBillingService(
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
         var publicModels = await billing.ListPublicModelsAsync(ct).ConfigureAwait(false);
-        var pricesByModelId = (await billing.ListAllModelsAsync(ct).ConfigureAwait(false))
-            .ToDictionary(model => model.ModelId, StringComparer.Ordinal);
+        var pricesByRouterId = (await billing.ListAllModelsAsync(ct).ConfigureAwait(false))
+            .ToDictionary(model => model.RouterModelId, StringComparer.Ordinal);
 
         var response = new ListPublicModelsResponse();
         response.Models.AddRange(
             publicModels.Select(model =>
             {
-                pricesByModelId.TryGetValue(model.Id, out var price);
+                pricesByRouterId.TryGetValue(model.Id, out var price);
 
                 return new Contracts.Grpc.Billing.V1.PublicModel
                 {

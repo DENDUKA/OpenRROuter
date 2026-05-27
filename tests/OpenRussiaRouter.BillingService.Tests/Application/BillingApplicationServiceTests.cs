@@ -82,7 +82,7 @@ public sealed class BillingApplicationServiceTests
         var models = await service.ListPublicModelsAsync();
 
         var model = models.Should().ContainSingle().Which;
-        model.Id.Should().Be("enabled");
+        model.Id.Should().Be("router/enabled");
     }
 
     [Fact]

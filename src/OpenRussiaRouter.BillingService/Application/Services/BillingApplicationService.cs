@@ -72,7 +72,7 @@ public sealed class BillingApplicationService(
         var pageSize = paginationOptions.Value.EffectivePageSize;
         return (await repository.ListEnabledModelsAsync(pageSize, null, ct).ConfigureAwait(false))
             .Items
-            .Select(model => new PublicModel(model.ModelId, model.DisplayName, model.Enabled))
+            .Select(model => new PublicModel(model.RouterModelId, model.DisplayName, model.Enabled))
             .ToArray();
     }
 

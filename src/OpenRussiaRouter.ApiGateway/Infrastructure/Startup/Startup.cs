@@ -104,10 +104,14 @@ public static class Startup
         var balanceResult = await billingClient.CheckBalanceAndModelAsync(authResult.UserId!, model, cancellationToken);
         if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
         {
-            var errorType = balanceResult.ErrorCode == ErrorCodes.InsufficientBalance
-                ? "billing_error"
-                : "invalid_request_error";
-            await WriteJsonErrorAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, "Balance check failed", requestId);
+            var (errorType, errorMessage) = balanceResult.ErrorCode switch
+            {
+                ErrorCodes.InsufficientBalance => ("billing_error", "Insufficient balance to process this request."),
+                ErrorCodes.ModelUnavailable => ("invalid_request_error", $"Model '{model}' is not available."),
+                ErrorCodes.InternalError => ("internal_error", "An internal error occurred while checking balance."),
+                _ => ("invalid_request_error", "Balance check failed.")
+            };
+            await WriteJsonErrorAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
             return null;
         }
 

@@ -109,23 +109,24 @@ public class ModelsSyncModel(
                 continue;
             }
 
-            var modelId = Form.Prefix + entry.PublicId;
-            if (byUpstream.TryGetValue(entry.UpstreamId, out var existingByUpstream))
+            var upstreamId = entry.UpstreamId;
+            var modelId = Form.Prefix + entry.UpstreamId;
+            if (byUpstream.TryGetValue(upstreamId, out var existingByUpstream))
             {
-                warnings.Add($"{entry.UpstreamId}: already configured under '{existingByUpstream.Id}'.");
+                warnings.Add($"{upstreamId}: already configured under '{existingByUpstream.Id}'.");
                 continue;
             }
 
             if (byBillingId.ContainsKey(modelId))
             {
-                warnings.Add($"{entry.UpstreamId}: billing ID '{modelId}' already used.");
+                warnings.Add($"{upstreamId}: billing ID '{modelId}' already used.");
                 continue;
             }
 
             var model = new ModelInfo(
                 modelId,
                 entry.DisplayName,
-                entry.UpstreamId,
+                upstreamId,
                 "v1",
                 row.InputPrice,
                 row.OutputPrice,
@@ -142,7 +143,7 @@ public class ModelsSyncModel(
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to import model {ModelId} from upstream {UpstreamId}", model.Id, model.UpstreamModelId);
-                warnings.Add($"{entry.UpstreamId}: import failed: {ex.Message}");
+                warnings.Add($"{upstreamId}: import failed: {ex.Message}");
             }
         }
 
@@ -257,8 +258,8 @@ public class ModelsSyncModel(
             .ToHashSet(StringComparer.Ordinal);
 
         NewOnNodes = catalog.Entries
-            .Where(entry => !byUpstream.ContainsKey(entry.UpstreamId) && !byBillingId.ContainsKey(entry.PublicId))
-            .OrderBy(entry => entry.PublicId, StringComparer.Ordinal)
+            .Where(entry => !byUpstream.ContainsKey(entry.UpstreamId) && !byBillingId.ContainsKey(entry.UpstreamId))
+            .OrderBy(entry => entry.UpstreamId, StringComparer.Ordinal)
             .ToList();
 
         Configured = catalog.Entries
@@ -348,4 +349,5 @@ public class ModelsSyncModel(
         string ModelType,
         IReadOnlyList<string> SourceProviders,
         bool Enabled);
+
 }

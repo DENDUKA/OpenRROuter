@@ -91,24 +91,24 @@ public sealed class ChatCompletionHandler(
             // GATEWAY-004: single retry on a different node before any bytes reach the client
             if (!session.IsSuccess)
             {
-                await session.DisposeAsync();
                 await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
 
                 var fallbackLease = await controlPlaneProvider.SelectRouterNodeAsync(body.Metadata.Model!, requestId, context.RequestAborted);
                 if (fallbackLease is null)
                 {
-                    await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+                    await PassThroughErrorAsync(context, session, context.RequestAborted);
                     return;
                 }
+
+                await session.DisposeAsync();
 
                 session = await routerProxy.BeginStreamChatCompletionAsync(fallbackLease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
                 lease = fallbackLease;
 
                 if (!session.IsSuccess)
                 {
-                    await session.DisposeAsync();
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
-                    await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "Router nodes unavailable", requestId);
+                    await PassThroughErrorAsync(context, session, context.RequestAborted);
                     return;
                 }
             }
@@ -146,6 +146,18 @@ public sealed class ChatCompletionHandler(
             if (!context.Response.HasStarted)
                 await GatewayErrors.WriteAsync(context, "internal_error", ErrorCodes.InternalError, "Internal server error", requestId);
         }
+    }
+
+    private static async Task PassThroughErrorAsync(HttpContext context, RouterStreamSession session, CancellationToken cancellationToken)
+    {
+        var statusCode = session.StatusCode;
+        var body = await session.ReadErrorBodyAsync(cancellationToken);
+        await session.DisposeAsync();
+
+        if (context.Response.HasStarted) return;
+        context.Response.StatusCode = statusCode;
+        context.Response.ContentType = "application/json";
+        await context.Response.WriteAsync(body, cancellationToken);
     }
 
     private void RecordUsageFireAndForget(

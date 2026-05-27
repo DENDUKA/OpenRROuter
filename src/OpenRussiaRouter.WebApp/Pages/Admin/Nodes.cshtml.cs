@@ -173,6 +173,13 @@ public class NodesModel(
 
             using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
 
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
+                var friendlyMessage = TryExtractErrorMessage(errorBody) ?? errorBody;
+                return await WriteStreamingErrorAsync((int)response.StatusCode, friendlyMessage);
+            }
+
             Response.StatusCode = (int)response.StatusCode;
             Response.ContentType = response.Content.Headers.ContentType?.ToString() ?? "text/plain; charset=utf-8";
             await Response.StartAsync(HttpContext.RequestAborted);
@@ -207,10 +214,47 @@ public class NodesModel(
         {
             using var doc = System.Text.Json.JsonDocument.Parse(body);
             if (doc.RootElement.TryGetProperty("error", out var error) &&
-                error.TryGetProperty("message", out var message))
-                return message.GetString();
+                error.TryGetProperty("message", out var messageProp))
+            {
+                var message = messageProp.GetString();
+                if (message is null) return null;
+                return TryFlattenEmbeddedJson(message) ?? message;
+            }
         }
         catch { }
+        return null;
+    }
+
+    // Handles "[prefix] [NNN]: {json_blob} (suffix)" format from upstream providers
+    private static string? TryFlattenEmbeddedJson(string message)
+    {
+        var braceIdx = message.IndexOf('{');
+        if (braceIdx < 0) return null;
+
+        var lastBrace = message.LastIndexOf('}');
+        if (lastBrace <= braceIdx) return null;
+
+        try
+        {
+            var prefix = message[..braceIdx].TrimEnd(':', ' ');
+            var suffix = message[(lastBrace + 1)..].Trim();
+            var jsonPart = message[braceIdx..(lastBrace + 1)];
+
+            using var inner = System.Text.Json.JsonDocument.Parse(jsonPart);
+            if (inner.RootElement.TryGetProperty("error", out var innerError) &&
+                innerError.TryGetProperty("message", out var innerMsg))
+            {
+                var innerText = innerMsg.GetString();
+                if (!string.IsNullOrWhiteSpace(innerText))
+                {
+                    var parts = new[] { prefix, innerText, suffix }
+                        .Where(s => !string.IsNullOrWhiteSpace(s));
+                    return string.Join(" ", parts);
+                }
+            }
+        }
+        catch { }
+
         return null;
     }
 

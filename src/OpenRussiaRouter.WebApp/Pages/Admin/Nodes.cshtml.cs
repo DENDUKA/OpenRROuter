@@ -133,7 +133,8 @@ public class NodesModel(
             using var response = await client.SendAsync(request, HttpContext.RequestAborted);
             var body = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
 
-            TestResult = new TestFormResult(response.IsSuccessStatusCode, body);
+            var displayBody = response.IsSuccessStatusCode ? body : (TryExtractErrorMessage(body) ?? body);
+            TestResult = new TestFormResult(response.IsSuccessStatusCode, displayBody);
         }
         catch (Exception ex)
         {
@@ -198,6 +199,19 @@ public class NodesModel(
         }
 
         return new EmptyResult();
+    }
+
+    private static string? TryExtractErrorMessage(string body)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(body);
+            if (doc.RootElement.TryGetProperty("error", out var error) &&
+                error.TryGetProperty("message", out var message))
+                return message.GetString();
+        }
+        catch { }
+        return null;
     }
 
     private async Task<IActionResult> WriteStreamingErrorAsync(int statusCode, string message)

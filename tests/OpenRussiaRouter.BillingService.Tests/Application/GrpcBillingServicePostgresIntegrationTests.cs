@@ -46,7 +46,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             RequestId = "pg-req-1",
             UserId = "user-pg",
             ApiKeyId = "key-pg",
-            ModelId = "gpt-pg",
+            ModelId = "router/gpt-pg",
             RouterNodeId = "node-pg",
             Usage = new TokenUsage { InputTokens = 1_000_000 },
             Status = "succeeded",

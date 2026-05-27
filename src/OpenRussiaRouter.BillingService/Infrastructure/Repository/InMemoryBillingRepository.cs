@@ -46,8 +46,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         return Task.CompletedTask;
     }
 
-    public Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default) =>
-        Task.FromResult(_models.TryGetValue(modelId, out var model) && model.Enabled ? model : null);
+    public Task<ModelPrice?> GetEnabledModelAsync(string routerModelId, CancellationToken ct = default) =>
+        Task.FromResult(_models.Values.FirstOrDefault(m => m.RouterModelId == routerModelId && m.Enabled));
 
     public Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {

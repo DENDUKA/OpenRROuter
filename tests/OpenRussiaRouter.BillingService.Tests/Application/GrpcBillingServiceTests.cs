@@ -21,11 +21,11 @@ public sealed class GrpcBillingServiceTests
         var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
 
         var response = await service.CheckBalanceAndModel(
-            new CheckBalanceAndModelRequest { UserId = "user-1", ModelId = "gpt-test" },
+            new CheckBalanceAndModelRequest { UserId = "user-1", ModelId = "router/gpt-test" },
             context: null!);
 
         response.Allowed.Should().BeTrue();
-        response.ModelId.Should().Be("gpt-test");
+        response.ModelId.Should().Be("router/gpt-test");
         response.PriceVersion.Should().Be("price-v1");
         response.BalanceRub.Should().Be("100");
         response.ErrorCode.Should().Be(string.Empty);
@@ -60,7 +60,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-1",
             ApiKeyPrefix = "sk-or-key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage
             {
@@ -212,7 +212,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-1",
             ApiKeyPrefix = "sk-or-key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = -1 },
             Status = "failed",
@@ -241,7 +241,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-1",
             ApiKeyPrefix = "sk-or-key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 1_000_000, OutputTokens = 500_000 },
             Status = "succeeded",
@@ -254,7 +254,7 @@ public sealed class GrpcBillingServiceTests
         var record = response.Records.Should().ContainSingle().Which;
         record.RequestId.Should().Be("req-usage");
         record.UserId.Should().Be("user-1");
-        record.ModelId.Should().Be("gpt-test");
+        record.ModelId.Should().Be("router/gpt-test");
         record.CostRub.Should().Be("20");
         record.Usage.InputTokens.Should().Be(1_000_000);
         record.Usage.OutputTokens.Should().Be(500_000);
@@ -273,7 +273,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-1",
             ApiKeyPrefix = "sk-or-key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 10, OutputTokens = 20, CacheTokens = 3 },
             Status = "completed",
@@ -287,7 +287,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-2",
             ApiKeyPrefix = "sk-or-key-2",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 30, OutputTokens = 40, CacheTokens = 5 },
             Status = "completed",
@@ -359,7 +359,7 @@ public sealed class GrpcBillingServiceTests
         var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
 
         var response = await service.CheckBalanceAndModel(
-            new CheckBalanceAndModelRequest { UserId = "user-1", ModelId = "gpt-test" },
+            new CheckBalanceAndModelRequest { UserId = "user-1", ModelId = "router/gpt-test" },
             context: null!);
 
         response.Allowed.Should().BeFalse();
@@ -393,7 +393,7 @@ public sealed class GrpcBillingServiceTests
             UserId = "user-1",
             ApiKeyId = "key-1",
             ApiKeyPrefix = "sk-or-key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "router-1",
             Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 10, OutputTokens = 5 },
             Status = "succeeded",

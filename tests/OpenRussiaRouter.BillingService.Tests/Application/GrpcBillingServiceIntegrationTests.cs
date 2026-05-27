@@ -44,14 +44,14 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
         var check = await client.CheckBalanceAndModelAsync(new CheckBalanceAndModelRequest
         {
             UserId = "user-1",
-            ModelId = "gpt-test"
+            ModelId = "router/gpt-test"
         });
         var usage = await client.RecordUsageAsync(new RecordUsageRequest
         {
             RequestId = "req-1",
             UserId = "user-1",
             ApiKeyId = "key-1",
-            ModelId = "gpt-test",
+            ModelId = "router/gpt-test",
             RouterNodeId = "node-1",
             Usage = new TokenUsage { InputTokens = 1_000_000 },
             Status = "succeeded",

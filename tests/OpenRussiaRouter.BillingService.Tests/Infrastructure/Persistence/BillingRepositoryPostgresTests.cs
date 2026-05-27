@@ -52,7 +52,7 @@ public sealed class BillingRepositoryPostgresTests
         await repository.AddAnomalyAsync(new BillingAnomaly("anomaly-1", "req-2", "missing_usage", "safe message", now));
 
         (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(100);
-        (await repository.GetEnabledModelAsync("gpt-test"))?.ModelId.Should().Be("gpt-test");
+        (await repository.GetEnabledModelAsync("router/gpt-test"))?.ModelId.Should().Be("gpt-test");
         (await repository.GetUsageAsync("req-1"))?.RequestId.Should().Be("req-1");
         (await repository.ListAnomaliesAsync(100, null)).Items.Should().ContainSingle().Which.Id.Should().Be("anomaly-1");
     }

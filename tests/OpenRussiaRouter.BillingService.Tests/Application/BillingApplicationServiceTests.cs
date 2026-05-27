@@ -42,7 +42,7 @@ public sealed class BillingApplicationServiceTests
         var service = await CreateServiceWithModelAsync();
         await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
-        var result = await service.CheckBalanceAndModelAsync("user-1", "gpt-test");
+        var result = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test");
 
         result.Allowed.Should().BeTrue();
         result.PriceVersion.Should().Be("price-v1");
@@ -54,7 +54,7 @@ public sealed class BillingApplicationServiceTests
     {
         var service = await CreateServiceWithModelAsync();
 
-        var result = await service.CheckBalanceAndModelAsync("user-1", "gpt-test");
+        var result = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test");
 
         result.Allowed.Should().BeFalse();
         result.ErrorCode.Should().Be(ErrorCodes.InsufficientBalance);
@@ -239,7 +239,7 @@ public sealed class BillingApplicationServiceTests
             "user-1",
             "key-1",
             "sk-or-test",
-            "gpt-test",
+            "router/gpt-test",
             "router-1",
             usage,
             status,

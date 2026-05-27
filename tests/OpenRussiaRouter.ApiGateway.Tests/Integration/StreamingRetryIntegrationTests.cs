@@ -60,8 +60,10 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
-    public async Task Streaming_BothNodesFail_Returns503()
+    public async Task Streaming_BothNodesFail_PassesThroughNodeError()
     {
+        // When both nodes fail, the gateway passes through the second node's raw error body
+        // (real f9router returns OpenAI-compatible JSON, so the client sees a meaningful message)
         var router = new SequentialStreamingProxy(
             CreateFailSession(),
             CreateFailSession());
@@ -71,7 +73,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
         response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable);
         var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        doc.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be(ErrorCodes.RouterUnavailable);
+        doc.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be("node_unavailable");
     }
 
     [Fact]
@@ -152,9 +154,12 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
 
     private static RouterStreamSession CreateFailSession()
     {
+        // Realistic f9router error format (OpenAI-compatible)
         var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
         {
-            Content = new StringContent("""{"error":"node down"}""", Encoding.UTF8, "application/json")
+            Content = new StringContent(
+                """{"error":{"message":"Service unavailable","type":"server_error","code":"node_unavailable"}}""",
+                Encoding.UTF8, "application/json")
         };
         return new RouterStreamSession(response);
     }

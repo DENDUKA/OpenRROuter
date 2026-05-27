@@ -65,7 +65,10 @@ public sealed class GatewayPipeline(
             return null;
         }
 
-        var lease = await controlPlaneProvider.SelectRouterNodeAsync(model, requestId, cancellationToken);
+        // Use RouterModelId (upstream node ID) so ControlPlane capability store can match
+        // against what the node actually reports (e.g. "glm-4.7"), not the billing public ID
+        // (e.g. "ORR/GLM-4.7").
+        var lease = await controlPlaneProvider.SelectRouterNodeAsync(balanceResult.RouterModelId, requestId, cancellationToken);
         if (lease is null)
         {
             await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);

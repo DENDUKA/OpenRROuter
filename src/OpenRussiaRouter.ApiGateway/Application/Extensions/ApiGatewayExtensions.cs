@@ -1,6 +1,10 @@
 using Grpc.Net.ClientFactory;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.ApiGateway.Application.Endpoints;
+using OpenRussiaRouter.ApiGateway.Application.Services;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
@@ -88,5 +92,30 @@ public static class ApiGatewayExtensions
         services.AddScoped<IRouterProxyProvider, YarpRouterProxyProvider>();
 
         return services;
+    }
+
+    public static IServiceCollection AddGatewayHandlers(this IServiceCollection services)
+    {
+        services.AddScoped<IGatewayPipeline, GatewayPipeline>();
+        services.AddScoped<ChatCompletionHandler>();
+        services.AddScoped<ModelsHandler>();
+
+        return services;
+    }
+
+    public static WebApplication MapGatewayEndpoints(this WebApplication app)
+    {
+        app.MapPost("/v1/chat/completions",
+            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));
+        app.MapPost("/v1/chat/completions/stream",
+            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleStreamAsync(ctx));
+        app.MapGet("/v1/models",
+            (ModelsHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));
+        app.MapGet("/health",
+            () => Results.Json(new { status = "healthy" }));
+        app.MapGet("/ready",
+            () => Results.Json(new { status = "ready" }));
+
+        return app;
     }
 }

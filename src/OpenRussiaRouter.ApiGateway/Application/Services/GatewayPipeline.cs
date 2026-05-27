@@ -1,0 +1,83 @@
+using Microsoft.AspNetCore.Http;
+using OpenRussiaRouter.ApiGateway.Auth;
+using OpenRussiaRouter.ApiGateway.Billing;
+using OpenRussiaRouter.ApiGateway.ControlPlane;
+using OpenRussiaRouter.ApiGateway.Http;
+using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Telemetry;
+
+namespace OpenRussiaRouter.ApiGateway.Application.Services;
+
+/// <summary>
+/// Общий пайплайн авторизации запроса: валидация модели → аутентификация → проверка баланса → выбор ноды.
+/// Возвращает <see langword="null"/> и записывает ошибку в ответ, если любой из шагов не пройден.
+/// </summary>
+public interface IGatewayPipeline
+{
+    Task<GatewayAuthorizedContext?> AuthorizeAndAcquireLeaseAsync(
+        HttpContext context,
+        string? model,
+        string requestId,
+        CancellationToken cancellationToken);
+}
+
+public sealed class GatewayPipeline(
+    IApiKeyProvider authProvider,
+    IBillingProvider billingProvider,
+    IControlPlaneProvider controlPlaneProvider) : IGatewayPipeline
+{
+    public async Task<GatewayAuthorizedContext?> AuthorizeAndAcquireLeaseAsync(
+        HttpContext context,
+        string? model,
+        string requestId,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(model))
+        {
+            await GatewayErrors.WriteAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
+            return null;
+        }
+
+        if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
+        {
+            await GatewayErrors.WriteAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
+            return null;
+        }
+
+        var authResult = await authProvider.AuthenticateAsync(apiKey, cancellationToken);
+        if (!authResult.Succeeded)
+        {
+            await GatewayErrors.WriteAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
+            return null;
+        }
+
+        var balanceResult = await billingProvider.CheckBalanceAndModelAsync(authResult.UserId!, model, cancellationToken);
+        if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
+        {
+            var (errorType, errorMessage) = balanceResult.ErrorCode switch
+            {
+                ErrorCodes.InsufficientBalance => ("billing_error", "Insufficient balance to process this request."),
+                ErrorCodes.ModelUnavailable    => ("invalid_request_error", $"Model '{model}' is not available."),
+                ErrorCodes.InternalError       => ("internal_error", "An internal error occurred while checking balance."),
+                _                              => ("invalid_request_error", "Balance check failed.")
+            };
+            await GatewayErrors.WriteAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
+            return null;
+        }
+
+        var lease = await controlPlaneProvider.SelectRouterNodeAsync(model, requestId, cancellationToken);
+        if (lease is null)
+        {
+            await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            return null;
+        }
+
+        return new GatewayAuthorizedContext(
+            apiKey,
+            authResult.UserId!,
+            authResult.ApiKeyId!,
+            authResult.ApiKeyPrefix!,
+            balanceResult.RouterModelId,
+            lease);
+    }
+}

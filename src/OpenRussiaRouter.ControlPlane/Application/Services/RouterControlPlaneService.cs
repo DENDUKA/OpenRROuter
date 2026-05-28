@@ -87,6 +87,8 @@ public sealed class RouterControlPlaneService(
         string? modelId,
         string requestId,
         DateTimeOffset nowUtc,
+        string? preferredNodeId = null,
+        string? preferredNodeControlToken = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(requestId))
@@ -104,6 +106,15 @@ public sealed class RouterControlPlaneService(
         IEnumerable<RouterNode> candidates = all;
         if (!string.IsNullOrWhiteSpace(modelId) && !capabilityStore.IsEmpty)
             candidates = all.Where(n => capabilityStore.NodeSupportsModel(n.Id, modelId));
+
+        if (!string.IsNullOrWhiteSpace(preferredNodeId))
+        {
+            var nodeId = preferredNodeId.Trim();
+            var controlToken = preferredNodeControlToken?.Trim() ?? string.Empty;
+            candidates = candidates.Where(n =>
+                string.Equals(n.Id, nodeId, StringComparison.Ordinal) &&
+                string.Equals(n.ControlToken, controlToken, StringComparison.Ordinal));
+        }
 
         var node = candidates
             .OrderBy(candidate => (decimal)candidate.InFlightRequests / candidate.CapacityWeight)

@@ -195,7 +195,12 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         public bool AlwaysReturnNull { get; init; }
         public int SelectCallCount { get; private set; }
 
-        public Task<GatewayRouterLease?> SelectRouterNodeAsync(string modelId, string requestId, CancellationToken ct)
+        public Task<GatewayRouterLease?> SelectRouterNodeAsync(
+            string modelId,
+            string requestId,
+            string? preferredNodeId,
+            string? preferredNodeControlToken,
+            CancellationToken ct)
         {
             SelectCallCount++;
             if (AlwaysReturnNull)

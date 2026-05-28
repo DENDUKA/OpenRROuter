@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
+using System.Text;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -11,9 +12,11 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class NodesModel(
     ControlPlaneProvider ControlPlaneProvider,
     AuthProvider AuthProvider,
-    RouterNodeApiProvider RouterNodeApiProvider,
+    IHttpClientFactory HttpClientFactory,
     ILogger<NodesModel> logger) : PageModelBase
 {
+    private const string PreferredNodeIdHeader = "X-ORR-Preferred-Node-Id";
+    private const string PreferredNodeTokenHeader = "X-ORR-Preferred-Node-Token";
 
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -121,6 +124,12 @@ public class NodesModel(
             return Page();
         }
 
+        if (string.IsNullOrWhiteSpace(node.ControlToken))
+        {
+            TestResult = new TestFormResult(false, "Selected router node has no Control Token saved.");
+            return Page();
+        }
+
         var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
         {
@@ -137,12 +146,10 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            var response = await RouterNodeApiProvider.SendChatCompletionAsync(
-                node,
-                rawKey,
-                requestBody,
-                HttpContext.RequestAborted);
-            var body = response.Body;
+            var client = HttpClientFactory.CreateClient("ApiGateway");
+            using var request = CreateGatewayTestRequest(node, rawKey, requestBody);
+            using var response = await client.SendAsync(request, HttpContext.RequestAborted);
+            var body = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
 
             var displayBody = response.IsSuccessStatusCode ? body : (TryExtractErrorMessage(body) ?? body);
             TestResult = new TestFormResult(response.IsSuccessStatusCode, displayBody);
@@ -174,6 +181,9 @@ public class NodesModel(
         if (string.IsNullOrWhiteSpace(StreamingTestInput.Model))
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Model is required.");
 
+        if (string.IsNullOrWhiteSpace(node.ControlToken))
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Selected router node has no Control Token saved.");
+
         var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest,
@@ -188,10 +198,11 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            using var response = await RouterNodeApiProvider.SendStreamingChatCompletionAsync(
-                node,
-                rawKey,
-                requestBody,
+            var client = HttpClientFactory.CreateClient("ApiGateway");
+            using var request = CreateGatewayTestRequest(node, rawKey, requestBody);
+            using var response = await client.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
                 HttpContext.RequestAborted);
 
             if (!response.IsSuccessStatusCode)
@@ -252,6 +263,19 @@ public class NodesModel(
 
     private RouterNodeInfo? FindSelectedNode(string nodeId) =>
         Nodes.FirstOrDefault(node => string.Equals(node.NodeId, nodeId, StringComparison.Ordinal));
+
+    private static HttpRequestMessage CreateGatewayTestRequest(
+        RouterNodeInfo node,
+        string rawKey,
+        string requestBody)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
+        request.Headers.TryAddWithoutValidation(PreferredNodeIdHeader, node.NodeId);
+        request.Headers.TryAddWithoutValidation(PreferredNodeTokenHeader, node.ControlToken);
+        request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+        return request;
+    }
 
     // Handles "[prefix] [NNN]: {json_blob} (suffix)" format from upstream providers
     private static string? TryFlattenEmbeddedJson(string message)

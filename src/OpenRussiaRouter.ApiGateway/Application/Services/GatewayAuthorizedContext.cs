@@ -9,4 +9,6 @@ public sealed record GatewayAuthorizedContext(
     string ApiKeyId,
     string ApiKeyPrefix,
     string RouterModelId,
+    string? PreferredNodeId,
+    string? PreferredNodeControlToken,
     GatewayRouterLease Lease);

@@ -25,6 +25,8 @@ service RouterControlPlane {
 message SelectRouterNodeRequest {
   string model_id = 1;
   string request_id = 2;
+  string preferred_node_id = 3;
+  string preferred_node_control_token = 4;
 }
 
 message SelectRouterNodeResponse {

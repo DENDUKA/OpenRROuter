@@ -25,7 +25,13 @@ public sealed class GrpcRouterControlPlaneService(
     {
         try
         {
-            var lease = await controlPlane.SelectRouterNodeAsync(request.ModelId, request.RequestId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var lease = await controlPlane.SelectRouterNodeAsync(
+                request.ModelId,
+                request.RequestId,
+                DateTimeOffset.UtcNow,
+                request.PreferredNodeId,
+                request.PreferredNodeControlToken,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             return new SelectRouterNodeResponse
             {
                 LeaseId = lease.LeaseId,

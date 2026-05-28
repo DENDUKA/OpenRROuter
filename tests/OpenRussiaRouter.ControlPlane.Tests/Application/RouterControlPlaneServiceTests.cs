@@ -105,6 +105,41 @@ public sealed class RouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task SelectRouterNode_PreferredNodeWithMatchingControlToken_ReturnsPreferredNode()
+    {
+        var service = CreateService();
+        var nodeA = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        var nodeB = await service.RegisterNodeAsync("node-b", new Uri("https://router-b.example"), "secret-b", 1, DateTimeOffset.UtcNow);
+        await service.ApplyHealthAsync(nodeA.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+        await service.ApplyHealthAsync(nodeB.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+
+        var lease = await service.SelectRouterNodeAsync(
+            null,
+            "req-1",
+            DateTimeOffset.UtcNow,
+            nodeB.Id,
+            "secret-b");
+
+        lease.NodeId.Should().Be(nodeB.Id);
+    }
+
+    [Fact]
+    public async Task SelectRouterNode_PreferredNodeWithWrongControlToken_Throws()
+    {
+        var service = CreateService();
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+
+        await ((Func<Task>)(() => service.SelectRouterNodeAsync(
+                null,
+                "req-1",
+                DateTimeOffset.UtcNow,
+                node.Id,
+                "wrong-secret")))
+            .Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
     public async Task DisableNode_RemovesNodeFromSelection()
     {
         var service = CreateService();

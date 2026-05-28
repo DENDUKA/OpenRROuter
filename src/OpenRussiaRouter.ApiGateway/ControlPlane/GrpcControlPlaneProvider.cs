@@ -15,6 +15,8 @@ public sealed class GrpcControlPlaneProvider(
     public async Task<GatewayRouterLease?> SelectRouterNodeAsync(
         string modelId,
         string requestId,
+        string? preferredNodeId,
+        string? preferredNodeControlToken,
         CancellationToken cancellationToken)
     {
         try
@@ -23,7 +25,9 @@ public sealed class GrpcControlPlaneProvider(
                 new SelectRouterNodeRequest
                 {
                     ModelId = modelId,
-                    RequestId = requestId
+                    RequestId = requestId,
+                    PreferredNodeId = preferredNodeId ?? string.Empty,
+                    PreferredNodeControlToken = preferredNodeControlToken ?? string.Empty
                 },
                 cancellationToken: cancellationToken);
 

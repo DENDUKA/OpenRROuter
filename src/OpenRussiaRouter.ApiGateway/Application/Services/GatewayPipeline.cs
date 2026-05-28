@@ -68,7 +68,13 @@ public sealed class GatewayPipeline(
         // Use RouterModelId (upstream node ID) so ControlPlane capability store can match
         // against what the node actually reports (e.g. "glm-4.7"), not the billing public ID
         // (e.g. "ORR/GLM-4.7").
-        var lease = await controlPlaneProvider.SelectRouterNodeAsync(balanceResult.RouterModelId, requestId, cancellationToken);
+        var (preferredNodeId, preferredNodeControlToken) = ReadPreferredNode(context);
+        var lease = await controlPlaneProvider.SelectRouterNodeAsync(
+            balanceResult.RouterModelId,
+            requestId,
+            preferredNodeId,
+            preferredNodeControlToken,
+            cancellationToken);
         if (lease is null)
         {
             await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
@@ -81,6 +87,25 @@ public sealed class GatewayPipeline(
             authResult.ApiKeyId!,
             authResult.ApiKeyPrefix!,
             balanceResult.RouterModelId,
+            preferredNodeId,
+            preferredNodeControlToken,
             lease);
+    }
+
+    private static (string? NodeId, string? ControlToken) ReadPreferredNode(HttpContext context)
+    {
+        var headers = context.Request.Headers;
+        if (!headers.TryGetValue(GatewayPreferredNodeHeaders.NodeId, out var nodeId) ||
+            !headers.TryGetValue(GatewayPreferredNodeHeaders.NodeControlToken, out var controlToken))
+        {
+            return (null, null);
+        }
+
+        var normalizedNodeId = nodeId.ToString().Trim();
+        var normalizedControlToken = controlToken.ToString().Trim();
+        return string.IsNullOrWhiteSpace(normalizedNodeId) ||
+               string.IsNullOrWhiteSpace(normalizedControlToken)
+            ? (null, null)
+            : (normalizedNodeId, normalizedControlToken);
     }
 }

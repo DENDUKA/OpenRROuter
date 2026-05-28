@@ -93,7 +93,12 @@ public sealed class ChatCompletionHandler(
             {
                 await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
 
-                var fallbackLease = await controlPlaneProvider.SelectRouterNodeAsync(auth.RouterModelId, requestId, context.RequestAborted);
+                var fallbackLease = await controlPlaneProvider.SelectRouterNodeAsync(
+                    auth.RouterModelId,
+                    requestId,
+                    preferredNodeId: null,
+                    preferredNodeControlToken: null,
+                    cancellationToken: context.RequestAborted);
                 if (fallbackLease is null)
                 {
                     await PassThroughErrorAsync(context, session, context.RequestAborted);

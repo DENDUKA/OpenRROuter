@@ -95,6 +95,24 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         await AssertErrorCode(response, ErrorCodes.RouterUnavailable);
     }
 
+    [Fact]
+    public async Task NonStreaming_PreferredNodeHeaders_ArePassedToControlPlane()
+    {
+        var control = new StubControlPlane();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control);
+
+        var response = await PostChatAsync(
+            client,
+            """{"model":"gpt-4"}""",
+            bearer: "sk-ok_key",
+            preferredNodeId: "node-preferred",
+            preferredNodeControlToken: "node-secret");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        control.LastPreferredNodeId.Should().Be("node-preferred");
+        control.LastPreferredNodeControlToken.Should().Be("node-secret");
+    }
+
     // --- Happy Path ---
 
     [Fact]
@@ -231,7 +249,11 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     private static async Task<HttpResponseMessage> PostChatAsync(
-        HttpClient client, string body, string? bearer = null)
+        HttpClient client,
+        string body,
+        string? bearer = null,
+        string? preferredNodeId = null,
+        string? preferredNodeControlToken = null)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions")
         {
@@ -239,6 +261,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         };
         if (bearer is not null)
             request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearer);
+        if (preferredNodeId is not null)
+            request.Headers.TryAddWithoutValidation("X-ORR-Preferred-Node-Id", preferredNodeId);
+        if (preferredNodeControlToken is not null)
+            request.Headers.TryAddWithoutValidation("X-ORR-Preferred-Node-Token", preferredNodeControlToken);
         return await client.SendAsync(request);
     }
 
@@ -288,9 +314,20 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             new("lease-1", "node-1", new Uri("https://router.example"), "secret");
 
         public string? LastReleasedStatus { get; private set; }
+        public string? LastPreferredNodeId { get; private set; }
+        public string? LastPreferredNodeControlToken { get; private set; }
 
-        public Task<GatewayRouterLease?> SelectRouterNodeAsync(string modelId, string requestId, CancellationToken ct)
-            => Task.FromResult(Lease);
+        public Task<GatewayRouterLease?> SelectRouterNodeAsync(
+            string modelId,
+            string requestId,
+            string? preferredNodeId,
+            string? preferredNodeControlToken,
+            CancellationToken ct)
+        {
+            LastPreferredNodeId = preferredNodeId;
+            LastPreferredNodeControlToken = preferredNodeControlToken;
+            return Task.FromResult(Lease);
+        }
 
         public Task ReleaseRouterNodeAsync(string leaseId, string status, CancellationToken ct)
         {

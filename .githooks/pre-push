@@ -1,0 +1,41 @@
+#!/bin/sh
+# pre-push hook: собирает и пушит Docker-образы изменённых сервисов в GHCR.
+# Вызывается автоматически при `git push` в ветку main.
+#
+# Первый раз: выполни `git config core.hooksPath .githooks` в репозитории.
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+# Конвертируем Unix-путь (/c/Programs/...) в Windows-путь (c:/Programs/...)
+WIN_ROOT="$(echo "$REPO_ROOT" | sed 's|^/\([a-zA-Z]\)/|\1:/|')"
+
+PUSH_FROM=""
+PUSH_TO=""
+
+# Читаем refs из stdin (формат: <local_ref> <local_sha> <remote_ref> <remote_sha>)
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+    # Пропускаем удаление веток
+    [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
+    # Только main
+    case "$remote_ref" in
+        refs/heads/main|refs/heads/master) ;;
+        *) continue ;;
+    esac
+    PUSH_FROM="$remote_sha"
+    PUSH_TO="$local_sha"
+    break
+done
+
+# Не main — ничего не делаем
+[ -z "$PUSH_TO" ] && exit 0
+
+echo ""
+echo ">>> [pre-push] Запускаем сборку Docker-образов для изменённых сервисов..."
+echo ""
+
+powershell.exe -ExecutionPolicy Bypass \
+    -File "$WIN_ROOT\\build-push.ps1" \
+    -PushFrom "$PUSH_FROM" \
+    -PushTo "$PUSH_TO"
+
+# exit 0 — не блокируем git push даже если сборка упала
+exit 0

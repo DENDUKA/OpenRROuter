@@ -188,8 +188,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             .GetProperty("parameters")
             .GetProperty("properties")
             .GetProperty("question");
-        questionSchema.EnumerateObject().Select(property => property.Name)
-            .Should().ContainSingle().Which.Should().Be("$ref");
+        questionSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        questionSchema.GetProperty("type").GetString().Should().Be("object");
+        questionSchema.GetProperty("properties").GetProperty("text").GetProperty("type").GetString()
+            .Should().Be("string");
     }
 
     [Fact]

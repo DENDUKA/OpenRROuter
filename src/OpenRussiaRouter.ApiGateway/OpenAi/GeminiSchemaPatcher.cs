@@ -39,7 +39,7 @@ public static class GeminiSchemaPatcher
                 if (tool["function"] is JsonObject function &&
                     function["parameters"] is JsonNode parameters)
                 {
-                    changed |= SanitizeSchemaNode(parameters);
+                    changed |= SanitizeSchemaRoot(parameters);
                 }
             }
         }
@@ -49,7 +49,7 @@ public static class GeminiSchemaPatcher
             foreach (var function in functions.OfType<JsonObject>())
             {
                 if (function["parameters"] is JsonNode parameters)
-                    changed |= SanitizeSchemaNode(parameters);
+                    changed |= SanitizeSchemaRoot(parameters);
             }
         }
 
@@ -57,13 +57,74 @@ public static class GeminiSchemaPatcher
             responseFormat["json_schema"] is JsonObject jsonSchema &&
             jsonSchema["schema"] is JsonNode responseSchema)
         {
-            changed |= SanitizeSchemaNode(responseSchema);
+            changed |= SanitizeSchemaRoot(responseSchema);
         }
 
         return changed;
     }
 
-    private static bool SanitizeSchemaNode(JsonNode? node)
+    private static bool SanitizeSchemaRoot(JsonNode schema)
+    {
+        if (schema is not JsonObject root)
+            return SanitizeSchemaNode(schema, new Dictionary<string, JsonNode>(), new HashSet<string>(StringComparer.Ordinal), depth: 0);
+
+        var definitions = CollectDefinitions(root);
+        var changed = SanitizeSchemaNode(root, definitions, new HashSet<string>(StringComparer.Ordinal), depth: 0);
+
+        changed |= root.Remove("$defs");
+        changed |= root.Remove("defs");
+
+        return changed;
+    }
+
+    private static Dictionary<string, JsonNode> CollectDefinitions(JsonObject root)
+    {
+        var definitions = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
+        CollectDefinitions(root, definitions);
+        return definitions;
+    }
+
+    private static void CollectDefinitions(JsonNode? node, Dictionary<string, JsonNode> definitions)
+    {
+        if (node is JsonObject obj)
+        {
+            AddDefinitions(obj["$defs"], definitions);
+            AddDefinitions(obj["defs"], definitions);
+
+            foreach (var child in obj)
+            {
+                if (child.Key is "$defs" or "defs")
+                    continue;
+
+                CollectDefinitions(child.Value, definitions);
+            }
+        }
+        else if (node is JsonArray array)
+        {
+            foreach (var item in array)
+            {
+                CollectDefinitions(item, definitions);
+            }
+        }
+    }
+
+    private static void AddDefinitions(JsonNode? node, Dictionary<string, JsonNode> definitions)
+    {
+        if (node is not JsonObject obj)
+            return;
+
+        foreach (var definition in obj)
+        {
+            if (definition.Value is not null)
+                definitions.TryAdd(definition.Key, definition.Value.DeepClone());
+        }
+    }
+
+    private static bool SanitizeSchemaNode(
+        JsonNode? node,
+        IReadOnlyDictionary<string, JsonNode> definitions,
+        HashSet<string> resolving,
+        int depth)
     {
         if (node is JsonObject obj)
         {
@@ -74,12 +135,12 @@ public static class GeminiSchemaPatcher
                     : null;
 
             if (refKey is not null)
-                return RemoveRefSiblings(obj, refKey);
+                return InlineRef(obj, refKey, definitions, resolving, depth);
 
             var changed = false;
             foreach (var child in obj.ToList())
             {
-                changed |= SanitizeSchemaNode(child.Value);
+                changed |= SanitizeSchemaNode(child.Value, definitions, resolving, depth);
             }
 
             return changed;
@@ -90,7 +151,7 @@ public static class GeminiSchemaPatcher
             var changed = false;
             foreach (var item in array)
             {
-                changed |= SanitizeSchemaNode(item);
+                changed |= SanitizeSchemaNode(item, definitions, resolving, depth);
             }
 
             return changed;
@@ -99,15 +160,62 @@ public static class GeminiSchemaPatcher
         return false;
     }
 
-    private static bool RemoveRefSiblings(JsonObject obj, string refKey)
+    private static bool InlineRef(
+        JsonObject obj,
+        string refKey,
+        IReadOnlyDictionary<string, JsonNode> definitions,
+        HashSet<string> resolving,
+        int depth)
     {
-        var changed = false;
-        foreach (var key in obj.Select(property => property.Key).Where(key => key != refKey).ToArray())
+        var refName = ReadRefName(obj[refKey]);
+        if (refName is null ||
+            depth > 32 ||
+            resolving.Contains(refName) ||
+            !definitions.TryGetValue(refName, out var definition) ||
+            definition.DeepClone() is not JsonObject inlined)
         {
-            obj.Remove(key);
-            changed = true;
+            obj.Remove(refKey);
+            if (obj.Count == 0)
+                obj["type"] = "object";
+            return true;
         }
 
-        return changed;
+        var siblings = obj
+            .Where(property => property.Key != refKey)
+            .Select(property => new KeyValuePair<string, JsonNode?>(property.Key, property.Value?.DeepClone()))
+            .ToArray();
+
+        foreach (var sibling in siblings)
+        {
+            inlined[sibling.Key] = sibling.Value;
+        }
+
+        foreach (var key in obj.Select(property => property.Key).ToArray())
+        {
+            obj.Remove(key);
+        }
+
+        foreach (var property in inlined.ToArray())
+        {
+            obj[property.Key] = property.Value?.DeepClone();
+        }
+
+        resolving.Add(refName);
+        SanitizeSchemaNode(obj, definitions, resolving, depth + 1);
+        resolving.Remove(refName);
+
+        return true;
+    }
+
+    private static string? ReadRefName(JsonNode? node)
+    {
+        var value = node?.GetValue<string>();
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var segments = value.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var name = segments.Length == 0 ? value : segments[^1];
+
+        return name.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
     }
 }

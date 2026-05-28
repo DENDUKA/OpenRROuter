@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.ApiGateway.Tests.OpenAi;
 public sealed class GeminiSchemaPatcherTests
 {
     [Fact]
-    public void SanitizeIfGeminiModel_RemovesRefSiblingsInToolSchema()
+    public void SanitizeIfGeminiModel_InlinesRefInToolSchema()
     {
         const string request = """
         {
@@ -56,19 +56,17 @@ public sealed class GeminiSchemaPatcherTests
             .GetProperty("properties")
             .GetProperty("question");
 
-        questionSchema.EnumerateObject().Select(property => property.Name)
-            .Should().ContainSingle().Which.Should().Be("$ref");
-        questionSchema.GetProperty("$ref").GetString().Should().Be("#/$defs/QuestionPrompt");
-
+        questionSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        questionSchema.GetProperty("type").GetString().Should().Be("object");
+        questionSchema.GetProperty("description").GetString().Should().Be("Prompt payload");
+        questionSchema.GetProperty("properties").GetProperty("text").GetProperty("type").GetString()
+            .Should().Be("string");
         document.RootElement
             .GetProperty("tools")[0]
             .GetProperty("function")
             .GetProperty("parameters")
-            .GetProperty("$defs")
-            .GetProperty("QuestionPrompt")
-            .GetProperty("type")
-            .GetString()
-            .Should().Be("object");
+            .TryGetProperty("$defs", out _)
+            .Should().BeFalse();
         document.RootElement.GetProperty("messages")[0].GetProperty("content").GetString()
             .Should().Be("QuestionPrompt should remain in plain text");
     }
@@ -84,7 +82,7 @@ public sealed class GeminiSchemaPatcherTests
     }
 
     [Fact]
-    public void SanitizeIfGeminiModel_RemovesRefSiblingsInResponseFormatSchema()
+    public void SanitizeIfGeminiModel_InlinesRefInResponseFormatSchema()
     {
         const string request = """
         {
@@ -97,8 +95,16 @@ public sealed class GeminiSchemaPatcherTests
                 "type": "object",
                 "properties": {
                   "answer": {
-                    "ref": "Answer",
+                    "ref": "#/defs/Answer",
                     "nullable": true
+                  }
+                },
+                "defs": {
+                  "Answer": {
+                    "type": "object",
+                    "properties": {
+                      "text": { "type": "string" }
+                    }
                   }
                 }
               }
@@ -117,8 +123,10 @@ public sealed class GeminiSchemaPatcherTests
             .GetProperty("properties")
             .GetProperty("answer");
 
-        answerSchema.EnumerateObject().Select(property => property.Name)
-            .Should().ContainSingle().Which.Should().Be("ref");
-        answerSchema.GetProperty("ref").GetString().Should().Be("Answer");
+        answerSchema.TryGetProperty("ref", out _).Should().BeFalse();
+        answerSchema.GetProperty("type").GetString().Should().Be("object");
+        answerSchema.GetProperty("nullable").GetBoolean().Should().BeTrue();
+        answerSchema.GetProperty("properties").GetProperty("text").GetProperty("type").GetString()
+            .Should().Be("string");
     }
 }

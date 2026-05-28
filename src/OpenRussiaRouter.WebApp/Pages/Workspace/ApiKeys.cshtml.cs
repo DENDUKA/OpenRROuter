@@ -7,11 +7,11 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 
 [Authorize]
-public class ApiKeysModel : PageModelBase
+public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider controlPlaneProvider, ILogger<ApiKeysModel> logger) : PageModelBase
 {
-    private readonly AuthProvider _authClient;
-    private readonly ControlPlaneProvider _controlPlaneClient;
-    private readonly ILogger<ApiKeysModel> _logger;
+    private readonly AuthProvider _authClient = authProvider;
+    private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
+    private readonly ILogger<ApiKeysModel> _logger = logger;
 
     public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -22,13 +22,6 @@ public class ApiKeysModel : PageModelBase
 
     [BindProperty] public CreateKeyInput Create { get; set; } = new();
     [BindProperty] public RenameKeyInput Rename { get; set; } = new();
-
-    public ApiKeysModel(AuthProvider AuthProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<ApiKeysModel> logger)
-    {
-        _authClient = AuthProvider;
-        _controlPlaneClient = ControlPlaneProvider;
-        _logger = logger;
-    }
 
     public async Task OnGetAsync()
     {

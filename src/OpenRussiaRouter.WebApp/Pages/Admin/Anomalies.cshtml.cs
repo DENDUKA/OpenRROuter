@@ -4,9 +4,9 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class AnomaliesModel(BillingProvider BillingProvider, ILogger<AnomaliesModel> logger) : PageModelBase
+public class AnomaliesModel(BillingProvider billingProvider, ILogger<AnomaliesModel> logger) : PageModelBase
 {
-    private readonly BillingProvider _billingClient = BillingProvider;
+    private readonly BillingProvider _billingClient = billingProvider;
 
     public IReadOnlyList<AnomalyInfo> Anomalies { get; set; } = [];
     public string? ErrorMessage { get; set; }

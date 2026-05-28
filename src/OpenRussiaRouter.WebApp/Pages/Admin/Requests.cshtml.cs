@@ -5,8 +5,10 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<RequestsModel> logger) : PageModelBase
+public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, ILogger<RequestsModel> logger) : PageModelBase
 {
+    private readonly BillingProvider _billingProvider = billingProvider;
+    private readonly ControlPlaneProvider _controlPlaneProvider = controlPlaneProvider;
     public IReadOnlyList<AdminRequestInfo> Records { get; set; } = [];
     public Dictionary<string, string> NodeNames { get; set; } = [];
     public bool HasMore { get; set; }
@@ -38,14 +40,14 @@ public class RequestsModel(BillingProvider BillingProvider, ControlPlaneProvider
         try
         {
             var (billingTask, nodesTask) = (
-                BillingProvider.ListAdminRequestsAsync(
+                _billingProvider.ListAdminRequestsAsync(
                     afterCursor: cursor,
                     pageSize: 50,
                     modelFilter: model,
                     providerFilter: provider,
                     fromUtc: fromParsed,
                     toUtc: toParsed),
-                ControlPlaneProvider.ListRouterNodesAsync());
+                _controlPlaneProvider.ListRouterNodesAsync());
 
             await Task.WhenAll(billingTask, nodesTask);
 

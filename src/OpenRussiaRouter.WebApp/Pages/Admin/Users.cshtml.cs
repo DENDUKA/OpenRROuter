@@ -8,11 +8,11 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class UsersModel : PageModelBase
+public class UsersModel(AuthProvider authProvider, BillingProvider billingProvider, ILogger<UsersModel> logger) : PageModelBase
 {
-    private readonly AuthProvider _authClient;
-    private readonly BillingProvider _billingClient;
-    private readonly ILogger<UsersModel> _logger;
+    private readonly AuthProvider _authClient = authProvider;
+    private readonly BillingProvider _billingClient = billingProvider;
+    private readonly ILogger<UsersModel> _logger = logger;
 
     public IReadOnlyList<UserInfo> Users { get; set; } = [];
     public Dictionary<string, decimal> UserBalances { get; set; } = new();
@@ -24,13 +24,6 @@ public class UsersModel : PageModelBase
 
     [BindProperty] public InviteInput Invite { get; set; } = new();
     [BindProperty] public TopUpInput TopUp { get; set; } = new();
-
-    public UsersModel(AuthProvider AuthProvider, BillingProvider BillingProvider, ILogger<UsersModel> logger)
-    {
-        _authClient = AuthProvider;
-        _billingClient = BillingProvider;
-        _logger = logger;
-    }
 
     public async Task OnGetAsync() => await LoadUsers();
 

@@ -5,9 +5,9 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 
 [Authorize]
-public class CreditsModel(BillingProvider BillingProvider, ILogger<CreditsModel> logger) : PageModelBase
+public class CreditsModel(BillingProvider billingProvider, ILogger<CreditsModel> logger) : PageModelBase
 {
-    private readonly BillingProvider _billingClient = BillingProvider;
+    private readonly BillingProvider _billingClient = billingProvider;
 
     public BalanceInfo? Balance { get; set; }
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];

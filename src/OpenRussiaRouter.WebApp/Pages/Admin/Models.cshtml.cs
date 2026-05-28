@@ -7,11 +7,11 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class ModelsModel : PageModelBase
+public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, ILogger<ModelsModel> logger) : PageModelBase
 {
-    private readonly BillingProvider _billingClient;
-    private readonly ControlPlaneProvider _controlPlaneClient;
-    private readonly ILogger<ModelsModel> _logger;
+    private readonly BillingProvider _billingClient = billingProvider;
+    private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
+    private readonly ILogger<ModelsModel> _logger = logger;
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
@@ -25,13 +25,6 @@ public class ModelsModel : PageModelBase
     public bool IsAdd { get; set; }
 
     [BindProperty] public ModelFormInput Form { get; set; } = new();
-
-    public ModelsModel(BillingProvider BillingProvider, ControlPlaneProvider ControlPlaneProvider, ILogger<ModelsModel> logger)
-    {
-        _billingClient = BillingProvider;
-        _controlPlaneClient = ControlPlaneProvider;
-        _logger = logger;
-    }
 
     public async Task OnGetAsync()
     {

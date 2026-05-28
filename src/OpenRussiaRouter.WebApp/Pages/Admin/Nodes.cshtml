@@ -169,7 +169,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label asp-for="TestInput.Model" class="form-label">Model</label>
+                    <label asp-for="TestInput.Model" class="form-label">Router Model</label>
                     <select asp-for="TestInput.Model" class="form-control" data-testid="input-model">
                         <option value="@Model.TestInput.Model">@Model.TestInput.Model</option>
                     </select>
@@ -202,7 +202,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label asp-for="StreamingTestInput.Model" class="form-label">Model</label>
+                    <label asp-for="StreamingTestInput.Model" class="form-label">Router Model</label>
                     <select asp-for="StreamingTestInput.Model" class="form-control" data-testid="input-streaming-model">
                         <option value="@Model.StreamingTestInput.Model">@Model.StreamingTestInput.Model</option>
                     </select>
@@ -338,7 +338,7 @@
             if (models.length === 0) {
                 const opt = document.createElement('option');
                 opt.value = '';
-                opt.textContent = '— no models —';
+                opt.textContent = '(no models)';
                 select.appendChild(opt);
                 return;
             }
@@ -362,7 +362,7 @@
             }
 
             nodeSelect.addEventListener('change', async () => {
-                modelSelect.innerHTML = '<option value="">Loading…</option>';
+                modelSelect.innerHTML = '<option value="">Loading...</option>';
                 const models = await fetchModels(nodeSelect.value);
                 populateModelSelect(modelSelect, models);
             });

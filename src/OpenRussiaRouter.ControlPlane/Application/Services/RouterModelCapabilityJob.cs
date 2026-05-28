@@ -64,7 +64,7 @@ public sealed class RouterModelCapabilityJob(
                 .Where(c => c.IsActive)
                 .SelectMany(c => c.Models)
                 .Where(m => m.Enabled && !string.IsNullOrWhiteSpace(m.Id))
-                .Select(m => m.Id)
+                .Select(m => string.IsNullOrWhiteSpace(m.PublicId) ? m.Id : m.PublicId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
         }
         catch (RouterNodeProviderException ex) when (ex.StatusCode == HttpStatusCode.NotFound)

@@ -88,7 +88,7 @@ public class ModelsSyncModel(
         var imported = 0;
         var warnings = new List<string>();
         var byBillingId = billingModels.ToDictionary(m => m.Id, StringComparer.Ordinal);
-        var byUpstream = billingModels
+        var byRouterModel = billingModels
             .Where(m => !string.IsNullOrWhiteSpace(m.UpstreamModelId))
             .GroupBy(m => m.UpstreamModelId, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
@@ -110,23 +110,24 @@ public class ModelsSyncModel(
             }
 
             var upstreamId = entry.UpstreamId;
-            var modelId = Form.Prefix + entry.UpstreamId;
-            if (byUpstream.TryGetValue(upstreamId, out var existingByUpstream))
+            var routerModelId = GetRouterModelId(entry);
+            var modelId = Form.Prefix + routerModelId;
+            if (byRouterModel.TryGetValue(routerModelId, out var existingByRouterModel))
             {
-                warnings.Add($"{upstreamId}: already configured under '{existingByUpstream.Id}'.");
+                warnings.Add($"{routerModelId}: already configured under '{existingByRouterModel.Id}'.");
                 continue;
             }
 
             if (byBillingId.ContainsKey(modelId))
             {
-                warnings.Add($"{upstreamId}: billing ID '{modelId}' already used.");
+                warnings.Add($"{routerModelId}: billing ID '{modelId}' already used.");
                 continue;
             }
 
             var model = new ModelInfo(
                 modelId,
                 entry.DisplayName,
-                upstreamId,
+                routerModelId,
                 "v1",
                 row.InputPrice,
                 row.OutputPrice,
@@ -137,13 +138,13 @@ public class ModelsSyncModel(
             {
                 await BillingProvider.UpsertModelAsync(model, HttpContext.RequestAborted);
                 byBillingId[model.Id] = model;
-                byUpstream[model.UpstreamModelId] = model;
+                byRouterModel[model.UpstreamModelId] = model;
                 imported++;
             }
             catch (Exception ex)
             {
                 logger.LogWarning(ex, "Failed to import model {ModelId} from upstream {UpstreamId}", model.Id, model.UpstreamModelId);
-                warnings.Add($"{upstreamId}: import failed: {ex.Message}");
+                warnings.Add($"{routerModelId}: import failed: {ex.Message}");
             }
         }
 
@@ -249,28 +250,33 @@ public class ModelsSyncModel(
         }
 
         var byBillingId = billingModels.ToDictionary(m => m.Id, StringComparer.Ordinal);
-        var byUpstream = billingModels
+        var byRouterModel = billingModels
             .Where(m => !string.IsNullOrWhiteSpace(m.UpstreamModelId))
             .GroupBy(m => m.UpstreamModelId, StringComparer.Ordinal)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
-        var catalogUpstreamIds = catalog.Entries
-            .Select(e => e.UpstreamId)
+        var catalogRouterModelIds = catalog.Entries
+            .Select(GetRouterModelId)
             .ToHashSet(StringComparer.Ordinal);
 
         NewOnNodes = catalog.Entries
-            .Where(entry => !byUpstream.ContainsKey(entry.UpstreamId) && !byBillingId.ContainsKey(entry.UpstreamId))
-            .OrderBy(entry => entry.UpstreamId, StringComparer.Ordinal)
+            .Where(entry =>
+            {
+                var routerModelId = GetRouterModelId(entry);
+                return !byRouterModel.ContainsKey(routerModelId) && !byBillingId.ContainsKey(routerModelId);
+            })
+            .OrderBy(GetRouterModelId, StringComparer.Ordinal)
             .ToList();
 
         Configured = catalog.Entries
-            .Where(entry => byUpstream.ContainsKey(entry.UpstreamId))
+            .Where(entry => byRouterModel.ContainsKey(GetRouterModelId(entry)))
             .Select(entry =>
             {
-                var billing = byUpstream[entry.UpstreamId];
+                var routerModelId = GetRouterModelId(entry);
+                var billing = byRouterModel[routerModelId];
                 return new ConfiguredModelRow(
                     billing.Id,
                     billing.DisplayName,
-                    entry.UpstreamId,
+                    routerModelId,
                     entry.ModelType,
                     entry.SourceProviders,
                     billing.Enabled);
@@ -282,7 +288,7 @@ public class ModelsSyncModel(
         MissingFromNodes = MissingFromNodesSuppressed
             ? []
             : billingModels
-                .Where(model => !catalogUpstreamIds.Contains(model.UpstreamModelId))
+                .Where(model => !catalogRouterModelIds.Contains(model.UpstreamModelId))
                 .OrderBy(model => model.Id, StringComparer.Ordinal)
                 .ToList();
 
@@ -349,5 +355,10 @@ public class ModelsSyncModel(
         string ModelType,
         IReadOnlyList<string> SourceProviders,
         bool Enabled);
+
+    public static string GetRouterModelId(NodeModelCatalogEntry entry) =>
+        string.IsNullOrWhiteSpace(entry.PublicId)
+            ? entry.UpstreamId
+            : entry.PublicId;
 
 }

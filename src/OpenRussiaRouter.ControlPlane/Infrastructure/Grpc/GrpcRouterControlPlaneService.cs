@@ -335,7 +335,7 @@ public sealed class GrpcRouterControlPlaneService(
         var modelIds = nodeResults
             .Where(result => !result.Unreachable)
             .SelectMany(result => result.Observations)
-            .Select(observation => observation.UpstreamId)
+            .Select(GetRoutableModelId)
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet()
             .Order()
@@ -362,7 +362,7 @@ public sealed class GrpcRouterControlPlaneService(
         var response = new GetNodeModelsResponse();
         response.PublicIds.AddRange(
             result.Observations
-                .Select(o => o.UpstreamId)
+                .Select(GetRoutableModelId)
                 .Where(id => !string.IsNullOrWhiteSpace(id))
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(id => id, StringComparer.Ordinal));
@@ -597,6 +597,11 @@ public sealed class GrpcRouterControlPlaneService(
 
         return (current, currentRank);
     }
+
+    private static string GetRoutableModelId(ModelObservation observation) =>
+        string.IsNullOrWhiteSpace(observation.PublicId)
+            ? observation.UpstreamId
+            : observation.PublicId;
 
     private sealed record NodeCatalogResult(
         string NodeId,

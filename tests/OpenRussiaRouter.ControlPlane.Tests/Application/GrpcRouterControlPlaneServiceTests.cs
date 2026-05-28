@@ -443,6 +443,74 @@ public sealed class GrpcRouterControlPlaneServiceTests
     }
 
     [Fact]
+    public async Task ListAvailableNodeModels_ProviderCatalog_ReturnsPublicRouterModelIds()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var stub = new CatalogProviderStub();
+        stub.ProvidersWithModelsByNode[nodeId] = _ => Task.FromResult(new RouterProvidersWithModelsResponse
+        {
+            Connections =
+            [
+                new RouterProviderWithModels
+                {
+                    Id = "c-1",
+                    Provider = "minimax",
+                    IsActive = true,
+                    Models =
+                    [
+                        new RouterProviderModelInfo
+                        {
+                            Id = "minimax-m2-id",
+                            PublicId = "minimax/MiniMax-M2.7",
+                            Enabled = true
+                        }
+                    ]
+                }
+            ]
+        });
+        var service = CreateService(control, providerClient: stub);
+
+        var response = await service.ListAvailableNodeModels(new ListAvailableNodeModelsRequest(), context: null!);
+
+        response.ModelIds.Should().ContainSingle().Which.Should().Be("minimax/MiniMax-M2.7");
+    }
+
+    [Fact]
+    public async Task GetNodeModels_ProviderCatalog_ReturnsPublicRouterModelIds()
+    {
+        var control = await CreateControlPlaneWithHealthyNodeAsync();
+        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var stub = new CatalogProviderStub();
+        stub.ProvidersWithModelsByNode[nodeId] = _ => Task.FromResult(new RouterProvidersWithModelsResponse
+        {
+            Connections =
+            [
+                new RouterProviderWithModels
+                {
+                    Id = "c-1",
+                    Provider = "minimax",
+                    IsActive = true,
+                    Models =
+                    [
+                        new RouterProviderModelInfo
+                        {
+                            Id = "minimax-m2-id",
+                            PublicId = "minimax/MiniMax-M2.7",
+                            Enabled = true
+                        }
+                    ]
+                }
+            ]
+        });
+        var service = CreateService(control, providerClient: stub);
+
+        var response = await service.GetNodeModels(new GetNodeModelsRequest { NodeId = nodeId }, context: null!);
+
+        response.PublicIds.Should().ContainSingle().Which.Should().Be("minimax/MiniMax-M2.7");
+    }
+
+    [Fact]
     public async Task ListNodeModelCatalog_WithModels404_FallsBackToV1Models_NotUnreachable()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();

@@ -71,7 +71,7 @@
                     <tr>
                         <th>Billing ID</th>
                         <th>Display Name</th>
-                        <th>Upstream</th>
+                        <th>Router Model</th>
                         <th>Status</th>
                         <th>Input / Output / Cache per 1M</th>
                     </tr>
@@ -124,7 +124,7 @@
                                     <th>Import</th>
                                     <th>Suggested Billing ID</th>
                                     <th>Display Name</th>
-                                    <th>Upstream</th>
+                                    <th>Router Model</th>
                                     <th>Type</th>
                                     <th>Input&nbsp;RUB/1M</th>
                                     <th>Output&nbsp;RUB/1M</th>
@@ -140,14 +140,15 @@
                                     var i = display.FormIndex;
                                     var entry = display.Entry;
                                     var nodeIdsTitle = string.Join(", ", entry.NodeIds);
+                                    var routerModelId = Admin.ModelsSyncModel.GetRouterModelId(entry);
                                     <tr data-testid="models-sync-row" data-upstream-id="@entry.UpstreamId">
                                         <td>
                                             <input asp-for="Form.Rows[i].UpstreamId" type="hidden" />
                                             <input asp-for="Form.Rows[i].Selected" type="checkbox" data-testid="models-sync-checkbox" />
                                         </td>
-                                        <td><code>@(Model.Form.Prefix + entry.UpstreamId)</code></td>
+                                        <td><code>@(Model.Form.Prefix + routerModelId)</code></td>
                                         <td class="nowrap">@entry.DisplayName</td>
-                                        <td><code>@entry.UpstreamId</code></td>
+                                        <td><code title="Node internal ID: @entry.UpstreamId">@routerModelId</code></td>
                                         <td>@entry.ModelType</td>
                                         <td>
                                             <input asp-for="Form.Rows[i].InputPrice"
@@ -219,7 +220,7 @@
                     <tr>
                         <th>Billing ID</th>
                         <th>Billing Display Name</th>
-                        <th>Upstream</th>
+                        <th>Router Model</th>
                         <th>Type</th>
                         <th>Providers</th>
                         <th>Status</th>
@@ -261,7 +262,7 @@ else if (!Model.CatalogUnavailable && Model.MissingFromNodes.Count > 0)
                     <tr>
                         <th>Billing ID</th>
                         <th>Display Name</th>
-                        <th>Upstream</th>
+                        <th>Router Model</th>
                         <th>Status</th>
                         <th>Input / Output / Cache per 1M</th>
                     </tr>

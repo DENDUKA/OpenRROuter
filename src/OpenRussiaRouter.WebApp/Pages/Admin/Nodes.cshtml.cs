@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
-using System.Text;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -12,7 +11,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class NodesModel(
     ControlPlaneProvider ControlPlaneProvider,
     AuthProvider AuthProvider,
-    IHttpClientFactory HttpClientFactory,
+    RouterNodeApiProvider RouterNodeApiProvider,
     ILogger<NodesModel> logger) : PageModelBase
 {
 
@@ -109,6 +108,19 @@ public class NodesModel(
     {
         await OnGetAsync();
 
+        var node = FindSelectedNode(TestInput.NodeId);
+        if (node is null)
+        {
+            TestResult = new TestFormResult(false, "Selected router node was not found.");
+            return Page();
+        }
+
+        if (string.IsNullOrWhiteSpace(TestInput.Model))
+        {
+            TestResult = new TestFormResult(false, "Model is required.");
+            return Page();
+        }
+
         var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
         {
@@ -125,20 +137,23 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = TestInput.Message } }
             });
 
-            var client = HttpClientFactory.CreateClient("ApiGateway");
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
-            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
-            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
-
-            using var response = await client.SendAsync(request, HttpContext.RequestAborted);
-            var body = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
+            var response = await RouterNodeApiProvider.SendChatCompletionAsync(
+                node,
+                rawKey,
+                requestBody,
+                HttpContext.RequestAborted);
+            var body = response.Body;
 
             var displayBody = response.IsSuccessStatusCode ? body : (TryExtractErrorMessage(body) ?? body);
             TestResult = new TestFormResult(response.IsSuccessStatusCode, displayBody);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Gateway test request failed. Model={Model}", TestInput.Model);
+            logger.LogError(
+                ex,
+                "Node test request failed. NodeId={NodeId}; Model={Model}",
+                TestInput.NodeId,
+                TestInput.Model);
             TestResult = new TestFormResult(false, ex.Message);
         }
 
@@ -151,6 +166,13 @@ public class NodesModel(
 
         Response.ContentType = "text/plain; charset=utf-8";
         Response.Headers.CacheControl = "no-cache";
+
+        var node = FindSelectedNode(StreamingTestInput.NodeId);
+        if (node is null)
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Selected router node was not found.");
+
+        if (string.IsNullOrWhiteSpace(StreamingTestInput.Model))
+            return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest, "Model is required.");
 
         var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
@@ -166,12 +188,11 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            var client = HttpClientFactory.CreateClient("ApiGateway");
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
-            request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
-            request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
-
-            using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, HttpContext.RequestAborted);
+            using var response = await RouterNodeApiProvider.SendStreamingChatCompletionAsync(
+                node,
+                rawKey,
+                requestBody,
+                HttpContext.RequestAborted);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -199,7 +220,11 @@ public class NodesModel(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Gateway streaming test request failed. Model={Model}", StreamingTestInput.Model);
+            logger.LogError(
+                ex,
+                "Node streaming test request failed. NodeId={NodeId}; Model={Model}",
+                StreamingTestInput.NodeId,
+                StreamingTestInput.Model);
             if (!Response.HasStarted)
                 return await WriteStreamingErrorAsync(StatusCodes.Status500InternalServerError, ex.Message);
             await Response.WriteAsync($"{Environment.NewLine}[stream error] {ex.Message}", HttpContext.RequestAborted);
@@ -224,6 +249,9 @@ public class NodesModel(
         catch { }
         return null;
     }
+
+    private RouterNodeInfo? FindSelectedNode(string nodeId) =>
+        Nodes.FirstOrDefault(node => string.Equals(node.NodeId, nodeId, StringComparison.Ordinal));
 
     // Handles "[prefix] [NNN]: {json_blob} (suffix)" format from upstream providers
     private static string? TryFlattenEmbeddedJson(string message)

@@ -196,4 +196,52 @@ public sealed class GeminiSchemaPatcherTests
         optionSchema.GetProperty("properties").GetProperty("label").GetProperty("type").GetString()
             .Should().Be("string");
     }
+
+    [Fact]
+    public void SanitizeIfGeminiModel_InlinesRefsWhenSchemaContainerIsUnknown()
+    {
+        const string request = """
+        {
+          "model": "gemini-test",
+          "$defs": {
+            "QuestionOption": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string" }
+              }
+            }
+          },
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "ask",
+                "custom_payload": {
+                  "choices": [
+                    {
+                      "$ref": "#/$defs/QuestionOption",
+                      "title": "Choice"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gc/gemini-3.1-pro-preview");
+
+        using var document = JsonDocument.Parse(result);
+        var optionSchema = document.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("custom_payload")
+            .GetProperty("choices")[0];
+
+        optionSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        optionSchema.GetProperty("title").GetString().Should().Be("Choice");
+        optionSchema.GetProperty("properties").GetProperty("label").GetProperty("type").GetString()
+            .Should().Be("string");
+    }
 }

@@ -41,10 +41,62 @@ public static class GeminiSchemaPatcher
     private static bool SanitizeKnownSchemaRoots(JsonObject request)
     {
         var changed = false;
+        var requestDefinitions = CollectDefinitions(request);
 
+        changed |= SanitizeSchemaBranch(request["tools"], requestDefinitions);
+        changed |= SanitizeSchemaBranch(request["functions"], requestDefinitions);
+        changed |= SanitizeSchemaBranch(request["response_format"], requestDefinitions);
         changed |= SanitizeSchemaRootsByName(request);
 
         return changed;
+    }
+
+    private static bool SanitizeSchemaBranch(JsonNode? node, IReadOnlyDictionary<string, JsonNode> requestDefinitions)
+    {
+        if (node is null)
+            return false;
+
+        var branchDefinitions = new Dictionary<string, JsonNode>(requestDefinitions, StringComparer.Ordinal);
+        foreach (var definition in CollectDefinitions(node))
+        {
+            branchDefinitions.TryAdd(definition.Key, definition.Value.DeepClone());
+        }
+
+        var changed = SanitizeSchemaNode(node, branchDefinitions, new HashSet<string>(StringComparer.Ordinal), depth: 0);
+        changed |= RemoveDefinitionBags(node);
+
+        return changed;
+    }
+
+    private static bool RemoveDefinitionBags(JsonNode? node)
+    {
+        if (node is JsonObject obj)
+        {
+            var changed = false;
+            changed |= obj.Remove("$defs");
+            changed |= obj.Remove("defs");
+            changed |= obj.Remove("definitions");
+
+            foreach (var child in obj.ToList())
+            {
+                changed |= RemoveDefinitionBags(child.Value);
+            }
+
+            return changed;
+        }
+
+        if (node is JsonArray array)
+        {
+            var changed = false;
+            foreach (var item in array)
+            {
+                changed |= RemoveDefinitionBags(item);
+            }
+
+            return changed;
+        }
+
+        return false;
     }
 
     private static bool SanitizeSchemaRootsByName(JsonNode? node)
@@ -95,7 +147,7 @@ public static class GeminiSchemaPatcher
         return changed;
     }
 
-    private static Dictionary<string, JsonNode> CollectDefinitions(JsonObject root)
+    private static Dictionary<string, JsonNode> CollectDefinitions(JsonNode root)
     {
         var definitions = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
         CollectDefinitions(root, definitions);

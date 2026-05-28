@@ -57,9 +57,9 @@
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Raw SSE / JSON</label>
+            <label class="form-label">Ответ</label>
             <pre id="gw-test-output" data-testid="result-output"
-                 style="background: #1e1e1e; color: #e0e0e0; padding: 12px; border-radius: 4px; max-height: 480px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px;"></pre>
+                 style="background: #f8fafc; color: #1f2937; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; max-height: 480px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 14px; line-height: 1.5;"></pre>
         </div>
     </div>
 </div>
@@ -74,6 +74,12 @@
         const latencyEl = document.getElementById('gw-test-latency');
         const statusEl = document.getElementById('gw-test-status');
         const usageEl = document.getElementById('gw-test-usage');
+        let sseBuffer = '';
+        let responseText = '';
+        let statusMessage = '';
+        let completionReason = '';
+        let sawAnyEvent = false;
+        let hasServerLatency = false;
 
         clearBtn.addEventListener('click', function () {
             outputEl.textContent = '';
@@ -93,7 +99,13 @@
             sendBtn.disabled = true;
 
             const startedAt = performance.now();
-            let aggregated = '';
+            sseBuffer = '';
+            responseText = '';
+            statusMessage = 'Отправляем запрос...';
+            completionReason = '';
+            sawAnyEvent = false;
+            hasServerLatency = false;
+            renderOutput();
 
             try {
                 const formData = new FormData(form);
@@ -107,69 +119,222 @@
 
                 if (!response.ok) {
                     const errBody = await response.text();
-                    outputEl.textContent = errBody;
+                    outputEl.textContent = formatErrorBody(errBody, response.status);
                     latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
                     return;
                 }
 
                 if (!response.body) {
-                    outputEl.textContent = '[no response body]';
+                    outputEl.textContent = 'Сервер ответил без тела ответа.';
                     return;
                 }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
+                statusMessage = 'Ответ приходит потоком...';
+                renderOutput();
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) break;
                     const chunk = decoder.decode(value, { stream: true });
-                    aggregated += chunk;
-                    outputEl.textContent = aggregated;
+                    processStreamChunk(chunk);
+                    renderOutput();
                     outputEl.scrollTop = outputEl.scrollHeight;
                 }
 
-                latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
-                parseMetaAndUsage(aggregated);
+                processStreamChunk(decoder.decode());
+                flushBufferedText();
+                if (!hasServerLatency) {
+                    latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
+                }
+                statusMessage = responseText || sawAnyEvent
+                    ? 'Проверка завершена.'
+                    : 'Ответ получен, но текстового содержимого нет.';
+                renderOutput();
             } catch (err) {
-                outputEl.textContent += '\n[error] ' + err.message;
+                statusMessage = 'Не удалось выполнить запрос: ' + err.message;
+                renderOutput();
                 latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
             } finally {
                 sendBtn.disabled = false;
             }
         });
 
-        function parseMetaAndUsage(text) {
-            // server-emitted meta event with latency_ms + status
-            const metaMatch = text.match(/event:\s*orr-meta\s*\ndata:\s*(\{[^\n]*\})/);
-            if (metaMatch) {
-                try {
-                    const meta = JSON.parse(metaMatch[1]);
-                    if (typeof meta.latency_ms === 'number') {
-                        latencyEl.textContent = meta.latency_ms + ' ms (server)';
-                    }
-                    if (typeof meta.status === 'number' && meta.status > 0) {
-                        statusEl.textContent = meta.status;
-                    }
-                } catch { /* ignore */ }
+        function processStreamChunk(chunk) {
+            if (!chunk) return;
+
+            sseBuffer += chunk.replace(/\r\n/g, '\n');
+            let separatorIndex;
+            while ((separatorIndex = sseBuffer.indexOf('\n\n')) >= 0) {
+                const block = sseBuffer.slice(0, separatorIndex);
+                sseBuffer = sseBuffer.slice(separatorIndex + 2);
+                processSseBlock(block);
+            }
+        }
+
+        function processSseBlock(block) {
+            const lines = block.split('\n');
+            let eventName = 'message';
+            const dataLines = [];
+
+            for (const line of lines) {
+                if (line.startsWith('event:')) {
+                    eventName = line.slice(6).trim();
+                } else if (line.startsWith('data:')) {
+                    dataLines.push(line.slice(5).trimStart());
+                }
             }
 
-            // usage payload - last SSE data chunk that contains "usage": { ... }
-            let lastUsage = null;
-            const dataMatches = text.matchAll(/^data:\s*(\{.*\})\s*$/gm);
-            for (const m of dataMatches) {
-                try {
-                    const obj = JSON.parse(m[1]);
-                    if (obj && obj.usage && typeof obj.usage === 'object') {
-                        lastUsage = obj.usage;
-                    }
-                } catch { /* ignore non-json */ }
+            if (dataLines.length === 0) return;
+
+            sawAnyEvent = true;
+            const payload = dataLines.join('\n').trim();
+            if (!payload || payload === '[DONE]') return;
+
+            if (eventName === 'orr-meta') {
+                applyMeta(payload);
+                return;
             }
-            if (lastUsage) {
-                const prompt = lastUsage.prompt_tokens ?? lastUsage.input_tokens ?? '?';
-                const completion = lastUsage.completion_tokens ?? lastUsage.output_tokens ?? '?';
-                const total = lastUsage.total_tokens ?? (Number(prompt) + Number(completion));
-                usageEl.textContent = `prompt=${prompt} | completion=${completion} | total=${total}`;
+
+            appendResponsePayload(payload);
+        }
+
+        function appendResponsePayload(payload) {
+            let obj = null;
+            try {
+                obj = JSON.parse(payload);
+            } catch {
+                appendPlainText(payload);
+                return;
             }
+
+            if (obj?.error) {
+                appendPlainText('Ошибка: ' + formatError(obj.error));
+                return;
+            }
+
+            appendChoiceText(obj);
+
+            if (obj?.usage && typeof obj.usage === 'object') {
+                applyUsage(obj.usage);
+            }
+        }
+
+        function appendChoiceText(obj) {
+            if (!Array.isArray(obj?.choices)) return;
+
+            for (const choice of obj.choices) {
+                const content = choice?.delta?.content
+                    ?? choice?.message?.content
+                    ?? choice?.text;
+
+                if (typeof content === 'string' && content.length > 0) {
+                    responseText += content;
+                }
+
+                if (choice?.finish_reason) {
+                    completionReason = formatFinishReason(choice.finish_reason);
+                }
+            }
+        }
+
+        function appendPlainText(text) {
+            if (!text) return;
+            responseText += responseText ? '\n' + text : text;
+        }
+
+        function applyMeta(payload) {
+            try {
+                const meta = JSON.parse(payload);
+                if (typeof meta.latency_ms === 'number') {
+                    latencyEl.textContent = meta.latency_ms + ' ms (server)';
+                    hasServerLatency = true;
+                }
+                if (typeof meta.status === 'number' && meta.status > 0) {
+                    statusEl.textContent = meta.status;
+                }
+            } catch { /* ignore malformed meta */ }
+        }
+
+        function applyUsage(usage) {
+            const prompt = usage.prompt_tokens ?? usage.input_tokens ?? '?';
+            const completion = usage.completion_tokens ?? usage.output_tokens ?? '?';
+            const total = usage.total_tokens ?? sumIfNumbers(prompt, completion) ?? '?';
+            usageEl.textContent = `prompt=${prompt} | completion=${completion} | total=${total}`;
+        }
+
+        function flushBufferedText() {
+            const tail = sseBuffer.trim();
+            sseBuffer = '';
+            if (tail) {
+                if (tail.startsWith('data:') || tail.startsWith('event:')) {
+                    processSseBlock(tail);
+                } else {
+                    appendResponsePayload(tail);
+                }
+            }
+        }
+
+        function renderOutput() {
+            const parts = [];
+            if (responseText) {
+                parts.push(responseText);
+            }
+            if (statusMessage) {
+                parts.push(statusMessage);
+            }
+            if (completionReason) {
+                parts.push('Причина завершения: ' + completionReason);
+            }
+            outputEl.textContent = parts.join('\n\n');
+        }
+
+        function formatErrorBody(body, status) {
+            if (!body || !body.trim()) {
+                return `Сервер вернул ошибку HTTP ${status} без текста.`;
+            }
+
+            try {
+                const obj = JSON.parse(body);
+                if (obj?.error) {
+                    return 'Ошибка: ' + formatError(obj.error);
+                }
+                if (typeof obj?.message === 'string') {
+                    return 'Ошибка: ' + obj.message;
+                }
+            } catch { /* plain text body */ }
+
+            return 'Ошибка: ' + body.trim();
+        }
+
+        function formatError(error) {
+            if (typeof error === 'string') return error;
+            const message = error?.message ?? error?.detail ?? error?.code ?? 'Неизвестная ошибка.';
+            const code = error?.code && error.code !== message ? ` (${error.code})` : '';
+            return message + code;
+        }
+
+        function formatFinishReason(reason) {
+            switch (reason) {
+                case 'stop':
+                    return 'ответ завершён';
+                case 'length':
+                    return 'достигнут лимит длины';
+                case 'content_filter':
+                    return 'ответ остановлен фильтром';
+                case 'tool_calls':
+                    return 'модель запросила вызов инструмента';
+                default:
+                    return reason;
+            }
+        }
+
+        function sumIfNumbers(left, right) {
+            const leftNumber = Number(left);
+            const rightNumber = Number(right);
+            return Number.isFinite(leftNumber) && Number.isFinite(rightNumber)
+                ? leftNumber + rightNumber
+                : null;
         }
     })();
 </script>

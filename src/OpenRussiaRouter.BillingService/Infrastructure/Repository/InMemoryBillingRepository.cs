@@ -42,6 +42,16 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
     public Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
     {
+        if (_models.TryGetValue(model.ModelId, out var existing) && model.DescriptionSource is null)
+        {
+            model = model with
+            {
+                Description = model.Description ?? existing.Description,
+                ContextLength = model.ContextLength ?? existing.ContextLength,
+                Modalities = model.Modalities ?? existing.Modalities,
+                DescriptionSource = existing.DescriptionSource
+            };
+        }
         _models[model.ModelId] = model;
         return Task.CompletedTask;
     }

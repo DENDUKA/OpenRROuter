@@ -3,14 +3,16 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
+using OpenRussiaRouter.WebApp.Services.Enrichment;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, ILogger<ModelsModel> logger) : PageModelBase
+public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, IOpenRouterCatalogClient openRouterClient, ILogger<ModelsModel> logger) : PageModelBase
 {
     private readonly BillingProvider _billingClient = billingProvider;
     private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
+    private readonly IOpenRouterCatalogClient _openRouterClient = openRouterClient;
     private readonly ILogger<ModelsModel> _logger = logger;
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
@@ -55,7 +57,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         InputPrice = m.InputPrice,
                         OutputPrice = m.OutputPrice,
                         CachePrice = m.CachePrice,
-                        Enabled = m.Enabled
+                        Enabled = m.Enabled,
+                        Description = m.Description,
+                        ContextLength = m.ContextLength,
+                        Modalities = m.Modalities
                     };
             }
             catch (Exception ex)
@@ -108,7 +113,11 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 Form.InputPrice,
                 Form.OutputPrice,
                 Form.CachePrice,
-                Form.Enabled);
+                Form.Enabled,
+                Description:       string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
+                ContextLength:     Form.ContextLength is > 0 ? Form.ContextLength : null,
+                Modalities:        string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
+                DescriptionSource: DetermineSource(orig, Form));
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -149,6 +158,70 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             await LoadModels();
             return Page();
         }
+    }
+
+    public async Task<IActionResult> OnPostEnrichAsync()
+    {
+        try
+        {
+            var catalog = await _openRouterClient.LoadCatalogAsync();
+            if (catalog.Count == 0)
+            {
+                TempData["WarningMessages"] = "OpenRouter catalog is empty or unreachable.";
+                return RedirectToPage();
+            }
+
+            var models = await _billingClient.ListModelsAsync();
+            int enriched = 0;
+            var notFound = new List<string>();
+
+            foreach (var model in models)
+            {
+                var match = _openRouterClient.FindMatch(catalog, model.UpstreamModelId);
+                if (match is null)
+                {
+                    notFound.Add(model.UpstreamModelId);
+                    continue;
+                }
+
+                if (model.DescriptionSource == "manual")
+                    continue;
+
+                var enrichedModel = model with
+                {
+                    Description       = match.Description,
+                    ContextLength     = match.ContextLength,
+                    Modalities        = match.Modalities,
+                    DescriptionSource = "openrouter"
+                };
+                await _billingClient.UpsertModelAsync(enrichedModel);
+                enriched++;
+            }
+
+            var msg = $"Enriched {enriched} model(s) from OpenRouter.";
+            if (notFound.Count > 0)
+                msg += $" Not found: {string.Join(", ", notFound)}.";
+
+            TempData["SuccessMessage"] = msg;
+            return RedirectToPage();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Enrich from OpenRouter failed");
+            TempData["WarningMessages"] = $"Enrichment failed: {ex.Message}";
+            return RedirectToPage();
+        }
+    }
+
+    private static string? DetermineSource(ModelInfo? orig, ModelFormInput form)
+    {
+        var descChanged    = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
+        var contextChanged = (form.ContextLength ?? 0) != (orig?.ContextLength ?? 0);
+        var modalChanged   = (form.Modalities?.Trim() ?? string.Empty) != (orig?.Modalities ?? string.Empty);
+
+        return descChanged || contextChanged || modalChanged
+            ? "manual"
+            : orig?.DescriptionSource;
     }
 
     private async Task LoadFormData()
@@ -194,5 +267,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         [Range(0, 1000000)] public decimal CachePrice { get; set; }
 
         public bool Enabled { get; set; } = true;
+
+        public string? Description { get; set; }
+        public int? ContextLength { get; set; }
+        public string? Modalities { get; set; }
     }
 }

@@ -22,4 +22,12 @@ public sealed class ModelPriceEntity
     public Currency Currency { get; set; }
 
     public bool Enabled { get; set; }
+
+    public string? Description { get; set; }
+
+    public int? ContextLength { get; set; }
+
+    public string? Modalities { get; set; }
+
+    public string? DescriptionSource { get; set; }
 }

@@ -10,6 +10,7 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
+using OpenRussiaRouter.WebApp.Services.Enrichment;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 
@@ -112,6 +113,13 @@ builder.Services.AddHttpClient("RouterNode", client =>
 {
     ConnectTimeout = TimeSpan.FromSeconds(10),
     PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30),
+});
+
+builder.Services.AddHttpClient<IOpenRouterCatalogClient, OpenRouterCatalogClient>(c =>
+{
+    c.BaseAddress = new Uri("https://openrouter.ai/");
+    c.DefaultRequestHeaders.Add("User-Agent", "OpenRussiaRouter/1.0");
+    c.Timeout = TimeSpan.FromSeconds(15);
 });
 
 var app = builder.Build();

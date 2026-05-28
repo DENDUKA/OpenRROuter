@@ -70,6 +70,9 @@ message PublicModel {
   string upstream_model_id = 3;
   string input_price_per_1m_rub = 4;
   string output_price_per_1m_rub = 5;
+  int32  context_length = 6;
+  string modalities = 7;
+  string description = 8;
 }
 
 message ListPublicModelsResponse {
@@ -111,7 +114,11 @@ message UpsertModelPriceRequest {
   string input_price_per_1m_rub = 5;
   string output_price_per_1m_rub = 6;
   string cache_price_per_1m_rub = 7;
-  bool enabled = 8;
+  bool   enabled = 8;
+  string description = 9;
+  int32  context_length = 10;
+  string modalities = 11;
+  string description_source = 12;
 }
 
 message UpsertModelPriceResponse {
@@ -134,7 +141,11 @@ message ModelDetail {
   string input_price_per_1m_rub = 5;
   string output_price_per_1m_rub = 6;
   string cache_price_per_1m_rub = 7;
-  bool enabled = 8;
+  bool   enabled = 8;
+  string description = 9;
+  int32  context_length = 10;
+  string modalities = 11;
+  string description_source = 12;
 }
 
 message ListModelsResponse {

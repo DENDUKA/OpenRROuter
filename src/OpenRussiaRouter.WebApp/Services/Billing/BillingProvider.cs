@@ -183,7 +183,10 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             string.IsNullOrEmpty(m.InputPricePer1MRub) ? 0m : decimal.Parse(m.InputPricePer1MRub, CultureInfo.InvariantCulture),
             string.IsNullOrEmpty(m.OutputPricePer1MRub) ? 0m : decimal.Parse(m.OutputPricePer1MRub, CultureInfo.InvariantCulture),
             0m,
-            true)).ToList();
+            true,
+            Description:   string.IsNullOrEmpty(m.Description) ? null : m.Description,
+            ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
+            Modalities:    string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -197,7 +200,11 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             decimal.Parse(m.InputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
             decimal.Parse(m.OutputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
             decimal.Parse(m.CachePricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
-            m.Enabled)).ToList();
+            m.Enabled,
+            Description:       string.IsNullOrEmpty(m.Description) ? null : m.Description,
+            ContextLength:     m.ContextLength == 0 ? null : (int?)m.ContextLength,
+            Modalities:        string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
+            DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource)).ToList();
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -212,7 +219,11 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
                 InputPricePer1MRub = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 OutputPricePer1MRub = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 CachePricePer1MRub = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Enabled = model.Enabled
+                Enabled = model.Enabled,
+                Description = model.Description ?? string.Empty,
+                ContextLength = model.ContextLength ?? 0,
+                Modalities = model.Modalities ?? string.Empty,
+                DescriptionSource = model.DescriptionSource ?? string.Empty,
             }, cancellationToken: cancellationToken);
         if (!response.Upserted)
         {

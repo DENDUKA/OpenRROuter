@@ -46,7 +46,11 @@ public static class BillingPersistenceMapper
             OutputPerMillionAmount = model.Price.OutputPerMillion.Amount,
             CachePerMillionAmount = model.Price.CachePerMillion.Amount,
             Currency = model.Price.InputPerMillion.Currency,
-            Enabled = model.Enabled
+            Enabled = model.Enabled,
+            Description = model.Description,
+            ContextLength = model.ContextLength,
+            Modalities = model.Modalities,
+            DescriptionSource = model.DescriptionSource
         };
     }
 
@@ -61,7 +65,11 @@ public static class BillingPersistenceMapper
                 new MoneyAmount(entity.InputPerMillionAmount, entity.Currency),
                 new MoneyAmount(entity.OutputPerMillionAmount, entity.Currency),
                 new MoneyAmount(entity.CachePerMillionAmount, entity.Currency)),
-            entity.Enabled);
+            entity.Enabled,
+            Description: entity.Description,
+            ContextLength: entity.ContextLength,
+            Modalities: entity.Modalities,
+            DescriptionSource: entity.DescriptionSource);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)

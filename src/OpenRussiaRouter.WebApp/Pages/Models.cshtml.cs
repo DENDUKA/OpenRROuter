@@ -56,6 +56,13 @@ public class ModelsModel(
     public static string FormatPrice(decimal price) =>
         $"{price:0.##} RUB / 1M";
 
+    public static string FormatContext(int? tokens) =>
+        tokens is > 0
+            ? tokens >= 1_000_000 ? $"{tokens / 1_000_000M:0.#}M"
+              : tokens >= 1_000   ? $"{tokens / 1_000}K"
+              : tokens.ToString()!
+            : "—";
+
     private async Task<NodeModelCatalogResult> GetCachedCatalogAsync(CancellationToken cancellationToken)
     {
         return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
@@ -76,9 +83,12 @@ public class ModelsModel(
         var provider = sourceProviders.Count == 0
             ? "Unknown"
             : string.Join(", ", sourceProviders);
-        var capability = string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
-            ? "Unknown"
-            : ToTitle(catalogEntry.ModelType);
+
+        var capability = !string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
+            ? ToTitle(catalogEntry.ModelType)
+            : !string.IsNullOrWhiteSpace(model.Modalities)
+                ? ToTitle(model.Modalities)
+                : "Unknown";
 
         return new PublicModelRow(
             model.Id,
@@ -88,7 +98,7 @@ public class ModelsModel(
             model.OutputPrice,
             provider,
             capability,
-            "Unknown");
+            FormatContext(model.ContextLength));
     }
 
     private static string ToTitle(string value)

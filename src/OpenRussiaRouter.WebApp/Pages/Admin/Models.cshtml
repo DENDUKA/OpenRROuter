@@ -104,6 +104,22 @@
                     </div>
                 </div>
                 <div class="adm-form-row">
+                    <div class="form-group" style="grid-column: span 3">
+                        <label asp-for="Form.Description" class="form-label">Description <small class="text-muted">(optional)</small></label>
+                        <textarea asp-for="Form.Description" class="form-control" rows="3" placeholder="Model description (auto-filled by Enrich from OpenRouter or enter manually)"></textarea>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.ContextLength" class="form-label">Context Length (tokens)</label>
+                        <input asp-for="Form.ContextLength" class="form-control" type="number" min="0" placeholder="e.g. 131072" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.Modalities" class="form-label">Modalities</label>
+                        <input asp-for="Form.Modalities" class="form-control" placeholder="e.g. text, image" />
+                    </div>
+                </div>
+                <div class="adm-form-row">
                     <div class="form-group">
                         <label class="form-label">
                             <input asp-for="Form.Enabled" type="checkbox" />
@@ -124,6 +140,9 @@
     <div class="adm-card-header adm-card-header--split">
         <span>Public Models</span>
         <div class="adm-btn-row">
+            <form method="post" asp-page-handler="Enrich" style="display:inline">
+                <button type="submit" class="btn btn-sm btn-secondary">Enrich from OpenRouter</button>
+            </form>
             <a class="btn btn-sm btn-secondary" href="/admin/models/sync">Sync from 9Router</a>
             <a class="btn btn-sm btn-primary" href="?action=add">Add Model</a>
         </div>
@@ -138,7 +157,7 @@
             <table class="table">
                 <thead><tr>
                     <th>Model ID</th><th>Display Name</th><th>Router Model</th>
-                    <th>Input / Output / Cache per 1M</th><th>Status</th><th>Actions</th>
+                    <th>Input / Output / Cache per 1M</th><th>Status</th><th>Source</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                     @foreach (var m in Model.Models)
@@ -152,6 +171,20 @@
                                 <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
                                     @(m.Enabled ? "Enabled" : "Disabled")
                                 </span>
+                            </td>
+                            <td>
+                                @if (m.DescriptionSource == "openrouter")
+                                {
+                                    <span class="badge badge-info" title="Enriched from OpenRouter">OR</span>
+                                }
+                                else if (m.DescriptionSource == "manual")
+                                {
+                                    <span class="badge badge-secondary" title="Manually entered">manual</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted" style="font-size:12px">&mdash;</span>
+                                }
                             </td>
                             <td class="adm-actions-cell">
                                 <a class="btn-icon" title="Edit" aria-label="Edit"

@@ -54,7 +54,10 @@ public sealed class GrpcBillingService(
                     DisplayName = model.DisplayName,
                     UpstreamModelId = price?.RouterModelId ?? string.Empty,
                     InputPricePer1MRub = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    OutputPricePer1MRub = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty
+                    OutputPricePer1MRub = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    ContextLength = price?.ContextLength ?? 0,
+                    Modalities = price?.Modalities ?? string.Empty,
+                    Description = price?.Description ?? string.Empty,
                 };
             }));
         return response;
@@ -159,7 +162,11 @@ public sealed class GrpcBillingService(
                     MoneyAmount.Rub(decimal.Parse(request.InputPricePer1MRub, CultureInfo.InvariantCulture)),
                     MoneyAmount.Rub(decimal.Parse(request.OutputPricePer1MRub, CultureInfo.InvariantCulture)),
                     MoneyAmount.Rub(decimal.Parse(request.CachePricePer1MRub, CultureInfo.InvariantCulture))),
-                request.Enabled),
+                request.Enabled,
+                Description: string.IsNullOrEmpty(request.Description) ? null : request.Description,
+                ContextLength: request.ContextLength == 0 ? null : (int?)request.ContextLength,
+                Modalities: string.IsNullOrEmpty(request.Modalities) ? null : request.Modalities,
+                DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -209,7 +216,11 @@ public sealed class GrpcBillingService(
                 InputPricePer1MRub = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
                 OutputPricePer1MRub = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
                 CachePricePer1MRub = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                Enabled = model.Enabled
+                Enabled = model.Enabled,
+                Description = model.Description ?? string.Empty,
+                ContextLength = model.ContextLength ?? 0,
+                Modalities = model.Modalities ?? string.Empty,
+                DescriptionSource = model.DescriptionSource ?? string.Empty,
             }));
         return response;
     }

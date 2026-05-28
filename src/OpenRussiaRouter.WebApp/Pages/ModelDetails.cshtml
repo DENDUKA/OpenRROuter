@@ -14,11 +14,11 @@
         </div>
 
         <div class="metrics-grid" aria-label="Model metrics">
-            <div class="metric"><div class="metric-label">Modalities</div><div class="metric-value">Text</div></div>
-            <div class="metric"><div class="metric-label">Input Price</div><div class="metric-value">Route</div></div>
-            <div class="metric"><div class="metric-label">Output Price</div><div class="metric-value">Route</div></div>
-            <div class="metric"><div class="metric-label">Context</div><div class="metric-value">128K</div></div>
-            <div class="metric"><div class="metric-label">Status</div><div class="metric-value">Available</div></div>
+            <div class="metric"><div class="metric-label">Modalities</div><div class="metric-value">@Model.ModalitiesDisplay</div></div>
+            <div class="metric"><div class="metric-label">Input Price</div><div class="metric-value">@(Model.HasPricing ? $"{Model.InputPrice:N0} RUB/1M" : "Route")</div></div>
+            <div class="metric"><div class="metric-label">Output Price</div><div class="metric-value">@(Model.HasPricing ? $"{Model.OutputPrice:N0} RUB/1M" : "Route")</div></div>
+            <div class="metric"><div class="metric-label">Context</div><div class="metric-value">@Model.ContextDisplay</div></div>
+            <div class="metric"><div class="metric-label">Status</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? "Disabled" : "Available")</div></div>
             <div class="metric"><div class="metric-label">Provider</div><div class="metric-value">@Model.ProviderTitle</div></div>
         </div>
     </section>
@@ -32,6 +32,10 @@
 
     <section id="overview" class="model-section">
         <h2>Overview</h2>
+        @if (!string.IsNullOrWhiteSpace(Model.Description))
+        {
+            <p class="model-overview-desc">@Model.Description</p>
+        }
         <p>@Model.DisplayName is available via OpenRussiaRouter using the model id <code>@Model.ModelId</code>.</p>
     </section>
 
@@ -87,5 +91,6 @@ Authorization: Bearer &lt;OPENRUSSIAROUTER_API_KEY&gt;
     .model-section { padding: 32px 0; border-bottom: 1px solid var(--color-hairline); }
     pre { overflow-x: auto; margin: 0; padding: 18px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); background: var(--color-canvas-card); }
     pre code { padding: 0; background: transparent; color: var(--color-body); font-size: 13px; }
+    .model-overview-desc { max-width: 760px; margin-bottom: 16px; color: var(--color-ink); font-size: 15px; line-height: 1.6; }
     @@media (max-width: 900px) { .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .table-scroll { overflow-x: auto; } }
 </style>

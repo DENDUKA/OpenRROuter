@@ -83,12 +83,18 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         using var connection = connectionFactory.CreateConnection();
         await connection.ExecuteAsync(new CommandDefinition(
             """
-            insert into billing.model_prices
-                (model_id, display_name, router_model_id, price_version, input_per_million_amount,
-                 output_per_million_amount, cache_per_million_amount, currency, enabled)
-            values
-                (@ModelId, @DisplayName, @RouterModelId, @PriceVersion, @InputPerMillionAmount,
-                 @OutputPerMillionAmount, @CachePerMillionAmount, @Currency, @Enabled)
+            insert into billing.model_prices (
+                model_id, display_name, router_model_id, price_version,
+                input_per_million_amount, output_per_million_amount, cache_per_million_amount,
+                currency, enabled,
+                description, context_length, modalities, description_source
+            )
+            values (
+                @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
+                @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
+                @Currency, @Enabled,
+                @Description, @ContextLength, @Modalities, @DescriptionSource
+            )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
                 router_model_id = excluded.router_model_id,
@@ -97,7 +103,27 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 output_per_million_amount = excluded.output_per_million_amount,
                 cache_per_million_amount = excluded.cache_per_million_amount,
                 currency = excluded.currency,
-                enabled = excluded.enabled;
+                enabled = excluded.enabled,
+                description = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.description
+                    ELSE COALESCE(excluded.description, billing.model_prices.description)
+                END,
+                context_length = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.context_length
+                    ELSE COALESCE(excluded.context_length, billing.model_prices.context_length)
+                END,
+                modalities = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.modalities
+                    ELSE COALESCE(excluded.modalities, billing.model_prices.modalities)
+                END,
+                description_source = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.description_source
+                    ELSE billing.model_prices.description_source
+                END
             """,
             new
             {
@@ -109,7 +135,11 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 OutputPerMillionAmount = model.Price.OutputPerMillion.Amount,
                 CachePerMillionAmount = model.Price.CachePerMillion.Amount,
                 Currency = model.Price.InputPerMillion.Currency.ToString(),
-                model.Enabled
+                model.Enabled,
+                model.Description,
+                model.ContextLength,
+                model.Modalities,
+                model.DescriptionSource
             },
             cancellationToken: ct)).ConfigureAwait(false);
     }
@@ -578,7 +608,11 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             output_per_million_amount as OutputPerMillionAmount,
             cache_per_million_amount as CachePerMillionAmount,
             currency as Currency,
-            enabled as Enabled
+            enabled as Enabled,
+            description as Description,
+            context_length as ContextLength,
+            modalities as Modalities,
+            description_source as DescriptionSource
         from billing.model_prices
 
         """;

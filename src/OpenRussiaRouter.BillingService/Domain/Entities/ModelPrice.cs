@@ -8,5 +8,9 @@ public sealed record ModelPrice(
     string RouterModelId,
     string PriceVersion,
     ModelTokenPrice Price,
-    bool Enabled);
+    bool Enabled,
+    string? Description = null,
+    int? ContextLength = null,
+    string? Modalities = null,
+    string? DescriptionSource = null);
 

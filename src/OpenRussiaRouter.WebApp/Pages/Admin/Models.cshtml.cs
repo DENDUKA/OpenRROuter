@@ -165,7 +165,13 @@ public class ModelsModel : PageModelBase
 
     private async Task LoadModels()
     {
-        try { Models = await _billingClient.ListModelsAsync(); }
+        try
+        {
+            Models = (await _billingClient.ListModelsAsync())
+                .OrderByDescending(model => model.Enabled)
+                .ThenBy(model => model.Id, StringComparer.Ordinal)
+                .ToList();
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to load models list.");

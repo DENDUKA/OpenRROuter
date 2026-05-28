@@ -40,7 +40,9 @@ public sealed class ChatCompletionHandler(
             var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
             if (auth is null) return;
 
-            var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
+            var patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                auth.RouterModelId);
             var startedAt = DateTimeOffset.UtcNow;
 
             var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
@@ -83,7 +85,9 @@ public sealed class ChatCompletionHandler(
             if (auth is null) return;
 
             var patchedJson = SseRequestPatcher.InjectStreamOptions(
-                SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId));
+                GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                    SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                    auth.RouterModelId));
             var lease = auth.Lease;
 
             var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);

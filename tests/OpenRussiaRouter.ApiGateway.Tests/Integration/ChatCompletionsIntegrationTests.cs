@@ -130,6 +130,69 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_GeminiModel_SanitizesJsonSchemaRefsBeforeRouter()
+    {
+        var router = new StubRouterProxy();
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gemini",
+                "gemini-cli/gemini-3.1-pro-preview",
+                "v1",
+                MoneyAmount.Rub(100),
+                null)
+        };
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        const string requestBody = """
+        {
+          "model": "gemini",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "ask",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "question": {
+                      "$ref": "#/$defs/QuestionPrompt",
+                      "description": "breaks Gemini schema conversion"
+                    }
+                  },
+                  "$defs": {
+                    "QuestionPrompt": {
+                      "type": "object",
+                      "properties": {
+                        "text": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+        var response = await PostChatAsync(client, requestBody, bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("model").GetString().Should().Be("gemini-cli/gemini-3.1-pro-preview");
+        var questionSchema = document.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("parameters")
+            .GetProperty("properties")
+            .GetProperty("question");
+        questionSchema.EnumerateObject().Select(property => property.Name)
+            .Should().ContainSingle().Which.Should().Be("$ref");
+    }
+
+    [Fact]
     public async Task NonStreaming_RouterUpstream5xx_ReleasesLeaseAsFailed()
     {
         var router = new StubRouterProxy { Response = new RouterProxyResponse(500, "application/json", """{"error":"upstream"}""") };
@@ -341,10 +404,15 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         public RouterProxyResponse Response { get; set; } =
             new(200, "application/json", """{"id":"chatcmpl-1","choices":[]}""");
 
+        public string? LastRequestJson { get; private set; }
+
         public Task<RouterProxyResponse> SendChatCompletionAsync(
             GatewayRouterLease lease, string requestJson, string requestId,
             string userApiKey, CancellationToken ct)
-            => Task.FromResult(Response);
+        {
+            LastRequestJson = requestJson;
+            return Task.FromResult(Response);
+        }
 
         public Task<RouterStreamSession> BeginStreamChatCompletionAsync(
             GatewayRouterLease lease, string requestJson, string requestId,

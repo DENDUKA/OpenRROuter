@@ -149,45 +149,6 @@
 </div>
 
 <div class="adm-card">
-    <div class="adm-card-header">Test Request</div>
-    <div class="adm-card-body">
-        @if (Model.TestResult != null)
-        {
-            <div class="alert @(Model.TestResult.Success ? "alert-success" : "alert-danger")" role="alert" data-testid="test-result">
-                <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Model.TestResult.Body</pre>
-            </div>
-        }
-        <form method="post" asp-page-handler="Test">
-            <div class="adm-form-row">
-                <div class="form-group">
-                    <label asp-for="TestInput.NodeId" class="form-label">Router Node</label>
-                    <select asp-for="TestInput.NodeId" class="form-control" data-testid="select-test-node">
-                        @foreach (var node in Model.Nodes)
-                        {
-                            <option value="@node.NodeId">@node.Name (@node.Status)</option>
-                        }
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label asp-for="TestInput.Model" class="form-label">Router Model</label>
-                    <select asp-for="TestInput.Model" class="form-control" data-testid="input-model">
-                        <option value="@Model.TestInput.Model">@Model.TestInput.Model</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label asp-for="TestInput.Message" class="form-label">Message</label>
-                <textarea asp-for="TestInput.Message" class="form-control" rows="3"
-                          placeholder="Hello! How are you?" data-testid="input-message"></textarea>
-            </div>
-            <div class="adm-btn-row">
-                <button type="submit" class="btn btn-primary" data-testid="btn-send-test">Send Request</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<div class="adm-card">
     <div class="adm-card-header">Streaming Test Request</div>
     <div class="adm-card-body">
         <form method="post" asp-page-handler="StreamingTest" id="streaming-test-form" data-testid="form-streaming-test">
@@ -317,7 +278,6 @@
 
     (async () => {
         const pairs = [
-            { nodeSelectId: 'TestInput_NodeId', modelSelectId: 'TestInput_Model' },
             { nodeSelectId: 'StreamingTestInput_NodeId', modelSelectId: 'StreamingTestInput_Model' }
         ];
 

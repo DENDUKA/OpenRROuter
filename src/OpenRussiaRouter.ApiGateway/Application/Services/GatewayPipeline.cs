@@ -51,7 +51,8 @@ public sealed class GatewayPipeline(
             return null;
         }
 
-        var balanceResult = await billingProvider.CheckBalanceAndModelAsync(authResult.UserId!, model, cancellationToken);
+        var adminBypassDisabled = authResult.IsAdmin && IsAdminTestHeaderPresent(context);
+        var balanceResult = await billingProvider.CheckBalanceAndModelAsync(authResult.UserId!, model, adminBypassDisabled, cancellationToken);
         if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
         {
             var (errorType, errorMessage) = balanceResult.ErrorCode switch
@@ -89,7 +90,17 @@ public sealed class GatewayPipeline(
             balanceResult.RouterModelId,
             preferredNodeId,
             preferredNodeControlToken,
-            lease);
+            lease,
+            authResult.IsAdmin);
+    }
+
+    private const string AdminTestHeader = "X-ORR-Admin-Test";
+
+    private static bool IsAdminTestHeaderPresent(HttpContext context)
+    {
+        if (!context.Request.Headers.TryGetValue(AdminTestHeader, out var value))
+            return false;
+        return string.Equals(value.ToString().Trim(), "1", StringComparison.Ordinal);
     }
 
     private static (string? NodeId, string? ControlToken) ReadPreferredNode(HttpContext context)

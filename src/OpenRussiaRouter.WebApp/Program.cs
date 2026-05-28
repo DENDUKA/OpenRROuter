@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSeqLogging("webapp");
 
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -115,6 +116,17 @@ builder.Services.AddHttpClient("RouterNode", client =>
     PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30),
 });
 
+builder.Services.AddHttpClient("DirectNodeChat", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(120);
+    client.DefaultRequestVersion = HttpVersion.Version11;
+    client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+}).ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+{
+    ConnectTimeout = TimeSpan.FromSeconds(10),
+    PooledConnectionIdleTimeout = TimeSpan.FromSeconds(60),
+});
+
 builder.Services.AddHttpClient<IOpenRouterCatalogClient, OpenRouterCatalogClient>(c =>
 {
     c.BaseAddress = new Uri("https://openrouter.ai/");
@@ -137,6 +149,7 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapRazorPages();
+app.MapControllers();
 
 app.Run();
 

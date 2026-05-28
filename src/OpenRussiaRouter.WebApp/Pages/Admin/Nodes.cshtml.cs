@@ -15,17 +15,12 @@ public class NodesModel(
     IHttpClientFactory HttpClientFactory,
     ILogger<NodesModel> logger) : PageModelBase
 {
-    private const string PreferredNodeIdHeader = "X-ORR-Preferred-Node-Id";
-    private const string PreferredNodeTokenHeader = "X-ORR-Preferred-Node-Token";
-
     public IReadOnlyList<RouterNodeInfo> Nodes { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? Action => Request.Query["action"];
 
     [BindProperty] public NodeFormInput Form { get; set; } = new();
-    [BindProperty] public TestFormInput TestInput { get; set; } = new();
     [BindProperty] public TestFormInput StreamingTestInput { get; set; } = new();
-    public TestFormResult? TestResult { get; set; }
 
     public async Task OnGetAsync()
     {
@@ -107,66 +102,6 @@ public class NodesModel(
         return new JsonResult(models);
     }
 
-    public async Task<IActionResult> OnPostTestAsync()
-    {
-        await OnGetAsync();
-
-        var node = FindSelectedNode(TestInput.NodeId);
-        if (node is null)
-        {
-            TestResult = new TestFormResult(false, "Selected router node was not found.");
-            return Page();
-        }
-
-        if (string.IsNullOrWhiteSpace(TestInput.Model))
-        {
-            TestResult = new TestFormResult(false, "Model is required.");
-            return Page();
-        }
-
-        if (string.IsNullOrWhiteSpace(node.ControlToken))
-        {
-            TestResult = new TestFormResult(false, "Selected router node has no Control Token saved.");
-            return Page();
-        }
-
-        var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
-        if (string.IsNullOrWhiteSpace(rawKey))
-        {
-            TestResult = new TestFormResult(false,
-                "Нет активных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
-            return Page();
-        }
-
-        try
-        {
-            var requestBody = System.Text.Json.JsonSerializer.Serialize(new
-            {
-                model = TestInput.Model,
-                messages = new[] { new { role = "user", content = TestInput.Message } }
-            });
-
-            var client = HttpClientFactory.CreateClient("ApiGateway");
-            using var request = CreateGatewayTestRequest(node, rawKey, requestBody);
-            using var response = await client.SendAsync(request, HttpContext.RequestAborted);
-            var body = await response.Content.ReadAsStringAsync(HttpContext.RequestAborted);
-
-            var displayBody = response.IsSuccessStatusCode ? body : (TryExtractErrorMessage(body) ?? body);
-            TestResult = new TestFormResult(response.IsSuccessStatusCode, displayBody);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(
-                ex,
-                "Node test request failed. NodeId={NodeId}; Model={Model}",
-                TestInput.NodeId,
-                TestInput.Model);
-            TestResult = new TestFormResult(false, ex.Message);
-        }
-
-        return Page();
-    }
-
     public async Task<IActionResult> OnPostStreamingTestAsync()
     {
         await OnGetAsync();
@@ -198,8 +133,8 @@ public class NodesModel(
                 messages = new[] { new { role = "user", content = StreamingTestInput.Message } }
             });
 
-            var client = HttpClientFactory.CreateClient("ApiGateway");
-            using var request = CreateGatewayTestRequest(node, rawKey, requestBody);
+            var client = HttpClientFactory.CreateClient("DirectNodeChat");
+            using var request = CreateDirectNodeRequest(node, rawKey, requestBody);
             using var response = await client.SendAsync(
                 request,
                 HttpCompletionOption.ResponseHeadersRead,
@@ -264,15 +199,18 @@ public class NodesModel(
     private RouterNodeInfo? FindSelectedNode(string nodeId) =>
         Nodes.FirstOrDefault(node => string.Equals(node.NodeId, nodeId, StringComparison.Ordinal));
 
-    private static HttpRequestMessage CreateGatewayTestRequest(
+    private static HttpRequestMessage CreateDirectNodeRequest(
         RouterNodeInfo node,
         string rawKey,
         string requestBody)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions");
+        if (string.IsNullOrWhiteSpace(node.EndpointUrl))
+            throw new InvalidOperationException("Router node endpoint URL is empty.");
+
+        var baseUri = new Uri(node.EndpointUrl, UriKind.Absolute);
+        var requestUri = new Uri(baseUri, "/v1/chat/completions");
+        var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + rawKey);
-        request.Headers.TryAddWithoutValidation(PreferredNodeIdHeader, node.NodeId);
-        request.Headers.TryAddWithoutValidation(PreferredNodeTokenHeader, node.ControlToken);
         request.Content = new StringContent(requestBody, Encoding.UTF8, "application/json");
         return request;
     }
@@ -340,6 +278,4 @@ public class NodesModel(
         public string Model { get; set; } = "minimax/MiniMax-M2.7";
         public string Message { get; set; } = "";
     }
-
-    public sealed record TestFormResult(bool Success, string Body);
 }

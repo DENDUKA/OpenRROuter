@@ -33,23 +33,26 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
         {
             var apiKey = await _repository.FindActiveApiKeyBySecretHashAsync(hash, ct).ConfigureAwait(false);
             if (apiKey is not null)
-                return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
+            {
+                var user = await _repository.GetUserAsync(apiKey.UserId, ct).ConfigureAwait(false);
+                return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null, user?.Role.ToString());
+            }
         }
 
         if (!_keysByHash.TryGetValue(hash, out var key) || key.Revoked)
             return Invalid();
 
-        return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, key.ApiKeyPrefix, null);
+        return new ValidateApiKeyResult(true, key.UserId, key.ApiKeyId, key.ApiKeyPrefix, null, key.Role);
     }
 
-    public void RegisterRawKey(string rawKey, string userId, string apiKeyId)
+    public void RegisterRawKey(string rawKey, string userId, string apiKeyId, string? role = null)
     {
-        var key = new StoredApiKey(userId, apiKeyId, GetPrefix(rawKey), Revoked: false);
+        var key = new StoredApiKey(userId, apiKeyId, GetPrefix(rawKey), Revoked: false, Role: role);
         _keysByHash[_secretHasher.Hash(rawKey)] = key;
     }
 
     private static ValidateApiKeyResult Invalid() =>
-        new(false, null, null, null, ErrorCodes.InvalidApiKey);
+        new(false, null, null, null, ErrorCodes.InvalidApiKey, null);
 
     private static string GetPrefix(string rawKey) =>
         rawKey[..Math.Min(rawKey.Length, VisiblePrefixLength)];
@@ -61,6 +64,7 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
             var rawKey = section["RawKey"];
             var userId = section["UserId"];
             var apiKeyId = section["ApiKeyId"];
+            var role = section["Role"];
 
             if (string.IsNullOrWhiteSpace(rawKey) ||
                 string.IsNullOrWhiteSpace(userId) ||
@@ -69,9 +73,9 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
                 continue;
             }
 
-            RegisterRawKey(rawKey, userId, apiKeyId);
+            RegisterRawKey(rawKey, userId, apiKeyId, role);
         }
     }
 
-    private sealed record StoredApiKey(string UserId, string ApiKeyId, string ApiKeyPrefix, bool Revoked);
+    private sealed record StoredApiKey(string UserId, string ApiKeyId, string ApiKeyPrefix, bool Revoked, string? Role = null);
 }

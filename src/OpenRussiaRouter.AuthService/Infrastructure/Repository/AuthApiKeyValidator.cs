@@ -20,9 +20,10 @@ public sealed class DapperAuthApiKeyValidator(
             return Invalid();
 
         await repository.MarkApiKeyUsedAsync(apiKey.Id, DateTimeOffset.UtcNow, ct).ConfigureAwait(false);
-        return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null);
+        var user = await repository.GetUserAsync(apiKey.UserId, ct).ConfigureAwait(false);
+        return new ValidateApiKeyResult(true, apiKey.UserId, apiKey.Id, apiKey.Prefix, null, user?.Role.ToString());
     }
 
     private static ValidateApiKeyResult Invalid() =>
-        new(false, null, null, null, ErrorCodes.InvalidApiKey);
+        new(false, null, null, null, ErrorCodes.InvalidApiKey, null);
 }

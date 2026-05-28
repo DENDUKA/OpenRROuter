@@ -29,6 +29,7 @@ message ValidateApiKeyResponse {
   string api_key_id = 3;
   string error_code = 4;
   string api_key_prefix = 5;
+  string role = 6;
 }
 
 message LoginRequest {

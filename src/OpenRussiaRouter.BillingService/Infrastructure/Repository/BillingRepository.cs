@@ -155,6 +155,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 : null;
     }
 
+    public async Task<ModelPrice?> GetModelAsync(string modelId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
+            ModelPriceSelectSql + "where router_model_id = @RouterModelId;",
+            new { RouterModelId = modelId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
+                ? BillingPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
     public async Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();

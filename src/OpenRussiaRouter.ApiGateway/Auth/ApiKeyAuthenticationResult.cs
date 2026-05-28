@@ -5,12 +5,13 @@ public sealed record ApiKeyAuthenticationResult(
     string? UserId,
     string? ApiKeyId,
     string? ApiKeyPrefix,
-    string? ErrorCode)
+    string? ErrorCode,
+    bool IsAdmin = false)
 {
 
-    public static ApiKeyAuthenticationResult Success(string userId, string apiKeyId, string apiKeyPrefix)
+    public static ApiKeyAuthenticationResult Success(string userId, string apiKeyId, string apiKeyPrefix, bool isAdmin = false)
     {
-        return new ApiKeyAuthenticationResult(true, userId, apiKeyId, apiKeyPrefix, null);
+        return new ApiKeyAuthenticationResult(true, userId, apiKeyId, apiKeyPrefix, null, isAdmin);
     }
 
     public static ApiKeyAuthenticationResult Failed(string errorCode)

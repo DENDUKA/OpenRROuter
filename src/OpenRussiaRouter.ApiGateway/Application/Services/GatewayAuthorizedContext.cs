@@ -11,4 +11,5 @@ public sealed record GatewayAuthorizedContext(
     string RouterModelId,
     string? PreferredNodeId,
     string? PreferredNodeControlToken,
-    GatewayRouterLease Lease);
+    GatewayRouterLease Lease,
+    bool IsAdmin = false);

@@ -15,6 +15,8 @@ public interface IBillingRepository
 
     Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default);
 
+    Task<ModelPrice?> GetModelAsync(string modelId, CancellationToken ct = default);
+
     Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListEnabledModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default);
 
     Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListAllModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default);

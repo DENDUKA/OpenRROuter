@@ -20,7 +20,7 @@ public sealed class GrpcBillingService(
         CheckBalanceAndModelRequest request,
         ServerCallContext context)
     {
-        var result = await billing.CheckBalanceAndModelAsync(request.UserId, request.ModelId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var result = await billing.CheckBalanceAndModelAsync(request.UserId, request.ModelId, request.AdminBypassDisabled, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         return new CheckBalanceAndModelResponse
         {

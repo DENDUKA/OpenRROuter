@@ -1,0 +1,175 @@
+@page
+@model Admin.GatewayTestModel
+@{
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Gateway Test - Admin";
+}
+
+<div class="adm-section-head">
+    <h2>Gateway Test</h2>
+    <p>Отправить запрос на <code>/v1/chat/completions</code> через ApiGateway. Доступны все модели каталога, включая отключенные.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert" data-testid="error-message">@Model.ErrorMessage</div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header">Запрос</div>
+    <div class="adm-card-body">
+        <form id="gateway-test-form" method="post" action="/admin/gatewaytest/stream" data-testid="form-gateway-test">
+            @Html.AntiForgeryToken()
+            <div class="form-group">
+                <label for="Form_Model" class="form-label">Model</label>
+                <select id="Form_Model" name="Model" class="form-control" data-testid="input-model">
+                    @foreach (var option in Model.Models)
+                    {
+                        <option value="@option.Value">@option.Label</option>
+                    }
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="Form_Prompt" class="form-label">Prompt</label>
+                <textarea id="Form_Prompt" name="Prompt" class="form-control" rows="6"
+                          placeholder="Напишите запрос к модели..." data-testid="input-prompt"></textarea>
+            </div>
+            <div class="adm-btn-row">
+                <button type="submit" id="gw-test-send" class="btn btn-primary" data-testid="btn-send">Send</button>
+                <button type="button" id="gw-test-clear" class="btn btn-secondary">Clear</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="adm-card" id="gw-test-result-card" style="display: none;">
+    <div class="adm-card-header">Результат</div>
+    <div class="adm-card-body">
+        <div class="adm-form-row">
+            <div class="form-group">
+                <strong>Latency:</strong> <span id="gw-test-latency" data-testid="result-latency">-</span>
+            </div>
+            <div class="form-group">
+                <strong>HTTP:</strong> <span id="gw-test-status" data-testid="result-status">-</span>
+            </div>
+            <div class="form-group">
+                <strong>Tokens:</strong> <span id="gw-test-usage" data-testid="result-usage">-</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Raw SSE / JSON</label>
+            <pre id="gw-test-output" data-testid="result-output"
+                 style="background: #1e1e1e; color: #e0e0e0; padding: 12px; border-radius: 4px; max-height: 480px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: 'Consolas', 'Courier New', monospace; font-size: 12px;"></pre>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById('gateway-test-form');
+        const sendBtn = document.getElementById('gw-test-send');
+        const clearBtn = document.getElementById('gw-test-clear');
+        const resultCard = document.getElementById('gw-test-result-card');
+        const outputEl = document.getElementById('gw-test-output');
+        const latencyEl = document.getElementById('gw-test-latency');
+        const statusEl = document.getElementById('gw-test-status');
+        const usageEl = document.getElementById('gw-test-usage');
+
+        clearBtn.addEventListener('click', function () {
+            outputEl.textContent = '';
+            latencyEl.textContent = '-';
+            statusEl.textContent = '-';
+            usageEl.textContent = '-';
+            resultCard.style.display = 'none';
+        });
+
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            outputEl.textContent = '';
+            latencyEl.textContent = '...';
+            statusEl.textContent = '...';
+            usageEl.textContent = '-';
+            resultCard.style.display = '';
+            sendBtn.disabled = true;
+
+            const startedAt = performance.now();
+            let aggregated = '';
+
+            try {
+                const formData = new FormData(form);
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'text/event-stream' }
+                });
+
+                statusEl.textContent = response.status;
+
+                if (!response.ok) {
+                    const errBody = await response.text();
+                    outputEl.textContent = errBody;
+                    latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
+                    return;
+                }
+
+                if (!response.body) {
+                    outputEl.textContent = '[no response body]';
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder('utf-8');
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    aggregated += chunk;
+                    outputEl.textContent = aggregated;
+                    outputEl.scrollTop = outputEl.scrollHeight;
+                }
+
+                latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
+                parseMetaAndUsage(aggregated);
+            } catch (err) {
+                outputEl.textContent += '\n[error] ' + err.message;
+                latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
+            } finally {
+                sendBtn.disabled = false;
+            }
+        });
+
+        function parseMetaAndUsage(text) {
+            // server-emitted meta event with latency_ms + status
+            const metaMatch = text.match(/event:\s*orr-meta\s*\ndata:\s*(\{[^\n]*\})/);
+            if (metaMatch) {
+                try {
+                    const meta = JSON.parse(metaMatch[1]);
+                    if (typeof meta.latency_ms === 'number') {
+                        latencyEl.textContent = meta.latency_ms + ' ms (server)';
+                    }
+                    if (typeof meta.status === 'number' && meta.status > 0) {
+                        statusEl.textContent = meta.status;
+                    }
+                } catch { /* ignore */ }
+            }
+
+            // usage payload - last SSE data chunk that contains "usage": { ... }
+            let lastUsage = null;
+            const dataMatches = text.matchAll(/^data:\s*(\{.*\})\s*$/gm);
+            for (const m of dataMatches) {
+                try {
+                    const obj = JSON.parse(m[1]);
+                    if (obj && obj.usage && typeof obj.usage === 'object') {
+                        lastUsage = obj.usage;
+                    }
+                } catch { /* ignore non-json */ }
+            }
+            if (lastUsage) {
+                const prompt = lastUsage.prompt_tokens ?? lastUsage.input_tokens ?? '?';
+                const completion = lastUsage.completion_tokens ?? lastUsage.output_tokens ?? '?';
+                const total = lastUsage.total_tokens ?? (Number(prompt) + Number(completion));
+                usageEl.textContent = `prompt=${prompt} | completion=${completion} | total=${total}`;
+            }
+        }
+    })();
+</script>

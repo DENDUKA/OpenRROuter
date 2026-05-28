@@ -28,7 +28,8 @@ public sealed class GrpcAuthService(
             UserId = result.UserId ?? string.Empty,
             ApiKeyId = result.ApiKeyId ?? string.Empty,
             ApiKeyPrefix = result.ApiKeyPrefix ?? string.Empty,
-            ErrorCode = result.ErrorCode ?? string.Empty
+            ErrorCode = result.ErrorCode ?? string.Empty,
+            Role = result.Role ?? string.Empty
         };
     }
 

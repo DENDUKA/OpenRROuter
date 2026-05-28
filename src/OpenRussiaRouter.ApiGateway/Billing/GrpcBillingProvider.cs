@@ -28,6 +28,7 @@ public sealed class GrpcBillingProvider(
     public async Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(
         string userId,
         string modelId,
+        bool adminBypassDisabled,
         CancellationToken cancellationToken)
     {
         try
@@ -36,7 +37,8 @@ public sealed class GrpcBillingProvider(
                 new CheckBalanceAndModelRequest
                 {
                     UserId = userId,
-                    ModelId = modelId
+                    ModelId = modelId,
+                    AdminBypassDisabled = adminBypassDisabled
                 },
                 cancellationToken: cancellationToken);
 

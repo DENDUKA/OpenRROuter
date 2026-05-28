@@ -362,8 +362,13 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         public Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken ct)
             => Task.FromResult(PublicModels ?? (IReadOnlyCollection<GatewayPublicModel>)Array.Empty<GatewayPublicModel>());
 
-        public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, CancellationToken ct)
-            => Task.FromResult(CheckResult);
+        public bool LastAdminBypassDisabled { get; private set; }
+
+        public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassDisabled, CancellationToken ct)
+        {
+            LastAdminBypassDisabled = adminBypassDisabled;
+            return Task.FromResult(CheckResult);
+        }
 
         public Task<bool> RecordUsageAsync(GatewayUsageEvent ev, CancellationToken ct)
         {

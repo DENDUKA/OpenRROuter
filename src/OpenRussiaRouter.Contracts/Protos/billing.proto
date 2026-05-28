@@ -23,6 +23,7 @@ service BillingService {
 message CheckBalanceAndModelRequest {
   string user_id = 1;
   string model_id = 2;
+  bool admin_bypass_disabled = 3;
 }
 
 message CheckBalanceAndModelResponse {

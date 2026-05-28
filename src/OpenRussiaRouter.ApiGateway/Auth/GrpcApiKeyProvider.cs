@@ -35,7 +35,8 @@ public sealed class GrpcApiKeyProvider(
                         : response.ErrorCode);
             }
 
-            return ApiKeyAuthenticationResult.Success(response.UserId, response.ApiKeyId, response.ApiKeyPrefix);
+            var isAdmin = string.Equals(response.Role, "Admin", StringComparison.OrdinalIgnoreCase);
+            return ApiKeyAuthenticationResult.Success(response.UserId, response.ApiKeyId, response.ApiKeyPrefix, isAdmin);
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

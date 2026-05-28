@@ -5,7 +5,8 @@ public sealed record ValidateApiKeyResult(
     string? UserId,
     string? ApiKeyId,
     string? ApiKeyPrefix,
-    string? ErrorCode);
+    string? ErrorCode,
+    string? Role = null);
 
 public sealed record ApiKeySummary(
     string Id,

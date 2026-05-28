@@ -244,4 +244,85 @@ public sealed class GeminiSchemaPatcherTests
         optionSchema.GetProperty("properties").GetProperty("label").GetProperty("type").GetString()
             .Should().Be("string");
     }
+
+    [Fact]
+    public void SanitizeIfGeminiModel_RemovesUnresolvedRefsInTools()
+    {
+        const string request = """
+        {
+          "model": "gemini-test",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "ask",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "option": {
+                      "$ref": "#/$defs/QuestionOption",
+                      "anyOf": [
+                        { "type": "object" }
+                      ],
+                      "description": "Option"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+
+        using var document = JsonDocument.Parse(result);
+        var optionSchema = document.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("parameters")
+            .GetProperty("properties")
+            .GetProperty("option");
+
+        optionSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        optionSchema.GetProperty("description").GetString().Should().Be("Option");
+        optionSchema.GetProperty("anyOf")[0].GetProperty("type").GetString().Should().Be("object");
+    }
+
+    [Fact]
+    public void SanitizeIfGeminiModel_DoesNotTreatPropertyNamedRefAsSchemaReference()
+    {
+        const string request = """
+        {
+          "model": "gemini-test",
+          "tools": [
+            {
+              "type": "function",
+              "function": {
+                "name": "ask",
+                "parameters": {
+                  "type": "object",
+                  "properties": {
+                    "ref": { "type": "string" }
+                  }
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+
+        using var document = JsonDocument.Parse(result);
+        document.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("function")
+            .GetProperty("parameters")
+            .GetProperty("properties")
+            .GetProperty("ref")
+            .GetProperty("type")
+            .GetString()
+            .Should().Be("string");
+    }
 }

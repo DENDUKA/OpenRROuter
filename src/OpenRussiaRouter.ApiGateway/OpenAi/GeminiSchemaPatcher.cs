@@ -64,8 +64,46 @@ public static class GeminiSchemaPatcher
 
         var changed = SanitizeSchemaNode(node, branchDefinitions, new HashSet<string>(StringComparer.Ordinal), depth: 0);
         changed |= RemoveDefinitionBags(node);
+        changed |= RemoveRemainingRefs(node);
 
         return changed;
+    }
+
+    private static bool RemoveRemainingRefs(JsonNode? node)
+    {
+        if (node is JsonObject obj)
+        {
+            var changed = false;
+            var refKey = FindRefKey(obj);
+            if (refKey is not null)
+            {
+                obj.Remove(refKey);
+                changed = true;
+
+                if (obj.Count == 0)
+                    obj["type"] = "object";
+            }
+
+            foreach (var child in obj.ToList())
+            {
+                changed |= RemoveRemainingRefs(child.Value);
+            }
+
+            return changed;
+        }
+
+        if (node is JsonArray array)
+        {
+            var changed = false;
+            foreach (var item in array)
+            {
+                changed |= RemoveRemainingRefs(item);
+            }
+
+            return changed;
+        }
+
+        return false;
     }
 
     private static bool RemoveDefinitionBags(JsonNode? node)
@@ -199,11 +237,7 @@ public static class GeminiSchemaPatcher
     {
         if (node is JsonObject obj)
         {
-            var refKey = obj.ContainsKey("$ref")
-                ? "$ref"
-                : obj.ContainsKey("ref")
-                    ? "ref"
-                    : null;
+            var refKey = FindRefKey(obj);
 
             if (refKey is not null)
                 return InlineRef(obj, refKey, definitions, resolving, depth);
@@ -280,7 +314,20 @@ public static class GeminiSchemaPatcher
 
     private static string? ReadRefName(JsonNode? node)
     {
-        var value = node?.GetValue<string>();
+        string? value;
+        try
+        {
+            value = node?.GetValue<string>();
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
         if (string.IsNullOrWhiteSpace(value))
             return null;
 
@@ -288,5 +335,16 @@ public static class GeminiSchemaPatcher
         var name = segments.Length == 0 ? value : segments[^1];
 
         return name.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
+    }
+
+    private static string? FindRefKey(JsonObject obj)
+    {
+        if (obj.ContainsKey("$ref") && ReadRefName(obj["$ref"]) is not null)
+            return "$ref";
+
+        if (obj.ContainsKey("ref") && ReadRefName(obj["ref"]) is not null)
+            return "ref";
+
+        return null;
     }
 }

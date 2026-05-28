@@ -4,6 +4,16 @@ namespace OpenRussiaRouter.ApiGateway.OpenAi;
 
 public static class GeminiSchemaPatcher
 {
+    private static readonly HashSet<string> SchemaPropertyNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "parameters",
+        "schema",
+        "input_schema",
+        "inputSchema",
+        "parameters_json_schema",
+        "parametersJsonSchema"
+    };
+
     public static string SanitizeIfGeminiModel(string requestJson, string routerModelId)
     {
         if (!IsGeminiModel(routerModelId))
@@ -32,35 +42,42 @@ public static class GeminiSchemaPatcher
     {
         var changed = false;
 
-        if (request["tools"] is JsonArray tools)
-        {
-            foreach (var tool in tools.OfType<JsonObject>())
-            {
-                if (tool["function"] is JsonObject function &&
-                    function["parameters"] is JsonNode parameters)
-                {
-                    changed |= SanitizeSchemaRoot(parameters);
-                }
-            }
-        }
-
-        if (request["functions"] is JsonArray functions)
-        {
-            foreach (var function in functions.OfType<JsonObject>())
-            {
-                if (function["parameters"] is JsonNode parameters)
-                    changed |= SanitizeSchemaRoot(parameters);
-            }
-        }
-
-        if (request["response_format"] is JsonObject responseFormat &&
-            responseFormat["json_schema"] is JsonObject jsonSchema &&
-            jsonSchema["schema"] is JsonNode responseSchema)
-        {
-            changed |= SanitizeSchemaRoot(responseSchema);
-        }
+        changed |= SanitizeSchemaRootsByName(request);
 
         return changed;
+    }
+
+    private static bool SanitizeSchemaRootsByName(JsonNode? node)
+    {
+        if (node is JsonObject obj)
+        {
+            var changed = false;
+
+            foreach (var property in obj.ToList())
+            {
+                if (property.Value is null)
+                    continue;
+
+                changed |= SchemaPropertyNames.Contains(property.Key)
+                    ? SanitizeSchemaRoot(property.Value)
+                    : SanitizeSchemaRootsByName(property.Value);
+            }
+
+            return changed;
+        }
+
+        if (node is JsonArray array)
+        {
+            var changed = false;
+            foreach (var item in array)
+            {
+                changed |= SanitizeSchemaRootsByName(item);
+            }
+
+            return changed;
+        }
+
+        return false;
     }
 
     private static bool SanitizeSchemaRoot(JsonNode schema)
@@ -73,6 +90,7 @@ public static class GeminiSchemaPatcher
 
         changed |= root.Remove("$defs");
         changed |= root.Remove("defs");
+        changed |= root.Remove("definitions");
 
         return changed;
     }
@@ -90,10 +108,11 @@ public static class GeminiSchemaPatcher
         {
             AddDefinitions(obj["$defs"], definitions);
             AddDefinitions(obj["defs"], definitions);
+            AddDefinitions(obj["definitions"], definitions);
 
             foreach (var child in obj)
             {
-                if (child.Key is "$defs" or "defs")
+                if (child.Key is "$defs" or "defs" or "definitions")
                     continue;
 
                 CollectDefinitions(child.Value, definitions);

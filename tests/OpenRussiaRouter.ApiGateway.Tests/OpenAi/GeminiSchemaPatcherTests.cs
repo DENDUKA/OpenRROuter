@@ -129,4 +129,71 @@ public sealed class GeminiSchemaPatcherTests
         answerSchema.GetProperty("properties").GetProperty("text").GetProperty("type").GetString()
             .Should().Be("string");
     }
+
+    [Fact]
+    public void SanitizeIfGeminiModel_InlinesNestedRefsFromDefinitions()
+    {
+        const string request = """
+        {
+          "model": "gemini-test",
+          "tools": [
+            {
+              "name": "ask_question",
+              "input_schema": {
+                "type": "object",
+                "properties": {
+                  "prompt": {
+                    "$ref": "#/definitions/QuestionPrompt",
+                    "description": "Prompt"
+                  }
+                },
+                "definitions": {
+                  "QuestionPrompt": {
+                    "type": "object",
+                    "properties": {
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/definitions/QuestionOption",
+                          "description": "Option"
+                        }
+                      }
+                    }
+                  },
+                  "QuestionOption": {
+                    "type": "object",
+                    "properties": {
+                      "label": { "type": "string" },
+                      "value": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+        """;
+
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+
+        using var document = JsonDocument.Parse(result);
+        var inputSchema = document.RootElement
+            .GetProperty("tools")[0]
+            .GetProperty("input_schema");
+        var promptSchema = inputSchema
+            .GetProperty("properties")
+            .GetProperty("prompt");
+        var optionSchema = promptSchema
+            .GetProperty("properties")
+            .GetProperty("options")
+            .GetProperty("items");
+
+        inputSchema.TryGetProperty("definitions", out _).Should().BeFalse();
+        promptSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        promptSchema.GetProperty("description").GetString().Should().Be("Prompt");
+        optionSchema.TryGetProperty("$ref", out _).Should().BeFalse();
+        optionSchema.GetProperty("description").GetString().Should().Be("Option");
+        optionSchema.GetProperty("properties").GetProperty("label").GetProperty("type").GetString()
+            .Should().Be("string");
+    }
 }

@@ -18,6 +18,9 @@ service BillingService {
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
   rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
+  rpc ListTags (ListTagsRequest) returns (ListTagsResponse);
+  rpc UpsertTag (UpsertTagRequest) returns (UpsertTagResponse);
+  rpc DeleteTag (DeleteTagRequest) returns (DeleteTagResponse);
 }
 
 message CheckBalanceAndModelRequest {
@@ -74,6 +77,7 @@ message PublicModel {
   int32  context_length = 6;
   string modalities = 7;
   string description = 8;
+  repeated string tag_ids = 9;
 }
 
 message ListPublicModelsResponse {
@@ -120,6 +124,7 @@ message UpsertModelPriceRequest {
   int32  context_length = 10;
   string modalities = 11;
   string description_source = 12;
+  repeated string tag_ids = 13;
 }
 
 message UpsertModelPriceResponse {
@@ -147,6 +152,7 @@ message ModelDetail {
   int32  context_length = 10;
   string modalities = 11;
   string description_source = 12;
+  repeated string tag_ids = 13;
 }
 
 message ListModelsResponse {
@@ -296,4 +302,38 @@ message AdminRequestRecord {
 message ListAdminRequestsResponse {
   repeated AdminRequestRecord records = 1;
   string next_cursor = 2;
+}
+
+message Tag {
+  string id = 1;
+  string display_name = 2;
+  string color = 3;
+}
+
+message ListTagsRequest {
+}
+
+message ListTagsResponse {
+  repeated Tag tags = 1;
+}
+
+message UpsertTagRequest {
+  string id = 1;
+  string display_name = 2;
+  string color = 3;
+}
+
+message UpsertTagResponse {
+  bool upserted = 1;
+  string id = 2;
+  string error_code = 3;
+}
+
+message DeleteTagRequest {
+  string id = 1;
+}
+
+message DeleteTagResponse {
+  bool deleted = 1;
+  string error_code = 2;
 }

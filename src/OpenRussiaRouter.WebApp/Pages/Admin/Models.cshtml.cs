@@ -17,6 +17,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     public IReadOnlyList<ModelInfo> Models { get; set; } = [];
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
+    public IReadOnlyList<TagInfo> AvailableTags { get; set; } = [];
+    public Dictionary<string, TagInfo> TagsById { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
     public IReadOnlyList<string> WarningMessages { get; set; } = [];
@@ -60,7 +62,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         Enabled = m.Enabled,
                         Description = m.Description,
                         ContextLength = m.ContextLength,
-                        Modalities = m.Modalities
+                        Modalities = m.Modalities,
+                        TagIds = m.TagIds?.ToList() ?? []
                     };
             }
             catch (Exception ex)
@@ -71,11 +74,11 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         if (ShowForm)
         {
-            await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+            await LoadFormData();
         }
         else
         {
-            await LoadModels();
+            await Task.WhenAll(LoadModels(), LoadTags());
         }
     }
 
@@ -117,7 +120,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
                 ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
                 Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
-                DescriptionSource: DetermineSource(orig, Form));
+                DescriptionSource: DetermineSource(orig, Form),
+                TagIds: Form.TagIds);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -226,7 +230,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     private async Task LoadFormData()
     {
-        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels());
+        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels(), LoadTags());
     }
 
     private async Task LoadModels()
@@ -250,6 +254,19 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         AvailableNodeModels = await _controlPlaneClient.ListAvailableNodeModelsAsync();
     }
 
+    private async Task LoadTags()
+    {
+        try
+        {
+            AvailableTags = await _billingClient.ListTagsAsync();
+            TagsById = AvailableTags.ToDictionary(t => t.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load tags.");
+        }
+    }
+
     public class ModelFormInput
     {
         [Required]
@@ -271,5 +288,6 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? Description { get; set; }
         public int? ContextLength { get; set; }
         public string? Modalities { get; set; }
+        public List<string> TagIds { get; set; } = [];
     }
 }

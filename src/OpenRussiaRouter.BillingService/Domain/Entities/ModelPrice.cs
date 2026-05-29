@@ -12,5 +12,6 @@ public sealed record ModelPrice(
     string? Description = null,
     int? ContextLength = null,
     string? Modalities = null,
-    string? DescriptionSource = null);
+    string? DescriptionSource = null,
+    IReadOnlyList<string>? TagIds = null);
 

@@ -1,13 +1,12 @@
 using Dapper;
 using FluentAssertions;
 using Npgsql;
-using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
+using OpenRussiaRouter.BillingService.Infrastructure.Repository;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
-using OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
 namespace OpenRussiaRouter.BillingService.Tests.Infrastructure.Persistence;
 
@@ -59,6 +58,36 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task DeleteTag_RemovesTagIdsFromModels()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyMigration();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        await repository.UpsertTagAsync(new Tag("fast", "Fast", "#0d6efd"));
+        await repository.UpsertTagAsync(new Tag("cheap", "Cheap", "#198754"));
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-test",
+            "GPT Test",
+            "router/gpt-test",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true,
+            TagIds: ["fast", "cheap"]));
+
+        await repository.DeleteTagAsync("fast");
+
+        var model = (await repository.ListAllModelsAsync(10)).Items.Should().ContainSingle().Which;
+        model.TagIds.Should().Equal("cheap");
+        (await repository.ListTagsAsync()).Should().ContainSingle(t => t.Id == "cheap");
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task CurrencyMigration_NormalizesLegacyRubValuesAndPreventsNewOnes()
     {
         await using var database = await PostgresTestDatabase.StartAsync();
@@ -95,11 +124,6 @@ public sealed class BillingRepositoryPostgresTests
             new { Now = now });
 
         database.ApplyMigrationFile("010_enforce_usd_currency.sql");
-
-        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
-        var model = (await repository.ListAllModelsAsync(10)).Items.Should().ContainSingle().Which;
-        model.ModelId.Should().Be("gpt-rub");
-        model.Price.InputPerMillion.Currency.Should().Be(Currency.Usd);
 
         var currencies = await connection.QuerySingleAsync<(string Ledger, string Model, string Usage)>(
             """

@@ -30,4 +30,6 @@ public sealed class ModelPriceEntity
     public string? Modalities { get; set; }
 
     public string? DescriptionSource { get; set; }
+
+    public string[] TagIds { get; set; } = [];
 }

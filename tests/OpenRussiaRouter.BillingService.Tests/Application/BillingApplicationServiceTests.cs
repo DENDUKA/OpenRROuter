@@ -204,6 +204,44 @@ public sealed class BillingApplicationServiceTests
         topUps.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task UpsertTag_InvalidId_Throws()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.UpsertTagAsync(new Tag("bad tag", "Bad Tag", "#0d6efd"));
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task UpsertTag_TrimsAndStoresTag()
+    {
+        var service = CreateService();
+
+        await service.UpsertTagAsync(new Tag(" fast ", " Fast ", " #0d6efd "));
+
+        var tag = (await service.ListTagsAsync()).Should().ContainSingle().Which;
+        tag.Id.Should().Be("fast");
+        tag.DisplayName.Should().Be("Fast");
+        tag.Color.Should().Be("#0d6efd");
+    }
+
+    [Fact]
+    public async Task DeleteTag_RemovesTagFromModels()
+    {
+        var service = CreateService();
+        await service.UpsertTagAsync(new Tag("fast", "Fast", "#0d6efd"));
+        await service.UpsertTagAsync(new Tag("cheap", "Cheap", "#198754"));
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: true) with { TagIds = ["fast", "cheap"] });
+
+        await service.DeleteTagAsync("fast");
+
+        var model = (await service.ListAllModelsAsync()).Should().ContainSingle().Which;
+        model.TagIds.Should().Equal("cheap");
+        (await service.ListTagsAsync()).Should().ContainSingle(t => t.Id == "cheap");
+    }
+
     private static BillingApplicationService CreateService()
     {
         return new BillingApplicationService(

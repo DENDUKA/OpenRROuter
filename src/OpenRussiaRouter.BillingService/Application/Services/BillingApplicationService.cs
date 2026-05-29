@@ -1,5 +1,6 @@
-using Microsoft.Extensions.Options;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Common;
@@ -215,7 +216,7 @@ public sealed class BillingApplicationService(
     }
 
     public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
-        int pageSize,
+        int limit,
         string? afterCursor = null,
         string? modelFilter = null,
         string? providerFilter = null,
@@ -223,9 +224,37 @@ public sealed class BillingApplicationService(
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default)
     {
-        var limit = pageSize > 0 ? pageSize : paginationOptions.Value.EffectivePageSize;
         return await repository.GetAdminUsageRecordsAsync(limit, afterCursor, modelFilter, providerFilter, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
+
+    public Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default)
+        => repository.ListTagsAsync(ct);
+
+    public Task UpsertTagAsync(Tag tag, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+
+        var id = Preconditions.RequireValue(tag.Id, nameof(tag.Id));
+        var displayName = Preconditions.RequireValue(tag.DisplayName, nameof(tag.DisplayName));
+        var color = string.IsNullOrWhiteSpace(tag.Color) ? null : tag.Color.Trim();
+
+        if (!TagIdPattern.IsMatch(id))
+            throw new ArgumentException("Tag ID must be alphanumeric with dashes, underscores, dots or slashes.", nameof(tag.Id));
+
+        if (id.Length > 50)
+            throw new ArgumentException("Tag ID cannot be longer than 50 characters.", nameof(tag.Id));
+
+        if (displayName.Length > 100)
+            throw new ArgumentException("Tag display name cannot be longer than 100 characters.", nameof(tag.DisplayName));
+
+        if (color is not null && !HexColorPattern.IsMatch(color))
+            throw new ArgumentException("Tag color must be a hex color starting with #.", nameof(tag.Color));
+
+        return repository.UpsertTagAsync(tag with { Id = id, DisplayName = displayName, Color = color }, ct);
+    }
+
+    public Task DeleteTagAsync(string id, CancellationToken ct = default)
+        => repository.DeleteTagAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
     private static void ValidatePositiveUsd(MoneyAmount amount, string name)
     {
@@ -240,4 +269,7 @@ public sealed class BillingApplicationService(
     {
         await repository.AddAnomalyAsync(new BillingAnomaly(Guid.NewGuid().ToString("N"), requestId, type, message, nowUtc), ct).ConfigureAwait(false);
     }
+
+    private static readonly Regex TagIdPattern = new(@"^[a-zA-Z0-9_\-./]+$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static readonly Regex HexColorPattern = new(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 }

@@ -87,13 +87,15 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model_id, display_name, router_model_id, price_version,
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
-                description, context_length, modalities, description_source
+                description, context_length, modalities, description_source,
+                tag_ids
             )
             values (
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
-                @Description, @ContextLength, @Modalities, @DescriptionSource
+                @Description, @ContextLength, @Modalities, @DescriptionSource,
+                @TagIds
             )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
@@ -104,6 +106,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 cache_per_million_amount = excluded.cache_per_million_amount,
                 currency = excluded.currency,
                 enabled = excluded.enabled,
+                tag_ids = excluded.tag_ids,
                 description = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description
@@ -139,7 +142,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model.Description,
                 model.ContextLength,
                 model.Modalities,
-                model.DescriptionSource
+                model.DescriptionSource,
+                TagIds = model.TagIds?.ToArray() ?? []
             },
             cancellationToken: ct)).ConfigureAwait(false);
     }
@@ -595,6 +599,54 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
+    public async Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return (await connection.QueryAsync<TagEntity>(new CommandDefinition(
+            """
+            select
+                id as Id,
+                display_name as DisplayName,
+                color as Color
+            from billing.tags
+            order by display_name;
+            """,
+            cancellationToken: ct)).ConfigureAwait(false))
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+    }
+
+    public async Task UpsertTagAsync(Tag tag, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into billing.tags (id, display_name, color)
+            values (@Id, @DisplayName, @Color)
+            on conflict (id) do update set
+                display_name = excluded.display_name,
+                color = excluded.color;
+            """,
+            new { tag.Id, tag.DisplayName, tag.Color },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task DeleteTagAsync(string id, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update billing.model_prices
+            set tag_ids = array_remove(tag_ids, @Id)
+            where tag_ids @> array[@Id]::text[];
+
+            delete from billing.tags where id = @Id;
+            """,
+            new { Id = id },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
     private const string LedgerEntrySelectSql = """
         select
             id as Id,
@@ -623,7 +675,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             description as Description,
             context_length as ContextLength,
             modalities as Modalities,
-            description_source as DescriptionSource
+            description_source as DescriptionSource,
+            tag_ids as TagIds
         from billing.model_prices
 
         """;

@@ -241,15 +241,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default)
     {
-        var costByRequest = _usageByRequestId.Values
-            .ToDictionary(u => u.RequestId, u => u.Cost, StringComparer.Ordinal);
-        var userByRequest = _usageByRequestId.Values
-            .ToDictionary(u => u.RequestId, u => u.UserId, StringComparer.Ordinal);
-
         var query = _activityByRequestId.Values.AsEnumerable();
 
-        if (afterCursor is not null && DateTimeOffset.TryParse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind, out var cursor))
-            query = query.Where(a => a.CreatedAtUtc < cursor);
         if (!string.IsNullOrEmpty(modelFilter))
             query = query.Where(a => a.ModelId == modelFilter);
         if (!string.IsNullOrEmpty(providerFilter))
@@ -259,27 +252,70 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         if (toUtc.HasValue)
             query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
 
-        var items = query
-            .OrderByDescending(a => a.CreatedAtUtc)
-            .ThenByDescending(a => a.RequestId)
-            .Take(limit + 1)
-            .Select(a => new AdminRequestRecord(
+        query = query.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.RequestId);
+
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            var cursorTime = DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind);
+            query = query.Where(a => a.CreatedAtUtc < cursorTime);
+        }
+
+        var results = query.Take(limit + 1).ToList();
+        var hasMore = results.Count > limit;
+        if (hasMore) results.RemoveAt(limit);
+
+        var adminRecords = results.Select(a =>
+        {
+            _usageByRequestId.TryGetValue(a.RequestId, out var usage);
+            return new AdminRequestRecord(
                 a.RequestId,
-                userByRequest.GetValueOrDefault(a.RequestId, ""),
+                usage?.UserId ?? string.Empty,
                 a.ApiKeyPrefix,
                 a.ModelId,
                 a.RouterNodeId,
                 a.ProviderName,
                 a.ProviderAccount,
                 a.Usage,
-                costByRequest.GetValueOrDefault(a.RequestId, MoneyAmount.Usd(0)),
+                usage?.Cost ?? MoneyAmount.Usd(0),
                 a.Status,
                 a.CreatedAtUtc,
-                a.CompletedAtUtc))
-            .ToArray();
+                a.CompletedAtUtc);
+        }).ToArray();
 
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return Task.FromResult<(IReadOnlyCollection<AdminRequestRecord>, bool)>((items, hasMore));
+        return Task.FromResult(((IReadOnlyCollection<AdminRequestRecord>)adminRecords, hasMore));
+    }
+
+    private readonly Dictionary<string, Tag> _tags = new(StringComparer.Ordinal);
+
+    public Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default)
+    {
+        IReadOnlyCollection<Tag> tags = _tags.Values.OrderBy(t => t.DisplayName, StringComparer.Ordinal).ToList();
+        return Task.FromResult(tags);
+    }
+
+    public Task UpsertTagAsync(Tag tag, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(tag);
+        _tags[tag.Id] = tag;
+        return Task.CompletedTask;
+    }
+
+    public Task DeleteTagAsync(string id, CancellationToken ct = default)
+    {
+        _tags.Remove(id);
+        foreach (var model in _models.Values)
+        {
+            if (model.TagIds?.Contains(id, StringComparer.Ordinal) != true)
+            {
+                continue;
+            }
+
+            _models[model.ModelId] = model with
+            {
+                TagIds = model.TagIds.Where(tagId => !string.Equals(tagId, id, StringComparison.Ordinal)).ToArray()
+            };
+        }
+
+        return Task.CompletedTask;
     }
 }

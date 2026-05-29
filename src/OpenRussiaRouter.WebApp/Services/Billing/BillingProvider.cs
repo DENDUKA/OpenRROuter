@@ -186,7 +186,8 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             true,
             Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
-            Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities)).ToList();
+            Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
+            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -204,27 +205,33 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
             Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
-            DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource)).ToList();
+            DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
+            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
     {
-        var response = await client.UpsertModelPriceAsync(
-            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertModelPriceRequest
-            {
-                ModelId = model.Id,
-                DisplayName = model.DisplayName,
-                UpstreamModelId = model.UpstreamModelId,
-                PriceVersion = model.PriceVersion,
-                InputPricePer1MUsd = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                OutputPricePer1MUsd = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                CachePricePer1MUsd = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                Enabled = model.Enabled,
-                Description = model.Description ?? string.Empty,
-                ContextLength = model.ContextLength ?? 0,
-                Modalities = model.Modalities ?? string.Empty,
-                DescriptionSource = model.DescriptionSource ?? string.Empty,
-            }, cancellationToken: cancellationToken);
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertModelPriceRequest
+        {
+            ModelId = model.Id,
+            DisplayName = model.DisplayName,
+            UpstreamModelId = model.UpstreamModelId,
+            PriceVersion = model.PriceVersion,
+            InputPricePer1MUsd = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            OutputPricePer1MUsd = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            CachePricePer1MUsd = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Enabled = model.Enabled,
+            Description = model.Description ?? string.Empty,
+            ContextLength = model.ContextLength ?? 0,
+            Modalities = model.Modalities ?? string.Empty,
+            DescriptionSource = model.DescriptionSource ?? string.Empty
+        };
+        if (model.TagIds != null)
+        {
+            request.TagIds.AddRange(model.TagIds);
+        }
+
+        var response = await client.UpsertModelPriceAsync(request, cancellationToken: cancellationToken);
         if (!response.Upserted)
         {
             throw new BillingException(response.ErrorCode);
@@ -280,5 +287,37 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
 
         return (items, response.Records.Count >= pageSize && !string.IsNullOrEmpty(response.NextCursor),
             string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+    }
+
+    public async Task<IReadOnlyList<TagInfo>> ListTagsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await client.ListTagsAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListTagsRequest(), cancellationToken: cancellationToken);
+        return response.Tags.Select(t => new TagInfo(
+            t.Id,
+            t.DisplayName,
+            string.IsNullOrEmpty(t.Color) ? null : t.Color)).ToList();
+    }
+
+    public async Task UpsertTagAsync(TagInfo tag, CancellationToken cancellationToken = default)
+    {
+        var response = await client.UpsertTagAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertTagRequest
+        {
+            Id = tag.Id,
+            DisplayName = tag.DisplayName,
+            Color = tag.Color ?? string.Empty
+        }, cancellationToken: cancellationToken);
+        if (!response.Upserted)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+    }
+
+    public async Task DeleteTagAsync(string id, CancellationToken cancellationToken = default)
+    {
+        var response = await client.DeleteTagAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.DeleteTagRequest { Id = id }, cancellationToken: cancellationToken);
+        if (!response.Deleted)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
     }
 }

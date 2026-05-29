@@ -57,4 +57,8 @@ public interface IBillingRepository
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default);
+
+    Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default);
+    Task UpsertTagAsync(Tag tag, CancellationToken ct = default);
+    Task DeleteTagAsync(string id, CancellationToken ct = default);
 }

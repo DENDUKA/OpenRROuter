@@ -1,0 +1,112 @@
+@page
+@model Admin.TagsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Tags - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Tags</h2>
+    <p>Manage model tags.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+@if (Model.ShowForm)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">@(Model.IsAdd ? "Add Tag" : $"Edit Tag: {Model.Form.Id}")</div>
+        <div class="adm-card-body">
+            <div asp-validation-summary="ModelOnly" class="validation-message"></div>
+            <form method="post" asp-page-handler="Save">
+                <input type="hidden" name="isNew" value="@(Model.IsAdd ? "true" : "false")" />
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Id" class="form-label">Tag ID</label>
+                        @if (Model.IsAdd)
+                        {
+                            <input asp-for="Form.Id" class="form-control" />
+                        }
+                        else
+                        {
+                            <input asp-for="Form.Id" class="form-control" readonly />
+                        }
+                        <span asp-validation-for="Form.Id" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.DisplayName" class="form-label">Display Name</label>
+                        <input asp-for="Form.DisplayName" class="form-control" />
+                        <span asp-validation-for="Form.DisplayName" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.Color" class="form-label">Color (Hex or valid CSS)</label>
+                        <input asp-for="Form.Color" class="form-control" placeholder="#e.g. 0d6efd" />
+                        <span asp-validation-for="Form.Color" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-secondary" href="/admin/tags">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Tags List</span>
+        <div class="adm-btn-row">
+            <a class="btn btn-sm btn-primary" href="?action=add">Add Tag</a>
+        </div>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Tags.Count == 0)
+        {
+            <p class="text-muted">No tags configured.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>Tag ID</th><th>Display Name</th><th>Color</th><th>Preview</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var t in Model.Tags)
+                    {
+                        <tr>
+                            <td><code>@t.Id</code></td>
+                            <td>@t.DisplayName</td>
+                            <td><code>@t.Color</code></td>
+                            <td>
+                                <span class="badge" style="background-color: @(t.Color ?? "#6c757d"); color: white;">@t.DisplayName</span>
+                            </td>
+                            <td class="adm-actions-cell">
+                                <a class="btn-icon" title="Edit" aria-label="Edit"
+                                   href="?action=edit&id=@Uri.EscapeDataString(t.Id)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </a>
+                                <form method="post" asp-page-handler="Delete" style="display:inline" onsubmit="return confirm('Are you sure you want to delete tag @t.Id?');">
+                                    <input type="hidden" name="id" value="@t.Id" />
+                                    <button type="submit" class="btn-icon" title="Delete" aria-label="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

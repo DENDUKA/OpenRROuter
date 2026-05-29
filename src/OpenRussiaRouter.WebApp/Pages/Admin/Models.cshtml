@@ -120,6 +120,21 @@
                     </div>
                 </div>
                 <div class="adm-form-row">
+                    <div class="form-group" style="grid-column: span 3">
+                        <label class="form-label">Tags</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
+                            @foreach (var tag in Model.AvailableTags)
+                            {
+                                var isChecked = Model.Form.TagIds.Contains(tag.Id);
+                                <label style="display:flex; align-items:center; gap:0.25rem; font-weight:normal;">
+                                    <input type="checkbox" name="Form.TagIds" value="@tag.Id" @(isChecked ? "checked" : "") />
+                                    @tag.DisplayName
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-form-row">
                     <div class="form-group">
                         <label class="form-label">
                             <input asp-for="Form.Enabled" type="checkbox" />
@@ -157,7 +172,7 @@
             <table class="table">
                 <thead><tr>
                     <th>Model ID</th><th>Display Name</th><th>Router Model</th>
-                    <th>Input / Output / Cache per 1M</th><th>Status</th><th>Source</th><th>Actions</th>
+                    <th>Input / Output / Cache per 1M</th><th>Tags</th><th>Status</th><th>Source</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                     @foreach (var m in Model.Models)
@@ -167,6 +182,22 @@
                             <td>@m.DisplayName</td>
                             <td><code>@m.UpstreamModelId</code></td>
                             <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</td>
+                            <td>
+                                @if (m.TagIds != null && m.TagIds.Count > 0)
+                                {
+                                    <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">
+                                        @foreach(var tid in m.TagIds)
+                                        {
+                                            Model.TagsById.TryGetValue(tid, out var t);
+                                            <span class="badge" style="background-color: @(t?.Color ?? "#6c757d"); color: white;">@(t?.DisplayName ?? tid)</span>
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted" style="font-size:12px">&mdash;</span>
+                                }
+                            </td>
                             <td>
                                 <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
                                     @(m.Enabled ? "Enabled" : "Disabled")

@@ -48,7 +48,7 @@ public sealed class GrpcBillingService(
             {
                 pricesByRouterId.TryGetValue(model.Id, out var price);
 
-                return new Contracts.Grpc.Billing.V1.PublicModel
+                var modelResponse = new Contracts.Grpc.Billing.V1.PublicModel
                 {
                     Id = model.Id,
                     DisplayName = model.DisplayName,
@@ -59,6 +59,11 @@ public sealed class GrpcBillingService(
                     Modalities = price?.Modalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,
                 };
+                if (price?.TagIds != null)
+                {
+                    modelResponse.TagIds.AddRange(price.TagIds);
+                }
+                return modelResponse;
             }));
         return response;
     }
@@ -166,7 +171,8 @@ public sealed class GrpcBillingService(
                 Description: string.IsNullOrEmpty(request.Description) ? null : request.Description,
                 ContextLength: request.ContextLength == 0 ? null : (int?)request.ContextLength,
                 Modalities: string.IsNullOrEmpty(request.Modalities) ? null : request.Modalities,
-                DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource),
+                DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource,
+                TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -207,20 +213,28 @@ public sealed class GrpcBillingService(
         var response = new ListModelsResponse();
         response.Models.AddRange(
             (await billing.ListAllModelsAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
-            .Select(model => new Contracts.Grpc.Billing.V1.ModelDetail
+            .Select(model =>
             {
-                Id = model.ModelId,
-                DisplayName = model.DisplayName,
-                UpstreamModelId = model.RouterModelId,
-                PriceVersion = model.PriceVersion,
-                InputPricePer1MUsd = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                OutputPricePer1MUsd = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                CachePricePer1MUsd = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                Enabled = model.Enabled,
-                Description = model.Description ?? string.Empty,
-                ContextLength = model.ContextLength ?? 0,
-                Modalities = model.Modalities ?? string.Empty,
-                DescriptionSource = model.DescriptionSource ?? string.Empty,
+                var m = new Contracts.Grpc.Billing.V1.ModelDetail
+                {
+                    Id = model.ModelId,
+                    DisplayName = model.DisplayName,
+                    UpstreamModelId = model.RouterModelId,
+                    PriceVersion = model.PriceVersion,
+                    InputPricePer1MUsd = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                    OutputPricePer1MUsd = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                    CachePricePer1MUsd = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                    Enabled = model.Enabled,
+                    Description = model.Description ?? string.Empty,
+                    ContextLength = model.ContextLength ?? 0,
+                    Modalities = model.Modalities ?? string.Empty,
+                    DescriptionSource = model.DescriptionSource ?? string.Empty,
+                };
+                if (model.TagIds != null)
+                {
+                    m.TagIds.AddRange(model.TagIds);
+                }
+                return m;
             }));
         return response;
     }
@@ -391,6 +405,60 @@ public sealed class GrpcBillingService(
             CompletedAtUtc = r.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
         }));
         return response;
+    }
+
+    public override async Task<ListTagsResponse> ListTags(
+        ListTagsRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListTagsResponse();
+        response.Tags.AddRange(
+            (await billing.ListTagsAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(t => new Contracts.Grpc.Billing.V1.Tag
+            {
+                Id = t.Id,
+                DisplayName = t.DisplayName,
+                Color = t.Color ?? string.Empty
+            }));
+        return response;
+    }
+
+    public override async Task<UpsertTagResponse> UpsertTag(
+        UpsertTagRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await billing.UpsertTagAsync(
+                new OpenRussiaRouter.BillingService.Domain.Entities.Tag(
+                    request.Id,
+                    request.DisplayName,
+                    string.IsNullOrEmpty(request.Color) ? null : request.Color),
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new UpsertTagResponse { Upserted = true, Id = request.Id };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "UpsertTag failed. Id: {Id}", request.Id);
+            return new UpsertTagResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<DeleteTagResponse> DeleteTag(
+        DeleteTagRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await billing.DeleteTagAsync(request.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DeleteTagResponse { Deleted = true };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "DeleteTag failed. Id: {Id}", request.Id);
+            return new DeleteTagResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
     }
 
     private DateTimeOffset ParseTimestamp(string value)

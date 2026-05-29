@@ -50,7 +50,8 @@ public static class BillingPersistenceMapper
             Description = model.Description,
             ContextLength = model.ContextLength,
             Modalities = model.Modalities,
-            DescriptionSource = model.DescriptionSource
+            DescriptionSource = model.DescriptionSource,
+            TagIds = model.TagIds?.ToArray() ?? []
         };
     }
 
@@ -69,7 +70,8 @@ public static class BillingPersistenceMapper
             Description: entity.Description,
             ContextLength: entity.ContextLength,
             Modalities: entity.Modalities,
-            DescriptionSource: entity.DescriptionSource);
+            DescriptionSource: entity.DescriptionSource,
+            TagIds: entity.TagIds);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)
@@ -180,5 +182,20 @@ public static class BillingPersistenceMapper
     public static BillingAnomaly ToDomain(BillingAnomalyEntity entity)
     {
         return new BillingAnomaly(entity.Id, entity.RequestId, entity.Type, entity.Message, entity.CreatedAtUtc);
+    }
+
+    public static TagEntity ToEntity(Tag tag)
+    {
+        return new TagEntity
+        {
+            Id = tag.Id,
+            DisplayName = tag.DisplayName,
+            Color = tag.Color
+        };
+    }
+
+    public static Tag ToDomain(TagEntity entity)
+    {
+        return new Tag(entity.Id, entity.DisplayName, entity.Color);
     }
 }

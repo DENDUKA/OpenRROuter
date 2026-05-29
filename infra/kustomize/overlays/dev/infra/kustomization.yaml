@@ -5,6 +5,7 @@ resources:
   - ../../../base/infra
 patches:
   - path: seq-nodeport.yaml
+  - path: grafana-nodeport.yaml
 commonAnnotations:
   orr.dev/version: "dev"
   argocd.argoproj.io/sync-wave: "0"

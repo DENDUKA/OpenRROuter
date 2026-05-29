@@ -56,7 +56,7 @@
                             <th scope="col">Model</th>
                             <th scope="col">Upstream</th>
                             <th scope="col">Providers</th>
-                            <th scope="col">Type</th>
+                            <th scope="col">Tags</th>
                             <th scope="col" class="num">Input</th>
                             <th scope="col" class="num">Output</th>
                             <th scope="col" class="num">Context</th>
@@ -70,8 +70,10 @@
                             var detailUrl = m.Id.Contains('/')
                                 ? $"/models/{m.Id}"
                                 : $"/models/model/{Uri.EscapeDataString(m.Id)}";
+                            var tagSearch = string.Join(" ", m.Tags.Select(t => t.DisplayName));
                             <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
                                 data-provider="@m.Provider.ToLower()" data-capability="@m.Capability.ToLower()"
+                                data-tags="@tagSearch.ToLower()"
                                 onclick="location.href='@detailUrl'" tabindex="0" role="link"
                                 onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                 <td>
@@ -85,7 +87,21 @@
                                 </td>
                                 <td><code class="model-slug">@m.UpstreamModelId</code></td>
                                 <td>@m.Provider</td>
-                                <td><span class="badge">@m.Capability</span></td>
+                                <td>
+                                    @if (m.Tags.Count > 0)
+                                    {
+                                        <div class="tag-list" aria-label="Model tags">
+                                            @foreach (var tag in m.Tags)
+                                            {
+                                                <span class="badge model-tag" style="background-color: @(tag.Color ?? "#6c757d");">@tag.DisplayName</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
                                 <td class="num">@ModelsModel.FormatPrice(m.InputPrice)</td>
                                 <td class="num">@ModelsModel.FormatPrice(m.OutputPrice)</td>
                                 <td class="num">@m.Context</td>
@@ -118,6 +134,8 @@
     .model-name { color: var(--color-ink); font-weight: 500; }
     .model-table tbody tr { cursor: pointer; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-width: 120px; }
+    .model-tag { color: white; border-color: transparent; }
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
     .catalog-state strong { color: var(--color-ink); }
     .catalog-state.error { border-color: rgba(255,59,48,.45); }
@@ -150,9 +168,11 @@
             const id = row.dataset.id || '';
             const provider = row.dataset.provider || '';
             const capability = row.dataset.capability || '';
-            const textMatch = !q || name.includes(q) || id.includes(q);
+            const tags = row.dataset.tags || '';
+            const textMatch = !q || name.includes(q) || id.includes(q) || tags.includes(q);
             const catMatch = activeCategory === 'All' || provider.includes(activeCategory.toLowerCase())
                 || capability.includes(activeCategory.toLowerCase())
+                || tags.includes(activeCategory.toLowerCase())
                 || name.includes(activeCategory.toLowerCase()) || id.includes(activeCategory.toLowerCase());
             const show = textMatch && catMatch;
             row.style.display = show ? '' : 'none';

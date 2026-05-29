@@ -22,9 +22,16 @@ public class ModelsModel(
     {
         try
         {
-            var billingModels = await BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
-            var catalog = await GetCachedCatalogAsync(HttpContext.RequestAborted);
+            var billingModelsTask = BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
+            var tagsTask = BillingProvider.ListTagsAsync(HttpContext.RequestAborted);
+            var catalogTask = GetCachedCatalogAsync(HttpContext.RequestAborted);
+
+            await Task.WhenAll(billingModelsTask, tagsTask, catalogTask);
+
+            var billingModels = await billingModelsTask;
+            var catalog = await catalogTask;
             CatalogMetadataUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
+            var tagsById = (await tagsTask).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
             var catalogByUpstream = catalog.Entries
                 .Where(e => !string.IsNullOrWhiteSpace(e.UpstreamId))
@@ -35,7 +42,7 @@ public class ModelsModel(
                 .Select(model =>
                 {
                     catalogByUpstream.TryGetValue(model.UpstreamModelId, out var catalogEntry);
-                    return MapModel(model, catalogEntry);
+                    return MapModel(model, catalogEntry, tagsById);
                 })
                 .ToList();
         }
@@ -72,7 +79,10 @@ public class ModelsModel(
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
 
-    private static PublicModelRow MapModel(ModelInfo model, NodeModelCatalogEntry? catalogEntry)
+    private static PublicModelRow MapModel(
+        ModelInfo model,
+        NodeModelCatalogEntry? catalogEntry,
+        IReadOnlyDictionary<string, TagInfo> tagsById)
     {
         var sourceProviders = catalogEntry?.SourceProviders
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -90,6 +100,12 @@ public class ModelsModel(
                 ? ToTitle(model.Modalities)
                 : "Unknown";
 
+        var tags = (model.TagIds ?? [])
+            .Select(tagId => tagsById.TryGetValue(tagId, out var tag)
+                ? new PublicTagRow(tag.Id, tag.DisplayName, tag.Color)
+                : new PublicTagRow(tagId, tagId, null))
+            .ToList();
+
         return new PublicModelRow(
             model.Id,
             model.DisplayName,
@@ -98,7 +114,8 @@ public class ModelsModel(
             model.OutputPrice,
             provider,
             capability,
-            FormatContext(model.ContextLength));
+            FormatContext(model.ContextLength),
+            tags);
     }
 
     private static string ToTitle(string value)
@@ -119,5 +136,11 @@ public class ModelsModel(
         decimal OutputPrice,
         string Provider,
         string Capability,
-        string Context);
+        string Context,
+        IReadOnlyList<PublicTagRow> Tags);
+
+    public sealed record PublicTagRow(
+        string Id,
+        string DisplayName,
+        string? Color);
 }

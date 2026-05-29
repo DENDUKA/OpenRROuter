@@ -22,7 +22,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
 
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
         options.LoginPath = "/Login";
@@ -32,15 +32,24 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
     })
-    .AddCookie("External", o => o.Cookie.Name = ".orr.ext")
-    .AddGoogle(options =>
+    .AddCookie("External", o => o.Cookie.Name = ".orr.ext");
+
+// Register Google external login only when credentials are configured.
+// Without this guard the OAuth handler fails validation ("ClientId option must be provided")
+// the moment the authentication middleware initializes the scheme, returning 500 on /Login.
+var googleClientId = builder.Configuration["Google:ClientId"];
+var googleClientSecret = builder.Configuration["Google:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
+{
+    authenticationBuilder.AddGoogle(options =>
     {
         options.SignInScheme = "External";
-        options.ClientId = builder.Configuration["Google:ClientId"]!;
-        options.ClientSecret = builder.Configuration["Google:ClientSecret"]!;
+        options.ClientId = googleClientId;
+        options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
         options.Scope.Add("email");
     });
+}
 
 
 builder.Services.AddAuthorization();

@@ -31,10 +31,10 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
         var nodeName = $"E2E Sync {run}";
 
         // run-specific model IDs keep the test idempotent across repeated runs
-        var upstreamText   = $"E2E-Text-{run}";
+        var upstreamText = $"E2E-Text-{run}";
         var upstreamVision = $"E2E-Vision-{run}";
         // publicId includes a namespace prefix so publicId != id (verifies namespaced import)
-        var publicText   = $"e2e/{upstreamText}";
+        var publicText = $"e2e/{upstreamText}";
         var publicVision = $"e2e/{upstreamVision}";
 
         // ── Stub server ──────────────────────────────────────────────────────
@@ -77,11 +77,11 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
             await modelsPage.SelectRowByUpstreamIdAsync(upstreamVision);
 
             // ── 7. Fill per-row prices ───────────────────────────────────────
-            await modelsPage.SetRowPricesAsync(upstreamText,   inputPrice: 10m, outputPrice: 20m, cachePrice: 5m);
+            await modelsPage.SetRowPricesAsync(upstreamText, inputPrice: 10m, outputPrice: 20m, cachePrice: 5m);
             await modelsPage.SetRowPricesAsync(upstreamVision, inputPrice: 15m, outputPrice: 30m, cachePrice: 8m);
 
             // ── 8. Per-row Enabled (defaults to true; assert explicit) ───────
-            await modelsPage.SetRowEnabledAsync(upstreamText,   true);
+            await modelsPage.SetRowEnabledAsync(upstreamText, true);
             await modelsPage.SetRowEnabledAsync(upstreamVision, true);
 
             // ── 9. Submit ────────────────────────────────────────────────────
@@ -99,7 +99,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
 
             // ── 12. Both models visible in billing table ─────────────────────
             var modelIds = await modelsPage.GetModelIdsAsync();
-            Assert.Contains(publicText,   modelIds, StringComparer.Ordinal);
+            Assert.Contains(publicText, modelIds, StringComparer.Ordinal);
             Assert.Contains(publicVision, modelIds, StringComparer.Ordinal);
 
             // ═══ Phase 2: re-sync must not show already-imported models ═══
@@ -260,7 +260,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
             try
             {
                 var method = ctx.Request.HttpMethod;
-                var path   = ctx.Request.Url?.AbsolutePath ?? "/";
+                var path = ctx.Request.Url?.AbsolutePath ?? "/";
 
                 string? json = null;
 

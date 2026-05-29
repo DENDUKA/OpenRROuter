@@ -6,11 +6,11 @@ public sealed record OpenRouterModelsResponse(
     [property: JsonPropertyName("data")] IReadOnlyList<OpenRouterModelEntry> Data);
 
 public sealed record OpenRouterModelEntry(
-    [property: JsonPropertyName("id")]             string Id,
-    [property: JsonPropertyName("name")]           string Name,
-    [property: JsonPropertyName("description")]    string? Description,
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("name")] string Name,
+    [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("context_length")] int? ContextLength,
-    [property: JsonPropertyName("architecture")]   OpenRouterArchitecture? Architecture);
+    [property: JsonPropertyName("architecture")] OpenRouterArchitecture? Architecture);
 
 public sealed record OpenRouterArchitecture(
     [property: JsonPropertyName("modality")] string? Modality);

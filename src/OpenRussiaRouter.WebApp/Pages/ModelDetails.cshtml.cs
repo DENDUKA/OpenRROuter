@@ -55,7 +55,7 @@ public class ModelDetailsModel : PageModelBase
 
     private static string FormatContext(int tokens) =>
         tokens >= 1_000_000 ? $"{tokens / 1_000_000M:0.#}M"
-        : tokens >= 1_000   ? $"{tokens / 1_000}K"
+        : tokens >= 1_000 ? $"{tokens / 1_000}K"
         : tokens.ToString();
 
     private static string ToTitle(string value) =>

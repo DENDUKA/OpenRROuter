@@ -32,11 +32,11 @@ public static class GatewayErrors
 
         context.Response.StatusCode = type switch
         {
-            "authentication_error"  => StatusCodes.Status401Unauthorized,
-            "billing_error"         => StatusCodes.Status402PaymentRequired,
+            "authentication_error" => StatusCodes.Status401Unauthorized,
+            "billing_error" => StatusCodes.Status402PaymentRequired,
             "invalid_request_error" => StatusCodes.Status400BadRequest,
-            "service_unavailable"   => StatusCodes.Status503ServiceUnavailable,
-            _                       => StatusCodes.Status500InternalServerError
+            "service_unavailable" => StatusCodes.Status503ServiceUnavailable,
+            _ => StatusCodes.Status500InternalServerError
         };
         context.Response.ContentType = "application/json";
 

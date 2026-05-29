@@ -114,9 +114,9 @@ public class ActivityModel : PageModelBase
         return period switch
         {
             "today" => (now.Date.ToUniversalTime(), now),
-            "24h"   => (now.AddHours(-24), now),
-            "30d"   => (now.AddDays(-30), now),
-            _       => (now.AddDays(-7), now)
+            "24h" => (now.AddHours(-24), now),
+            "30d" => (now.AddDays(-30), now),
+            _ => (now.AddDays(-7), now)
         };
     }
 }

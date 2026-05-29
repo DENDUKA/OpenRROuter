@@ -184,9 +184,9 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             string.IsNullOrEmpty(m.OutputPricePer1MUsd) ? 0m : decimal.Parse(m.OutputPricePer1MUsd, CultureInfo.InvariantCulture),
             0m,
             true,
-            Description:   string.IsNullOrEmpty(m.Description) ? null : m.Description,
+            Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
-            Modalities:    string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities)).ToList();
+            Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -201,9 +201,9 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             decimal.Parse(m.OutputPricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
             decimal.Parse(m.CachePricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
             m.Enabled,
-            Description:       string.IsNullOrEmpty(m.Description) ? null : m.Description,
-            ContextLength:     m.ContextLength == 0 ? null : (int?)m.ContextLength,
-            Modalities:        string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
+            Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
+            ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
+            Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
             DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource)).ToList();
     }
 

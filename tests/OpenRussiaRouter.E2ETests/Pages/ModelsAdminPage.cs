@@ -32,7 +32,7 @@ sealed class ModelsAdminPage(IPage page, string baseUrl)
 
         await page.FillAsync("#Form_Id", id);
         await page.FillAsync("#Form_DisplayName", displayName);
-        await page.FillAsync("#Form_InputPrice",  inputPrice.ToString("F2", CultureInfo.InvariantCulture));
+        await page.FillAsync("#Form_InputPrice", inputPrice.ToString("F2", CultureInfo.InvariantCulture));
         await page.FillAsync("#Form_OutputPrice", outputPrice.ToString("F2", CultureInfo.InvariantCulture));
 
         await page.ClickAsync("button.btn-primary");

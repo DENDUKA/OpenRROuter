@@ -58,9 +58,9 @@ public sealed class GatewayPipeline(
             var (errorType, errorMessage) = balanceResult.ErrorCode switch
             {
                 ErrorCodes.InsufficientBalance => ("billing_error", "Insufficient balance to process this request."),
-                ErrorCodes.ModelUnavailable    => ("invalid_request_error", $"Model '{model}' is not available."),
-                ErrorCodes.InternalError       => ("internal_error", "An internal error occurred while checking balance."),
-                _                              => ("invalid_request_error", "Balance check failed.")
+                ErrorCodes.ModelUnavailable => ("invalid_request_error", $"Model '{model}' is not available."),
+                ErrorCodes.InternalError => ("internal_error", "An internal error occurred while checking balance."),
+                _ => ("invalid_request_error", "Balance check failed.")
             };
             await GatewayErrors.WriteAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
             return null;

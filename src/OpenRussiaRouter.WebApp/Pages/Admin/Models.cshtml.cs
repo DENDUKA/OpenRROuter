@@ -114,9 +114,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 Form.OutputPrice,
                 Form.CachePrice,
                 Form.Enabled,
-                Description:       string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
-                ContextLength:     Form.ContextLength is > 0 ? Form.ContextLength : null,
-                Modalities:        string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
+                Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
+                ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
+                Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
                 DescriptionSource: DetermineSource(orig, Form));
 
             await _billingClient.UpsertModelAsync(m);
@@ -189,9 +189,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
                 var enrichedModel = model with
                 {
-                    Description       = match.Description,
-                    ContextLength     = match.ContextLength,
-                    Modalities        = match.Modalities,
+                    Description = match.Description,
+                    ContextLength = match.ContextLength,
+                    Modalities = match.Modalities,
                     DescriptionSource = "openrouter"
                 };
                 await _billingClient.UpsertModelAsync(enrichedModel);
@@ -215,9 +215,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     private static string? DetermineSource(ModelInfo? orig, ModelFormInput form)
     {
-        var descChanged    = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
+        var descChanged = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
         var contextChanged = (form.ContextLength ?? 0) != (orig?.ContextLength ?? 0);
-        var modalChanged   = (form.Modalities?.Trim() ?? string.Empty) != (orig?.Modalities ?? string.Empty);
+        var modalChanged = (form.Modalities?.Trim() ?? string.Empty) != (orig?.Modalities ?? string.Empty);
 
         return descChanged || contextChanged || modalChanged
             ? "manual"

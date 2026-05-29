@@ -59,7 +59,7 @@ public class ModelsModel(
     public static string FormatContext(int? tokens) =>
         tokens is > 0
             ? tokens >= 1_000_000 ? $"{tokens / 1_000_000M:0.#}M"
-              : tokens >= 1_000   ? $"{tokens / 1_000}K"
+              : tokens >= 1_000 ? $"{tokens / 1_000}K"
               : tokens.ToString()!
             : "—";
 

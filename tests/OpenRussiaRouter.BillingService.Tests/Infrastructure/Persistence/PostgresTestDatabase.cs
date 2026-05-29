@@ -43,11 +43,30 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
     public void ApplyMigration()
     {
         using var connection = new NpgsqlConnection(ConnectionString);
-        foreach (var migration in Directory.EnumerateFiles(Path.Combine(FindRepositoryRoot(), "db", "migrations", "billing"), "*.sql")
-                     .Order(StringComparer.OrdinalIgnoreCase))
+        foreach (var migration in BillingMigrations().Order(StringComparer.OrdinalIgnoreCase))
         {
             connection.Execute(File.ReadAllText(migration));
         }
+    }
+
+    public void ApplyMigrationsThrough(string lastMigrationFileName)
+    {
+        using var connection = new NpgsqlConnection(ConnectionString);
+        foreach (var migration in BillingMigrations().Order(StringComparer.OrdinalIgnoreCase))
+        {
+            if (string.Compare(Path.GetFileName(migration), lastMigrationFileName, StringComparison.OrdinalIgnoreCase) > 0)
+            {
+                break;
+            }
+
+            connection.Execute(File.ReadAllText(migration));
+        }
+    }
+
+    public void ApplyMigrationFile(string migrationFileName)
+    {
+        using var connection = new NpgsqlConnection(ConnectionString);
+        connection.Execute(File.ReadAllText(Path.Combine(BillingMigrationsDirectory(), migrationFileName)));
     }
 
     public void Truncate()
@@ -66,4 +85,10 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
 
         return directory?.FullName ?? throw new InvalidOperationException("Repository root was not found.");
     }
+
+    private static string BillingMigrationsDirectory()
+        => Path.Combine(FindRepositoryRoot(), "db", "migrations", "billing");
+
+    private static IEnumerable<string> BillingMigrations()
+        => Directory.EnumerateFiles(BillingMigrationsDirectory(), "*.sql");
 }

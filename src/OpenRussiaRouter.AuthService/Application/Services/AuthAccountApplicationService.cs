@@ -75,11 +75,12 @@ public sealed class AuthAccountApplicationService(
         return (await repository.ListApiKeysAsync(
             Preconditions.RequireValue(userId, nameof(userId)),
             DefaultPageSize,
+            null,
             ct).ConfigureAwait(false)).Items;
     }
 
     public async Task<IReadOnlyCollection<UserAccount>> ListUsersAsync(CancellationToken ct = default)
     {
-        return (await repository.ListUsersAsync(DefaultPageSize, ct).ConfigureAwait(false)).Items;
+        return (await repository.ListUsersAsync(DefaultPageSize, null, ct).ConfigureAwait(false)).Items;
     }
 }

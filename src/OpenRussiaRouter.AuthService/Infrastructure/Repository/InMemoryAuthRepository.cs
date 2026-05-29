@@ -44,15 +44,23 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, string? afterUserId = null, CancellationToken ct = default)
     {
-        lock (_gate)
+        var query = _users.Values.OrderByDescending(u => u.CreatedAtUtc).AsEnumerable();
+        
+        if (afterUserId != null)
         {
-            var all = _users.Values.OrderByDescending(u => u.CreatedAtUtc).Take(limit + 1).ToArray();
-            var hasMore = all.Length > limit;
-            IReadOnlyCollection<UserAccount> result = hasMore ? all.Take(limit).ToArray() : all;
-            return Task.FromResult((result, hasMore));
+            var user = _users.GetValueOrDefault(afterUserId);
+            if (user != null)
+            {
+                query = query.Where(u => u.CreatedAtUtc < user.CreatedAtUtc || (u.CreatedAtUtc == user.CreatedAtUtc && string.Compare(u.Id, user.Id, StringComparison.Ordinal) < 0));
+            }
         }
+
+        var items = query.Take(limit + 1).ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<UserAccount>)items, hasMore));
     }
 
     public Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
@@ -66,19 +74,26 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate) { return Task.FromResult(_apiKeys.SingleOrDefault(k => k.Id == apiKeyId)); }
     }
 
-    public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default)
     {
-        lock (_gate)
+        var query = _apiKeys
+            .Where(k => k.UserId == userId)
+            .OrderByDescending(k => k.CreatedAtUtc)
+            .AsEnumerable();
+            
+        if (afterApiKeyId != null)
         {
-            var all = _apiKeys
-                .Where(k => k.UserId == userId)
-                .OrderByDescending(k => k.CreatedAtUtc)
-                .Take(limit + 1)
-                .ToArray();
-            var hasMore = all.Length > limit;
-            IReadOnlyCollection<ApiKey> result = hasMore ? all.Take(limit).ToArray() : all;
-            return Task.FromResult((result, hasMore));
+            var key = _apiKeys.FirstOrDefault(k => k.Id == afterApiKeyId);
+            if (key != null)
+            {
+                query = query.Where(k => k.CreatedAtUtc < key.CreatedAtUtc || (k.CreatedAtUtc == key.CreatedAtUtc && string.Compare(k.Id, key.Id, StringComparison.Ordinal) < 0));
+            }
         }
+            
+        var items = query.Take(limit + 1).ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<ApiKey>)items, hasMore));
     }
 
     public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)

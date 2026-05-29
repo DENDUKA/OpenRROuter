@@ -14,13 +14,13 @@ public interface IAuthRepository
 
     Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default);
 
-    Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default);
+    Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, string? afterUserId = null, CancellationToken ct = default);
 
     Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default);
 
     Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default);
 
-    Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default);
+    Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default);
 
     Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default);
 

@@ -15,7 +15,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 LedgerEntrySelectSql +
                 """
                 where user_id = @UserId and type = 'VirtualTopUp'
-                order by created_at_utc desc
+                order by created_at_utc desc, id desc
                 limit @Limit;
                 """,
                 new { UserId = userId, Limit = limit + 1 },
@@ -289,7 +289,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         parameters.Add("Limit", limit + 1);
         if (afterCreatedAtUtc.HasValue)
         {
-            conditions.Add("created_at_utc > @AfterCreatedAtUtc");
+            conditions.Add("created_at_utc < @AfterCreatedAtUtc");
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
         if (userId != null)
@@ -302,7 +302,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             ? "where " + string.Join(" and ", conditions) + "\n"
             : "";
         var items = (await connection.QueryAsync<UsageRecordEntity>(new CommandDefinition(
-                UsageSelectSql + whereClause + "order by created_at_utc\nlimit @Limit;",
+                UsageSelectSql + whereClause + "order by created_at_utc desc, request_id desc\nlimit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
@@ -398,7 +398,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var items = (await connection.QueryAsync<ActivityByTokenEntity>(new CommandDefinition(
                 ActivityByTokenSelectSql +
                 "where " + string.Join(" and ", conditions) + "\n" +
-                "order by a.created_at_utc desc\nlimit @Limit;",
+                "order by a.created_at_utc desc, a.request_id desc\nlimit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
@@ -512,7 +512,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var afterCondition = "";
         if (afterCreatedAtUtc.HasValue)
         {
-            afterCondition = "where created_at_utc > @AfterCreatedAtUtc\n";
+            afterCondition = "where created_at_utc < @AfterCreatedAtUtc\n";
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
@@ -526,7 +526,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                     created_at_utc as CreatedAtUtc
                 from billing.billing_anomalies
 
-                """ + afterCondition + "order by created_at_utc\nlimit @Limit;",
+                """ + afterCondition + "order by created_at_utc desc, id desc\nlimit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
@@ -582,7 +582,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 a.completed_at_utc as CompletedAtUtc
             from billing.activity_by_token a
             left join billing.usage_records u on u.request_id = a.request_id
-            {whereClause}order by a.created_at_utc desc
+            {whereClause}order by a.created_at_utc desc, a.request_id desc
             limit @Limit;
             """,
             parameters,

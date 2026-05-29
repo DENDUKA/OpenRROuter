@@ -22,12 +22,12 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         var items = _ledgerByIdempotencyKey.Values
             .Where(e => e.UserId == userId && e.Type == LedgerEntryType.VirtualTopUp)
             .OrderByDescending(e => e.CreatedAtUtc)
+            .ThenByDescending(e => e.Id)
             .Take(limit + 1)
-            .ToArray();
-
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return Task.FromResult<(IReadOnlyCollection<LedgerEntry>, bool)>((items, hasMore));
+            .ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
     }
 
     public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
@@ -102,15 +102,22 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     public Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default)
     {
         var query = _usageByRequestId.Values.AsEnumerable();
-        if (afterCreatedAtUtc.HasValue)
-            query = query.Where(u => u.CreatedAtUtc > afterCreatedAtUtc.Value);
-        if (!string.IsNullOrWhiteSpace(userId))
+        if (userId != null)
+        {
             query = query.Where(u => u.UserId == userId);
+        }
 
-        var items = query.OrderBy(u => u.CreatedAtUtc).Take(limit + 1).ToArray();
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return Task.FromResult<(IReadOnlyCollection<UsageRecord>, bool)>((items, hasMore));
+        query = query.OrderByDescending(u => u.CreatedAtUtc).ThenByDescending(u => u.RequestId);
+
+        if (afterCreatedAtUtc.HasValue)
+        {
+            query = query.Where(u => u.CreatedAtUtc < afterCreatedAtUtc.Value);
+        }
+
+        var items = query.Take(limit + 1).ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<UsageRecord>)items, hasMore));
     }
 
     public Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default)
@@ -129,29 +136,19 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         DateTimeOffset? afterCreatedAtUtc = null,
         CancellationToken ct = default)
     {
-        var keySet = apiKeyIds.ToHashSet(StringComparer.Ordinal);
-        var query = _activityByRequestId.Values
-            .Where(item => keySet.Contains(item.ApiKeyId));
+        var keySet = new HashSet<string>(apiKeyIds);
+        var query = _activityByRequestId.Values.Where(a => keySet.Contains(a.ApiKeyId));
 
-        if (fromUtc.HasValue)
-            query = query.Where(item => item.CreatedAtUtc >= fromUtc.Value);
-        if (toUtc.HasValue)
-            query = query.Where(item => item.CreatedAtUtc <= toUtc.Value);
-        if (!string.IsNullOrEmpty(modelIdFilter))
-            query = query.Where(item => item.ModelId == modelIdFilter);
-        if (!string.IsNullOrEmpty(apiKeyIdFilter))
-            query = query.Where(item => item.ApiKeyId == apiKeyIdFilter);
-        if (afterCreatedAtUtc.HasValue)
-            query = query.Where(item => item.CreatedAtUtc < afterCreatedAtUtc.Value);
+        if (fromUtc.HasValue) query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
+        if (toUtc.HasValue) query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
+        if (!string.IsNullOrEmpty(modelIdFilter)) query = query.Where(a => a.ModelId == modelIdFilter);
+        if (!string.IsNullOrEmpty(apiKeyIdFilter)) query = query.Where(a => a.ApiKeyId == apiKeyIdFilter);
+        if (afterCreatedAtUtc.HasValue) query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
 
-        var items = query
-            .OrderByDescending(item => item.CreatedAtUtc)
-            .Take(limit + 1)
-            .ToArray();
-
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return Task.FromResult<(IReadOnlyCollection<ActivityByTokenRecord>, bool)>((items, hasMore));
+        var items = query.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.RequestId).Take(limit + 1).ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore));
     }
 
     public Task<ActivitySummary> GetActivitySummaryAsync(
@@ -222,14 +219,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
     public Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
     {
-        var query = _anomalies.AsEnumerable();
-        if (afterCreatedAtUtc.HasValue)
-            query = query.Where(a => a.CreatedAtUtc > afterCreatedAtUtc.Value);
+        var query = _anomalies.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.Id).AsEnumerable();
 
-        var items = query.OrderBy(a => a.CreatedAtUtc).Take(limit + 1).ToArray();
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return Task.FromResult<(IReadOnlyCollection<BillingAnomaly>, bool)>((items, hasMore));
+        if (afterCreatedAtUtc.HasValue)
+        {
+            query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
+        }
+
+        var items = query.Take(limit + 1).ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<BillingAnomaly>)items, hasMore));
     }
 
     public Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
@@ -261,6 +261,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
         var items = query
             .OrderByDescending(a => a.CreatedAtUtc)
+            .ThenByDescending(a => a.RequestId)
             .Take(limit + 1)
             .Select(a => new AdminRequestRecord(
                 a.RequestId,

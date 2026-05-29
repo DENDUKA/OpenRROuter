@@ -70,7 +70,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         }
 
         var items = (await connection.QueryAsync<RouterNodeEntity>(new CommandDefinition(
-                NodeSelectSql + afterCondition + "order by name\nlimit @Limit;",
+                NodeSelectSql + afterCondition + "order by name, id\nlimit @Limit;",
                 parameters, cancellationToken: ct)).ConfigureAwait(false))
             .Select(ControlPlanePersistenceMapper.ToDomain)
             .ToArray();

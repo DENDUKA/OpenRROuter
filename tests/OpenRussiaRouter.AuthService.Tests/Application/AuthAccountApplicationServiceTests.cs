@@ -124,7 +124,7 @@ public sealed class AuthAccountApplicationServiceTests
         public Task<UserAccount?> GetUserByEmailAsync(string email, CancellationToken ct = default) =>
             Task.FromResult(Users.Values.SingleOrDefault(u => u.Email == email.ToLowerInvariant()));
 
-        public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default) =>
+        public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, string? afterUserId = null, CancellationToken ct = default) =>
             Task.FromResult<(IReadOnlyCollection<UserAccount>, bool)>((Users.Values.ToArray(), false));
 
         public Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
@@ -136,7 +136,7 @@ public sealed class AuthAccountApplicationServiceTests
         public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys.SingleOrDefault(key => key.Id == apiKeyId));
 
-        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default) =>
+        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default) =>
             Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId).ToArray(), false));
 
         public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)

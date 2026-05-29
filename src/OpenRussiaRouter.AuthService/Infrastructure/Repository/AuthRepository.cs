@@ -98,12 +98,21 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    public async Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, string? afterUserId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("Limit", limit + 1);
+        var afterCondition = "";
+        if (afterUserId != null)
+        {
+            afterCondition = " where id > @AfterUserId ";
+            parameters.Add("AfterUserId", afterUserId);
+        }
+
         var items = (await connection.QueryAsync<UserAccountEntity>(new CommandDefinition(
-                UserSelectSql + " order by created_at_utc desc limit @Limit;",
-                new { Limit = limit + 1 },
+                UserSelectSql + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
+                parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
             .ToArray();
@@ -139,12 +148,23 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    public async Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+        parameters.Add("UserId", userId);
+        parameters.Add("Limit", limit + 1);
+        
+        var afterCondition = "";
+        if (afterApiKeyId != null)
+        {
+            afterCondition = " and id > @AfterApiKeyId ";
+            parameters.Add("AfterApiKeyId", afterApiKeyId);
+        }
+
         var items = (await connection.QueryAsync<ApiKeyEntity>(new CommandDefinition(
-                ApiKeySelectSql + " where user_id = @UserId order by created_at_utc desc limit @Limit;",
-                new { UserId = userId, Limit = limit + 1 },
+                ApiKeySelectSql + " where user_id = @UserId " + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
+                parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
             .ToArray();

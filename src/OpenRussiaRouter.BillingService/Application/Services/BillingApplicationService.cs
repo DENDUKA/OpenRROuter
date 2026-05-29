@@ -26,7 +26,7 @@ public sealed class BillingApplicationService(
         CancellationToken ct = default)
     {
         _ = Preconditions.RequireValue(adminId, nameof(adminId));
-        ValidatePositiveRub(amount, nameof(amount));
+        ValidatePositiveUsd(amount, nameof(amount));
 
         return await repository.AddLedgerEntryAsync(new LedgerEntry(
             Guid.NewGuid().ToString("N"),
@@ -108,7 +108,7 @@ public sealed class BillingApplicationService(
         {
             logger.LogWarning(ex, "Usage record validation failed. RequestId: {RequestId}; UserId: {UserId}; ModelId: {ModelId}", usageEvent.RequestId, usageEvent.UserId, usageEvent.ModelId);
             await AddAnomalyAsync(usageEvent.RequestId, "invalid_token_count", ex.Message, nowUtc, ct).ConfigureAwait(false);
-            return new RecordUsageResult(false, null, MoneyAmount.Rub(0), "invalid_token_count");
+            return new RecordUsageResult(false, null, MoneyAmount.Usd(0), "invalid_token_count");
         }
 
         await repository.AddActivityByTokenAsync(new ActivityByTokenRecord(
@@ -118,7 +118,7 @@ public sealed class BillingApplicationService(
             usageEvent.ModelId,
             usageEvent.RouterNodeId,
             usageEvent.Usage,
-            MoneyAmount.Rub(0),
+            MoneyAmount.Usd(0),
             usageEvent.Status,
             nowUtc,
             usageEvent.CompletedAtUtc,
@@ -126,14 +126,14 @@ public sealed class BillingApplicationService(
             usageEvent.ProviderAccount), ct).ConfigureAwait(false);
 
         if (usageEvent.Usage.TotalTokens == 0)
-            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
+            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Usd(0), null);
 
         var model = await repository.GetEnabledModelAsync(usageEvent.ModelId, ct).ConfigureAwait(false);
         if (model is null)
         {
             await AddAnomalyAsync(usageEvent.RequestId, "model_price_missing", "Enabled model price was not found.", nowUtc, ct).ConfigureAwait(false);
             logger.LogError("Model price not found for model {ModelId}, request {RequestId}. Usage recorded with zero cost.", usageEvent.ModelId, usageEvent.RequestId);
-            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
+            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Usd(0), null);
         }
 
         var cost = usageCostCalculator.Calculate(usageEvent.Usage, model.Price);
@@ -155,7 +155,7 @@ public sealed class BillingApplicationService(
             Guid.NewGuid().ToString("N"),
             usageEvent.UserId,
             LedgerEntryType.UsageCharge,
-            MoneyAmount.Rub(-record.Cost.Amount),
+            MoneyAmount.Usd(-record.Cost.Amount),
             $"usage:{usageEvent.RequestId}",
             $"Usage charge for {usageEvent.ModelId}",
             nowUtc), ct).ConfigureAwait(false);
@@ -209,7 +209,7 @@ public sealed class BillingApplicationService(
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Rub(0), [], []);
+            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Usd(0), [], []);
 
         return await repository.GetActivitySummaryAsync(apiKeyIds, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
@@ -227,10 +227,10 @@ public sealed class BillingApplicationService(
         return await repository.GetAdminUsageRecordsAsync(limit, afterCursor, modelFilter, providerFilter, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
 
-    private static void ValidatePositiveRub(MoneyAmount amount, string name)
+    private static void ValidatePositiveUsd(MoneyAmount amount, string name)
     {
-        if (amount.Currency != Currency.Rub)
-            throw new ArgumentException("Only RUB is supported.", name);
+        if (amount.Currency != Currency.Usd)
+            throw new ArgumentException("Only $ is supported.", name);
 
         if (amount.Amount <= 0)
             throw new ArgumentOutOfRangeException(name, "Amount must be positive.");

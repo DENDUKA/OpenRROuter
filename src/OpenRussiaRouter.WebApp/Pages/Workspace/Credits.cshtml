@@ -4,7 +4,7 @@
 
 <div class="ws-section-header">
     <h2>Credits</h2>
-    <p class="ws-section-desc">Your current RUB balance used for API request billing.</p>
+    <p class="ws-section-desc">Your current $ balance used for API request billing.</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -22,7 +22,7 @@
         else
         {
             <div class="ws-balance-amount">
-                @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">RUB</span>
+                @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">$</span>
             </div>
         }
     </div>
@@ -50,7 +50,7 @@
                     {
                         <tr>
                             <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                            <td>@topUp.Amount.ToString("N2") RUB</td>
+                            <td>@topUp.Amount.ToString("N2") $</td>
                             <td>@topUp.Reason</td>
                         </tr>
                     }

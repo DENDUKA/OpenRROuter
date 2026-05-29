@@ -28,16 +28,16 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
             DisplayName = "GPT Test",
             UpstreamModelId = "router/gpt-test",
             PriceVersion = "v1",
-            InputPricePer1MRub = "10",
-            OutputPricePer1MRub = "20",
-            CachePricePer1MRub = "1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
             Enabled = true
         });
         var topUp = await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
         {
             AdminId = "admin-1",
             UserId = "user-1",
-            AmountRub = "100",
+            AmountUsd = "100",
             Reason = "test",
             IdempotencyKey = "topup-1"
         });

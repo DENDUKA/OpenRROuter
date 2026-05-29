@@ -37,7 +37,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             .Select(entry => entry.Amount.Amount)
             .DefaultIfEmpty(0m)
             .Sum();
-        return Task.FromResult(MoneyAmount.Rub(amount));
+        return Task.FromResult(MoneyAmount.Usd(amount));
     }
 
     public Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
@@ -185,7 +185,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
                 g.Sum(r => r.Usage.InputTokens),
                 g.Sum(r => r.Usage.OutputTokens),
                 g.Sum(r => r.Usage.CacheTokens),
-                MoneyAmount.Rub(TotalCostFor(g))))
+                MoneyAmount.Usd(TotalCostFor(g))))
             .OrderByDescending(m => m.Requests)
             .ToList();
 
@@ -198,7 +198,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
                 g.Sum(r => r.Usage.InputTokens),
                 g.Sum(r => r.Usage.OutputTokens),
                 g.Sum(r => r.Usage.CacheTokens),
-                MoneyAmount.Rub(TotalCostFor(g))))
+                MoneyAmount.Usd(TotalCostFor(g))))
             .OrderByDescending(k => k.Requests)
             .ToList();
 
@@ -207,7 +207,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             all.Sum(r => r.Usage.InputTokens),
             all.Sum(r => r.Usage.OutputTokens),
             all.Sum(r => r.Usage.CacheTokens),
-            MoneyAmount.Rub(TotalCostFor(all)),
+            MoneyAmount.Usd(TotalCostFor(all)),
             models,
             keys);
 
@@ -271,7 +271,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
                 a.ProviderName,
                 a.ProviderAccount,
                 a.Usage,
-                costByRequest.GetValueOrDefault(a.RequestId, MoneyAmount.Rub(0)),
+                costByRequest.GetValueOrDefault(a.RequestId, MoneyAmount.Usd(0)),
                 a.Status,
                 a.CreatedAtUtc,
                 a.CompletedAtUtc))

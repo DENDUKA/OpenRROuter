@@ -56,7 +56,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var billing = new StubBillingProvider
         {
-            CheckResult = new GatewayBalanceCheckResult(false, "gpt-4", "gpt-4", null, MoneyAmount.Rub(0), ErrorCodes.InsufficientBalance)
+            CheckResult = new GatewayBalanceCheckResult(false, "gpt-4", "gpt-4", null, MoneyAmount.Usd(0), ErrorCodes.InsufficientBalance)
         };
         var client = CreateClient(new StubAuthenticator(), billing);
 
@@ -71,7 +71,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var billing = new StubBillingProvider
         {
-            CheckResult = new GatewayBalanceCheckResult(false, "unknown-model", "unknown-model", null, MoneyAmount.Rub(100), ErrorCodes.ValidationFailed)
+            CheckResult = new GatewayBalanceCheckResult(false, "unknown-model", "unknown-model", null, MoneyAmount.Usd(100), ErrorCodes.ValidationFailed)
         };
         var client = CreateClient(new StubAuthenticator(), billing);
 
@@ -140,7 +140,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
                 "gemini",
                 "gemini-cli/gemini-3.1-pro-preview",
                 "v1",
-                MoneyAmount.Rub(100),
+                MoneyAmount.Usd(100),
                 null)
         };
         var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
@@ -353,7 +353,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     private sealed class StubBillingProvider : IBillingProvider
     {
         public GatewayBalanceCheckResult CheckResult { get; set; } =
-            new(true, "gpt-4", "gpt-4", "v1", MoneyAmount.Rub(100), null);
+            new(true, "gpt-4", "gpt-4", "v1", MoneyAmount.Usd(100), null);
 
         public IReadOnlyCollection<GatewayPublicModel>? PublicModels { get; set; }
         public bool RecordUsageCalled { get; private set; }

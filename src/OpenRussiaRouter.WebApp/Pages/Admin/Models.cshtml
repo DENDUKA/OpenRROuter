@@ -88,17 +88,17 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="Form.InputPrice" class="form-label">Input Price (RUB/1M)</label>
+                        <label asp-for="Form.InputPrice" class="form-label">Input Price ($/1M)</label>
                         <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.01" />
                         <span asp-validation-for="Form.InputPrice" class="validation-message"></span>
                     </div>
                     <div class="form-group">
-                        <label asp-for="Form.OutputPrice" class="form-label">Output Price (RUB/1M)</label>
+                        <label asp-for="Form.OutputPrice" class="form-label">Output Price ($/1M)</label>
                         <input asp-for="Form.OutputPrice" class="form-control" type="number" step="0.01" />
                         <span asp-validation-for="Form.OutputPrice" class="validation-message"></span>
                     </div>
                     <div class="form-group">
-                        <label asp-for="Form.CachePrice" class="form-label">Cache Price (RUB/1M)</label>
+                        <label asp-for="Form.CachePrice" class="form-label">Cache Price ($/1M)</label>
                         <input asp-for="Form.CachePrice" class="form-control" type="number" step="0.01" />
                         <span asp-validation-for="Form.CachePrice" class="validation-message"></span>
                     </div>
@@ -166,7 +166,7 @@
                             <td><code>@m.Id</code></td>
                             <td>@m.DisplayName</td>
                             <td><code>@m.UpstreamModelId</code></td>
-                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") RUB</td>
+                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</td>
                             <td>
                                 <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
                                     @(m.Enabled ? "Enabled" : "Disabled")

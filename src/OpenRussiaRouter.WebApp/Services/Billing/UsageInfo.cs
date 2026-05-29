@@ -8,6 +8,6 @@ public sealed record UsageInfo(
     long InputTokens,
     long OutputTokens,
     long CacheTokens,
-    decimal CostRub,
+    decimal CostUsd,
     string Status,
     DateTimeOffset CreatedAt);

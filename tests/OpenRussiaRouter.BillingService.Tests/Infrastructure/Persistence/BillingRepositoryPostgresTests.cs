@@ -30,13 +30,13 @@ public sealed class BillingRepositoryPostgresTests
         var repository = new BillingRepository(new BillingDbConnectionFactory(connectionString));
         var now = DateTimeOffset.UtcNow;
 
-        await repository.AddLedgerEntryAsync(new LedgerEntry("ledger-1", "user-1", LedgerEntryType.VirtualTopUp, MoneyAmount.Rub(100), "idem-1", "top-up", now));
+        await repository.AddLedgerEntryAsync(new LedgerEntry("ledger-1", "user-1", LedgerEntryType.VirtualTopUp, MoneyAmount.Usd(100), "idem-1", "top-up", now));
         await repository.UpsertModelAsync(new ModelPrice(
             "gpt-test",
             "GPT Test",
             "router/gpt-test",
             "v1",
-            new ModelTokenPrice(MoneyAmount.Rub(10), MoneyAmount.Rub(20), MoneyAmount.Rub(2)),
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
             Enabled: true));
         await repository.AddUsageAsync(new UsageRecord(
             "req-1",
@@ -46,7 +46,7 @@ public sealed class BillingRepositoryPostgresTests
             "v1",
             "node-1",
             new TokenUsage(10, 20, 0),
-            MoneyAmount.Rub(0.001m),
+            MoneyAmount.Usd(0.001m),
             "succeeded",
             now));
         await repository.AddAnomalyAsync(new BillingAnomaly("anomaly-1", "req-2", "missing_usage", "safe message", now));

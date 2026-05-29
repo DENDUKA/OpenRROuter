@@ -13,7 +13,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
         {
             throw new BillingException(response.ErrorCode);
         }
-        return new BalanceInfo(decimal.Parse(response.BalanceRub, System.Globalization.CultureInfo.InvariantCulture));
+        return new BalanceInfo(decimal.Parse(response.BalanceUsd, System.Globalization.CultureInfo.InvariantCulture));
     }
 
     public async Task<IReadOnlyList<UsageInfo>> ListUsageAsync(string userId, CancellationToken cancellationToken = default)
@@ -27,7 +27,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             r.Usage?.InputTokens ?? 0,
             r.Usage?.OutputTokens ?? 0,
             r.Usage?.CacheTokens ?? 0,
-            decimal.Parse(r.CostRub, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(r.CostUsd, System.Globalization.CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
@@ -105,7 +105,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             r.Usage?.InputTokens ?? 0,
             r.Usage?.OutputTokens ?? 0,
             r.Usage?.CacheTokens ?? 0,
-            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(r.CostUsd) ? 0m : decimal.Parse(r.CostUsd, CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, CultureInfo.InvariantCulture),
             DateTimeOffset.Parse(r.CompletedAtUtc, CultureInfo.InvariantCulture))).ToList();
@@ -135,13 +135,13 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             response.TotalInputTokens,
             response.TotalOutputTokens,
             response.TotalCacheTokens,
-            string.IsNullOrEmpty(response.TotalCostRub) ? 0m : decimal.Parse(response.TotalCostRub, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(response.TotalCostUsd) ? 0m : decimal.Parse(response.TotalCostUsd, CultureInfo.InvariantCulture),
             response.Models.Select(m => new ActivityModelSummaryInfo(
                 m.ModelId, m.Requests, m.InputTokens, m.OutputTokens, m.CacheTokens,
-                string.IsNullOrEmpty(m.CostRub) ? 0m : decimal.Parse(m.CostRub, CultureInfo.InvariantCulture))).ToList(),
+                string.IsNullOrEmpty(m.CostUsd) ? 0m : decimal.Parse(m.CostUsd, CultureInfo.InvariantCulture))).ToList(),
             response.Keys.Select(k => new ActivityKeySummaryInfo(
                 k.ApiKeyId, k.ApiKeyPrefix, k.Requests, k.InputTokens, k.OutputTokens, k.CacheTokens,
-                string.IsNullOrEmpty(k.CostRub) ? 0m : decimal.Parse(k.CostRub, CultureInfo.InvariantCulture))).ToList());
+                string.IsNullOrEmpty(k.CostUsd) ? 0m : decimal.Parse(k.CostUsd, CultureInfo.InvariantCulture))).ToList());
     }
 
     public async Task<IReadOnlyList<TopUpInfo>> ListTopUpsAsync(string userId, CancellationToken cancellationToken = default)
@@ -150,19 +150,19 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListTopUpsRequest { UserId = userId },
             cancellationToken: cancellationToken);
         return response.Records.Select(r => new TopUpInfo(
-            decimal.Parse(r.AmountRub, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(r.AmountUsd, System.Globalization.CultureInfo.InvariantCulture),
             r.Reason,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
-    public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountRub, string reason, CancellationToken cancellationToken = default)
+    public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountUsd, string reason, CancellationToken cancellationToken = default)
     {
         var response = await client.CreateVirtualTopUpAsync(
             new OpenRussiaRouter.Contracts.Grpc.Billing.V1.CreateVirtualTopUpRequest
             {
                 AdminId = adminId,
                 UserId = userId,
-                AmountRub = amountRub.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                AmountUsd = amountUsd.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 Reason = reason,
                 IdempotencyKey = Guid.NewGuid().ToString()
             }, cancellationToken: cancellationToken);
@@ -180,8 +180,8 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             m.DisplayName,
             m.UpstreamModelId,
             "",
-            string.IsNullOrEmpty(m.InputPricePer1MRub) ? 0m : decimal.Parse(m.InputPricePer1MRub, CultureInfo.InvariantCulture),
-            string.IsNullOrEmpty(m.OutputPricePer1MRub) ? 0m : decimal.Parse(m.OutputPricePer1MRub, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(m.InputPricePer1MUsd) ? 0m : decimal.Parse(m.InputPricePer1MUsd, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(m.OutputPricePer1MUsd) ? 0m : decimal.Parse(m.OutputPricePer1MUsd, CultureInfo.InvariantCulture),
             0m,
             true,
             Description:   string.IsNullOrEmpty(m.Description) ? null : m.Description,
@@ -197,9 +197,9 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             m.DisplayName,
             m.UpstreamModelId,
             m.PriceVersion,
-            decimal.Parse(m.InputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
-            decimal.Parse(m.OutputPricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
-            decimal.Parse(m.CachePricePer1MRub, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.InputPricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.OutputPricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.CachePricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
             m.Enabled,
             Description:       string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength:     m.ContextLength == 0 ? null : (int?)m.ContextLength,
@@ -216,9 +216,9 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
                 DisplayName = model.DisplayName,
                 UpstreamModelId = model.UpstreamModelId,
                 PriceVersion = model.PriceVersion,
-                InputPricePer1MRub = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                OutputPricePer1MRub = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                CachePricePer1MRub = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                InputPricePer1MUsd = model.InputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                OutputPricePer1MUsd = model.OutputPrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                CachePricePer1MUsd = model.CachePrice.ToString(System.Globalization.CultureInfo.InvariantCulture),
                 Enabled = model.Enabled,
                 Description = model.Description ?? string.Empty,
                 ContextLength = model.ContextLength ?? 0,
@@ -273,7 +273,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             r.InputTokens,
             r.OutputTokens,
             r.CacheTokens,
-            string.IsNullOrEmpty(r.CostRub) ? 0m : decimal.Parse(r.CostRub, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(r.CostUsd) ? 0m : decimal.Parse(r.CostUsd, CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, CultureInfo.InvariantCulture),
             DateTimeOffset.Parse(r.CompletedAtUtc, CultureInfo.InvariantCulture))).ToList();

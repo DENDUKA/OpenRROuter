@@ -54,7 +54,7 @@ public class ModelsModel(
     }
 
     public static string FormatPrice(decimal price) =>
-        $"{price:0.##} RUB / 1M";
+        $"{price:0.##} $ / 1M";
 
     public static string FormatContext(int? tokens) =>
         tokens is > 0

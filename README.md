@@ -1,6 +1,6 @@
 # OpenRussiaRouter
 
-OpenRussiaRouter is a .NET-based OpenAI-compatible LLM gateway for RUB billing, API keys, 9Router-based routing and pilot B2B usage accounting.
+OpenRussiaRouter is a .NET-based OpenAI-compatible LLM gateway for $ billing, API keys, 9Router-based routing and pilot B2B usage accounting.
 
 ## Current implementation status
 

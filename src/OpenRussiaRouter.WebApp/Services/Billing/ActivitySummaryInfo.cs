@@ -5,7 +5,7 @@ public sealed record ActivitySummaryInfo(
     long TotalInputTokens,
     long TotalOutputTokens,
     long TotalCacheTokens,
-    decimal TotalCostRub,
+    decimal TotalCostUsd,
     IReadOnlyList<ActivityModelSummaryInfo> Models,
     IReadOnlyList<ActivityKeySummaryInfo> Keys);
 
@@ -15,7 +15,7 @@ public sealed record ActivityModelSummaryInfo(
     long InputTokens,
     long OutputTokens,
     long CacheTokens,
-    decimal CostRub);
+    decimal CostUsd);
 
 public sealed record ActivityKeySummaryInfo(
     string ApiKeyId,
@@ -24,4 +24,4 @@ public sealed record ActivityKeySummaryInfo(
     long InputTokens,
     long OutputTokens,
     long CacheTokens,
-    decimal CostRub);
+    decimal CostUsd);

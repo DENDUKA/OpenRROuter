@@ -39,7 +39,7 @@ pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chr
 
 ## Architecture Overview
 
-OpenRussiaRouter is an OpenAI-compatible LLM gateway with RUB billing, built as .NET 8 microservices communicating via gRPC.
+OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .NET 8 microservices communicating via gRPC.
 
 ### Services
 

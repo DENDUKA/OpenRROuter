@@ -67,7 +67,7 @@
                 <input type="hidden" name="userId" value="@Model.TopUpUserId" />
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="TopUp.Amount" class="form-label">Amount (RUB)</label>
+                        <label asp-for="TopUp.Amount" class="form-label">Amount ($)</label>
                         <input asp-for="TopUp.Amount" class="form-control" type="number" step="0.01" />
                     </div>
                     <div class="form-group">
@@ -108,7 +108,7 @@
                             <td>@user.Role</td>
                             <td><span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">@user.Status</span></td>
                             <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
-                            <td>@Model.UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") RUB</td>
+                            <td>@Model.UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") $</td>
                             <td class="adm-actions-cell">
                                 <a class="btn-icon" title="Top Up" aria-label="Top Up" href="?action=topup&userId=@user.Id">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

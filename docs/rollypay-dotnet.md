@@ -10,7 +10,7 @@
 
 ## 1. Что Rollypay делает и чего не делает
 
-**Делает**: принимает RUB через СБП (QR), автоматически конвертирует в USDT и зачисляет на ваш Rollypay-баланс. Подтверждение оплаты приходит вебхуком за секунды.
+**Делает**: принимает $ через СБП (QR), автоматически конвертирует в USDT и зачисляет на ваш Rollypay-баланс. Подтверждение оплаты приходит вебхуком за секунды.
 
 **Не делает**:
 - Не принимает крипту от пользователей (USDT — только валюта расчётов с вами).
@@ -36,7 +36,7 @@ Headers:
 Body:
 {
   "amount": "1500.00",             // строка, не number
-  "payment_currency": "RUB",       // других пока нет
+  "payment_currency": "$",       // других пока нет
   "payment_method": "sbp",         // или "card", "crypto" если включены в кассе
   "order_id": "your-internal-id",  // ваш id, по нему ищете платёж в webhook
   "description": "Заказ #12345",
@@ -156,7 +156,7 @@ public sealed class CreateRollypayPaymentRequest
     public string Amount { get; set; } = string.Empty;
 
     [JsonPropertyName("payment_currency")]
-    public string PaymentCurrency { get; set; } = "RUB";
+    public string PaymentCurrency { get; set; } = "$";
 
     [JsonPropertyName("payment_method")]
     public string? PaymentMethod { get; set; } = "sbp";

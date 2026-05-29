@@ -88,7 +88,7 @@
                                     @(m.Enabled ? "Enabled" : "Disabled")
                                 </span>
                             </td>
-                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") RUB</td>
+                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</td>
                         </tr>
                     }
                 </tbody>
@@ -126,9 +126,9 @@
                                     <th>Display Name</th>
                                     <th>Router Model</th>
                                     <th>Type</th>
-                                    <th>Input&nbsp;RUB/1M</th>
-                                    <th>Output&nbsp;RUB/1M</th>
-                                    <th>Cache&nbsp;RUB/1M</th>
+                                    <th>Input&nbsp;$/1M</th>
+                                    <th>Output&nbsp;$/1M</th>
+                                    <th>Cache&nbsp;$/1M</th>
                                     <th>Enabled</th>
                                     <th>Providers</th>
                                     <th>Nodes</th>
@@ -279,7 +279,7 @@ else if (!Model.CatalogUnavailable && Model.MissingFromNodes.Count > 0)
                                     @(row.Enabled ? "Enabled" : "Disabled")
                                 </span>
                             </td>
-                            <td>@row.InputPrice.ToString("N2") / @row.OutputPrice.ToString("N2") / @row.CachePrice.ToString("N2") RUB</td>
+                            <td>@row.InputPrice.ToString("N2") / @row.OutputPrice.ToString("N2") / @row.CachePrice.ToString("N2") $</td>
                         </tr>
                     }
                 </tbody>

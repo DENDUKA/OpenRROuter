@@ -43,7 +43,7 @@ WebApp Admin/Models/Sync (POST Import)
             model_id           = (prefix ?? "") + entry.public_id
             display_name       = entry.display_name           (re-derived server-side)
             upstream_model_id  = entry.upstream_id            (re-derived server-side)
-            *_price_per_1m_rub = row.InputPrice / OutputPrice / CachePrice (per-row)
+            *_price_per_1m_usd = row.InputPrice / OutputPrice / CachePrice (per-row)
             enabled            = row.Enabled                  (per-row)
     → redirect to /admin/models with success count
 ```
@@ -210,7 +210,7 @@ Routed at `/admin/models/sync`. Layout: `_AdminLayout`.
   - `MissingFromNodes` — billing models whose `UpstreamModelId` is not in the catalog AND not in `unreachable_node_ids` context (warning row; can't tell apart "node down" vs "model truly removed" if any node was unreachable, so suppress this list when `unreachable_node_ids` is non-empty)
 - Render a table with one row per `NewOnNodes` catalog entry. Each row has its own form inputs:
   - `Selected` checkbox (whether to import this row)
-  - `InputPrice` / `OutputPrice` / `CachePrice` (RUB/1M, per-row, validated `[0, 1_000_000]`)
+  - `InputPrice` / `OutputPrice` / `CachePrice` ($/1M, per-row, validated `[0, 1_000_000]`)
   - `Enabled` checkbox (whether the imported model is enabled in billing)
   - `UpstreamId` (hidden — identifies which catalog entry this row maps to)
 - Plus one form-wide field:

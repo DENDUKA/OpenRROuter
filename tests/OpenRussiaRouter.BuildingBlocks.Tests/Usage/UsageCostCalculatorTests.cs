@@ -13,7 +13,7 @@ public sealed class UsageCostCalculatorTests
     [InlineData(0, 1_000_000, 0, 10, 20, 1, 20)]
     [InlineData(0, 0, 1_000_000, 10, 20, 1, 1)]
     [InlineData(500_000, 250_000, 100_000, 10, 20, 1, 10.1)]
-    public void Calculate_ValidUsage_ReturnsExpectedRubCost(
+    public void Calculate_ValidUsage_ReturnsExpectedUsdCost(
         long inputTokens,
         long outputTokens,
         long cacheTokens,
@@ -24,13 +24,13 @@ public sealed class UsageCostCalculatorTests
     {
         var usage = new TokenUsage(inputTokens, outputTokens, cacheTokens);
         var price = new ModelTokenPrice(
-            MoneyAmount.Rub(inputPrice),
-            MoneyAmount.Rub(outputPrice),
-            MoneyAmount.Rub(cachePrice));
+            MoneyAmount.Usd(inputPrice),
+            MoneyAmount.Usd(outputPrice),
+            MoneyAmount.Usd(cachePrice));
 
         var result = _calculator.Calculate(usage, price);
 
-        result.Currency.Should().Be(Currency.Rub);
+        result.Currency.Should().Be(Currency.Usd);
         result.Amount.Should().Be(expected);
     }
 
@@ -42,9 +42,9 @@ public sealed class UsageCostCalculatorTests
     {
         var usage = new TokenUsage(inputTokens, outputTokens, cacheTokens);
         var price = new ModelTokenPrice(
-            MoneyAmount.Rub(10),
-            MoneyAmount.Rub(20),
-            MoneyAmount.Rub(1));
+            MoneyAmount.Usd(10),
+            MoneyAmount.Usd(20),
+            MoneyAmount.Usd(1));
 
         ((Action)(() => _calculator.Calculate(usage, price))).Should().Throw<ArgumentOutOfRangeException>();
     }
@@ -54,9 +54,9 @@ public sealed class UsageCostCalculatorTests
     {
         var usage = new TokenUsage(1, 1, 1);
         var price = new ModelTokenPrice(
-            MoneyAmount.Rub(-1),
-            MoneyAmount.Rub(20),
-            MoneyAmount.Rub(1));
+            MoneyAmount.Usd(-1),
+            MoneyAmount.Usd(20),
+            MoneyAmount.Usd(1));
 
         ((Action)(() => _calculator.Calculate(usage, price))).Should().Throw<ArgumentOutOfRangeException>();
     }

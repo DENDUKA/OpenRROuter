@@ -32,7 +32,7 @@ dotnet run --project src/OpenRussiaRouter.WebApp
 
 ## Architecture Overview
 
-OpenRussiaRouter is an OpenAI-compatible LLM gateway with RUB billing, built as .NET 8 microservices communicating via gRPC.
+OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .NET 8 microservices communicating via gRPC.
 
 ### Services
 

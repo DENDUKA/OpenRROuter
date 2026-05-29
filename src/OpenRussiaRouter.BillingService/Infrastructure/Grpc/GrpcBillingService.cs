@@ -28,7 +28,7 @@ public sealed class GrpcBillingService(
             ModelId = result.ModelId,
             RouterModelId = result.RouterModelId,
             PriceVersion = result.PriceVersion ?? string.Empty,
-            BalanceRub = result.CurrentBalance.Amount.ToString(CultureInfo.InvariantCulture),
+            BalanceUsd = result.CurrentBalance.Amount.ToString(CultureInfo.InvariantCulture),
             ErrorCode = result.ErrorCode ?? string.Empty
         };
     }
@@ -53,8 +53,8 @@ public sealed class GrpcBillingService(
                     Id = model.Id,
                     DisplayName = model.DisplayName,
                     UpstreamModelId = price?.RouterModelId ?? string.Empty,
-                    InputPricePer1MRub = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    OutputPricePer1MRub = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    InputPricePer1MUsd = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    OutputPricePer1MUsd = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                     ContextLength = price?.ContextLength ?? 0,
                     Modalities = price?.Modalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,
@@ -104,7 +104,7 @@ public sealed class GrpcBillingService(
             return new GetBalanceResponse
             {
                 UserId = request.UserId,
-                BalanceRub = balance.Amount.ToString(CultureInfo.InvariantCulture)
+                BalanceUsd = balance.Amount.ToString(CultureInfo.InvariantCulture)
             };
         }
         catch (ArgumentException ex)
@@ -120,7 +120,7 @@ public sealed class GrpcBillingService(
     {
         try
         {
-            var amount = MoneyAmount.Rub(decimal.Parse(request.AmountRub, CultureInfo.InvariantCulture));
+            var amount = MoneyAmount.Usd(decimal.Parse(request.AmountUsd, CultureInfo.InvariantCulture));
             var entry = await billing.CreateVirtualTopUpAsync(
                 request.AdminId,
                 request.UserId,
@@ -136,8 +136,8 @@ public sealed class GrpcBillingService(
                 Created = true,
                 LedgerEntryId = entry.Id,
                 UserId = entry.UserId,
-                AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
-                BalanceRub = balance.Amount.ToString(CultureInfo.InvariantCulture)
+                AmountUsd = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+                BalanceUsd = balance.Amount.ToString(CultureInfo.InvariantCulture)
             };
         }
         catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
@@ -159,9 +159,9 @@ public sealed class GrpcBillingService(
                 request.UpstreamModelId,
                 request.PriceVersion,
                 new ModelTokenPrice(
-                    MoneyAmount.Rub(decimal.Parse(request.InputPricePer1MRub, CultureInfo.InvariantCulture)),
-                    MoneyAmount.Rub(decimal.Parse(request.OutputPricePer1MRub, CultureInfo.InvariantCulture)),
-                    MoneyAmount.Rub(decimal.Parse(request.CachePricePer1MRub, CultureInfo.InvariantCulture))),
+                    MoneyAmount.Usd(decimal.Parse(request.InputPricePer1MUsd, CultureInfo.InvariantCulture)),
+                    MoneyAmount.Usd(decimal.Parse(request.OutputPricePer1MUsd, CultureInfo.InvariantCulture)),
+                    MoneyAmount.Usd(decimal.Parse(request.CachePricePer1MUsd, CultureInfo.InvariantCulture))),
                 request.Enabled,
                 Description: string.IsNullOrEmpty(request.Description) ? null : request.Description,
                 ContextLength: request.ContextLength == 0 ? null : (int?)request.ContextLength,
@@ -213,9 +213,9 @@ public sealed class GrpcBillingService(
                 DisplayName = model.DisplayName,
                 UpstreamModelId = model.RouterModelId,
                 PriceVersion = model.PriceVersion,
-                InputPricePer1MRub = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                OutputPricePer1MRub = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
-                CachePricePer1MRub = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                InputPricePer1MUsd = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                OutputPricePer1MUsd = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                CachePricePer1MUsd = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
                 Enabled = model.Enabled,
                 Description = model.Description ?? string.Empty,
                 ContextLength = model.ContextLength ?? 0,
@@ -247,7 +247,7 @@ public sealed class GrpcBillingService(
                     OutputTokens = usage.Usage.OutputTokens,
                     CacheTokens = usage.Usage.CacheTokens
                 },
-                CostRub = usage.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+                CostUsd = usage.Cost.Amount.ToString(CultureInfo.InvariantCulture),
                 Status = usage.Status,
                 CreatedAtUtc = usage.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
             }));
@@ -289,7 +289,7 @@ public sealed class GrpcBillingService(
             Status = activity.Status,
             CreatedAtUtc = activity.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             CompletedAtUtc = activity.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-            CostRub = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+            CostUsd = activity.Cost.Amount.ToString(CultureInfo.InvariantCulture),
             ProviderName = activity.ProviderName ?? "",
             ProviderAccount = activity.ProviderAccount ?? ""
         }));
@@ -313,7 +313,7 @@ public sealed class GrpcBillingService(
             TotalInputTokens = summary.TotalInputTokens,
             TotalOutputTokens = summary.TotalOutputTokens,
             TotalCacheTokens = summary.TotalCacheTokens,
-            TotalCostRub = summary.TotalCost.Amount.ToString(CultureInfo.InvariantCulture)
+            TotalCostUsd = summary.TotalCost.Amount.ToString(CultureInfo.InvariantCulture)
         };
         response.Models.AddRange(summary.Models.Select(m => new Contracts.Grpc.Billing.V1.ActivityModelSummary
         {
@@ -322,7 +322,7 @@ public sealed class GrpcBillingService(
             InputTokens = m.InputTokens,
             OutputTokens = m.OutputTokens,
             CacheTokens = m.CacheTokens,
-            CostRub = m.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+            CostUsd = m.Cost.Amount.ToString(CultureInfo.InvariantCulture)
         }));
         response.Keys.AddRange(summary.Keys.Select(k => new Contracts.Grpc.Billing.V1.ActivityKeySummary
         {
@@ -332,7 +332,7 @@ public sealed class GrpcBillingService(
             InputTokens = k.InputTokens,
             OutputTokens = k.OutputTokens,
             CacheTokens = k.CacheTokens,
-            CostRub = k.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+            CostUsd = k.Cost.Amount.ToString(CultureInfo.InvariantCulture)
         }));
         return response;
     }
@@ -347,7 +347,7 @@ public sealed class GrpcBillingService(
             .Select(entry => new TopUpRecord
             {
                 Id = entry.Id,
-                AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+                AmountUsd = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
                 Reason = entry.Reason,
                 CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
             }));
@@ -385,7 +385,7 @@ public sealed class GrpcBillingService(
             InputTokens = r.Usage.InputTokens,
             OutputTokens = r.Usage.OutputTokens,
             CacheTokens = r.Usage.CacheTokens,
-            CostRub = r.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+            CostUsd = r.Cost.Amount.ToString(CultureInfo.InvariantCulture),
             Status = r.Status,
             CreatedAtUtc = r.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
             CompletedAtUtc = r.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)

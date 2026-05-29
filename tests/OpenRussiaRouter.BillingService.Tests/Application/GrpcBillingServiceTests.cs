@@ -27,7 +27,7 @@ public sealed class GrpcBillingServiceTests
         response.Allowed.Should().BeTrue();
         response.ModelId.Should().Be("router/gpt-test");
         response.PriceVersion.Should().Be("price-v1");
-        response.BalanceRub.Should().Be("100");
+        response.BalanceUsd.Should().Be("100");
         response.ErrorCode.Should().Be(string.Empty);
     }
 
@@ -43,8 +43,8 @@ public sealed class GrpcBillingServiceTests
         model.Id.Should().Be("router/gpt-test");
         model.DisplayName.Should().Be("GPT Test");
         model.UpstreamModelId.Should().Be("router/gpt-test");
-        model.InputPricePer1MRub.Should().Be("10");
-        model.OutputPricePer1MRub.Should().Be("20");
+        model.InputPricePer1MUsd.Should().Be("10");
+        model.OutputPricePer1MUsd.Should().Be("20");
     }
 
     [Fact]
@@ -76,11 +76,11 @@ public sealed class GrpcBillingServiceTests
         response.Accepted.Should().BeTrue();
         response.RequestId.Should().Be("req-1");
         response.ErrorCode.Should().Be(string.Empty);
-        (await billing.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Rub(90));
+        (await billing.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Usd(90));
     }
 
     [Fact]
-    public async Task GetBalance_ExistingUser_ReturnsBalanceRub()
+    public async Task GetBalance_ExistingUser_ReturnsBalanceUsd()
     {
         var billing = await CreateBillingWithModelAndBalanceAsync();
         var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
@@ -88,7 +88,7 @@ public sealed class GrpcBillingServiceTests
         var response = await service.GetBalance(new GetBalanceRequest { UserId = "user-1" }, context: null!);
 
         response.UserId.Should().Be("user-1");
-        response.BalanceRub.Should().Be("100");
+        response.BalanceUsd.Should().Be("100");
         response.ErrorCode.Should().Be(string.Empty);
     }
 
@@ -106,7 +106,7 @@ public sealed class GrpcBillingServiceTests
         {
             AdminId = "admin-1",
             UserId = "user-1",
-            AmountRub = "25.50",
+            AmountUsd = "25.50",
             Reason = "manual top-up",
             IdempotencyKey = "topup-1"
         }, context: null!);
@@ -114,8 +114,8 @@ public sealed class GrpcBillingServiceTests
         response.Created.Should().BeTrue();
         response.LedgerEntryId.Should().NotBeNullOrEmpty();
         response.UserId.Should().Be("user-1");
-        response.AmountRub.Should().Be("25.50");
-        response.BalanceRub.Should().Be("25.50");
+        response.AmountUsd.Should().Be("25.50");
+        response.BalanceUsd.Should().Be("25.50");
         response.ErrorCode.Should().Be(string.Empty);
     }
 
@@ -133,7 +133,7 @@ public sealed class GrpcBillingServiceTests
         {
             AdminId = "admin-1",
             UserId = "user-1",
-            AmountRub = "0",
+            AmountUsd = "0",
             Reason = "manual top-up",
             IdempotencyKey = "topup-1"
         }, context: null!);
@@ -158,9 +158,9 @@ public sealed class GrpcBillingServiceTests
             DisplayName = "GPT Admin",
             UpstreamModelId = "router/gpt-admin",
             PriceVersion = "v1",
-            InputPricePer1MRub = "10",
-            OutputPricePer1MRub = "20",
-            CachePricePer1MRub = "1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
             Enabled = true
         }, context: null!);
         var models = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
@@ -170,8 +170,8 @@ public sealed class GrpcBillingServiceTests
         var model = models.Models.Should().ContainSingle().Which;
         model.Id.Should().Be("router/gpt-admin");
         model.UpstreamModelId.Should().Be("router/gpt-admin");
-        model.InputPricePer1MRub.Should().Be("10");
-        model.OutputPricePer1MRub.Should().Be("20");
+        model.InputPricePer1MUsd.Should().Be("10");
+        model.OutputPricePer1MUsd.Should().Be("20");
     }
 
     [Fact]
@@ -190,9 +190,9 @@ public sealed class GrpcBillingServiceTests
             DisplayName = "GPT Admin",
             UpstreamModelId = "router/gpt-admin",
             PriceVersion = "v1",
-            InputPricePer1MRub = "bad",
-            OutputPricePer1MRub = "20",
-            CachePricePer1MRub = "1",
+            InputPricePer1MUsd = "bad",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
             Enabled = true
         }, context: null!);
 
@@ -255,7 +255,7 @@ public sealed class GrpcBillingServiceTests
         record.RequestId.Should().Be("req-usage");
         record.UserId.Should().Be("user-1");
         record.ModelId.Should().Be("router/gpt-test");
-        record.CostRub.Should().Be("20");
+        record.CostUsd.Should().Be("20");
         record.Usage.InputTokens.Should().Be(1_000_000);
         record.Usage.OutputTokens.Should().Be(500_000);
     }
@@ -321,7 +321,7 @@ public sealed class GrpcBillingServiceTests
 
         var record = response.Records.Should().ContainSingle().Which;
         record.Id.Should().NotBeNullOrEmpty();
-        record.AmountRub.Should().Be("100");
+        record.AmountUsd.Should().Be("100");
         record.Reason.Should().Be("test");
         record.CreatedAtUtc.Should().NotBeNullOrEmpty();
     }
@@ -354,7 +354,7 @@ public sealed class GrpcBillingServiceTests
             NullLogger<BillingApplicationService>.Instance);
         await billing.UpsertModelAsync(new ModelPrice(
             "gpt-test", "GPT Test", "router/gpt-test", "v1",
-            new ModelTokenPrice(MoneyAmount.Rub(10), MoneyAmount.Rub(20), MoneyAmount.Rub(1)),
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(1)),
             Enabled: true));
         var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
 
@@ -418,9 +418,9 @@ public sealed class GrpcBillingServiceTests
             "GPT Test",
             "router/gpt-test",
             "price-v1",
-            new ModelTokenPrice(MoneyAmount.Rub(10), MoneyAmount.Rub(20), MoneyAmount.Rub(1)),
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(1)),
             Enabled: true));
-        await billing.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+        await billing.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
         return billing;
     }
 }

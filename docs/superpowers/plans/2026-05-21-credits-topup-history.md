@@ -51,7 +51,7 @@
 
   message TopUpRecord {
     string id = 1;
-    string amount_rub = 2;
+    string amount_usd = 2;
     string reason = 3;
     string created_at_utc = 4;
   }
@@ -93,8 +93,8 @@
   {
       var service = CreateService();
       var now = DateTimeOffset.UtcNow;
-      service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "first", "key-1", now);
-      service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(200), "second", "key-2", now.AddSeconds(1));
+      service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(100), "first", "key-1", now);
+      service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(200), "second", "key-2", now.AddSeconds(1));
 
       var topUps = service.ListTopUps("user-1");
 
@@ -105,7 +105,7 @@
   public void ListTopUps_OtherUserTopUps_NotReturned()
   {
       var service = CreateService();
-      service.CreateVirtualTopUp("admin-1", "user-2", MoneyAmount.Rub(100), "other", "key-3", DateTimeOffset.UtcNow);
+      service.CreateVirtualTopUp("admin-1", "user-2", MoneyAmount.Usd(100), "other", "key-3", DateTimeOffset.UtcNow);
 
       var topUps = service.ListTopUps("user-1");
 
@@ -309,13 +309,13 @@
 
       var record = Assert.Single(response.Records);
       Assert.NotEmpty(record.Id);
-      Assert.Equal("100", record.AmountRub);
+      Assert.Equal("100", record.AmountUsd);
       Assert.Equal("test", record.Reason);
       Assert.NotEmpty(record.CreatedAtUtc);
   }
   ```
 
-  Note: `CreateBillingWithModelAndBalance` already calls `CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", ...)`, so the test data is already there.
+  Note: `CreateBillingWithModelAndBalance` already calls `CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", ...)`, so the test data is already there.
 
 - [ ] **Step 2: Run test to confirm it fails**
 
@@ -338,7 +338,7 @@
       response.Records.AddRange(billing.ListTopUps(request.UserId).Select(entry => new TopUpRecord
       {
           Id = entry.Id,
-          AmountRub = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+          AmountUsd = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
           Reason = entry.Reason,
           CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
       }));
@@ -391,7 +391,7 @@
           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListTopUpsRequest { UserId = userId },
           cancellationToken: cancellationToken);
       return response.Records.Select(r => new TopUpInfo(
-          decimal.Parse(r.AmountRub, System.Globalization.CultureInfo.InvariantCulture),
+          decimal.Parse(r.AmountUsd, System.Globalization.CultureInfo.InvariantCulture),
           r.Reason,
           DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
   }
@@ -465,7 +465,7 @@
 
   <div class="ws-section-header">
       <h2>Credits</h2>
-      <p class="ws-section-desc">Your current RUB balance used for API request billing.</p>
+      <p class="ws-section-desc">Your current $ balance used for API request billing.</p>
   </div>
 
   @if (Model.ErrorMessage != null)
@@ -483,7 +483,7 @@
           else
           {
               <div class="ws-balance-amount">
-                  @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">RUB</span>
+                  @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">$</span>
               </div>
           }
       </div>
@@ -511,7 +511,7 @@
                       {
                           <tr>
                               <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                              <td>@topUp.Amount.ToString("N2") RUB</td>
+                              <td>@topUp.Amount.ToString("N2") $</td>
                               <td>@topUp.Reason</td>
                           </tr>
                       }

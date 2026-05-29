@@ -13,7 +13,7 @@
 - Unit-тесты писать на xUnit по AAA-паттерну; для интеграционных тестов использовать Testcontainers/PostgreSQL и in-memory/mock gRPC clients там, где это уместно.
 - Каждый сервис владеет своей базой данных и миграциями. Прямые запросы в чужую базу запрещены.
 - Prompt/response bodies не сохраняются в persistent storage и обычные логи.
-- Все money-значения хранить в минимальных денежных единицах или decimal с явной валютой RUB. Не использовать `double` для денег.
+- Все money-значения хранить в минимальных денежных единицах или decimal с явной валютой $. Не использовать `double` для денег.
 - Все token/cost операции должны быть идемпотентны по request/usage id.
 
 ## 0. Shared Contracts / Platform Foundation
@@ -236,7 +236,7 @@
 
 ### BILLING-001: Реализовать баланс и ledger
 
-**Постановка:** сервис должен хранить баланс пользователя в RUB и историю операций: virtual top-up, charge, correction.
+**Постановка:** сервис должен хранить баланс пользователя в $ и историю операций: virtual top-up, charge, correction.
 
 **Технические особенности:**
 - Ledger должен быть append-only.
@@ -299,7 +299,7 @@
 
 ### BILLING-005: Реализовать расчет стоимости
 
-**Постановка:** вычислять стоимость запроса в RUB по input/output/cache tokens и таблице цен модели.
+**Постановка:** вычислять стоимость запроса в $ по input/output/cache tokens и таблице цен модели.
 
 **Технические особенности:**
 - Формула: `(inputTokens * inputPricePer1M + outputTokens * outputPricePer1M + cacheTokens * cachePricePer1M) / 1_000_000`.
@@ -468,7 +468,7 @@
 - Поддержать фильтр по датам и моделям.
 
 **Тесты:**
-- Balance отображается в RUB.
+- Balance отображается в $.
 - Usage list корректно показывает tokens/cost/status.
 - Фильтр по периоду меняет выдачу.
 
@@ -489,7 +489,7 @@
 
 ### UI-005: Реализовать admin model/pricing management
 
-**Постановка:** админ включает модели, задает public id, 9Router mapping и RUB prices.
+**Постановка:** админ включает модели, задает public id, 9Router mapping и $ prices.
 
 **Технические особенности:**
 - Форма должна валидировать цены >= 0.

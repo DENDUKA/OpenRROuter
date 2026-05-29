@@ -9,7 +9,7 @@ Display the full top-up history for the current user on the `/workspace/credits`
 
 ## Scope
 
-Show all `LedgerEntryType.VirtualTopUp` entries belonging to the authenticated user, ordered by date descending. Columns: Date, Amount (RUB), Reason.
+Show all `LedgerEntryType.VirtualTopUp` entries belonging to the authenticated user, ordered by date descending. Columns: Date, Amount ($), Reason.
 
 ## Changes
 
@@ -26,7 +26,7 @@ message ListTopUpsRequest {
 
 message TopUpRecord {
   string id = 1;
-  string amount_rub = 2;
+  string amount_usd = 2;
   string reason = 3;
   string created_at_utc = 4;
 }
@@ -49,7 +49,7 @@ message ListTopUpsResponse {
 - `TopUpInfo` record DTO: `(decimal Amount, string Reason, DateTimeOffset CreatedAtUtc)`.
 - `BillingClient`: add `ListTopUpsAsync(string userId)` — calls `ListTopUps` gRPC, maps to `TopUpInfo`.
 - `Credits.cshtml.cs`: load `TopUps` list in `OnGetAsync`, handle errors gracefully.
-- `Credits.cshtml`: add table with columns Date (local time, format `g`), Amount (`N2 RUB`), Reason. Show "No top-ups yet." when list is empty.
+- `Credits.cshtml`: add table with columns Date (local time, format `g`), Amount (`N2 $`), Reason. Show "No top-ups yet." when list is empty.
 
 ## Out of Scope
 

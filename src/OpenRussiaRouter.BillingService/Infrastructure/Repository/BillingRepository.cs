@@ -74,7 +74,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             "select coalesce(sum(amount), 0) from billing.ledger_entries where user_id = @UserId;",
             new { UserId = userId },
             cancellationToken: ct)).ConfigureAwait(false);
-        return MoneyAmount.Rub(amount);
+        return MoneyAmount.Usd(amount);
     }
 
     public async Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
@@ -416,7 +416,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Rub(0), [], []);
+            return new ActivitySummary(0, 0, 0, 0, MoneyAmount.Usd(0), [], []);
 
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -434,7 +434,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 coalesce(sum(a.input_tokens), 0) as InputTokens,
                 coalesce(sum(a.output_tokens), 0) as OutputTokens,
                 coalesce(sum(a.cache_tokens), 0) as CacheTokens,
-                coalesce(sum(u.cost_amount), 0) as CostRub
+                coalesce(sum(u.cost_amount), 0) as CostUsd
             from billing.activity_by_token a
             left join billing.usage_records u on u.request_id = a.request_id
             {whereClause};
@@ -445,7 +445,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 coalesce(sum(a.input_tokens), 0) as InputTokens,
                 coalesce(sum(a.output_tokens), 0) as OutputTokens,
                 coalesce(sum(a.cache_tokens), 0) as CacheTokens,
-                coalesce(sum(u.cost_amount), 0) as CostRub
+                coalesce(sum(u.cost_amount), 0) as CostUsd
             from billing.activity_by_token a
             left join billing.usage_records u on u.request_id = a.request_id
             {whereClause}
@@ -459,7 +459,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 coalesce(sum(a.input_tokens), 0) as InputTokens,
                 coalesce(sum(a.output_tokens), 0) as OutputTokens,
                 coalesce(sum(a.cache_tokens), 0) as CacheTokens,
-                coalesce(sum(u.cost_amount), 0) as CostRub
+                coalesce(sum(u.cost_amount), 0) as CostUsd
             from billing.activity_by_token a
             left join billing.usage_records u on u.request_id = a.request_id
             {whereClause}
@@ -469,14 +469,14 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters,
             cancellationToken: ct)).ConfigureAwait(false);
 
-        var totals = await multi.ReadSingleAsync<(long Requests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostRub)>().ConfigureAwait(false);
+        var totals = await multi.ReadSingleAsync<(long Requests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)>().ConfigureAwait(false);
         var models = (await multi.ReadAsync<ActivityModelSummaryEntity>().ConfigureAwait(false))
             .Select(e => new ActivityModelSummary(
-                e.ModelId, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
+                e.ModelId, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Usd(e.CostUsd)))
             .ToList();
         var keys = (await multi.ReadAsync<ActivityKeySummaryEntity>().ConfigureAwait(false))
             .Select(e => new ActivityKeySummary(
-                e.ApiKeyId, e.ApiKeyPrefix, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Rub(e.CostRub)))
+                e.ApiKeyId, e.ApiKeyPrefix, e.Requests, e.InputTokens, e.OutputTokens, e.CacheTokens, MoneyAmount.Usd(e.CostUsd)))
             .ToList();
 
         return new ActivitySummary(
@@ -484,7 +484,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             totals.InputTokens,
             totals.OutputTokens,
             totals.CacheTokens,
-            MoneyAmount.Rub(totals.CostRub),
+            MoneyAmount.Usd(totals.CostUsd),
             models,
             keys);
     }

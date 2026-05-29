@@ -43,7 +43,7 @@
             </div>
             <div class="act-stat-card">
                 <div class="act-stat-label">Total cost</div>
-                <div class="act-stat-value">@Model.Summary.TotalCostRub.ToString("N4") ₽</div>
+                <div class="act-stat-value">@Model.Summary.TotalCostUsd.ToString("N4") $</div>
             </div>
         </div>
 
@@ -71,7 +71,7 @@
                                     <td class="num">@m.InputTokens.ToString("N0")</td>
                                     <td class="num">@m.OutputTokens.ToString("N0")</td>
                                     <td class="num">@m.CacheTokens.ToString("N0")</td>
-                                    <td class="num">@m.CostRub.ToString("N4") ₽</td>
+                                    <td class="num">@m.CostUsd.ToString("N4") $</td>
                                 </tr>
                             }
                         </tbody>
@@ -104,7 +104,7 @@
                                     <td class="num">@k.InputTokens.ToString("N0")</td>
                                     <td class="num">@k.OutputTokens.ToString("N0")</td>
                                     <td class="num">@k.CacheTokens.ToString("N0")</td>
-                                    <td class="num">@k.CostRub.ToString("N4") ₽</td>
+                                    <td class="num">@k.CostUsd.ToString("N4") $</td>
                                 </tr>
                             }
                         </tbody>
@@ -203,7 +203,7 @@ else
                                 <td class="num">@r.InputTokens.ToString("N0")</td>
                                 <td class="num">@r.OutputTokens.ToString("N0")</td>
                                 <td class="num">@r.CacheTokens.ToString("N0")</td>
-                                <td class="num">@r.CostRub.ToString("N4") ₽</td>
+                                <td class="num">@r.CostUsd.ToString("N4") $</td>
                                 <td>
                                     <span class="badge @(r.Status == "completed" ? "badge-success" : "badge-warning")">@r.Status</span>
                                 </td>

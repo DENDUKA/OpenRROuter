@@ -28,16 +28,16 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             DisplayName = "GPT PG",
             UpstreamModelId = "router/gpt-pg",
             PriceVersion = "v1",
-            InputPricePer1MRub = "10",
-            OutputPricePer1MRub = "20",
-            CachePricePer1MRub = "1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
             Enabled = true
         });
         _ = await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
         {
             AdminId = "admin-1",
             UserId = "user-pg",
-            AmountRub = "50",
+            AmountUsd = "50",
             Reason = "pg test",
             IdempotencyKey = "pg-topup-1"
         });
@@ -57,7 +57,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
         var balance = await client.GetBalanceAsync(new GetBalanceRequest { UserId = "user-pg" });
         var usage = await client.ListUsageAsync(new ListUsageRequest());
 
-        Assert.Equal("40", balance.BalanceRub);
+        Assert.Equal("40", balance.BalanceUsd);
         Assert.Equal("pg-req-1", Assert.Single(usage.Records).RequestId);
     }
 

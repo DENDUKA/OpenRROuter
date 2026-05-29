@@ -11,7 +11,7 @@ public sealed record AdminRequestInfo(
     long InputTokens,
     long OutputTokens,
     long CacheTokens,
-    decimal CostRub,
+    decimal CostUsd,
     string Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset CompletedAt);

@@ -1,4 +1,4 @@
-﻿# План реализации ActivityByToken
+# План реализации ActivityByToken
 
 > **Для agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Шаги используют checkbox-синтаксис (`- [ ]`) для отслеживания выполнения.
 
@@ -383,7 +383,7 @@ dotnet build OpenRussiaRouter.sln -nr:false -m:1
 public void RecordUsage_ValidUsage_WritesActivityByToken()
 {
     var service = CreateServiceWithModel();
-    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
     service.RecordUsage(CreateUsageEvent("req-activity", new TokenUsage(10, 20, 3)), DateTimeOffset.UtcNow);
 
@@ -400,12 +400,12 @@ public void RecordUsage_ValidUsage_WritesActivityByToken()
 public void RecordUsage_UsageMissing_WritesActivityWithoutCharge()
 {
     var service = CreateServiceWithModel();
-    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
 
     var result = service.RecordUsage(CreateUsageEvent("req-missing", new TokenUsage(0, 0, 0), "usage_missing"), DateTimeOffset.UtcNow);
 
     Assert.True(result.Accepted);
-    Assert.Equal(MoneyAmount.Rub(100), service.GetBalance("user-1"));
+    Assert.Equal(MoneyAmount.Usd(100), service.GetBalance("user-1"));
     var activity = Assert.Single(service.ListActivityByToken(["key-1"]));
     Assert.Equal("usage_missing", activity.Status);
     Assert.Equal(0, activity.Usage.TotalTokens);
@@ -415,7 +415,7 @@ public void RecordUsage_UsageMissing_WritesActivityWithoutCharge()
 public void RecordUsage_SameRequestId_DoesNotDuplicateActivity()
 {
     var service = CreateServiceWithModel();
-    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Rub(100), "test", "topup-1", DateTimeOffset.UtcNow);
+    service.CreateVirtualTopUp("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
     var usage = CreateUsageEvent("req-idempotent", new TokenUsage(1, 1, 0));
 
     service.RecordUsage(usage, DateTimeOffset.UtcNow);
@@ -648,7 +648,7 @@ repository.AddActivityByToken(new ActivityByTokenRecord(
 
 if (usageEvent.Usage.TotalTokens == 0)
 {
-    return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Rub(0), null);
+    return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Usd(0), null);
 }
 ```
 

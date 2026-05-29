@@ -3,7 +3,7 @@ namespace OpenRussiaRouter.BuildingBlocks.Money;
 public readonly record struct MoneyAmount(decimal Amount, Currency Currency)
 {
 
-    public static MoneyAmount Rub(decimal amount) => new(amount, Currency.Rub);
+    public static MoneyAmount Usd(decimal amount) => new(amount, Currency.Usd);
 
     public static MoneyAmount operator +(MoneyAmount left, MoneyAmount right)
     {

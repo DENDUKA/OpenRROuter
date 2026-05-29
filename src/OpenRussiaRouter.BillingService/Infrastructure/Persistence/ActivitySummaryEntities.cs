@@ -7,7 +7,7 @@ internal sealed class ActivityModelSummaryEntity
     public long InputTokens { get; set; }
     public long OutputTokens { get; set; }
     public long CacheTokens { get; set; }
-    public decimal CostRub { get; set; }
+    public decimal CostUsd { get; set; }
 }
 
 internal sealed class ActivityKeySummaryEntity
@@ -18,5 +18,5 @@ internal sealed class ActivityKeySummaryEntity
     public long InputTokens { get; set; }
     public long OutputTokens { get; set; }
     public long CacheTokens { get; set; }
-    public decimal CostRub { get; set; }
+    public decimal CostUsd { get; set; }
 }

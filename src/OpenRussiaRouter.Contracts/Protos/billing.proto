@@ -30,7 +30,7 @@ message CheckBalanceAndModelResponse {
   bool allowed = 1;
   string model_id = 2;
   string price_version = 3;
-  string balance_rub = 4;
+  string balance_usd = 4;
   string error_code = 5;
   string router_model_id = 6;
 }
@@ -69,8 +69,8 @@ message PublicModel {
   string id = 1;
   string display_name = 2;
   string upstream_model_id = 3;
-  string input_price_per_1m_rub = 4;
-  string output_price_per_1m_rub = 5;
+  string input_price_per_1m_usd = 4;
+  string output_price_per_1m_usd = 5;
   int32  context_length = 6;
   string modalities = 7;
   string description = 8;
@@ -86,14 +86,14 @@ message GetBalanceRequest {
 
 message GetBalanceResponse {
   string user_id = 1;
-  string balance_rub = 2;
+  string balance_usd = 2;
   string error_code = 3;
 }
 
 message CreateVirtualTopUpRequest {
   string admin_id = 1;
   string user_id = 2;
-  string amount_rub = 3;
+  string amount_usd = 3;
   string reason = 4;
   string idempotency_key = 5;
 }
@@ -102,8 +102,8 @@ message CreateVirtualTopUpResponse {
   bool created = 1;
   string ledger_entry_id = 2;
   string user_id = 3;
-  string amount_rub = 4;
-  string balance_rub = 5;
+  string amount_usd = 4;
+  string balance_usd = 5;
   string error_code = 6;
 }
 
@@ -112,9 +112,9 @@ message UpsertModelPriceRequest {
   string display_name = 2;
   string upstream_model_id = 3;
   string price_version = 4;
-  string input_price_per_1m_rub = 5;
-  string output_price_per_1m_rub = 6;
-  string cache_price_per_1m_rub = 7;
+  string input_price_per_1m_usd = 5;
+  string output_price_per_1m_usd = 6;
+  string cache_price_per_1m_usd = 7;
   bool   enabled = 8;
   string description = 9;
   int32  context_length = 10;
@@ -139,9 +139,9 @@ message ModelDetail {
   string display_name = 2;
   string upstream_model_id = 3;
   string price_version = 4;
-  string input_price_per_1m_rub = 5;
-  string output_price_per_1m_rub = 6;
-  string cache_price_per_1m_rub = 7;
+  string input_price_per_1m_usd = 5;
+  string output_price_per_1m_usd = 6;
+  string cache_price_per_1m_usd = 7;
   bool   enabled = 8;
   string description = 9;
   int32  context_length = 10;
@@ -173,7 +173,7 @@ message UsageRecord {
   string price_version = 5;
   string router_node_id = 6;
   TokenUsage usage = 7;
-  string cost_rub = 8;
+  string cost_usd = 8;
   string status = 9;
   string created_at_utc = 10;
 }
@@ -202,7 +202,7 @@ message ActivityByTokenRecord {
   string status = 7;
   string created_at_utc = 8;
   string completed_at_utc = 9;
-  string cost_rub = 10;
+  string cost_usd = 10;
   string provider_name = 11;
   string provider_account = 12;
 }
@@ -225,7 +225,7 @@ message ActivityModelSummary {
   int64 input_tokens = 3;
   int64 output_tokens = 4;
   int64 cache_tokens = 5;
-  string cost_rub = 6;
+  string cost_usd = 6;
 }
 
 message ActivityKeySummary {
@@ -235,7 +235,7 @@ message ActivityKeySummary {
   int64 input_tokens = 4;
   int64 output_tokens = 5;
   int64 cache_tokens = 6;
-  string cost_rub = 7;
+  string cost_usd = 7;
 }
 
 message GetActivitySummaryResponse {
@@ -243,7 +243,7 @@ message GetActivitySummaryResponse {
   int64 total_input_tokens = 2;
   int64 total_output_tokens = 3;
   int64 total_cache_tokens = 4;
-  string total_cost_rub = 5;
+  string total_cost_usd = 5;
   repeated ActivityModelSummary models = 6;
   repeated ActivityKeySummary keys = 7;
 }
@@ -258,7 +258,7 @@ message ListTopUpsRequest {
 
 message TopUpRecord {
   string id = 1;
-  string amount_rub = 2;
+  string amount_usd = 2;
   string reason = 3;
   string created_at_utc = 4;
 }
@@ -290,7 +290,7 @@ message AdminRequestRecord {
   string status = 11;
   string created_at_utc = 12;
   string completed_at_utc = 13;
-  string cost_rub = 14;
+  string cost_usd = 14;
 }
 
 message ListAdminRequestsResponse {

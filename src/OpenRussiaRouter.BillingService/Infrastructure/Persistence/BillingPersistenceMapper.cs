@@ -140,7 +140,7 @@ public static class BillingPersistenceMapper
             entity.ModelId,
             entity.RouterNodeId,
             new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
-            new MoneyAmount(entity.CostAmount ?? 0m, Currency.Rub),
+            new MoneyAmount(entity.CostAmount ?? 0m, Currency.Usd),
             entity.Status,
             entity.CreatedAtUtc,
             entity.CompletedAtUtc,
@@ -159,7 +159,7 @@ public static class BillingPersistenceMapper
             entity.ProviderName,
             entity.ProviderAccount,
             new TokenUsage(entity.InputTokens, entity.OutputTokens, entity.CacheTokens),
-            MoneyAmount.Rub(entity.CostAmount),
+            MoneyAmount.Usd(entity.CostAmount),
             entity.Status,
             entity.CreatedAtUtc,
             entity.CompletedAtUtc);

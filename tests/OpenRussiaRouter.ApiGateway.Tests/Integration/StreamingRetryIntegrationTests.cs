@@ -180,7 +180,7 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
             => Task.FromResult<IReadOnlyCollection<GatewayPublicModel>>(Array.Empty<GatewayPublicModel>());
 
         public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassDisabled, CancellationToken ct)
-            => Task.FromResult(new GatewayBalanceCheckResult(true, modelId, modelId, "v1", MoneyAmount.Rub(100), null));
+            => Task.FromResult(new GatewayBalanceCheckResult(true, modelId, modelId, "v1", MoneyAmount.Usd(100), null));
 
         public Task<bool> RecordUsageAsync(GatewayUsageEvent ev, CancellationToken ct)
         {

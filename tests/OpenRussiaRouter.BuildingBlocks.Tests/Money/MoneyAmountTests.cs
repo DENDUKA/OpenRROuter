@@ -8,22 +8,22 @@ public sealed class MoneyAmountTests
     [Fact]
     public void Addition_SameCurrency_ReturnsSum()
     {
-        var left = MoneyAmount.Rub(10.25m);
-        var right = MoneyAmount.Rub(5.75m);
+        var left = MoneyAmount.Usd(10.25m);
+        var right = MoneyAmount.Usd(5.75m);
 
         var result = left + right;
 
-        result.Should().Be(MoneyAmount.Rub(16m));
+        result.Should().Be(MoneyAmount.Usd(16m));
     }
 
     [Fact]
     public void Subtraction_SameCurrency_ReturnsDifference()
     {
-        var left = MoneyAmount.Rub(10.25m);
-        var right = MoneyAmount.Rub(5m);
+        var left = MoneyAmount.Usd(10.25m);
+        var right = MoneyAmount.Usd(5m);
 
         var result = left - right;
 
-        result.Should().Be(MoneyAmount.Rub(5.25m));
+        result.Should().Be(MoneyAmount.Usd(5.25m));
     }
 }

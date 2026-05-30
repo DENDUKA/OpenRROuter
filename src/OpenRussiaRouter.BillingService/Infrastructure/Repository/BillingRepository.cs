@@ -152,8 +152,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         using var connection = connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
-            ModelPriceSelectSql + "where router_model_id = @RouterModelId and enabled = true;",
-            new { RouterModelId = modelId },
+            ModelPriceSelectSql + "where model_id = @ModelId and enabled = true;",
+            new { ModelId = modelId },
             cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;
@@ -163,8 +163,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         using var connection = connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
-            ModelPriceSelectSql + "where router_model_id = @RouterModelId;",
-            new { RouterModelId = modelId },
+            ModelPriceSelectSql + "where model_id = @ModelId;",
+            new { ModelId = modelId },
             cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
                 : null;

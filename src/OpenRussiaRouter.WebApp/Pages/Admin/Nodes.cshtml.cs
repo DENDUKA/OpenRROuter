@@ -275,7 +275,7 @@ public class NodesModel(
     public class TestFormInput
     {
         public string NodeId { get; set; } = "";
-        public string Model { get; set; } = "minimax/MiniMax-M2.7";
+        public string Model { get; set; } = "";
         public string Message { get; set; } = "";
     }
 }

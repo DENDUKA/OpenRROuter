@@ -7,5 +7,7 @@ resources:
   - postgres-secret.yaml
   - seq.yaml
   - grafana.yaml
+  - grafana-dashboards-cm.yaml
+  - prometheus.yaml
   - migration-job.yaml
   - network-policies.yaml

@@ -5,7 +5,7 @@ ARG SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:8.0
 FROM ${SDK_IMAGE} AS build
 WORKDIR /src
 
-COPY NuGet.Config ./
+COPY NuGet.Config Directory.Packages.props ./
 COPY src/OpenRussiaRouter.BuildingBlocks/OpenRussiaRouter.BuildingBlocks.csproj src/OpenRussiaRouter.BuildingBlocks/
 COPY src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj src/OpenRussiaRouter.Contracts/
 COPY src/OpenRussiaRouter.ControlPlane/OpenRussiaRouter.ControlPlane.csproj src/OpenRussiaRouter.ControlPlane/

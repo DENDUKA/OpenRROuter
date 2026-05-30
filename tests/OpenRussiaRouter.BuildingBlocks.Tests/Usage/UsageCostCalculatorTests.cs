@@ -11,8 +11,13 @@ public sealed class UsageCostCalculatorTests
     [Theory]
     [InlineData(1_000_000, 0, 0, 10, 20, 1, 10)]
     [InlineData(0, 1_000_000, 0, 10, 20, 1, 20)]
-    [InlineData(0, 0, 1_000_000, 10, 20, 1, 1)]
-    [InlineData(500_000, 250_000, 100_000, 10, 20, 1, 10.1)]
+    // Cache is a subset of input: cached part billed at cache rate, not input rate.
+    [InlineData(1_000_000, 0, 1_000_000, 10, 20, 1, 1)]
+    [InlineData(1_000_000, 0, 200_000, 10, 20, 1, 8.2)]
+    // 400k non-cached input @10 + 250k output @20 + 100k cache @1.
+    [InlineData(500_000, 250_000, 100_000, 10, 20, 1, 9.1)]
+    // Cache greater than input is clamped to zero billable input (no negative charge).
+    [InlineData(100_000, 0, 200_000, 10, 20, 1, 0.2)]
     public void Calculate_ValidUsage_ReturnsExpectedUsdCost(
         long inputTokens,
         long outputTokens,

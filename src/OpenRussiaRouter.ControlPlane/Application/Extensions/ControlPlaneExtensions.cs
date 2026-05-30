@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.ControlPlane.Application.Metrics;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
@@ -40,6 +41,12 @@ public static class ControlPlaneExtensions
         services.AddTransient<IRouterNodeProvider, CachedRouterNodeProvider>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
+
+        services.AddHttpClient<ProviderQuotaCollectorWorker>();
+        services.AddOptions<ProviderQuotaCollectorOptions>()
+            .Bind(configuration.GetSection("ProviderQuotaCollector"))
+            .ValidateDataAnnotations();
+        services.AddHostedService<ProviderQuotaCollectorWorker>();
 
         services.AddOptions<RouterModelCapabilityOptions>()
             .Bind(configuration.GetSection("RouterModelCapability"))

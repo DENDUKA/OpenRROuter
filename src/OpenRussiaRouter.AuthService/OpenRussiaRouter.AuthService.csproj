@@ -8,9 +8,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
-    <PackageReference Include="Npgsql" Version="8.0.6" />
+    <PackageReference Include="Dapper"  />
+    <PackageReference Include="Grpc.AspNetCore"  />
+    <PackageReference Include="Npgsql"  />
   </ItemGroup>
 
   <PropertyGroup>

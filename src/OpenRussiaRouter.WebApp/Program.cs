@@ -3,6 +3,7 @@ using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 using OpenRussiaRouter.BuildingBlocks.Logging;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
@@ -17,6 +18,7 @@ using Microsoft.AspNetCore.Authentication.Google;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("webapp");
+builder.AddOpenTelemetryMetrics("OpenRussiaRouter.WebApp");
 
 builder.Services.AddRazorPages();
 builder.Services.AddControllers();
@@ -159,6 +161,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapRazorPages();
 app.MapControllers();
+app.MapOpenTelemetryEndpoints();
 
 app.Run();
 

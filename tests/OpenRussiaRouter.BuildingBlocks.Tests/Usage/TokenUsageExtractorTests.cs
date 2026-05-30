@@ -45,6 +45,39 @@ public sealed class TokenUsageExtractorTests
     }
 
     [Fact]
+    public void TryExtractJson_OpenAiCachedTokens_AreSubsetOfPromptTokens()
+    {
+        // OpenAI: prompt_tokens already includes cached_tokens, so input is unchanged.
+        var json = """
+            {"usage":{"prompt_tokens":1000,"completion_tokens":50,"prompt_tokens_details":{"cached_tokens":800}}}
+            """;
+
+        var result = TokenUsageExtractor.TryExtractJson(json, out var usage);
+
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(1000);
+        usage.OutputTokens.Should().Be(50);
+        usage.CacheTokens.Should().Be(800);
+    }
+
+    [Fact]
+    public void TryExtractJson_AnthropicCacheReadTokens_AreAddedToInput()
+    {
+        // Anthropic: input_tokens excludes cache reads, so cache is folded into input
+        // to keep the invariant "InputTokens includes CacheTokens".
+        var json = """
+            {"usage":{"input_tokens":200,"output_tokens":50,"cache_read_input_tokens":800}}
+            """;
+
+        var result = TokenUsageExtractor.TryExtractJson(json, out var usage);
+
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(1000);
+        usage.OutputTokens.Should().Be(50);
+        usage.CacheTokens.Should().Be(800);
+    }
+
+    [Fact]
     public void TryExtractStreamingSse_MissingUsage_ReturnsFalse()
     {
         var body = """

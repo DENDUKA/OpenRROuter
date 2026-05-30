@@ -25,17 +25,17 @@ public static class TokenUsageExtractor
             if (usageElement.TryGetProperty("_orr_raw", out var rawElement) &&
                 rawElement.ValueKind == JsonValueKind.Object)
             {
-                usage = new TokenUsage(
+                usage = BuildUsage(
                     ReadInt64(rawElement, "prompt_tokens", "input_tokens"),
                     ReadInt64(rawElement, "completion_tokens", "output_tokens"),
-                    ReadCacheTokens(usageElement));
+                    usageElement);
                 return true;
             }
 
-            usage = new TokenUsage(
+            usage = BuildUsage(
                 ReadInt64(usageElement, "input_tokens", "prompt_tokens"),
                 ReadInt64(usageElement, "output_tokens", "completion_tokens"),
-                ReadCacheTokens(usageElement));
+                usageElement);
             return true;
         }
         catch (JsonException)
@@ -73,9 +73,38 @@ public static class TokenUsageExtractor
         return found;
     }
 
-    private static long ReadCacheTokens(JsonElement usageElement)
+    /// <summary>
+    /// Builds a <see cref="TokenUsage"/> enforcing the invariant that
+    /// <see cref="TokenUsage.InputTokens"/> includes <see cref="TokenUsage.CacheTokens"/>
+    /// (cached tokens are a subset of the prompt). OpenAI-style usage already satisfies
+    /// this (<c>prompt_tokens</c> includes <c>cached_tokens</c>). Anthropic-style usage
+    /// reports cache reads separately from <c>input_tokens</c>, so cache is added to input.
+    /// </summary>
+    private static TokenUsage BuildUsage(long inputTokens, long outputTokens, JsonElement usageElement)
     {
-        var direct = ReadInt64(usageElement, "cache_tokens", "cached_tokens", "cache_read_input_tokens");
+        var cacheTokens = ReadCacheTokens(usageElement, out var separateFromInput);
+        if (separateFromInput)
+        {
+            inputTokens += cacheTokens;
+        }
+
+        return new TokenUsage(inputTokens, outputTokens, cacheTokens);
+    }
+
+    private static long ReadCacheTokens(JsonElement usageElement, out bool separateFromInput)
+    {
+        // Anthropic reports cache reads/creation separately from input_tokens.
+        var anthropic = ReadInt64(usageElement, "cache_read_input_tokens", "cache_creation_input_tokens");
+        if (anthropic > 0)
+        {
+            separateFromInput = true;
+            return anthropic;
+        }
+
+        separateFromInput = false;
+
+        // OpenAI-style: cached tokens are already part of prompt_tokens.
+        var direct = ReadInt64(usageElement, "cache_tokens", "cached_tokens");
         if (direct > 0)
         {
             return direct;

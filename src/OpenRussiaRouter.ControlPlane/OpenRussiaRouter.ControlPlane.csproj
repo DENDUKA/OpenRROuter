@@ -9,17 +9,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Google.Protobuf" Version="3.34.1" />
-    <PackageReference Include="Grpc.AspNetCore" Version="2.80.0" />
-    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.80.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.80.0">
+    <PackageReference Include="Dapper"  />
+    <PackageReference Include="Google.Protobuf"  />
+    <PackageReference Include="Grpc.AspNetCore"  />
+    <PackageReference Include="Grpc.Net.ClientFactory"  />
+    <PackageReference Include="Grpc.Tools" >
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql" Version="8.0.6" />
-    <PackageReference Include="Quartz" Version="3.13.1" />
-    <PackageReference Include="Quartz.Extensions.Hosting" Version="3.13.1" />
+    <PackageReference Include="Npgsql"  />
+    <PackageReference Include="Quartz"  />
+    <PackageReference Include="Quartz.Extensions.Hosting"  />
   </ItemGroup>
 
   <PropertyGroup>

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -18,4 +19,6 @@ public sealed class RouterHealthCheckOptions
 
     [Required]
     public string NodeTokenHeader { get; set; } = "X-ORR-Node-Token";
+
+    public Dictionary<string, string> NodeTokens { get; set; } = new();
 }

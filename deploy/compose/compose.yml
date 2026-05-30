@@ -1,0 +1,178 @@
+name: orr
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: openrussiarouter
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d openrussiarouter"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    mem_limit: 1g
+    cpus: 1.0
+
+  seq:
+    image: datalust/seq:latest
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    mem_limit: 1g
+    cpus: 1.0
+
+  auth-service:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.AuthService/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Kestrel__EndpointDefaults__Protocols: "Http2"
+      ConnectionStrings__AuthDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
+      Seq__Url: "http://seq:80"
+      AuthOptions__InitialAdminEmail: "${INITIAL_ADMIN_EMAIL}"
+      AuthOptions__InitialAdminPassword: "${INITIAL_ADMIN_PASSWORD}"
+    mem_limit: 512m
+    cpus: 0.75
+
+  billing-service:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.BillingService/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5002:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Kestrel__EndpointDefaults__Protocols: "Http2"
+      ConnectionStrings__BillingDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
+      Seq__Url: "http://seq:80"
+    mem_limit: 512m
+    cpus: 0.75
+
+  control-plane:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.ControlPlane/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5003:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Kestrel__EndpointDefaults__Protocols: "Http2"
+      ConnectionStrings__ControlPlaneDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
+      GrpcServices__Auth: "http://auth-service:8080"
+      Seq__Url: "http://seq:80"
+      RouterHealthChecks__HealthPath: "/api/health"
+      RouterHealthChecks__NodeTokens: ""
+    mem_limit: 512m
+    cpus: 0.75
+
+  api-gateway:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.ApiGateway/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_started
+      billing-service:
+        condition: service_started
+      control-plane:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      GrpcServices__Auth: "http://auth-service:8080"
+      GrpcServices__Billing: "http://billing-service:8080"
+      GrpcServices__ControlPlane: "http://control-plane:8080"
+      Seq__Url: "http://seq:80"
+    mem_limit: 512m
+    cpus: 0.75
+
+  webapp:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.WebApp/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_started
+      billing-service:
+        condition: service_started
+      control-plane:
+        condition: service_started
+    ports:
+      - "3000:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      GrpcServices__Auth: "http://auth-service:8080"
+      GrpcServices__Billing: "http://billing-service:8080"
+      GrpcServices__ControlPlane: "http://control-plane:8080"
+      Seq__Url: "http://seq:80"
+    mem_limit: 512m
+    cpus: 0.75
+
+  f9router:
+    build:
+      context: ./f9router
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "20128:20128"
+    environment:
+      NODE_ENV: production
+      PORT: "20128"
+      HOSTNAME: 0.0.0.0
+      DATA_DIR: /app/data
+      JWT_SECRET: ${F9_JWT_SECRET}
+      INITIAL_PASSWORD: ${F9_INITIAL_PASSWORD}
+      API_KEY_SECRET: ${F9_API_KEY_SECRET}
+      MACHINE_ID_SALT: ${F9_MACHINE_ID_SALT}
+      ROUTER_CONTROL_TOKEN: ${ORR_NODE_CONTROL_TOKEN}
+      ENABLE_REQUEST_LOGS: "false"
+      OBSERVABILITY_ENABLED: "true"
+      AUTH_COOKIE_SECURE: "false"
+      REQUIRE_API_KEY: "true"
+      BASE_URL: "${F9_PUBLIC_URL:-http://localhost:20128}"
+      NEXT_PUBLIC_BASE_URL: "${F9_PUBLIC_URL:-http://localhost:20128}"
+      CLOUD_URL: "https://9router.com"
+      NEXT_PUBLIC_CLOUD_URL: "https://9router.com"
+    volumes:
+      - f9router_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:20128/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    mem_limit: 768m
+    cpus: 1.0
+
+volumes:
+  postgres_data:
+  seq_data:
+  f9router_data:

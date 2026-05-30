@@ -46,7 +46,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview", "gemini-cli/gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         var questionSchema = document.RootElement
@@ -76,7 +76,7 @@ public sealed class GeminiSchemaPatcherTests
     {
         const string request = """{"model":"gpt-test","tools":[{"function":{"parameters":{"properties":{"x":{"$ref":"#/$defs/X","description":"kept"}}}}}]}""";
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gpt-4.1");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gpt-4.1", "gpt-4.1");
 
         result.Should().Be(request);
     }
@@ -113,7 +113,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-3.1-pro-preview", "gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         var answerSchema = document.RootElement
@@ -174,7 +174,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview", "gemini-cli/gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         var inputSchema = document.RootElement
@@ -230,7 +230,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gc/gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gc/gemini-3.1-pro-preview", "gc/gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         var optionSchema = document.RootElement
@@ -274,7 +274,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview", "gemini-cli/gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         var optionSchema = document.RootElement
@@ -312,7 +312,7 @@ public sealed class GeminiSchemaPatcherTests
         }
         """;
 
-        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview");
+        var result = GeminiSchemaPatcher.SanitizeIfGeminiModel(request, "gemini-cli/gemini-3.1-pro-preview", "gemini-cli/gemini-3.1-pro-preview");
 
         using var document = JsonDocument.Parse(result);
         document.RootElement

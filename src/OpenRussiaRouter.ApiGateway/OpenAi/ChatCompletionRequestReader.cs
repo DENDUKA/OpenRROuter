@@ -24,8 +24,15 @@ public static class ChatCompletionRequestReader
 
     public static ChatCompletionRequestMetadata Read(string json)
     {
-        using var document = JsonDocument.Parse(json);
-        return Read(document.RootElement);
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return Read(document.RootElement);
+        }
+        catch (JsonException)
+        {
+            return new ChatCompletionRequestMetadata(null, false);
+        }
     }
 
     private static ChatCompletionRequestMetadata Read(JsonElement root)

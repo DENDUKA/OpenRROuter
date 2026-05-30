@@ -14,9 +14,9 @@ public static class GeminiSchemaPatcher
         "parametersJsonSchema"
     };
 
-    public static string SanitizeIfGeminiModel(string requestJson, string routerModelId)
+    public static string SanitizeIfGeminiModel(string requestJson, string routerModelId, string originalModelId)
     {
-        if (!IsGeminiModel(routerModelId))
+        if (!IsGeminiModel(routerModelId, originalModelId))
             return requestJson;
 
         try
@@ -33,9 +33,9 @@ public static class GeminiSchemaPatcher
         }
     }
 
-    private static bool IsGeminiModel(string routerModelId)
+    private static bool IsGeminiModel(string routerModelId, string originalModelId)
     {
-        return routerModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase);
+        return routerModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase) || originalModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool SanitizeKnownSchemaRoots(JsonObject request)

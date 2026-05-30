@@ -42,7 +42,8 @@ public sealed class ChatCompletionHandler(
 
             var patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
                 SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
-                auth.RouterModelId);
+                auth.RouterModelId,
+                body.Metadata.Model ?? "");
             var startedAt = DateTimeOffset.UtcNow;
 
             var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
@@ -87,7 +88,8 @@ public sealed class ChatCompletionHandler(
             var patchedJson = SseRequestPatcher.InjectStreamOptions(
                 GeminiSchemaPatcher.SanitizeIfGeminiModel(
                     SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
-                    auth.RouterModelId));
+                    auth.RouterModelId,
+                    body.Metadata.Model ?? ""));
             var lease = auth.Lease;
 
             var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);

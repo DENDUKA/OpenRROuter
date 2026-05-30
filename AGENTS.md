@@ -50,11 +50,14 @@ OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .N
 
 `POST /v1/chat/completions`:
 1. Extract Bearer token → validate via AuthService gRPC
-2. Check balance + model availability via BillingService gRPC
-3. Select router node via ControlPlane gRPC
-4. Forward request to 9Router node via YARP reverse proxy
-5. Extract token usage from response
-6. Record usage event asynchronously (fire-and-forget)
+2. Check balance + model availability via BillingService gRPC. The BillingService resolves the user-facing `ModelId` (e.g. `ORR/Gemini-3.1-Pro`) to the internal `RouterModelId` (e.g. `ag/gemini-pro-agent`).
+3. Select router node via ControlPlane gRPC using the resolved `RouterModelId`.
+4. Patch the request JSON:
+   - Replace the `model` field in the payload with the internal `RouterModelId`.
+   - If either the user-facing `ModelId` or the internal `RouterModelId` contains the word "gemini" (case-insensitive), apply `GeminiSchemaPatcher` to sanitize schemas (e.g. `tools`/`functions` formatting) to comply with Google's strict requirements.
+5. Forward request to 9Router node via YARP reverse proxy
+6. Extract token usage from response
+7. Record usage event asynchronously (fire-and-forget)
 
 ### Key Patterns
 

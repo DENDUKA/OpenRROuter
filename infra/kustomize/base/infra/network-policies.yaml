@@ -98,6 +98,8 @@ spec:
           protocol: TCP
         - port: 8080
           protocol: TCP
+        - port: 20128
+          protocol: TCP
 
 ---
 # Ingress controller (nginx) → api-gateway, and webapp → api-gateway (for test requests)

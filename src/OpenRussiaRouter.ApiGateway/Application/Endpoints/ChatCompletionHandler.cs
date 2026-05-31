@@ -49,6 +49,11 @@ public sealed class ChatCompletionHandler(
             var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
             var completedAt = DateTimeOffset.UtcNow;
 
+            if (response.StatusCode >= 500)
+            {
+                logger.LogError("Chat completion downstream error. StatusCode: {StatusCode}, Body: {Body}", response.StatusCode, response.Body);
+            }
+
             await controlPlaneProvider.ReleaseRouterNodeAsync(
                 auth.Lease.LeaseId,
                 response.StatusCode >= 500 ? "failed" : "completed",
@@ -62,6 +67,10 @@ public sealed class ChatCompletionHandler(
             context.Response.StatusCode = response.StatusCode;
             context.Response.ContentType = response.ContentType;
             await context.Response.WriteAsync(response.Body);
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected before the response completed — expected, not an error.
         }
         catch (Exception ex)
         {
@@ -159,10 +168,13 @@ public sealed class ChatCompletionHandler(
         }
     }
 
-    private static async Task PassThroughErrorAsync(HttpContext context, RouterStreamSession session, CancellationToken cancellationToken)
+    private async Task PassThroughErrorAsync(HttpContext context, RouterStreamSession session, CancellationToken cancellationToken)
     {
         var statusCode = session.StatusCode;
         var body = await session.ReadErrorBodyAsync(cancellationToken);
+        
+        logger.LogError("Streaming chat completion downstream error. StatusCode: {StatusCode}, Body: {Body}", statusCode, body);
+        
         await session.DisposeAsync();
 
         if (context.Response.HasStarted) return;

@@ -132,9 +132,13 @@
                     </div>
                     <div class="form-group" style="align-self:flex-end">
                         <button type="submit" asp-page-handler="EnrichModel" class="btn btn-secondary"
-                                title="Fetch description, context length, modalities and provider from OpenRouter into the fields above. Review, then Save.">
+                                title="Fetch description, context length, modalities, provider and prices from OpenRouter into the fields above. Review, then Save.">
                             Fetch from OpenRouter
                         </button>
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:normal; margin-top:0.4rem;">
+                            <input type="checkbox" name="fillPrices" value="true" @(Model.EnrichFillPrices ? "checked" : "") />
+                            Fill price fields
+                        </label>
                     </div>
                 </div>
                 <div class="adm-form-row">

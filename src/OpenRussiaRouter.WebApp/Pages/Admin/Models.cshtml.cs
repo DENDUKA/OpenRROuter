@@ -34,6 +34,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     /// <summary>The OpenRouter id the admin typed for an explicit per-model enrich (kept across redisplay).</summary>
     public string? EnrichOpenRouterId { get; set; }
 
+    /// <summary>Whether per-model enrich writes OpenRouter prices into the form fields (checked by default).</summary>
+    public bool EnrichFillPrices { get; set; } = true;
+
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
     public async Task OnGetAsync()
@@ -241,11 +244,12 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     /// If <paramref name="openRouterId"/> is given it is matched explicitly; otherwise auto-match
     /// runs against the Router Model / Model ID, and on failure the UI asks for an explicit id.
     /// </summary>
-    public async Task<IActionResult> OnPostEnrichModelAsync(bool isNew, string? openRouterId)
+    public async Task<IActionResult> OnPostEnrichModelAsync(bool isNew, string? openRouterId, bool fillPrices)
     {
         ShowForm = true;
         IsAdd = isNew;
         EnrichOpenRouterId = openRouterId?.Trim();
+        EnrichFillPrices = fillPrices;
 
         // This is a "fill the form" action, not a save — drop any premature validation errors
         // (e.g. a still-empty Display Name while adding) so the redisplayed form stays clean.
@@ -285,15 +289,23 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             // Echo the matched id back into the input so the admin sees exactly what was used.
             EnrichOpenRouterId = match.MatchedId;
 
-            // Prices from OpenRouter are the upstream *cost* per 1M tokens — fill them so the admin
-            // has a reference, but they must set their own selling price (margin) before saving.
+            // Prices from OpenRouter are the upstream *cost* per 1M tokens. They are always surfaced
+            // in the message for reference; they are only written into the form fields when the admin
+            // left "Fill price fields" checked (so a description refresh can't clobber margins).
             var pricesNote = "";
             if (match.InputPrice is not null || match.OutputPrice is not null || match.CachePrice is not null)
             {
-                if (match.InputPrice is not null) Form.InputPrice = match.InputPrice.Value;
-                if (match.OutputPrice is not null) Form.OutputPrice = match.OutputPrice.Value;
-                if (match.CachePrice is not null) Form.CachePrice = match.CachePrice.Value;
-                pricesNote = $" OpenRouter cost (in/out/cache per 1M): ${Form.InputPrice:N4} / ${Form.OutputPrice:N4} / ${Form.CachePrice:N4} — set your selling price before saving.";
+                if (EnrichFillPrices)
+                {
+                    if (match.InputPrice is not null) Form.InputPrice = match.InputPrice.Value;
+                    if (match.OutputPrice is not null) Form.OutputPrice = match.OutputPrice.Value;
+                    if (match.CachePrice is not null) Form.CachePrice = match.CachePrice.Value;
+                    pricesNote = $" OpenRouter cost (in/out/cache per 1M): ${match.InputPrice:N4} / ${match.OutputPrice:N4} / ${match.CachePrice:N4} — set your selling price before saving.";
+                }
+                else
+                {
+                    pricesNote = $" OpenRouter cost (in/out/cache per 1M): ${match.InputPrice:N4} / ${match.OutputPrice:N4} / ${match.CachePrice:N4} (price fields left unchanged).";
+                }
             }
 
             SuccessMessage = $"Filled from OpenRouter ({match.MatchedId}). Review the fields and click Save to persist.{pricesNote}";

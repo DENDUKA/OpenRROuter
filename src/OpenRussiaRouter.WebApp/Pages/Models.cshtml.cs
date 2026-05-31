@@ -61,7 +61,7 @@ public class ModelsModel(
     }
 
     public static string FormatPrice(decimal price) =>
-        $"{price:0.##} $ / 1M";
+        $"{price:0.##} $";
 
     public static string FormatContext(int? tokens) =>
         tokens is > 0
@@ -112,6 +112,7 @@ public class ModelsModel(
             model.UpstreamModelId,
             model.InputPrice,
             model.OutputPrice,
+            model.CachePrice,
             provider,
             capability,
             FormatContext(model.ContextLength),
@@ -134,6 +135,7 @@ public class ModelsModel(
         string UpstreamModelId,
         decimal InputPrice,
         decimal OutputPrice,
+        decimal CacheWritePrice,
         string Provider,
         string Capability,
         string Context,

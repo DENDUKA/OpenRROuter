@@ -36,6 +36,7 @@ public class ModelDetailsModel : PageModelBase
     public string ModalitiesDisplay => ModelData?.Modalities ?? "Text";
     public decimal InputPrice => ModelData?.InputPrice ?? 0;
     public decimal OutputPrice => ModelData?.OutputPrice ?? 0;
+    public decimal CachePrice => ModelData?.CachePrice ?? 0;
     public bool HasPricing => InputPrice > 0 || OutputPrice > 0;
 
     public async Task OnGetAsync()

@@ -323,7 +323,9 @@ public class ModelsSyncModel(
 
     public sealed class ImportFormInput
     {
-        public string Prefix { get; set; } = "";
+        // Optional. Must be nullable: a non-nullable string under <Nullable>enable</Nullable>
+        // gets an implicit [Required] that rejects an empty prefix and silently blocks import.
+        public string? Prefix { get; set; }
 
         public List<ModelImportRow> Rows { get; set; } = [];
     }

@@ -54,7 +54,6 @@
                     <thead>
                         <tr>
                             <th scope="col">Model</th>
-                            <th scope="col">Upstream</th>
                             <th scope="col">Providers</th>
                             <th scope="col">Tags</th>
                             <th scope="col" class="num">Input</th>
@@ -81,11 +80,15 @@
                                         <div class="model-icon" aria-hidden="true">@initials</div>
                                         <div>
                                             <div class="model-name">@m.DisplayName</div>
-                                            <code class="model-slug">@m.Id</code>
+                                            <div style="display: flex; align-items: center; gap: 6px;">
+                                                <code class="model-slug" id="model-slug-@m.Id">@m.Id</code>
+                                                <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="Copy Model ID" aria-label="Copy Model ID">
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td><code class="model-slug">@m.UpstreamModelId</code></td>
                                 <td>@m.Provider</td>
                                 <td>
                                     @if (m.Tags.Count > 0)
@@ -139,6 +142,8 @@
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
     .catalog-state strong { color: var(--color-ink); }
     .catalog-state.error { border-color: rgba(255,59,48,.45); }
+    .copy-btn { padding: 4px; border: none; background: transparent; color: var(--color-mute); cursor: pointer; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; }
+    .copy-btn:hover { background: var(--color-canvas-soft); color: var(--color-ink); }
     @@media (max-width: 820px) { .models-hero, .models-toolbar { display: grid; grid-template-columns: 1fr; } .table-scroll { overflow-x: auto; } }
     @@media (max-width: 520px) { .toolbar-note { display: none; } }
 </style>
@@ -180,5 +185,20 @@
         });
         const countEl = document.getElementById('model-count');
         if (countEl) countEl.textContent = visible + ' model' + (visible === 1 ? '' : 's') + ' available';
+    }
+
+    function copyModelId(event) {
+        event.stopPropagation();
+        const btn = event.currentTarget;
+        const id = btn.getAttribute('data-model-id');
+        navigator.clipboard.writeText(id).then(() => {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            btn.style.color = 'var(--color-success)';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.style.color = '';
+            }, 1500);
+        });
     }
 </script>

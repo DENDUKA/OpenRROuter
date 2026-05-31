@@ -51,6 +51,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 var all = await _billingClient.ListModelsAsync();
                 var m = all.FirstOrDefault(x => x.Id == EditModelId);
                 if (m != null)
+                {
                     Form = new ModelFormInput
                     {
                         Id = m.Id,
@@ -65,6 +66,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         Modalities = m.Modalities,
                         TagIds = m.TagIds?.ToList() ?? []
                     };
+                }
             }
             catch (Exception ex)
             {
@@ -100,6 +102,13 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             if (isNew && orig != null)
             {
                 ModelState.AddModelError("Form.Id", $"Model '{Form.Id}' already exists.");
+                await LoadFormData();
+                return Page();
+            }
+
+            if (!isNew && orig == null)
+            {
+                ModelState.AddModelError("Form.Id", $"Model '{Form.Id}' not found.");
                 await LoadFormData();
                 return Page();
             }

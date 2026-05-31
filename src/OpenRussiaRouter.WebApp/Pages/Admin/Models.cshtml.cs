@@ -282,7 +282,21 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             if (!string.IsNullOrWhiteSpace(match.Provider))
                 Form.Provider = match.Provider;
 
-            SuccessMessage = $"Filled from OpenRouter ({match.MatchedId}). Review the fields and click Save to persist.";
+            // Echo the matched id back into the input so the admin sees exactly what was used.
+            EnrichOpenRouterId = match.MatchedId;
+
+            // Prices from OpenRouter are the upstream *cost* per 1M tokens — fill them so the admin
+            // has a reference, but they must set their own selling price (margin) before saving.
+            var pricesNote = "";
+            if (match.InputPrice is not null || match.OutputPrice is not null || match.CachePrice is not null)
+            {
+                if (match.InputPrice is not null) Form.InputPrice = match.InputPrice.Value;
+                if (match.OutputPrice is not null) Form.OutputPrice = match.OutputPrice.Value;
+                if (match.CachePrice is not null) Form.CachePrice = match.CachePrice.Value;
+                pricesNote = $" OpenRouter cost (in/out/cache per 1M): ${Form.InputPrice:N4} / ${Form.OutputPrice:N4} / ${Form.CachePrice:N4} — set your selling price before saving.";
+            }
+
+            SuccessMessage = $"Filled from OpenRouter ({match.MatchedId}). Review the fields and click Save to persist.{pricesNote}";
             await LoadFormData();
             return Page();
         }

@@ -9,9 +9,9 @@ public interface IOpenRouterCatalogClient
     Task<IReadOnlyList<OpenRouterModelEntry>> LoadCatalogAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Ищет модель по upstream_model_id.
-    /// Стратегия: exact match → strip-suffix match.
-    /// Возвращает null если модель не найдена.
+    /// Ищет модель по upstream_model_id многоуровневой стратегией:
+    /// exact → strip-suffix → normalized → slug-tail → cross → by-name.
+    /// Возвращает описание, контекст, модальности, провайдера и цены ($/1M). null если не найдена.
     /// </summary>
     OpenRouterMatchResult? FindMatch(IReadOnlyList<OpenRouterModelEntry> catalog, string upstreamModelId);
 }

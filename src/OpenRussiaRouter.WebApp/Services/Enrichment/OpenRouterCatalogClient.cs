@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 
@@ -14,8 +15,9 @@ public sealed class OpenRouterCatalogClient(
     {
         try
         {
+            // Frontend feed — full descriptions + pricing (see OpenRouterModelDto.cs).
             var response = await httpClient.GetFromJsonAsync<OpenRouterModelsResponse>(
-                "api/v1/models", cancellationToken);
+                "api/frontend/models", cancellationToken);
             return response?.Data ?? [];
         }
         catch (Exception ex)
@@ -36,30 +38,37 @@ public sealed class OpenRouterCatalogClient(
         var normId = Normalize(id);
         var normSlug = Normalize(Slug(id));
 
+        // Defensive: the frontend feed is large and undocumented — drop entries without a slug.
+        var entries = catalog.Where(e => !string.IsNullOrWhiteSpace(e.Slug)).ToList();
+
         // Strategy ladder, from most to least confident. First hit wins.
         var match =
-            // 1. Exact id (case-insensitive).
-            catalog.FirstOrDefault(e => string.Equals(e.Id, id, StringComparison.OrdinalIgnoreCase))
+            // 1. Exact slug (case-insensitive).
+            entries.FirstOrDefault(e => string.Equals(e.Slug, id, StringComparison.OrdinalIgnoreCase))
             // 2. Strip versioning/variant suffix on either side, then exact.
-            ?? catalog.FirstOrDefault(e => string.Equals(StripSuffix(e.Id), StripSuffix(id), StringComparison.OrdinalIgnoreCase))
-            // 3. Fully normalized id (separators/case/punctuation removed).
-            ?? catalog.FirstOrDefault(e => Normalize(e.Id) == normId)
-            // 4. Slug-only match — handles vendor prefix present on one side only
+            ?? entries.FirstOrDefault(e => string.Equals(StripSuffix(e.Slug), StripSuffix(id), StringComparison.OrdinalIgnoreCase))
+            // 3. Fully normalized slug (separators/case/punctuation removed).
+            ?? entries.FirstOrDefault(e => Normalize(e.Slug) == normId)
+            // 4. Slug-tail match — handles vendor prefix present on one side only
             //    (e.g. upstream "gpt-4o" vs OpenRouter "openai/gpt-4o").
-            ?? catalog.FirstOrDefault(e => Normalize(Slug(e.Id)) == normSlug)
-            // 5. Cross match: full upstream id vs candidate slug, or vice versa.
-            ?? catalog.FirstOrDefault(e => Normalize(Slug(e.Id)) == normId || Normalize(e.Id) == normSlug)
+            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlug)
+            // 5. Cross match: full upstream id vs candidate tail, or vice versa.
+            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normId || Normalize(e.Slug) == normSlug)
             // 6. Fall back to the human-readable name (after stripping the "Vendor:" prefix).
-            ?? catalog.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name)) == normSlug);
+            ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlug);
 
         if (match is null) return null;
 
+        var pricing = match.Endpoint?.Pricing;
         return new OpenRouterMatchResult(
-            match.Id,
+            match.Slug,
             string.IsNullOrWhiteSpace(match.Description) ? null : match.Description.Trim(),
             match.ContextLength is > 0 ? match.ContextLength : null,
-            ParseModalities(match.Architecture?.Modality),
-            ParseProvider(match));
+            FormatModalities(match.InputModalities),
+            ParseProvider(match),
+            PerMillion(pricing?.Prompt),
+            PerMillion(pricing?.Completion),
+            PerMillion(pricing?.InputCacheRead));
     }
 
     private static string StripSuffix(string modelId)
@@ -97,7 +106,11 @@ public sealed class OpenRouterCatalogClient(
 
     private static string? ParseProvider(OpenRouterModelEntry entry)
     {
-        // OpenRouter names look like "OpenAI: GPT-4o" — the part before ':' is the vendor.
+        // The frontend feed gives a clean vendor display name directly.
+        if (!string.IsNullOrWhiteSpace(entry.AuthorDisplayName))
+            return entry.AuthorDisplayName.Trim();
+
+        // Names look like "OpenAI: GPT-4o" — the part before ':' is the vendor.
         if (!string.IsNullOrWhiteSpace(entry.Name))
         {
             var colon = entry.Name.IndexOf(':');
@@ -105,23 +118,34 @@ public sealed class OpenRouterCatalogClient(
                 return entry.Name[..colon].Trim();
         }
 
-        // Fall back to the vendor prefix of the id ("openai/gpt-4o" -> "Openai").
-        var slash = entry.Id.IndexOf('/');
+        // Fall back to the vendor prefix of the slug ("openai/gpt-4o" -> "Openai").
+        var slash = entry.Slug.IndexOf('/');
         if (slash > 0)
         {
-            var vendor = entry.Id[..slash];
+            var vendor = entry.Slug[..slash];
             return vendor.Length > 0 ? char.ToUpperInvariant(vendor[0]) + vendor[1..] : null;
         }
 
         return null;
     }
 
-    private static string? ParseModalities(string? modality)
+    private static string? FormatModalities(IReadOnlyList<string>? modalities)
     {
-        if (string.IsNullOrWhiteSpace(modality)) return null;
-
-        var inputPart = modality.Split("->")[0];
-        var parts = inputPart.Split('+', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (modalities is null || modalities.Count == 0) return null;
+        var parts = modalities
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Select(m => m.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
         return parts.Length > 0 ? string.Join(", ", parts) : null;
+    }
+
+    /// <summary>Converts an OpenRouter per-token price string to $ per 1M tokens.</summary>
+    private static decimal? PerMillion(string? perTokenPrice)
+    {
+        if (string.IsNullOrWhiteSpace(perTokenPrice)) return null;
+        if (!decimal.TryParse(perTokenPrice, NumberStyles.Float, CultureInfo.InvariantCulture, out var perToken))
+            return null;
+        return perToken < 0 ? null : decimal.Round(perToken * 1_000_000m, 6);
     }
 }

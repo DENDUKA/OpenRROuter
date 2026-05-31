@@ -45,13 +45,14 @@ public static class BillingPersistenceMapper
             InputPerMillionAmount = model.Price.InputPerMillion.Amount,
             OutputPerMillionAmount = model.Price.OutputPerMillion.Amount,
             CachePerMillionAmount = model.Price.CachePerMillion.Amount,
-            Currency = model.Price.InputPerMillion.Currency,
+            Currency = model.Price.InputPerMillion.Currency.ToString(),
             Enabled = model.Enabled,
             Description = model.Description,
             ContextLength = model.ContextLength,
             Modalities = model.Modalities,
             DescriptionSource = model.DescriptionSource,
-            TagIds = model.TagIds?.ToArray() ?? []
+            TagIds = model.TagIds?.ToArray(),
+            Provider = model.Provider
         };
     }
 
@@ -63,15 +64,16 @@ public static class BillingPersistenceMapper
             entity.RouterModelId,
             entity.PriceVersion,
             new ModelTokenPrice(
-                new MoneyAmount(entity.InputPerMillionAmount, entity.Currency),
-                new MoneyAmount(entity.OutputPerMillionAmount, entity.Currency),
-                new MoneyAmount(entity.CachePerMillionAmount, entity.Currency)),
+                new MoneyAmount(entity.InputPerMillionAmount, Enum.Parse<Currency>(entity.Currency, true)),
+                new MoneyAmount(entity.OutputPerMillionAmount, Enum.Parse<Currency>(entity.Currency, true)),
+                new MoneyAmount(entity.CachePerMillionAmount, Enum.Parse<Currency>(entity.Currency, true))),
             entity.Enabled,
             Description: entity.Description,
             ContextLength: entity.ContextLength,
             Modalities: entity.Modalities,
             DescriptionSource: entity.DescriptionSource,
-            TagIds: entity.TagIds);
+            TagIds: entity.TagIds,
+            Provider: entity.Provider);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)

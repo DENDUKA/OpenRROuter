@@ -58,6 +58,7 @@ public sealed class GrpcBillingService(
                     ContextLength = price?.ContextLength ?? 0,
                     Modalities = price?.Modalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,
+                    Provider = price?.Provider ?? string.Empty,
                 };
                 if (price?.TagIds != null)
                 {
@@ -172,7 +173,8 @@ public sealed class GrpcBillingService(
                 ContextLength: request.ContextLength == 0 ? null : (int?)request.ContextLength,
                 Modalities: string.IsNullOrEmpty(request.Modalities) ? null : request.Modalities,
                 DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource,
-                TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null),
+                TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null,
+                Provider: string.IsNullOrEmpty(request.Provider) ? null : request.Provider),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -229,6 +231,7 @@ public sealed class GrpcBillingService(
                     ContextLength = model.ContextLength ?? 0,
                     Modalities = model.Modalities ?? string.Empty,
                     DescriptionSource = model.DescriptionSource ?? string.Empty,
+                    Provider = model.Provider ?? string.Empty,
                 };
                 if (model.TagIds != null)
                 {

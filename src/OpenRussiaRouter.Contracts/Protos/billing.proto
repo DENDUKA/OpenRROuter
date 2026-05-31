@@ -78,6 +78,7 @@ message PublicModel {
   string modalities = 7;
   string description = 8;
   repeated string tag_ids = 9;
+  string provider = 10;
 }
 
 message ListPublicModelsResponse {
@@ -119,12 +120,13 @@ message UpsertModelPriceRequest {
   string input_price_per_1m_usd = 5;
   string output_price_per_1m_usd = 6;
   string cache_price_per_1m_usd = 7;
-  bool   enabled = 8;
+  bool enabled = 8;
   string description = 9;
-  int32  context_length = 10;
+  int32 context_length = 10;
   string modalities = 11;
   string description_source = 12;
   repeated string tag_ids = 13;
+  string provider = 14;
 }
 
 message UpsertModelPriceResponse {
@@ -153,6 +155,7 @@ message ModelDetail {
   string modalities = 11;
   string description_source = 12;
   repeated string tag_ids = 13;
+  string provider = 14;
 }
 
 message ListModelsResponse {

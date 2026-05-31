@@ -88,14 +88,14 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
                 description, context_length, modalities, description_source,
-                tag_ids
+                tag_ids, provider
             )
             values (
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
                 @Description, @ContextLength, @Modalities, @DescriptionSource,
-                @TagIds
+                @TagIds, @Provider
             )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
@@ -107,6 +107,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 currency = excluded.currency,
                 enabled = excluded.enabled,
                 tag_ids = excluded.tag_ids,
+                provider = excluded.provider,
                 description = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description
@@ -143,6 +144,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model.ContextLength,
                 model.Modalities,
                 model.DescriptionSource,
+                model.Provider,
                 TagIds = model.TagIds?.ToArray() ?? []
             },
             cancellationToken: ct)).ConfigureAwait(false);
@@ -676,7 +678,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             context_length as ContextLength,
             modalities as Modalities,
             description_source as DescriptionSource,
-            tag_ids as TagIds
+            tag_ids as TagIds,
+            provider as Provider
         from billing.model_prices
 
         """;

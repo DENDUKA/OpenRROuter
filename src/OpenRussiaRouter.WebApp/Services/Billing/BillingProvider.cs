@@ -187,6 +187,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
             Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
+            Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
     }
 
@@ -206,6 +207,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
             Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
             DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
+            Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
     }
 
@@ -224,7 +226,8 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             Description = model.Description ?? string.Empty,
             ContextLength = model.ContextLength ?? 0,
             Modalities = model.Modalities ?? string.Empty,
-            DescriptionSource = model.DescriptionSource ?? string.Empty
+            DescriptionSource = model.DescriptionSource ?? string.Empty,
+            Provider = model.Provider ?? string.Empty
         };
         if (model.TagIds != null)
         {

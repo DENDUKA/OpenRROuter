@@ -64,6 +64,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         Description = m.Description,
                         ContextLength = m.ContextLength,
                         Modalities = m.Modalities,
+                        Provider = m.Provider,
                         TagIds = m.TagIds?.ToList() ?? []
                     };
                 }
@@ -130,6 +131,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
                 Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
                 DescriptionSource: DetermineSource(orig, Form),
+                Provider: string.IsNullOrWhiteSpace(Form.Provider) ? null : Form.Provider.Trim(),
                 TagIds: Form.TagIds);
 
             await _billingClient.UpsertModelAsync(m);
@@ -297,6 +299,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? Description { get; set; }
         public int? ContextLength { get; set; }
         public string? Modalities { get; set; }
+        public string? Provider { get; set; }
         public List<string> TagIds { get; set; } = [];
     }
 }

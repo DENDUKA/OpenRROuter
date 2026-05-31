@@ -5,31 +5,19 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 
 public sealed class ModelPriceEntity
 {
-    public string ModelId { get; set; } = string.Empty;
-
-    public string DisplayName { get; set; } = string.Empty;
-
-    public string RouterModelId { get; set; } = string.Empty;
-
-    public string PriceVersion { get; set; } = string.Empty;
-
+    public required string ModelId { get; set; }
+    public required string DisplayName { get; set; }
+    public required string RouterModelId { get; set; }
+    public required string PriceVersion { get; set; }
     public decimal InputPerMillionAmount { get; set; }
-
     public decimal OutputPerMillionAmount { get; set; }
-
     public decimal CachePerMillionAmount { get; set; }
-
-    public Currency Currency { get; set; }
-
+    public string Currency { get; set; } = "USD";
     public bool Enabled { get; set; }
-
     public string? Description { get; set; }
-
     public int? ContextLength { get; set; }
-
     public string? Modalities { get; set; }
-
     public string? DescriptionSource { get; set; }
-
-    public string[] TagIds { get; set; } = [];
+    public string[]? TagIds { get; set; }
+    public string? Provider { get; set; }
 }

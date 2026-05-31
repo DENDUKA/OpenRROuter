@@ -185,19 +185,4 @@
         const countEl = document.getElementById('model-count');
         if (countEl) countEl.textContent = visible + ' model' + (visible === 1 ? '' : 's') + ' available';
     }
-
-    function copyModelId(event) {
-        event.stopPropagation();
-        const btn = event.currentTarget;
-        const id = btn.getAttribute('data-model-id');
-        navigator.clipboard.writeText(id).then(() => {
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
-            btn.style.color = 'var(--color-success)';
-            setTimeout(() => {
-                btn.innerHTML = originalHtml;
-                btn.style.color = '';
-            }, 1500);
-        });
-    }
 </script>

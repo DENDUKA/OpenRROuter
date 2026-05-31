@@ -165,7 +165,7 @@
                 <div class="form-group">
                     <label asp-for="StreamingTestInput.Model" class="form-label">Router Model</label>
                     <select asp-for="StreamingTestInput.Model" class="form-control" data-testid="input-streaming-model">
-                        <option value="">Loading models...</option>
+                        <option value="">Loading models…</option>
                     </select>
                 </div>
             </div>
@@ -322,7 +322,7 @@
             }
 
             nodeSelect.addEventListener('change', async () => {
-                modelSelect.innerHTML = '<option value="">Loading...</option>';
+                modelSelect.innerHTML = '<option value="">Loading…</option>';
                 const models = await fetchModels(nodeSelect.value);
                 populateModelSelect(modelSelect, models);
             });

@@ -178,7 +178,14 @@
                     @foreach (var m in Model.Models)
                     {
                         <tr>
-                            <td><code>@m.Id</code></td>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <code>@m.Id</code>
+                                    <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="Copy Model ID" aria-label="Copy Model ID" style="padding: 4px; border: none; background: transparent; cursor: pointer;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    </button>
+                                </div>
+                            </td>
                             <td>@m.DisplayName</td>
                             <td><code>@m.UpstreamModelId</code></td>
                             <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</td>
@@ -252,3 +259,7 @@
         }
     </div>
 </div>
+
+<style>
+    .copy-btn:hover { color: var(--color-primary); }
+</style>

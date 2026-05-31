@@ -58,8 +58,8 @@
             {
                 <div class="user-menu" id="user-menu">
                     <button class="user-menu-trigger" id="user-menu-trigger"
-                            onclick="toggleUserMenu()" aria-expanded="false" aria-haspopup="menu">
-                        <span class="user-avatar">@avatarLetter</span>
+                            onclick="toggleUserMenu()" aria-expanded="false" aria-haspopup="menu" aria-label="User menu">
+                        <span class="user-avatar" aria-hidden="true">@avatarLetter</span>
                         <span class="user-display-name">@displayName</span>
                         <svg class="user-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                             <path d="M2 4L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
@@ -148,27 +148,40 @@
     </main>
 </div>
 
-<script>
-    function toggleUserMenu() {
-        const menu = document.getElementById('user-menu');
-        const dropdown = document.getElementById('user-dropdown');
-        const trigger = document.getElementById('user-menu-trigger');
-        const isOpen = !dropdown.hidden;
-        dropdown.hidden = isOpen;
-        if (menu) menu.classList.toggle('user-menu--open', !isOpen);
-        if (trigger) trigger.setAttribute('aria-expanded', String(!isOpen));
-    }
-
-    document.addEventListener('click', function (e) {
-        const menu = document.getElementById('user-menu');
-        if (menu && !menu.contains(e.target)) {
-            const dropdown = document.getElementById('user-dropdown');
-            const trigger = document.getElementById('user-menu-trigger');
-            if (dropdown) dropdown.hidden = true;
-            menu.classList.remove('user-menu--open');
-            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    <script>
+        function toggleUserMenu() {
+            var menu = document.getElementById('user-dropdown');
+            var btn = document.getElementById('user-menu-trigger');
+            var isHidden = menu.hasAttribute('hidden');
+            if (isHidden) {
+                menu.removeAttribute('hidden');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                menu.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
         }
-    });
-</script>
+
+        document.addEventListener('click', function(e) {
+            var menu = document.getElementById('user-dropdown');
+            var btn = document.getElementById('user-menu-trigger');
+            if (menu && !menu.hasAttribute('hidden') && !btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.setAttribute('hidden', '');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+        
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                var menu = document.getElementById('user-dropdown');
+                var btn = document.getElementById('user-menu-trigger');
+                if (menu && !menu.hasAttribute('hidden')) {
+                    menu.setAttribute('hidden', '');
+                    btn.setAttribute('aria-expanded', 'false');
+                    btn.focus();
+                }
+            }
+        });
+    </script>
 </body>
 </html>

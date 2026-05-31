@@ -16,10 +16,10 @@
     <div class="adm-card-header">
         <span>Requests</span>
         <form method="get" class="d-flex gap-2 align-items-center flex-wrap" style="font-weight:normal">
-            <input type="text" name="model" value="@Model.ModelFilter" placeholder="Model filter" class="form-control form-control-sm" style="width:180px" />
-            <input type="text" name="provider" value="@Model.ProviderFilter" placeholder="Provider filter" class="form-control form-control-sm" style="width:150px" />
-            <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" />
-            <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" />
+            <input type="text" name="model" value="@Model.ModelFilter" placeholder="Model filter" class="form-control form-control-sm" style="width:180px" aria-label="Model filter" />
+            <input type="text" name="provider" value="@Model.ProviderFilter" placeholder="Provider filter" class="form-control form-control-sm" style="width:150px" aria-label="Provider filter" />
+            <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" aria-label="From (UTC)" />
+            <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" aria-label="To (UTC)" />
             <button type="submit" class="btn btn-sm btn-primary">Filter</button>
             @if (Model.ModelFilter != null || Model.ProviderFilter != null || Model.FromUtc != null || Model.ToUtc != null)
             {

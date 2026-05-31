@@ -255,6 +255,7 @@ textarea:disabled {
 .input:focus {
     outline: none;
     border-color: #52525b;
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-brand);
 }
 
 .btn:focus-visible,

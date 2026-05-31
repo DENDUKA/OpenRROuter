@@ -10,6 +10,7 @@ using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.ApiGateway.Router;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
@@ -35,6 +36,9 @@ public static class ApiGatewayExtensions
             options.KeepAlivePingTimeout = TimeSpan.FromSeconds(30);
         });
 
+        // Default per-call deadline for all gRPC clients (overridable via GrpcServices:CallDeadlineSeconds).
+        var grpcCallDeadline = TimeSpan.FromSeconds(configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
+
         var authGrpcUrl = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
         services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
         {
@@ -48,7 +52,8 @@ public static class ApiGatewayExtensions
                 KeepAlivePingDelay = TimeSpan.FromSeconds(60),
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
-        });
+        })
+        .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
         services.AddScoped<IApiKeyProvider, GrpcApiKeyProvider>();
 
         var billingGrpcUrl = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
@@ -64,7 +69,8 @@ public static class ApiGatewayExtensions
                 KeepAlivePingDelay = TimeSpan.FromSeconds(60),
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
-        });
+        })
+        .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
         services.AddScoped<IBillingProvider, GrpcBillingProvider>();
 
         var controlPlaneGrpcUrl = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
@@ -80,7 +86,8 @@ public static class ApiGatewayExtensions
                 KeepAlivePingDelay = TimeSpan.FromSeconds(60),
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
-        });
+        })
+        .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
         services.AddScoped<IControlPlaneProvider, GrpcControlPlaneProvider>();
 
         return services;

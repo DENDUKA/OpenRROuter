@@ -2,6 +2,7 @@ using System.Net;
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
@@ -56,6 +57,10 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
 
 builder.Services.AddAuthorization();
 
+// Default per-call deadline for all gRPC clients (overridable via GrpcServices:CallDeadlineSeconds).
+var grpcCallDeadline = TimeSpan.FromSeconds(
+    builder.Configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
+
 var authGrpcUrl = builder.Configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
 builder.Services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
 {
@@ -69,7 +74,8 @@ builder.Services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
         KeepAlivePingDelay = TimeSpan.FromSeconds(60),
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
-});
+})
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
 builder.Services.AddScoped<AuthProvider>();
 
 var billingGrpcUrl = builder.Configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
@@ -85,7 +91,8 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
         KeepAlivePingDelay = TimeSpan.FromSeconds(60),
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
-});
+})
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
 builder.Services.AddScoped<BillingProvider>();
 
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
@@ -101,7 +108,8 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
         KeepAlivePingDelay = TimeSpan.FromSeconds(60),
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
-});
+})
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
 builder.Services.AddScoped<ControlPlaneProvider>();
 builder.Services.AddScoped<RouterNodeApiProvider>();
 

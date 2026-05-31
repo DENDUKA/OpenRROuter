@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace OpenRussiaRouter.ApiGateway.OpenAi;
@@ -19,7 +20,7 @@ public static class SseRequestPatcher
                 return obj.ToJsonString();
             }
         }
-        catch { /* malformed JSON — return as-is */ }
+        catch (JsonException) { /* malformed JSON — return as-is */ }
         return requestJson;
     }
 
@@ -40,7 +41,7 @@ public static class SseRequestPatcher
                 return obj.ToJsonString();
             }
         }
-        catch { /* malformed JSON — return as-is */ }
+        catch (JsonException) { /* malformed JSON — return as-is */ }
         return requestJson;
     }
 }

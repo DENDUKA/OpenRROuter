@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Nodes;
 
 namespace OpenRussiaRouter.ApiGateway.OpenAi;
@@ -27,8 +28,9 @@ public static class GeminiSchemaPatcher
 
             return SanitizeKnownSchemaRoots(obj) ? obj.ToJsonString() : requestJson;
         }
-        catch
+        catch (JsonException)
         {
+            // Malformed JSON — forward the original request unchanged.
             return requestJson;
         }
     }

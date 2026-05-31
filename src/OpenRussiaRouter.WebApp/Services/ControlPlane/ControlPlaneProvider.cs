@@ -161,8 +161,9 @@ public sealed class ControlPlaneProvider(
                 cancellationToken: timeoutCts.Token);
             return response.ModelIds.ToList();
         }
-        catch
+        catch (Exception ex)
         {
+            logger.LogWarning(ex, "Failed to list available node models");
             return [];
         }
     }

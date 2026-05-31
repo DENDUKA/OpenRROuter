@@ -93,7 +93,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         ArgumentNullException.ThrowIfNull(lease);
 
         var requestUri = new Uri(lease.EndpointUrl, ChatCompletionsPath);
-        var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
         request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);
         request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");

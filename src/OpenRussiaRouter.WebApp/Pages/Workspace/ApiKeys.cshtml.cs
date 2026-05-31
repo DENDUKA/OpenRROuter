@@ -45,7 +45,18 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
         {
             var result = await _authClient.CreateApiKeyAsync(User.GetUserId(), Create.Name);
             NewKeyValue = result.RawKey;
-            _ = _controlPlaneClient.PushUserIntegrationKeyAsync(Create.Name, result.RawKey, User.GetUserId(), result.ApiKeyId);
+            // Sync the new key to router nodes within the request lifetime. A push failure must not
+            // break key creation (the key already exists), so log and continue rather than throw.
+            try
+            {
+                await _controlPlaneClient.PushUserIntegrationKeyAsync(
+                    Create.Name, result.RawKey, User.GetUserId(), result.ApiKeyId,
+                    cancellationToken: HttpContext.RequestAborted);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to push new API key to router nodes. UserId={UserId} KeyId={KeyId}", User.GetUserId(), result.ApiKeyId);
+            }
             return RedirectToPage();
         }
         catch (Exception ex)

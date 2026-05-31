@@ -46,7 +46,8 @@ public class InviteModel : PageModelBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unexpected error completing invite. Token={Token}", Token);
+            // Do not log the raw invite token — it is a secret credential.
+            _logger.LogError(ex, "Unexpected error completing invite.");
             ErrorMessage = "An error occurred. Please try again.";
         }
 

@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Npgsql"  />
     <PackageReference Include="Serilog.AspNetCore"  />
     <PackageReference Include="Serilog.Settings.Configuration"  />

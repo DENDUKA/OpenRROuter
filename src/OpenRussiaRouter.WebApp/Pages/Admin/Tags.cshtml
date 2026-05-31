@@ -83,7 +83,7 @@
                             <td>@t.DisplayName</td>
                             <td><code>@t.Color</code></td>
                             <td>
-                                <span class="badge" style="background-color: @(t.Color ?? "#6c757d"); color: white;">@t.DisplayName</span>
+                                <span class="badge" style="background-color: @(t.Color ?? "#6c757d"); color: @ColorContrast.TextColor(t.Color ?? "#6c757d");">@t.DisplayName</span>
                             </td>
                             <td class="adm-actions-cell">
                                 <a class="btn-icon" title="Edit" aria-label="Edit"

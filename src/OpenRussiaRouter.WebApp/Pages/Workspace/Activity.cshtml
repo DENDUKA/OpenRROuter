@@ -20,10 +20,10 @@
 @if (Model.Tab == "overview")
 {
     <div class="act-period-bar">
-        <a class="act-period-btn @(Model.Period == "today" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("today")">Сегодня</a>
-        <a class="act-period-btn @(Model.Period == "24h" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("24h")">24 ч</a>
-        <a class="act-period-btn @(Model.Period == "7d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("7d")">7 дней</a>
-        <a class="act-period-btn @(Model.Period == "30d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("30d")">30 дней</a>
+        <a class="act-period-btn @(Model.Period == "today" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("today")">Today</a>
+        <a class="act-period-btn @(Model.Period == "24h" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("24h")">24h</a>
+        <a class="act-period-btn @(Model.Period == "7d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("7d")">7d</a>
+        <a class="act-period-btn @(Model.Period == "30d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("30d")">30d</a>
     </div>
 
     @if (Model.Summary != null)
@@ -49,7 +49,7 @@
 
         <div class="ws-panel">
             <div class="ws-panel-header">By model</div>
-            <div class="ws-panel-body" style="padding:0">
+            <div class="ws-panel-body table-scroll" style="padding:0">
                 @if (Model.Summary.Models.Count == 0)
                 {
                     <p class="text-muted" style="padding:16px">No data for this period.</p>
@@ -82,7 +82,7 @@
 
         <div class="ws-panel">
             <div class="ws-panel-header">By API key</div>
-            <div class="ws-panel-body" style="padding:0">
+            <div class="ws-panel-body table-scroll" style="padding:0">
                 @if (Model.Summary.Keys.Count == 0)
                 {
                     <p class="text-muted" style="padding:16px">No data for this period.</p>
@@ -180,7 +180,7 @@ else
 
     <div class="ws-panel">
         <div class="ws-panel-header">Usage records</div>
-        <div class="ws-panel-body" style="padding:0">
+        <div class="ws-panel-body table-scroll" style="padding:0">
             @if (Model.Activity.Count == 0)
             {
                 <p class="text-muted" style="padding:16px">No activity records found.</p>

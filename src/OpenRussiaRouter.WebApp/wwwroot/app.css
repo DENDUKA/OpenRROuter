@@ -4,8 +4,8 @@
     --color-ink: #f5f5f5;
     --color-ink-hover: #ffffff;
     --color-body: #a1a1aa;
-    --color-body-mid: #71717a;
-    --color-mute: #71717a;
+    --color-body-mid: #8b8b94;
+    --color-mute: #8b8b94;
     --color-hairline: #1b1c20;
     --color-border: #26272b;
     --color-canvas: #0a0a0a;
@@ -255,7 +255,7 @@ textarea:disabled {
 .input:focus {
     outline: none;
     border-color: #52525b;
-    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-brand);
+    box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px rgba(245, 245, 245, .55);
 }
 
 .btn:focus-visible,
@@ -335,6 +335,9 @@ textarea.form-control {
     background: var(--color-canvas);
 }
 
+/* Lightweight horizontal scroll for tables inside bordered panels (no extra frame) */
+.table-scroll { overflow-x: auto; }
+
 .table {
     width: 100%;
     border-collapse: collapse;
@@ -388,6 +391,7 @@ textarea.form-control {
 .badge-warning { color: var(--color-warning); border-color: rgba(234, 179, 8, .32); }
 .badge-danger { color: var(--color-danger); border-color: rgba(239, 68, 68, .32); }
 .badge-secondary { color: var(--color-body-mid); border-color: var(--color-border); }
+.badge-info { color: var(--color-info); border-color: rgba(96, 165, 250, .32); }
 
 code,
 .text-mono,
@@ -440,6 +444,19 @@ code.d-block {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Async submit feedback — applied by the global submit handler in _Layout */
+.btn.is-loading { pointer-events: none; opacity: .7; }
+.btn.is-loading::after {
+    content: "";
+    width: 14px;
+    height: 14px;
+    margin-left: 6px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
 
 .validation-message {
     color: var(--color-danger);
@@ -1049,6 +1066,15 @@ code.d-block {
     .adm-link { width: auto; flex: 0 0 auto; padding: 0 12px; }
     .adm-content { grid-column: 1; padding: 20px 16px; }
     .adm-form-row { grid-template-columns: 1fr; }
+}
+
+/* Expand small interactive controls to the 44px touch minimum on touch devices */
+@media (pointer: coarse) {
+    .btn-icon,
+    .copy-btn { min-width: 44px; min-height: 44px; }
+    .btn-sm,
+    .act-period-btn,
+    .filter-pill { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -196,7 +196,7 @@
                                         @foreach(var tid in m.TagIds)
                                         {
                                             Model.TagsById.TryGetValue(tid, out var t);
-                                            <span class="badge" style="background-color: @(t?.Color ?? "#6c757d"); color: white;">@(t?.DisplayName ?? tid)</span>
+                                            <span class="badge" style="background-color: @(t?.Color ?? "#6c757d"); color: @ColorContrast.TextColor(t?.Color ?? "#6c757d");">@(t?.DisplayName ?? tid)</span>
                                         }
                                     </div>
                                 }

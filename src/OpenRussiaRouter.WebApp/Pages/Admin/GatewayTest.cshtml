@@ -7,7 +7,7 @@
 
 <div class="adm-section-head">
     <h2>Gateway Test</h2>
-    <p>Отправить запрос на <code>/v1/chat/completions</code> через ApiGateway. Доступны все модели каталога, включая отключенные.</p>
+    <p>Send a request to <code>/v1/chat/completions</code> through the ApiGateway. All catalog models are available, including disabled ones.</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -16,7 +16,7 @@
 }
 
 <div class="adm-card">
-    <div class="adm-card-header">Запрос</div>
+    <div class="adm-card-header">Request</div>
     <div class="adm-card-body">
         <form id="gateway-test-form" method="post" action="/admin/gatewaytest/stream" data-testid="form-gateway-test">
             @Html.AntiForgeryToken()
@@ -32,7 +32,7 @@
             <div class="form-group">
                 <label for="Form_Prompt" class="form-label">Prompt</label>
                 <textarea id="Form_Prompt" name="Prompt" class="form-control" rows="6"
-                          placeholder="Напишите запрос к модели..." data-testid="input-prompt"></textarea>
+                          placeholder="Write a prompt for the model..." data-testid="input-prompt"></textarea>
             </div>
             <div class="adm-btn-row">
                 <button type="submit" id="gw-test-send" class="btn btn-primary" data-testid="btn-send">Send</button>
@@ -43,7 +43,7 @@
 </div>
 
 <div class="adm-card" id="gw-test-result-card" style="display: none;">
-    <div class="adm-card-header">Результат</div>
+    <div class="adm-card-header">Result</div>
     <div class="adm-card-body">
         <div class="adm-form-row">
             <div class="form-group">
@@ -57,9 +57,9 @@
             </div>
         </div>
         <div class="form-group">
-            <label class="form-label">Ответ</label>
+            <label class="form-label">Response</label>
             <pre id="gw-test-output" data-testid="result-output"
-                 style="background: #f8fafc; color: #1f2937; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; max-height: 480px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: inherit; font-size: 14px; line-height: 1.5;"></pre>
+                 style="background: var(--color-canvas-soft); color: var(--color-ink); padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); max-height: 480px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-family: var(--font-mono); font-size: 13px; line-height: 1.5;"></pre>
         </div>
     </div>
 </div>
@@ -101,7 +101,7 @@
             const startedAt = performance.now();
             sseBuffer = '';
             responseText = '';
-            statusMessage = 'Отправляем запрос...';
+            statusMessage = 'Sending request...';
             completionReason = '';
             sawAnyEvent = false;
             hasServerLatency = false;
@@ -125,13 +125,13 @@
                 }
 
                 if (!response.body) {
-                    outputEl.textContent = 'Сервер ответил без тела ответа.';
+                    outputEl.textContent = 'Server responded with no body.';
                     return;
                 }
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder('utf-8');
-                statusMessage = 'Ответ приходит потоком...';
+                statusMessage = 'Streaming response...';
                 renderOutput();
                 while (true) {
                     const { value, done } = await reader.read();
@@ -148,11 +148,11 @@
                     latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
                 }
                 statusMessage = responseText || sawAnyEvent
-                    ? 'Проверка завершена.'
-                    : 'Ответ получен, но текстового содержимого нет.';
+                    ? 'Test complete.'
+                    : 'Response received, but it has no text content.';
                 renderOutput();
             } catch (err) {
-                statusMessage = 'Не удалось выполнить запрос: ' + err.message;
+                statusMessage = 'Request failed: ' + err.message;
                 renderOutput();
                 latencyEl.textContent = Math.round(performance.now() - startedAt) + ' ms';
             } finally {
@@ -209,7 +209,7 @@
             }
 
             if (obj?.error) {
-                appendPlainText('Ошибка: ' + formatError(obj.error));
+                appendPlainText('Error: ' + formatError(obj.error));
                 return;
             }
 
@@ -284,32 +284,32 @@
                 parts.push(statusMessage);
             }
             if (completionReason) {
-                parts.push('Причина завершения: ' + completionReason);
+                parts.push('Finish reason: ' + completionReason);
             }
             outputEl.textContent = parts.join('\n\n');
         }
 
         function formatErrorBody(body, status) {
             if (!body || !body.trim()) {
-                return `Сервер вернул ошибку HTTP ${status} без текста.`;
+                return `Server returned HTTP ${status} error with no text.`;
             }
 
             try {
                 const obj = JSON.parse(body);
                 if (obj?.error) {
-                    return 'Ошибка: ' + formatError(obj.error);
+                    return 'Error: ' + formatError(obj.error);
                 }
                 if (typeof obj?.message === 'string') {
-                    return 'Ошибка: ' + obj.message;
+                    return 'Error: ' + obj.message;
                 }
             } catch { /* plain text body */ }
 
-            return 'Ошибка: ' + body.trim();
+            return 'Error: ' + body.trim();
         }
 
         function formatError(error) {
             if (typeof error === 'string') return error;
-            const message = error?.message ?? error?.detail ?? error?.code ?? 'Неизвестная ошибка.';
+            const message = error?.message ?? error?.detail ?? error?.code ?? 'Unknown error.';
             const code = error?.code && error.code !== message ? ` (${error.code})` : '';
             return message + code;
         }
@@ -317,13 +317,13 @@
         function formatFinishReason(reason) {
             switch (reason) {
                 case 'stop':
-                    return 'ответ завершён';
+                    return 'completed';
                 case 'length':
-                    return 'достигнут лимит длины';
+                    return 'length limit reached';
                 case 'content_filter':
-                    return 'ответ остановлен фильтром';
+                    return 'stopped by content filter';
                 case 'tool_calls':
-                    return 'модель запросила вызов инструмента';
+                    return 'model requested a tool call';
                 default:
                     return reason;
             }

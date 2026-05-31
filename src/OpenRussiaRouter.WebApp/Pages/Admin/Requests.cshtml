@@ -23,7 +23,7 @@
             <button type="submit" class="btn btn-sm btn-primary">Filter</button>
             @if (Model.ModelFilter != null || Model.ProviderFilter != null || Model.FromUtc != null || Model.ToUtc != null)
             {
-                <a href="/admin/requests" class="btn btn-sm btn-outline-secondary">Clear</a>
+                <a href="/admin/requests" class="btn btn-sm btn-secondary">Clear</a>
             }
         </form>
     </div>
@@ -81,7 +81,7 @@
                 if (Model.FromUtc != null) nextUrl += $"&from={Uri.EscapeDataString(Model.FromUtc)}";
                 if (Model.ToUtc != null) nextUrl += $"&to={Uri.EscapeDataString(Model.ToUtc)}";
                 <div class="mt-2">
-                    <a href="@nextUrl" class="btn btn-sm btn-outline-primary">Next page</a>
+                    <a href="@nextUrl" class="btn btn-sm btn-primary">Next page</a>
                 </div>
             }
         }

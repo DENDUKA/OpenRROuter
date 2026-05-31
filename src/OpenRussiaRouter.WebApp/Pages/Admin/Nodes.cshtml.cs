@@ -122,7 +122,7 @@ public class NodesModel(
         var rawKey = await AuthProvider.GetFirstActiveApiKeyRawAsync(User.GetUserId(), HttpContext.RequestAborted);
         if (string.IsNullOrWhiteSpace(rawKey))
             return await WriteStreamingErrorAsync(StatusCodes.Status400BadRequest,
-                "Нет активных API-ключей. Создайте ключ в разделе Рабочее пространство → API Ключи.");
+                "No active API keys. Create one under Workspace → API Keys.");
 
         try
         {

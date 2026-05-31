@@ -5,7 +5,7 @@
 <div class="models-page">
     <section class="models-hero" aria-labelledby="models-title">
         <div>
-            <div class="eyebrow">Filter Filter</div>
+            <div class="eyebrow">Catalog</div>
             <h1 id="models-title">Models</h1>
             <p class="models-lead">Browse available OpenAI-compatible models routed through OpenRussiaRouter.</p>
         </div>
@@ -96,7 +96,7 @@
                                         <div class="tag-list" aria-label="Model tags">
                                             @foreach (var tag in m.Tags)
                                             {
-                                                <span class="badge model-tag" style="background-color: @(tag.Color ?? "#6c757d");">@tag.DisplayName</span>
+                                                <span class="badge model-tag" style="background-color: @(tag.Color ?? "#6c757d"); color: @ColorContrast.TextColor(tag.Color ?? "#6c757d");">@tag.DisplayName</span>
                                             }
                                         </div>
                                     }
@@ -139,7 +139,7 @@
     .model-table tbody tr { cursor: pointer; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-width: 120px; }
-    .model-tag { color: white; border-color: transparent; }
+    .model-tag { border-color: transparent; }
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
     .catalog-state strong { color: var(--color-ink); }
     .catalog-state.error { border-color: rgba(255,59,48,.45); }

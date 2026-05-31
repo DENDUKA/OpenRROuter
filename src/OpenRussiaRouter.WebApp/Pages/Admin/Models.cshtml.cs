@@ -28,6 +28,12 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
 
+    /// <summary>Set when per-model enrich could not auto-match — UI prompts for an explicit OpenRouter id.</summary>
+    public bool EnrichNotFound { get; set; }
+
+    /// <summary>The OpenRouter id the admin typed for an explicit per-model enrich (kept across redisplay).</summary>
+    public string? EnrichOpenRouterId { get; set; }
+
     [BindProperty] public ModelFormInput Form { get; set; } = new();
 
     public async Task OnGetAsync()
@@ -207,6 +213,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     Description = match.Description,
                     ContextLength = match.ContextLength,
                     Modalities = match.Modalities,
+                    Provider = string.IsNullOrWhiteSpace(model.Provider) ? match.Provider : model.Provider,
                     DescriptionSource = "openrouter"
                 };
                 await _billingClient.UpsertModelAsync(enrichedModel);
@@ -225,6 +232,66 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             _logger.LogError(ex, "Enrich from OpenRouter failed");
             TempData["WarningMessages"] = $"Enrichment failed: {ex.Message}";
             return RedirectToPage();
+        }
+    }
+
+    /// <summary>
+    /// Per-model enrich invoked from the edit/add form. Fills the form's metadata fields from
+    /// OpenRouter so the admin can review and Save. Does not persist on its own.
+    /// If <paramref name="openRouterId"/> is given it is matched explicitly; otherwise auto-match
+    /// runs against the Router Model / Model ID, and on failure the UI asks for an explicit id.
+    /// </summary>
+    public async Task<IActionResult> OnPostEnrichModelAsync(bool isNew, string? openRouterId)
+    {
+        ShowForm = true;
+        IsAdd = isNew;
+        EnrichOpenRouterId = openRouterId?.Trim();
+
+        // This is a "fill the form" action, not a save — drop any premature validation errors
+        // (e.g. a still-empty Display Name while adding) so the redisplayed form stays clean.
+        ModelState.Clear();
+
+        try
+        {
+            var catalog = await _openRouterClient.LoadCatalogAsync();
+            if (catalog.Count == 0)
+            {
+                WarningMessages = ["OpenRouter catalog is empty or unreachable."];
+                await LoadFormData();
+                return Page();
+            }
+
+            var lookup = !string.IsNullOrWhiteSpace(EnrichOpenRouterId)
+                ? EnrichOpenRouterId
+                : (string.IsNullOrWhiteSpace(Form.RouterModelId) ? Form.Id : Form.RouterModelId);
+
+            var match = _openRouterClient.FindMatch(catalog, lookup ?? string.Empty);
+            if (match is null)
+            {
+                EnrichNotFound = true;
+                WarningMessages = string.IsNullOrWhiteSpace(EnrichOpenRouterId)
+                    ? [$"Could not auto-match '{lookup}' on OpenRouter. Enter the OpenRouter model id below and try again."]
+                    : [$"OpenRouter has no model '{EnrichOpenRouterId}'. Check the id and try again."];
+                await LoadFormData();
+                return Page();
+            }
+
+            Form.Description = match.Description;
+            Form.ContextLength = match.ContextLength;
+            Form.Modalities = match.Modalities;
+            if (!string.IsNullOrWhiteSpace(match.Provider))
+                Form.Provider = match.Provider;
+
+            SuccessMessage = $"Filled from OpenRouter ({match.MatchedId}). Review the fields and click Save to persist.";
+            await LoadFormData();
+            return Page();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Per-model enrich from OpenRouter failed. ModelId={ModelId}", Form.Id);
+            WarningMessages = [$"Enrichment failed: {ex.Message}"];
+            await LoadFormData();
+            return Page();
         }
     }
 

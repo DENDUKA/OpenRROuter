@@ -123,6 +123,20 @@
                         <input asp-for="Form.Provider" class="form-control" placeholder="e.g. OpenAI" />
                     </div>
                 </div>
+                <div class="adm-form-row adm-enrich-row">
+                    <div class="form-group" style="flex:1 1 auto">
+                        <label class="form-label">OpenRouter model ID <small class="text-muted">(optional — leave blank to auto-match)</small></label>
+                        <input name="openRouterId" class="form-control" value="@Model.EnrichOpenRouterId"
+                               placeholder="e.g. openai/gpt-4o" autocomplete="off"
+                               @(Model.EnrichNotFound ? "autofocus" : "") />
+                    </div>
+                    <div class="form-group" style="align-self:flex-end">
+                        <button type="submit" asp-page-handler="EnrichModel" class="btn btn-secondary"
+                                title="Fetch description, context length, modalities and provider from OpenRouter into the fields above. Review, then Save.">
+                            Fetch from OpenRouter
+                        </button>
+                    </div>
+                </div>
                 <div class="adm-form-row">
                     <div class="form-group" style="grid-column: span 3">
                         <label class="form-label">Tags</label>
@@ -266,4 +280,5 @@
 
 <style>
     .copy-btn:hover { color: var(--color-primary); }
+    .adm-enrich-row { display: flex; gap: 1rem; align-items: flex-end; }
 </style>

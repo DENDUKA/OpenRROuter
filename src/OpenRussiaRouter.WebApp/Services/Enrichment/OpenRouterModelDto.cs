@@ -20,4 +20,5 @@ public sealed record OpenRouterMatchResult(
     string MatchedId,
     string? Description,
     int? ContextLength,
-    string? Modalities);
+    string? Modalities,
+    string? Provider);

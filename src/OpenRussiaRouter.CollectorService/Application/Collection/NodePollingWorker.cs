@@ -1,13 +1,16 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 
 namespace OpenRussiaRouter.CollectorService.Application.Collection;
 
 public sealed class NodePollingWorker(
     INodeListProvider nodeListProvider,
     NodeCatalogCollector collector,
+    NodeQuotaCollector quotaCollector,
     CollectorSnapshotStore store,
+    QuotaSnapshotStore quotaStore,
     IOptionsMonitor<CollectorOptions> options,
     ILogger<NodePollingWorker> logger,
     TimeProvider timeProvider)
@@ -29,10 +32,15 @@ public sealed class NodePollingWorker(
         }
 
         var routable = nodes.Where(NodeCatalogCollector.IsRoutableForCatalog).ToList();
-        var results = await Task.WhenAll(
-            routable.Select(node => collector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
+        var now = timeProvider.GetUtcNow();
 
-        store.Set(new CollectorSnapshot(results, timeProvider.GetUtcNow()));
+        var catalogResults = await Task.WhenAll(
+            routable.Select(node => collector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
+        store.Set(new CollectorSnapshot(catalogResults, now));
+
+        var quotaResults = await Task.WhenAll(
+            routable.Select(node => quotaCollector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
+        quotaStore.Set(new QuotaSnapshot(quotaResults.SelectMany(m => m).ToList(), now));
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)

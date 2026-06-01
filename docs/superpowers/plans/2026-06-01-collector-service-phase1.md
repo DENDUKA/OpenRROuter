@@ -55,9 +55,10 @@
 
 ## Task 1: Define the collector gRPC contract
 
+> **Important:** The `OpenRussiaRouter.Contracts` project does NOT compile `.proto` files itself — it is a bare project that only *holds* the `.proto` files on disk (plus a BuildingBlocks reference). Each consuming service project (ControlPlane, WebApp, CollectorService, …) links the proto via `<Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\xxx.proto" Link=... GrpcServices=... />` and generates its own copy of the types. **Do not add `<Protobuf>` items or `Grpc.Tools` to the Contracts csproj** — that causes duplicate-type conflicts when a service links the same proto. Creating the `.proto` file is the only change needed here.
+
 **Files:**
 - Create: `src/OpenRussiaRouter.Contracts/Protos/collector.proto`
-- Modify: `src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj`
 
 - [ ] **Step 1: Write `collector.proto`**
 
@@ -124,23 +125,14 @@ message GetNodeModelsResponse {
 }
 ```
 
-- [ ] **Step 2: Register the proto in Contracts csproj**
+- [ ] **Step 2: Verify the file is well-formed (no csproj change)**
 
-In `src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj`, add a `<Protobuf>` line next to the existing proto registrations (match the existing pattern in that file; the Contracts project compiles all three `.proto` files as `GrpcServices="Both"`):
+No csproj edit is required — Contracts only stores the `.proto`. The contract is exercised when a service links it (Task 2 onward). To sanity-check the proto syntax now, you may temporarily build any project that already links protos, or simply proceed; the first real codegen happens in Task 2's CollectorService csproj.
 
-```xml
-<Protobuf Include="Protos\collector.proto" GrpcServices="Both" />
-```
-
-- [ ] **Step 3: Verify the contract compiles**
-
-Run: `dotnet build src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj -nr:false -m:1`
-Expected: Build succeeded. Generated types `OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector` are now available.
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/OpenRussiaRouter.Contracts/Protos/collector.proto src/OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj
+git add src/OpenRussiaRouter.Contracts/Protos/collector.proto
 git commit -m "feat(contracts): add collector.proto gRPC contract"
 ```
 

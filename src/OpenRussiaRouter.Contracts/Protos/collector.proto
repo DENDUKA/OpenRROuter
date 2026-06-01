@@ -11,6 +11,8 @@ service Collector {
   rpc ListNodeModelCatalog (ListNodeModelCatalogRequest) returns (ListNodeModelCatalogResponse);
   // Routable model ids for a single node.
   rpc GetNodeModels (GetNodeModelsRequest) returns (GetNodeModelsResponse);
+  rpc GetProviderQuota (GetProviderQuotaRequest) returns (GetProviderQuotaResponse);
+  rpc GetOpenRouterCatalog (GetOpenRouterCatalogRequest) returns (GetOpenRouterCatalogResponse);
 }
 
 message GetCapabilitiesSnapshotRequest {}
@@ -57,4 +59,40 @@ message GetNodeModelsRequest {
 message GetNodeModelsResponse {
   repeated string public_ids = 1;
   string error = 2;
+}
+
+message GetProviderQuotaRequest {}
+
+message ProviderQuotaMeasurement {
+  string node_id = 1;
+  string provider = 2;
+  string connection_id = 3;
+  double remaining = 4;
+}
+
+message GetProviderQuotaResponse {
+  repeated ProviderQuotaMeasurement measurements = 1;
+  string collected_at_utc = 2;
+}
+
+message GetOpenRouterCatalogRequest {}
+
+message OpenRouterCatalogEntry {
+  string slug = 1;
+  string name = 2;
+  string author_display_name = 3;
+  string description = 4;
+  int32 context_length = 5;
+  repeated string input_modalities = 6;
+  // Per-token prices as raw strings from OpenRouter (USD per single token); empty if absent.
+  string price_prompt = 7;
+  string price_completion = 8;
+  string price_input_cache_read = 9;
+}
+
+message GetOpenRouterCatalogResponse {
+  repeated OpenRouterCatalogEntry entries = 1;
+  string collected_at_utc = 2;
+  // False when the catalog has never been successfully fetched (consumers keep their own fallback).
+  bool available = 3;
 }

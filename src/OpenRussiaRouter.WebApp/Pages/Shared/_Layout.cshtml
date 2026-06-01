@@ -45,8 +45,7 @@
 
         <nav class="topbar-nav" aria-label="Product navigation">
             <a class="@TopNavClass("/models")" href="/models">Models</a>
-            <a class="topbar-link" href="/pricing">Pricing</a>
-            <a class="topbar-link" href="/docs">Docs</a>
+            <a class="@TopNavClass("/docs")" href="/docs">Setup guide</a>
             @if (user?.IsAdmin == true)
             {
                 <a class="@TopNavClass("/admin")" href="/admin">Admin</a>

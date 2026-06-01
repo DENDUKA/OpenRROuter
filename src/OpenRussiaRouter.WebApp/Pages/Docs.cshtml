@@ -1,0 +1,128 @@
+@page "/docs"
+@{ ViewData["Title"] = "Setup guide"; }
+
+<div class="docs-page">
+    <section class="docs-hero" aria-labelledby="docs-title">
+        <div class="section-label">Connection guide</div>
+        <h1 id="docs-title">Setup guide</h1>
+        <p>Connect to OpenRussiaRouter with an OpenAI-compatible request flow.</p>
+    </section>
+
+    <section class="docs-section" aria-labelledby="steps-title">
+        <h2 id="steps-title">Start in 4 steps</h2>
+        <div class="docs-step-list">
+            <div class="docs-step">
+                <span>01</span>
+                <div>
+                    <h3>Signup</h3>
+                    <p>Create your account and open the workspace.</p>
+                </div>
+            </div>
+            <div class="docs-step">
+                <span>02</span>
+                <div>
+                    <h3>Buy credits</h3>
+                    <p>Add USD balance once and use it across available models.</p>
+                </div>
+            </div>
+            <div class="docs-step">
+                <span>03</span>
+                <div>
+                    <h3>Choose a model</h3>
+                    <p>Open the model catalog and copy the public model ID you want to use.</p>
+                </div>
+            </div>
+            <div class="docs-step">
+                <span>04</span>
+                <div>
+                    <h3>Get your API key</h3>
+                    <p>Create an API key in the workspace and use it as a bearer token.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="docs-section" aria-labelledby="request-title">
+        <h2 id="request-title">Example request</h2>
+        <p>Use the same request shape as OpenAI chat completions.</p>
+        <div class="docs-code-panel" aria-label="Example curl request">
+<pre><code>curl /v1/chat/completions \
+  -H "Authorization: Bearer $ORR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "ORR/...",
+    "messages": [
+      { "role": "user", "content": "Hello" }
+    ]
+  }'</code></pre>
+        </div>
+    </section>
+</div>
+
+<style>
+    .docs-page { max-width: 920px; }
+    .docs-hero {
+        padding: 40px 0 32px;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+    .docs-hero p {
+        max-width: 620px;
+        font-size: 16px;
+        line-height: 26px;
+    }
+    .docs-section {
+        padding: 40px 0;
+        border-bottom: 1px solid var(--color-hairline);
+    }
+    .docs-section:last-child { border-bottom: none; }
+    .docs-step-list {
+        display: grid;
+        gap: 0;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas-soft);
+        overflow: hidden;
+    }
+    .docs-step {
+        display: grid;
+        grid-template-columns: 52px minmax(0, 1fr);
+        gap: var(--spacing-md);
+        padding: 18px;
+        border-top: 1px solid var(--color-hairline);
+    }
+    .docs-step:first-child { border-top: none; }
+    .docs-step span {
+        color: var(--color-body);
+        font-family: var(--font-mono);
+        font-size: 12px;
+    }
+    .docs-step h3 { margin: 0 0 4px; font-size: 15px; }
+    .docs-step p { margin: 0; }
+    .docs-code-panel {
+        margin-top: var(--spacing-lg);
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas-soft);
+        overflow: hidden;
+    }
+    .docs-code-panel pre {
+        margin: 0;
+        padding: 18px;
+        overflow-x: auto;
+        color: var(--color-body);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 1.6;
+    }
+    .docs-code-panel code {
+        display: block;
+        padding: 0;
+        background: transparent;
+        color: inherit;
+        font-size: inherit;
+    }
+    @@media (max-width: 640px) {
+        .docs-hero { padding-top: 28px; }
+        .docs-section { padding: 32px 0; }
+    }
+</style>

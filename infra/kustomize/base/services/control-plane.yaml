@@ -36,6 +36,8 @@ spec:
               value: "control-plane"
             - name: GrpcServices__Auth
               value: "http://auth-service:8080"
+            - name: GrpcServices__Collector
+              value: "http://collector:8080"
             - name: ConnectionStrings__ControlPlaneDb
               valueFrom:
                 secretKeyRef:

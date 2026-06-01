@@ -94,6 +94,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__ControlPlaneDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres};Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleTimeout=300"
       GrpcServices__Auth: "http://auth-service:8080"
+      GrpcServices__Collector: "http://collector:8080"
       Seq__Url: "http://seq:80"
       RouterHealthChecks__NodeTokens: ""
 
@@ -154,6 +155,7 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
+      GrpcServices__Collector: "http://collector:8080"
       Seq__Url: "http://seq:80"
 
   prometheus:

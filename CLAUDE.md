@@ -50,6 +50,7 @@ OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .N
 | **BillingService** | Balance ledger, model pricing, usage tracking | gRPC 5002 |
 | **ControlPlane** | 9Router node registry, health checks, leasing | gRPC 5003 |
 | **WebApp** | ASP.NET Core Razor Pages user cabinet & admin dashboard | HTTP 5004 |
+| **CollectorService** | Периодический опрос нод/OpenRouter, in-memory кеш, отдаёт снапшоты по gRPC | gRPC 5005 |
 | **BuildingBlocks** | Shared library: Money, TokenUsage, errors, migrations | — |
 | **Contracts** | Shared DTOs + `.proto` files for all gRPC interfaces | — |
 
@@ -293,5 +294,5 @@ kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
 | Immutable price history | В `billing.model_prices` один active row на модель, не versioned history (BILLING-003) |
 | Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox (BILLING-004) |
 | Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` (CONTROL-002) |
-| ~~Capability-aware routing~~ | Реализовано: `RouterControlPlaneService` фильтрует кандидатов по `NodeModelCapabilityStore` (наполняется `RouterModelCapabilityJob`), при пустом store — fallback на least-load без фильтра (CONTROL-003) |
+| ~~Capability-aware routing~~ | Реализовано: `RouterControlPlaneService` фильтрует кандидатов по `NodeModelCapabilityStore` (наполняется `CapabilityReplicaRefresher` из CollectorService), при пустом store — fallback на least-load без фильтра (CONTROL-003) |
 | Lease recovery | После рестарта ControlPlane in-flight счётчики сбрасываются, нет recovery (CONTROL-004) |

@@ -28,4 +28,13 @@ public sealed class NodeModelCapabilityStore
     public bool NodeSupportsModel(string nodeId, string modelId)
         => _nodeModels.TryGetValue(nodeId, out var models)
            && models.Contains(modelId);
+
+    /// <summary>Atomically replaces the entire node→models map with the given snapshot.</summary>
+    public void ReplaceAll(IReadOnlyDictionary<string, IReadOnlySet<string>> nodeModels)
+    {
+        ArgumentNullException.ThrowIfNull(nodeModels);
+        _nodeModels.Clear();
+        foreach (var (nodeId, models) in nodeModels)
+            _nodeModels[nodeId] = models;
+    }
 }

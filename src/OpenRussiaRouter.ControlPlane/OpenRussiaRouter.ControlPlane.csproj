@@ -4,6 +4,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\control-plane.proto" GrpcServices="Both" Link="Protos\control-plane.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\auth.proto" GrpcServices="Client" Link="Protos\auth.proto" />
+    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\collector.proto" GrpcServices="Client" Link="Protos\collector.proto" />
     <ProjectReference Include="..\OpenRussiaRouter.BuildingBlocks\OpenRussiaRouter.BuildingBlocks.csproj" />
     <ProjectReference Include="..\OpenRussiaRouter.Contracts\OpenRussiaRouter.Contracts.csproj" />
   </ItemGroup>

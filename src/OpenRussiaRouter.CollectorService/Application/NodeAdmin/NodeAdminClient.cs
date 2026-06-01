@@ -7,6 +7,7 @@ public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
 {
     private const string ModelsPath = "/v1/models";
     private const string ProvidersWithModelsPath = "/api/integrations/providers/with-models";
+    private const string ProviderQuotaPath = "/api/integrations/providers/quota";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -23,6 +24,13 @@ public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
     public Task<NodeModelsResponse> ListModelsAsync(
         Uri endpoint, string controlToken, CancellationToken cancellationToken) =>
         SendAsync<NodeModelsResponse>(endpoint, controlToken, ModelsPath, cancellationToken);
+
+    public Task<NodeProviderQuotaResponse> GetProviderQuotaAsync(
+        Uri endpoint, string controlToken, bool includeInactive, CancellationToken cancellationToken)
+    {
+        var path = includeInactive ? $"{ProviderQuotaPath}?includeInactive=true" : ProviderQuotaPath;
+        return SendAsync<NodeProviderQuotaResponse>(endpoint, controlToken, path, cancellationToken);
+    }
 
     private async Task<TResponse> SendAsync<TResponse>(
         Uri endpoint, string controlToken, string relativePath, CancellationToken cancellationToken)

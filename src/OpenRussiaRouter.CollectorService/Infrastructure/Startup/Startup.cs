@@ -44,6 +44,18 @@ public static class Startup
 
         services.AddHostedService<NodePollingWorker>();
 
+        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.QuotaSnapshotStore>();
+        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.NodeQuotaCollector>();
+        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.ProviderQuotaMeter>();
+
+        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogStore>();
+        services.AddOptions<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogOptions>()
+            .Bind(configuration.GetSection("OpenRouter"))
+            .ValidateDataAnnotations();
+        services.AddHttpClient<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogClient>(c =>
+            c.BaseAddress = new Uri(configuration["OpenRouter:BaseUrl"] ?? "https://openrouter.ai/"));
+        services.AddHostedService<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogPoller>();
+
         return services;
     }
 

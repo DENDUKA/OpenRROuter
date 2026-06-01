@@ -4,7 +4,11 @@ using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 
 namespace OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 
-public sealed class GrpcCollectorService(CollectorSnapshotStore store) : Collector.CollectorBase
+public sealed class GrpcCollectorService(
+    CollectorSnapshotStore store,
+    OpenRussiaRouter.CollectorService.Application.Quota.QuotaSnapshotStore quotaStore,
+    OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogStore openRouterStore)
+    : Collector.CollectorBase
 {
     public override Task<GetCapabilitiesSnapshotResponse> GetCapabilitiesSnapshot(
         GetCapabilitiesSnapshotRequest request, ServerCallContext context)
@@ -70,6 +74,55 @@ public sealed class GrpcCollectorService(CollectorSnapshotStore store) : Collect
 
         var response = new GetNodeModelsResponse();
         response.PublicIds.AddRange(models);
+        return Task.FromResult(response);
+    }
+
+    public override Task<GetProviderQuotaResponse> GetProviderQuota(
+        GetProviderQuotaRequest request, ServerCallContext context)
+    {
+        var snapshot = quotaStore.Current;
+        var response = new GetProviderQuotaResponse
+        {
+            CollectedAtUtc = snapshot.CollectedAtUtc?.ToString("O") ?? string.Empty
+        };
+        foreach (var m in snapshot.Measurements)
+        {
+            response.Measurements.Add(new ProviderQuotaMeasurement
+            {
+                NodeId = m.NodeId,
+                Provider = m.Provider,
+                ConnectionId = m.ConnectionId,
+                Remaining = m.Remaining
+            });
+        }
+        return Task.FromResult(response);
+    }
+
+    public override Task<GetOpenRouterCatalogResponse> GetOpenRouterCatalog(
+        GetOpenRouterCatalogRequest request, ServerCallContext context)
+    {
+        var snapshot = openRouterStore.Current;
+        var response = new GetOpenRouterCatalogResponse
+        {
+            CollectedAtUtc = snapshot.CollectedAtUtc?.ToString("O") ?? string.Empty,
+            Available = snapshot.Available
+        };
+        foreach (var e in snapshot.Entries)
+        {
+            var entry = new OpenRouterCatalogEntry
+            {
+                Slug = e.Slug,
+                Name = e.Name,
+                AuthorDisplayName = e.AuthorDisplayName,
+                Description = e.Description,
+                ContextLength = e.ContextLength,
+                PricePrompt = e.PricePrompt,
+                PriceCompletion = e.PriceCompletion,
+                PriceInputCacheRead = e.PriceInputCacheRead
+            };
+            entry.InputModalities.AddRange(e.InputModalities);
+            response.Entries.Add(entry);
+        }
         return Task.FromResult(response);
     }
 }

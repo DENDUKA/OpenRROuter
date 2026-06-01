@@ -10,6 +10,11 @@ public sealed class OpenRouterCatalogClient(
 {
     private static readonly string[] _strippableSuffixes = [":free", ":beta", ":nitro", ":extended", ":thinking", ":online"];
 
+    // Reasoning-effort qualifiers some providers append to the model id (e.g. "gpt-oss-120b-medium",
+    // "gemini-3.1-pro-low"). OpenRouter slugs don't carry these, so we strip them — but only as a
+    // fallback after exact strategies, because real slugs can also end this way (mistral-medium, o4-mini-high).
+    private static readonly string[] _effortQualifiers = ["minimal", "low", "medium", "high"];
+
     public async Task<IReadOnlyList<OpenRouterModelEntry>> LoadCatalogAsync(
         CancellationToken cancellationToken = default)
     {
@@ -38,6 +43,11 @@ public sealed class OpenRouterCatalogClient(
         var normId = Normalize(id);
         var normSlug = Normalize(Slug(id));
 
+        // Same lookup with any trailing reasoning-effort qualifier removed (e.g. "...-low").
+        var idEff = StripEffort(id);
+        var normIdEff = Normalize(idEff);
+        var normSlugEff = Normalize(Slug(idEff));
+
         // Defensive: the frontend feed is large and undocumented — drop entries without a slug.
         var entries = catalog.Where(e => !string.IsNullOrWhiteSpace(e.Slug)).ToList();
 
@@ -55,7 +65,25 @@ public sealed class OpenRouterCatalogClient(
             // 5. Cross match: full upstream id vs candidate tail, or vice versa.
             ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normId || Normalize(e.Slug) == normSlug)
             // 6. Fall back to the human-readable name (after stripping the "Vendor:" prefix).
-            ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlug);
+            ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlug)
+            // 7-9. Repeat the slug/cross/name strategies after stripping the effort qualifier
+            //      (e.g. "ag/gpt-oss-120b-medium" -> "gpt-oss-120b" == "openai/gpt-oss-120b").
+            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlugEff)
+            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normIdEff || Normalize(e.Slug) == normSlugEff)
+            ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlugEff);
+
+        // 10. Last resort: provider appended trailing tokens OpenRouter expresses as a longer slug
+        //     (e.g. "ag/gemini-3.1-pro-low" -> "google/gemini-3.1-pro-preview"). Match catalog tails
+        //     that extend the effort-stripped upstream tail at a separator boundary; prefer the shortest.
+        if (match is null)
+        {
+            var upTail = Slug(idEff).ToLowerInvariant();
+            if (Normalize(upTail).Length >= 4)
+                match = entries
+                    .Where(e => StartsAtBoundary(Slug(e.Slug).ToLowerInvariant(), upTail))
+                    .OrderBy(e => Slug(e.Slug).Length)
+                    .FirstOrDefault();
+        }
 
         if (match is null) return null;
 
@@ -77,6 +105,28 @@ public sealed class OpenRouterCatalogClient(
             if (modelId.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
                 return modelId[..^suffix.Length];
         return modelId;
+    }
+
+    /// <summary>Removes a single trailing "-{minimal|low|medium|high}" reasoning-effort token.</summary>
+    private static string StripEffort(string modelId)
+    {
+        var dash = modelId.LastIndexOf('-');
+        if (dash > 0 && dash < modelId.Length - 1)
+        {
+            var tail = modelId[(dash + 1)..];
+            if (_effortQualifiers.Contains(tail, StringComparer.OrdinalIgnoreCase))
+                return modelId[..dash];
+        }
+        return modelId;
+    }
+
+    /// <summary>True when <paramref name="candidateTail"/> strictly extends <paramref name="prefix"/> at a separator boundary.</summary>
+    private static bool StartsAtBoundary(string candidateTail, string prefix)
+    {
+        if (candidateTail.Length <= prefix.Length) return false;
+        if (!candidateTail.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return false;
+        var next = candidateTail[prefix.Length];
+        return next is '-' or '.' or '_' or ' ';
     }
 
     /// <summary>Lowercased, with every non-alphanumeric character removed.</summary>

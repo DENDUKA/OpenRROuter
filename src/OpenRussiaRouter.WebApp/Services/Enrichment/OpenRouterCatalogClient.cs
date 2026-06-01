@@ -1,11 +1,12 @@
 using System.Globalization;
-using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
+using CollectorGrpc = OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector;
 
 namespace OpenRussiaRouter.WebApp.Services.Enrichment;
 
 public sealed class OpenRouterCatalogClient(
-    HttpClient httpClient,
+    CollectorGrpc.CollectorClient collectorClient,
     ILogger<OpenRouterCatalogClient> logger) : IOpenRouterCatalogClient
 {
     private static readonly string[] _strippableSuffixes = [":free", ":beta", ":nitro", ":extended", ":thinking", ":online"];
@@ -20,14 +21,29 @@ public sealed class OpenRouterCatalogClient(
     {
         try
         {
-            // Frontend feed — full descriptions + pricing (see OpenRouterModelDto.cs).
-            var response = await httpClient.GetFromJsonAsync<OpenRouterModelsResponse>(
-                "api/frontend/models", cancellationToken);
-            return response?.Data ?? [];
+            var response = await collectorClient.GetOpenRouterCatalogAsync(
+                new GetOpenRouterCatalogRequest(),
+                cancellationToken: cancellationToken);
+
+            if (!response.Available)
+                return [];
+
+            return response.Entries.Select(e => new OpenRouterModelEntry(
+                Slug: e.Slug,
+                Name: string.IsNullOrEmpty(e.Name) ? null : e.Name,
+                ShortName: null,
+                AuthorDisplayName: string.IsNullOrEmpty(e.AuthorDisplayName) ? null : e.AuthorDisplayName,
+                Description: string.IsNullOrEmpty(e.Description) ? null : e.Description,
+                ContextLength: e.ContextLength > 0 ? e.ContextLength : null,
+                InputModalities: e.InputModalities.ToList(),
+                Endpoint: new OpenRouterEndpoint(new OpenRouterPricing(
+                    Prompt: string.IsNullOrEmpty(e.PricePrompt) ? null : e.PricePrompt,
+                    Completion: string.IsNullOrEmpty(e.PriceCompletion) ? null : e.PriceCompletion,
+                    InputCacheRead: string.IsNullOrEmpty(e.PriceInputCacheRead) ? null : e.PriceInputCacheRead)))).ToList();
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to load OpenRouter model catalog");
+            logger.LogWarning(ex, "Failed to load OpenRouter catalog from collector");
             return [];
         }
     }

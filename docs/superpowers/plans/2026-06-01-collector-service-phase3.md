@@ -159,7 +159,7 @@ public class CapabilityReplicaRefresherTests
         store.NodeSupportsModel("old", "m").Should().BeTrue();
     }
 
-    private sealed class StaticMonitor<T>(T value) : IOptionsMonitor<T>
+    private sealed class StaticMonitor<T>(T value) : IOptionsMonitor<T> where T : class
     {
         public T CurrentValue { get; } = value;
         public T Get(string? name) => CurrentValue;

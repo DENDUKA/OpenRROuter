@@ -22,6 +22,9 @@ public class ActivityModel : PageModelBase
     [FromQuery(Name = "after")] public string? After { get; set; }
     [FromQuery(Name = "period")] public string Period { get; set; } = "7d";
 
+    // Number of records per page in the Details tab.
+    public const int PageSize = 100;
+
     // Details tab output
     public IReadOnlyList<ActivityByTokenInfo> Activity { get; set; } = [];
     public bool HasMore { get; set; }
@@ -76,6 +79,7 @@ public class ActivityModel : PageModelBase
                     modelIdFilter: string.IsNullOrEmpty(ModelFilter) ? null : ModelFilter,
                     apiKeyIdFilter: string.IsNullOrEmpty(KeyFilter) ? null : KeyFilter,
                     afterCreatedAtUtc: afterUtc,
+                    pageSize: PageSize,
                     cancellationToken: HttpContext.RequestAborted);
 
                 Activity = items;

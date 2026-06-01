@@ -2,16 +2,18 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, IOpenRouterCatalogClient openRouterClient, ILogger<ModelsModel> logger) : PageModelBase
+public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider controlPlaneProvider, CollectorProvider collectorProvider, IOpenRouterCatalogClient openRouterClient, ILogger<ModelsModel> logger) : PageModelBase
 {
     private readonly BillingProvider _billingClient = billingProvider;
     private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
+    private readonly CollectorProvider _collectorProvider = collectorProvider;
     private readonly IOpenRouterCatalogClient _openRouterClient = openRouterClient;
     private readonly ILogger<ModelsModel> _logger = logger;
 
@@ -355,7 +357,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     private async Task LoadAvailableNodeModels()
     {
-        AvailableNodeModels = await _controlPlaneClient.ListAvailableNodeModelsAsync();
+        AvailableNodeModels = await _collectorProvider.ListAvailableNodeModelsAsync();
     }
 
     private async Task LoadTags()

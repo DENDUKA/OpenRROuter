@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
@@ -10,6 +11,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 public class ModelsSyncModel(
     BillingProvider BillingProvider,
     ControlPlaneProvider ControlPlaneProvider,
+    CollectorProvider CollectorProvider,
     RouterNodeApiProvider RouterNodeApiProvider,
     ILogger<ModelsSyncModel> logger) : PageModelBase
 {
@@ -46,7 +48,7 @@ public class ModelsSyncModel(
             submittedRows.Count,
             selectedCount);
 
-        var catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+        var catalog = await CollectorProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         if (!string.IsNullOrWhiteSpace(catalog.Error))
         {
             ErrorMessage = $"Catalog unavailable — import cancelled: {catalog.Error}";
@@ -203,7 +205,7 @@ public class ModelsSyncModel(
 
         if (preloadedCatalog is null)
         {
-            catalog = await ControlPlaneProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+            catalog = await CollectorProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
         }
         else
         {

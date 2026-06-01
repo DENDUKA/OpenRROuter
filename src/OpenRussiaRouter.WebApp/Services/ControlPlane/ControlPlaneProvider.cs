@@ -4,12 +4,8 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 
 public sealed class ControlPlaneProvider(
-    ControlGrpc.RouterControlPlaneClient client,
-    ILogger<ControlPlaneProvider> logger)
+    ControlGrpc.RouterControlPlaneClient client)
 {
-    private static readonly TimeSpan NodeModelDropdownTimeout = TimeSpan.FromSeconds(5);
-    private static readonly TimeSpan NodeModelCatalogTimeout = TimeSpan.FromSeconds(30);
-
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {
         var response = await client.ListRouterNodesAsync(new ListRouterNodesRequest(), cancellationToken: cancellationToken);
@@ -147,84 +143,6 @@ public sealed class ControlPlaneProvider(
         {
             ApiKeyId = apiKeyId
         }, cancellationToken: cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<string>> ListAvailableNodeModelsAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(NodeModelDropdownTimeout);
-
-            var response = await client.ListAvailableNodeModelsAsync(
-                new ListAvailableNodeModelsRequest(),
-                cancellationToken: timeoutCts.Token);
-            return response.ModelIds.ToList();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to list available node models");
-            return [];
-        }
-    }
-
-    public async Task<IReadOnlyList<string>> GetNodeModelsAsync(string nodeId, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(NodeModelDropdownTimeout);
-
-            var response = await client.GetNodeModelsAsync(
-                new GetNodeModelsRequest { NodeId = nodeId ?? string.Empty },
-                cancellationToken: timeoutCts.Token);
-
-            return string.IsNullOrWhiteSpace(response.Error)
-                ? response.PublicIds.ToList()
-                : [];
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to get models for node {NodeId}", nodeId);
-            return [];
-        }
-    }
-
-    public async Task<NodeModelCatalogResult> ListNodeModelCatalogAsync(CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeoutCts.CancelAfter(NodeModelCatalogTimeout);
-
-            var response = await client.ListNodeModelCatalogAsync(
-                new ListNodeModelCatalogRequest(),
-                cancellationToken: timeoutCts.Token);
-
-            return new NodeModelCatalogResult(
-                Entries: response.Entries.Select(e => new NodeModelCatalogEntry(
-                    UpstreamId: e.UpstreamId,
-                    PublicId: e.PublicId,
-                    DisplayName: e.DisplayName,
-                    ModelType: e.ModelType,
-                    SourceProviders: e.SourceProviders.ToList(),
-                    NodeIds: e.NodeIds.ToList())).ToList(),
-                UnreachableNodeIds: response.UnreachableNodeIds.ToList(),
-                UnreachableNodes: response.UnreachableNodes.Select(u => new UnreachableNodeDetail(
-                    NodeId: u.NodeId,
-                    Request: u.Request,
-                    Response: u.Response)).ToList(),
-                Error: null);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to load node model catalog");
-            return new NodeModelCatalogResult(
-                Entries: [],
-                UnreachableNodeIds: [],
-                UnreachableNodes: [],
-                Error: $"Failed to load node model catalog: {ex.Message}");
-        }
     }
 
     private static RouterNodeInfo MapNode(RouterNodeSummary n)

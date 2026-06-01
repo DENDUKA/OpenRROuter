@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
 using System.Text;
@@ -11,6 +12,7 @@ namespace OpenRussiaRouter.WebApp.Pages.Admin;
 [Authorize(Roles = "Admin")]
 public class NodesModel(
     ControlPlaneProvider ControlPlaneProvider,
+    CollectorProvider CollectorProvider,
     AuthProvider AuthProvider,
     IHttpClientFactory HttpClientFactory,
     ILogger<NodesModel> logger) : PageModelBase
@@ -98,7 +100,7 @@ public class NodesModel(
 
     public async Task<IActionResult> OnGetNodeModelsAsync(string nodeId)
     {
-        var models = await ControlPlaneProvider.GetNodeModelsAsync(nodeId, HttpContext.RequestAborted);
+        var models = await CollectorProvider.GetNodeModelsAsync(nodeId, HttpContext.RequestAborted);
         return new JsonResult(models);
     }
 

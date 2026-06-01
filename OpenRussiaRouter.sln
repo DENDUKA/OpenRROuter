@@ -35,6 +35,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.E2ETests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.CollectorService", "src\OpenRussiaRouter.CollectorService\OpenRussiaRouter.CollectorService.csproj", "{88E9B094-6D78-4CEC-B1B1-6D6916BCDFA4}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenRussiaRouter.CollectorService.Tests", "tests\OpenRussiaRouter.CollectorService.Tests\OpenRussiaRouter.CollectorService.Tests.csproj", "{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -100,6 +102,10 @@ Global
 		{88E9B094-6D78-4CEC-B1B1-6D6916BCDFA4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88E9B094-6D78-4CEC-B1B1-6D6916BCDFA4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{88E9B094-6D78-4CEC-B1B1-6D6916BCDFA4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E9DBC051-E863-4672-B80B-9369B3FFD0EA} = {48553977-5017-49FC-AC38-784B7269DFD0}
@@ -116,5 +122,6 @@ Global
 		{CA183F6C-3801-45CD-B731-B5EA54DFE28F} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
 		{24D9D177-20C9-4260-9591-6B5E055B8AA0} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
 		{88E9B094-6D78-4CEC-B1B1-6D6916BCDFA4} = {48553977-5017-49FC-AC38-784B7269DFD0}
+		{1D3D131E-66FB-4501-B745-9AB0FBEDEFAE} = {54996DA5-B6D9-40E7-8BC1-461A999B7D34}
 	EndGlobalSection
 EndGlobal

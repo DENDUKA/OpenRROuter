@@ -293,5 +293,5 @@ kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
 | Immutable price history | В `billing.model_prices` один active row на модель, не versioned history (BILLING-003) |
 | Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox (BILLING-004) |
 | Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` (CONTROL-002) |
-| Capability-aware routing | Роутинг по least-load, без фильтра по model capabilities (CONTROL-003) |
+| ~~Capability-aware routing~~ | Реализовано: `RouterControlPlaneService` фильтрует кандидатов по `NodeModelCapabilityStore` (наполняется `RouterModelCapabilityJob`), при пустом store — fallback на least-load без фильтра (CONTROL-003) |
 | Lease recovery | После рестарта ControlPlane in-flight счётчики сбрасываются, нет recovery (CONTROL-004) |

@@ -164,87 +164,9 @@ public sealed class RouterNodeProviderTests
         ex.Which.Message.Should().NotContain("control-token");
     }
 
-    [Fact]
-    public async Task ListProvidersWithModelsAsync_SendsGetToWithModelsEndpoint()
-    {
-        var handler = new CapturingHandler(JsonResponse("""
-            {
-              "connections": [
-                {
-                  "id": "conn-1",
-                  "provider": "minimax",
-                  "authType": "apikey",
-                  "name": "MiniMax account",
-                  "isActive": true,
-                  "testStatus": "active",
-                  "models": [
-                    {
-                      "id": "MiniMax-M2.7",
-                      "publicId": "minimax/MiniMax-M2.7",
-                      "name": "MiniMax M2.7",
-                      "type": "llm",
-                      "enabled": true
-                    }
-                  ]
-                }
-              ]
-            }
-            """));
-        var client = CreateClient(handler);
-
-        var result = await client.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
-
-        handler.LastMethod.Should().Be(HttpMethod.Get);
-        handler.LastUri.Should().Be("https://router.example/api/integrations/providers/with-models");
-        handler.Authorization.Should().Be("Bearer control-token");
-        handler.NodeToken.Should().Be("control-token");
-        var conn = result.Connections.Should().ContainSingle().Which;
-        conn.Id.Should().Be("conn-1");
-        conn.Provider.Should().Be("minimax");
-        conn.IsActive.Should().BeTrue();
-        var model = conn.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("MiniMax-M2.7");
-        model.PublicId.Should().Be("minimax/MiniMax-M2.7");
-    }
-
-    [Fact]
-    public async Task ListProvidersWithModelsAsync_ErrorResponse_ThrowsProviderException()
-    {
-        var handler = new CapturingHandler(JsonResponse(
-            """{ "error": "Failed to fetch providers" }""",
-            HttpStatusCode.InternalServerError));
-        var client = CreateClient(handler);
-
-        var ex = await ((Func<Task>)(() => client.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None)))
-            .Should().ThrowAsync<RouterNodeProviderException>();
-
-        ex.Which.StatusCode.Should().Be(HttpStatusCode.InternalServerError);
-        ex.Which.RouterError.Should().Be("Failed to fetch providers");
-    }
-
     private static RouterNodeProvider CreateClient(CapturingHandler handler)
     {
         return new RouterNodeProvider(new HttpClient(handler));
-    }
-
-    [Fact]
-    public void DescribeListProvidersRequest_ReturnsRequestLine()
-    {
-        var client = CreateClient(new CapturingHandler(JsonResponse("""{}""")));
-
-        var request = client.DescribeListProvidersRequest(CreateNode());
-
-        request.Should().Be("GET https://router.example/api/integrations/providers/with-models");
-    }
-
-    [Fact]
-    public void DescribeListModelsRequest_ReturnsRequestLine()
-    {
-        var client = CreateClient(new CapturingHandler(JsonResponse("""{}""")));
-
-        var request = client.DescribeListModelsRequest(CreateNode());
-
-        request.Should().Be("GET https://router.example/v1/models");
     }
 
     private static RouterNode CreateNode(string controlToken = "control-token")

@@ -12,16 +12,8 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
     private const string ProviderStatusPathTemplate = "/api/integrations/providers/{0}/status";
     private const string IntegrationKeysPath = "/api/integrations/keys";
     private const string IntegrationKeyStatusPathTemplate = "/api/integrations/keys/{0}/status";
-    private const string ModelsPath = "/v1/models";
-    private const string ProvidersWithModelsPath = "/api/integrations/providers/with-models";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-
-    public string DescribeListProvidersRequest(RouterNode node) =>
-        DescribeRequest(node, HttpMethod.Get, ProvidersWithModelsPath);
-
-    public string DescribeListModelsRequest(RouterNode node) =>
-        DescribeRequest(node, HttpMethod.Get, ModelsPath);
 
     public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
         RouterNode node,
@@ -97,25 +89,6 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
             cancellationToken);
     }
 
-    public Task<NodeModelsResponse> ListModelsAsync(
-        RouterNode node,
-        CancellationToken cancellationToken)
-    {
-        return SendAsync<NodeModelsResponse>(node, HttpMethod.Get, ModelsPath, content: null, cancellationToken);
-    }
-
-    public Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
-        RouterNode node,
-        CancellationToken cancellationToken)
-    {
-        return SendAsync<RouterProvidersWithModelsResponse>(
-            node,
-            HttpMethod.Get,
-            ProvidersWithModelsPath,
-            content: null,
-            cancellationToken);
-    }
-
     private async Task<TResponse> SendAsync<TResponse>(
         RouterNode node,
         HttpMethod method,
@@ -178,12 +151,6 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
             return document.RootElement.TryGetProperty("error", out var errorElement) ? errorElement.GetString() : null;
         }
         catch (JsonException) { return null; }
-    }
-
-    private static string DescribeRequest(RouterNode node, HttpMethod method, string relativePathAndQuery)
-    {
-        ArgumentNullException.ThrowIfNull(node);
-        return $"{method.Method} {new Uri(node.EndpointUrl, relativePathAndQuery)}";
     }
 
     private sealed record ProviderStatusRequest(bool IsActive);

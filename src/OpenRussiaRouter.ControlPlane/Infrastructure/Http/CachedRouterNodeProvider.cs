@@ -10,12 +10,6 @@ public sealed class CachedRouterNodeProvider(
     IOptionsMonitor<RouterNodeProviderCacheOptions> options)
     : IRouterNodeProvider
 {
-    public string DescribeListProvidersRequest(RouterNode node) =>
-        inner.DescribeListProvidersRequest(node);
-
-    public string DescribeListModelsRequest(RouterNode node) =>
-        inner.DescribeListModelsRequest(node);
-
     public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
         RouterNode node,
         bool includeInactive,
@@ -70,24 +64,6 @@ public sealed class CachedRouterNodeProvider(
         cache.InvalidateNode(node.Id);
         return response;
     }
-
-    public Task<NodeModelsResponse> ListModelsAsync(
-        RouterNode node,
-        CancellationToken cancellationToken) =>
-        GetOrCreateAsync(
-            node,
-            "models",
-            ct => inner.ListModelsAsync(node, ct),
-            cancellationToken);
-
-    public Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
-        RouterNode node,
-        CancellationToken cancellationToken) =>
-        GetOrCreateAsync(
-            node,
-            "providers-with-models",
-            ct => inner.ListProvidersWithModelsAsync(node, ct),
-            cancellationToken);
 
     private async Task<TResponse> GetOrCreateAsync<TResponse>(
         RouterNode node,

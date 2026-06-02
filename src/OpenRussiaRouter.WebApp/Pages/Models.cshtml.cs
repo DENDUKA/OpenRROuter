@@ -91,9 +91,9 @@ public class ModelsModel(
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList() ?? [];
 
-        var provider = sourceProviders.Count == 0
+        var provider = model.Provider ?? (sourceProviders.Count == 0
             ? "Unknown"
-            : string.Join(", ", sourceProviders);
+            : string.Join(", ", sourceProviders));
 
         var capability = !string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
             ? ToTitle(catalogEntry.ModelType)

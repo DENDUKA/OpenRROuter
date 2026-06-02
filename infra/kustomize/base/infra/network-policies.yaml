@@ -272,8 +272,12 @@ metadata:
   namespace: orr-dev
 spec:
   podSelector:
-    matchLabels:
-      app: f9router
+    matchExpressions:
+      - key: app
+        operator: In
+        values:
+          - f9router
+          - f9router-2
   policyTypes:
     - Ingress
   ingress:

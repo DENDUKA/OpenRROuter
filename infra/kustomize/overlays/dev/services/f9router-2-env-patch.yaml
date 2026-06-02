@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: f9router-2
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: f9router-2
+          env:
+            - name: BASE_URL
+              value: "http://f9router-2.local"
+            - name: NEXT_PUBLIC_BASE_URL
+              value: "http://f9router-2.local"

@@ -6,12 +6,15 @@ resources:
 - webapp-localhost-ingress.yaml
 - api-gateway-localhost-ingress.yaml
 - f9router-localhost-ingress.yaml
+- f9router-2-localhost-ingress.yaml
 - mock-llm-node.yaml
 
 patches:
 - path: webapp-google-patch.yaml
 - path: f9router-env-patch.yaml
+- path: f9router-2-env-patch.yaml
 - path: f9router-nodeport.yaml
+- path: f9router-2-nodeport.yaml
 - path: control-plane-env-patch.yaml
 - path: webapp-env-patch.yaml
 commonAnnotations:

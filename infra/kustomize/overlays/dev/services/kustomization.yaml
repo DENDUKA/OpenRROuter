@@ -29,6 +29,8 @@ images:
   newTag: dev-latest
 - name: ghcr.io/denduka/control-plane
   newTag: dev-latest
+- name: ghcr.io/denduka/collector
+  newTag: dev-latest
 - name: ghcr.io/denduka/webapp
   newTag: dev-latest
 - name: ghcr.io/inc64/f9router

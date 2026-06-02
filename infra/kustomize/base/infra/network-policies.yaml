@@ -206,7 +206,8 @@ spec:
           protocol: TCP
 
 ---
-# control-plane receives gRPC from api-gateway and webapp.
+# control-plane receives gRPC from api-gateway, webapp, and collector
+# (collector's NodePollingWorker fetches the node list from control-plane).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -223,6 +224,37 @@ spec:
         - podSelector:
             matchLabels:
               app: api-gateway
+        - podSelector:
+            matchLabels:
+              app: webapp
+        - podSelector:
+            matchLabels:
+              app: collector
+      ports:
+        - port: 8081
+          protocol: TCP
+        - port: 8080
+          protocol: TCP
+
+---
+# collector receives gRPC from control-plane (CapabilityReplicaRefresher)
+# and webapp (CollectorProvider — node models / snapshots).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-collector
+  namespace: orr-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: collector
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: control-plane
         - podSelector:
             matchLabels:
               app: webapp

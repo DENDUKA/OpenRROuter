@@ -37,16 +37,6 @@ public sealed record RouterProviderConnectionInfo
     public JsonElement? ProviderSpecificData { get; init; }
 }
 
-public sealed record RouterProviderModelInfo
-{
-    public string Id { get; init; } = string.Empty;
-    public string PublicId { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public string Type { get; init; } = string.Empty;
-    public bool Enabled { get; init; }
-    public IReadOnlyList<string> Sources { get; init; } = [];
-}
-
 public sealed record RouterIntegrationKeysResponse
 {
     public IReadOnlyList<RouterIntegrationKeyInfo> Keys { get; init; } = [];
@@ -67,32 +57,6 @@ public sealed record RouterIntegrationKeyCreateResponse
 {
     public bool Created { get; init; }
     public string Id { get; init; } = string.Empty;
-}
-
-public sealed record NodeModelsResponse
-{
-    public IReadOnlyList<NodeModelInfo> Data { get; init; } = [];
-}
-
-public sealed record NodeModelInfo
-{
-    public string Id { get; init; } = string.Empty;
-}
-
-public sealed record RouterProvidersWithModelsResponse
-{
-    public IReadOnlyList<RouterProviderWithModels> Connections { get; init; } = [];
-}
-
-public sealed record RouterProviderWithModels
-{
-    public string Id { get; init; } = string.Empty;
-    public string Provider { get; init; } = string.Empty;
-    public string AuthType { get; init; } = string.Empty;
-    public string? Name { get; init; }
-    public bool IsActive { get; init; }
-    public string? TestStatus { get; init; }
-    public IReadOnlyList<RouterProviderModelInfo> Models { get; init; } = [];
 }
 
 public sealed class RouterNodeProviderException : Exception

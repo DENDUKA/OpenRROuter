@@ -11,6 +11,7 @@ using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -113,6 +114,23 @@ builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>
 builder.Services.AddScoped<ControlPlaneProvider>();
 builder.Services.AddScoped<RouterNodeApiProvider>();
 
+var collectorGrpcUrl = builder.Configuration["GrpcServices:Collector"] ?? "http://localhost:5005";
+builder.Services.AddGrpcClient<OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector.CollectorClient>(options =>
+{
+    options.Address = new Uri(collectorGrpcUrl);
+})
+.ConfigureChannel(options =>
+{
+    options.HttpHandler = new SocketsHttpHandler
+    {
+        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+        KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+        KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+    };
+})
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+builder.Services.AddScoped<CollectorProvider>();
+
 var apiGatewayUrl = builder.Configuration["ApiGatewayUrl"] ?? "http://localhost:5000";
 builder.Services.AddHttpClient("ApiGateway", client =>
 {
@@ -146,12 +164,7 @@ builder.Services.AddHttpClient("DirectNodeChat", client =>
     PooledConnectionIdleTimeout = TimeSpan.FromSeconds(60),
 });
 
-builder.Services.AddHttpClient<IOpenRouterCatalogClient, OpenRouterCatalogClient>(c =>
-{
-    c.BaseAddress = new Uri("https://openrouter.ai/");
-    c.DefaultRequestHeaders.Add("User-Agent", "OpenRussiaRouter/1.0");
-    c.Timeout = TimeSpan.FromSeconds(15);
-});
+builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
 
 var app = builder.Build();
 

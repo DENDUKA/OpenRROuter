@@ -31,6 +31,8 @@ spec:
               value: "http://billing-service:8080"
             - name: GrpcServices__ControlPlane
               value: "http://control-plane:8080"
+            - name: GrpcServices__Collector
+              value: "http://collector:8080"
           readinessProbe:
             httpGet:
               path: /health

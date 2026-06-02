@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package openrussiarouter.collector.v1;
+
+option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Collector.V1";
+
+service Collector {
+  // node_id -> supported routable model ids; consumed by ControlPlane's local replica.
+  rpc GetCapabilitiesSnapshot (GetCapabilitiesSnapshotRequest) returns (GetCapabilitiesSnapshotResponse);
+  // Rich merged catalog across all nodes; consumed by WebApp.
+  rpc ListNodeModelCatalog (ListNodeModelCatalogRequest) returns (ListNodeModelCatalogResponse);
+  // Routable model ids for a single node.
+  rpc GetNodeModels (GetNodeModelsRequest) returns (GetNodeModelsResponse);
+  rpc GetProviderQuota (GetProviderQuotaRequest) returns (GetProviderQuotaResponse);
+  rpc GetOpenRouterCatalog (GetOpenRouterCatalogRequest) returns (GetOpenRouterCatalogResponse);
+}
+
+message GetCapabilitiesSnapshotRequest {}
+
+message NodeCapability {
+  string node_id = 1;
+  repeated string model_ids = 2;
+}
+
+message GetCapabilitiesSnapshotResponse {
+  repeated NodeCapability nodes = 1;
+  // ISO-8601 round-trip ("O") UTC timestamp of the snapshot; empty if nothing collected yet.
+  string collected_at_utc = 2;
+}
+
+message ListNodeModelCatalogRequest {}
+
+message UpstreamModelEntry {
+  string upstream_id = 1;
+  string public_id = 2;
+  string display_name = 3;
+  string model_type = 4;
+  repeated string source_providers = 5;
+  repeated string node_ids = 6;
+}
+
+message UnreachableNodeInfo {
+  string node_id = 1;
+  string request = 2;
+  string response = 3;
+}
+
+message ListNodeModelCatalogResponse {
+  repeated UpstreamModelEntry entries = 1;
+  repeated string unreachable_node_ids = 2;
+  repeated UnreachableNodeInfo unreachable_nodes = 3;
+  string collected_at_utc = 4;
+}
+
+message GetNodeModelsRequest {
+  string node_id = 1;
+}
+
+message GetNodeModelsResponse {
+  repeated string public_ids = 1;
+  string error = 2;
+}
+
+message GetProviderQuotaRequest {}
+
+message ProviderQuotaMeasurement {
+  string node_id = 1;
+  string provider = 2;
+  string connection_id = 3;
+  double remaining = 4;
+}
+
+message GetProviderQuotaResponse {
+  repeated ProviderQuotaMeasurement measurements = 1;
+  string collected_at_utc = 2;
+}
+
+message GetOpenRouterCatalogRequest {}
+
+message OpenRouterCatalogEntry {
+  string slug = 1;
+  string name = 2;
+  string author_display_name = 3;
+  string description = 4;
+  int32 context_length = 5;
+  repeated string input_modalities = 6;
+  // Per-token prices as raw strings from OpenRouter (USD per single token); empty if absent.
+  string price_prompt = 7;
+  string price_completion = 8;
+  string price_input_cache_read = 9;
+}
+
+message GetOpenRouterCatalogResponse {
+  repeated OpenRouterCatalogEntry entries = 1;
+  string collected_at_utc = 2;
+  // False when the catalog has never been successfully fetched (consumers keep their own fallback).
+  bool available = 3;
+}

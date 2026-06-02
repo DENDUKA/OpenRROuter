@@ -1,3 +1,4 @@
+using System.Net.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,6 +27,26 @@ public static class Startup
         services.AddOptions<RouterLeaseCleanupOptions>()
             .Bind(configuration.GetSection("RouterLeaseCleanup"))
             .ValidateDataAnnotations();
+
+        services.AddOptions<CapabilityReplicaOptions>()
+            .Bind(configuration.GetSection("CapabilityReplica"))
+            .ValidateDataAnnotations();
+
+        var grpcCallDeadline = TimeSpan.FromSeconds(
+            configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
+        var collectorUrl = configuration["GrpcServices:Collector"] ?? "http://localhost:5005";
+        services.AddGrpcClient<OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector.CollectorClient>(
+                o => o.Address = new Uri(collectorUrl))
+            .ConfigureChannel(o =>
+            {
+                o.HttpHandler = new SocketsHttpHandler
+                {
+                    PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                };
+            })
+            .AddInterceptor(() => new OpenRussiaRouter.BuildingBlocks.Grpc.GrpcDeadlineInterceptor(grpcCallDeadline));
 
         var connectionString = configuration.GetConnectionString("ControlPlaneDb");
         services.AddControlPlaneInfrastructure(connectionString);

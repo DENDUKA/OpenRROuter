@@ -9,6 +9,7 @@
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\auth.proto" GrpcServices="Client" Link="Protos\auth.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\billing.proto" GrpcServices="Client" Link="Protos\billing.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\control-plane.proto" GrpcServices="Client" Link="Protos\control-plane.proto" />
+    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\collector.proto" GrpcServices="Client" Link="Protos\collector.proto" />
     <PackageReference Include="Google.Protobuf"  />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google"  />
     <PackageReference Include="Grpc.Net.Client"  />

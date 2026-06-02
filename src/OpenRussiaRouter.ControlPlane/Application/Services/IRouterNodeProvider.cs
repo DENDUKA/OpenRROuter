@@ -4,10 +4,6 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 public interface IRouterNodeProvider
 {
-    string DescribeListProvidersRequest(RouterNode node);
-
-    string DescribeListModelsRequest(RouterNode node);
-
     Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
         RouterNode node,
         bool includeInactive,
@@ -33,13 +29,5 @@ public interface IRouterNodeProvider
         RouterNode node,
         string keyId,
         bool isActive,
-        CancellationToken cancellationToken);
-
-    Task<NodeModelsResponse> ListModelsAsync(
-        RouterNode node,
-        CancellationToken cancellationToken);
-
-    Task<RouterProvidersWithModelsResponse> ListProvidersWithModelsAsync(
-        RouterNode node,
         CancellationToken cancellationToken);
 }

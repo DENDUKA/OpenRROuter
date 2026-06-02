@@ -1,11 +1,9 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.ControlPlane.Application.Metrics;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
-using Quartz;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Extensions;
 
@@ -41,36 +39,7 @@ public static class ControlPlaneExtensions
         services.AddTransient<IRouterNodeProvider, CachedRouterNodeProvider>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
-
-        services.AddHttpClient<ProviderQuotaCollectorWorker>();
-        services.AddOptions<ProviderQuotaCollectorOptions>()
-            .Bind(configuration.GetSection("ProviderQuotaCollector"))
-            .ValidateDataAnnotations();
-        services.AddHostedService<ProviderQuotaCollectorWorker>();
-
-        services.AddOptions<RouterModelCapabilityOptions>()
-            .Bind(configuration.GetSection("RouterModelCapability"))
-            .ValidateDataAnnotations();
-
-        services.AddQuartz(q =>
-        {
-            q.UseInMemoryStore();
-            var jobKey = new JobKey(nameof(RouterModelCapabilityJob));
-            q.AddJob<RouterModelCapabilityJob>(opts => opts.WithIdentity(jobKey));
-            q.AddTrigger(opts =>
-            {
-                var interval = configuration
-                    .GetSection("RouterModelCapability")
-                    .GetValue("Interval", TimeSpan.FromMinutes(5));
-                opts.ForJob(jobKey)
-                    .WithIdentity("RouterModelCapabilityTrigger")
-                    .StartNow()
-                    .WithSimpleSchedule(s => s
-                        .WithInterval(interval)
-                        .RepeatForever());
-            });
-        });
-        services.AddQuartzHostedService(q => q.WaitForJobsToComplete = true);
+        services.AddHostedService<CapabilityReplicaRefresher>();
 
         return services;
     }

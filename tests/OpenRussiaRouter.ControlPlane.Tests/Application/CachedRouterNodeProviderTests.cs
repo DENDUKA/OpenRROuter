@@ -9,35 +9,6 @@ namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 public sealed class CachedRouterNodeProviderTests
 {
     [Fact]
-    public async Task ListProvidersWithModelsAsync_RepeatedCallWithinTtl_UsesCachedResponse()
-    {
-        var handler = new CountingHandler(_ => JsonResponse("""
-            {
-              "connections": [
-                {
-                  "id": "conn-1",
-                  "provider": "minimax",
-                  "authType": "apikey",
-                  "name": "MiniMax account",
-                  "isActive": true,
-                  "models": [
-                    { "id": "minimax-m2", "publicId": "minimax/minimax-m2", "enabled": true }
-                  ]
-                }
-              ]
-            }
-            """));
-        var provider = CreateProvider(handler);
-
-        var first = await provider.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
-        var second = await provider.ListProvidersWithModelsAsync(CreateNode(), CancellationToken.None);
-
-        handler.RequestCount.Should().Be(1);
-        first.Connections.Should().ContainSingle().Which.Id.Should().Be("conn-1");
-        second.Connections.Should().ContainSingle().Which.Id.Should().Be("conn-1");
-    }
-
-    [Fact]
     public async Task GetProviderQuotaAsync_DisabledCache_CallsInnerProviderEveryTime()
     {
         var handler = new CountingHandler(_ => JsonResponse("""{ "providers": [] }"""));
@@ -50,68 +21,24 @@ public sealed class CachedRouterNodeProviderTests
     }
 
     [Fact]
-    public async Task ListModelsAsync_FailedRequest_IsNotCached()
-    {
-        var responses = new Queue<HttpResponseMessage>([
-            JsonResponse("""{ "error": "temporary failure" }""", HttpStatusCode.ServiceUnavailable),
-            JsonResponse("""{ "data": [ { "id": "gpt-test" } ] }""")
-        ]);
-        var handler = new CountingHandler(_ => responses.Dequeue());
-        var provider = CreateProvider(handler);
-
-        await ((Func<Task>)(() => provider.ListModelsAsync(CreateNode(), CancellationToken.None)))
-            .Should().ThrowAsync<RouterNodeProviderException>();
-        var result = await provider.ListModelsAsync(CreateNode(), CancellationToken.None);
-
-        handler.RequestCount.Should().Be(2);
-        result.Data.Should().ContainSingle().Which.Id.Should().Be("gpt-test");
-    }
-
-    [Fact]
     public async Task UpdateProviderStatusAsync_Success_InvalidatesNodeCache()
     {
         var responses = new Queue<HttpResponseMessage>([
-            JsonResponse("""
-            {
-              "connections": [
-                {
-                  "id": "conn-1",
-                  "provider": "minimax",
-                  "authType": "apikey",
-                  "name": "Old",
-                  "isActive": true,
-                  "models": []
-                }
-              ]
-            }
-            """),
+            JsonResponse("""{ "providers": [{ "connectionId": "conn-1", "provider": "minimax", "authType": "apikey", "name": "Old", "isActive": true }] }"""),
             JsonResponse("""{ "connection": { "id": "conn-1", "isActive": false } }"""),
-            JsonResponse("""
-            {
-              "connections": [
-                {
-                  "id": "conn-1",
-                  "provider": "minimax",
-                  "authType": "apikey",
-                  "name": "New",
-                  "isActive": false,
-                  "models": []
-                }
-              ]
-            }
-            """)
+            JsonResponse("""{ "providers": [{ "connectionId": "conn-1", "provider": "minimax", "authType": "apikey", "name": "New", "isActive": false }] }""")
         ]);
         var handler = new CountingHandler(_ => responses.Dequeue());
         var provider = CreateProvider(handler);
         var node = CreateNode();
 
-        var first = await provider.ListProvidersWithModelsAsync(node, CancellationToken.None);
+        var first = await provider.GetProviderQuotaAsync(node, includeInactive: true, CancellationToken.None);
         await provider.UpdateProviderStatusAsync(node, "conn-1", isActive: false, CancellationToken.None);
-        var second = await provider.ListProvidersWithModelsAsync(node, CancellationToken.None);
+        var second = await provider.GetProviderQuotaAsync(node, includeInactive: true, CancellationToken.None);
 
         handler.RequestCount.Should().Be(3);
-        first.Connections.Should().ContainSingle().Which.Name.Should().Be("Old");
-        second.Connections.Should().ContainSingle().Which.Name.Should().Be("New");
+        first.Providers.Should().ContainSingle().Which.Name.Should().Be("Old");
+        second.Providers.Should().ContainSingle().Which.Name.Should().Be("New");
     }
 
     [Fact]

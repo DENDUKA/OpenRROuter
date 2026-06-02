@@ -17,9 +17,6 @@ service RouterControlPlane {
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
   rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
-  rpc ListAvailableNodeModels (ListAvailableNodeModelsRequest) returns (ListAvailableNodeModelsResponse);
-  rpc ListNodeModelCatalog (ListNodeModelCatalogRequest) returns (ListNodeModelCatalogResponse);
-  rpc GetNodeModels (GetNodeModelsRequest) returns (GetNodeModelsResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -183,42 +180,3 @@ message RevokeUserIntegrationKeyResponse {
   int32 revoked_count = 1;
 }
 
-message ListAvailableNodeModelsRequest {}
-
-message ListAvailableNodeModelsResponse {
-  repeated string model_ids = 1;
-}
-
-message ListNodeModelCatalogRequest {}
-
-message UpstreamModelEntry {
-  string upstream_id = 1;
-  string public_id = 2;
-  string display_name = 3;
-  string model_type = 4;
-  repeated string source_providers = 5;
-  repeated string node_ids = 6;
-}
-
-message UnreachableNodeInfo {
-  string node_id = 1;
-  string request = 2;
-  string response = 3;
-}
-
-message ListNodeModelCatalogResponse {
-  repeated UpstreamModelEntry entries = 1;
-  repeated string unreachable_node_ids = 2;
-  repeated UnreachableNodeInfo unreachable_nodes = 3;
-}
-
-message GetNodeModelsRequest {
-  string node_id = 1;
-}
-
-message GetNodeModelsResponse {
-  // Public IDs ordered alphabetically. Empty on error or when the node has no models.
-  repeated string public_ids = 1;
-  // Non-empty when the node was unreachable or not found.
-  string error = 2;
-}

@@ -5,6 +5,7 @@ resources:
   - auth-service.yaml
   - billing-service.yaml
   - control-plane.yaml
+  - collector.yaml
   - api-gateway.yaml
   - webapp.yaml
   - ingress.yaml

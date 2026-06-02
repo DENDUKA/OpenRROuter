@@ -1,12 +1,13 @@
 using Microsoft.Extensions.Caching.Memory;
 using OpenRussiaRouter.WebApp.Services.Billing;
-using OpenRussiaRouter.WebApp.Services.ControlPlane;
+using OpenRussiaRouter.WebApp.Services.Collector;
+using OpenRussiaRouter.WebApp.Services.ControlPlane; // NodeModelCatalogResult, NodeModelCatalogEntry
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class ModelsModel(
     BillingProvider BillingProvider,
-    ControlPlaneProvider ControlPlaneProvider,
+    CollectorProvider CollectorProvider,
     IMemoryCache memoryCache,
     ILogger<ModelsModel> logger) : PageModelBase
 {
@@ -75,7 +76,7 @@ public class ModelsModel(
         return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return await ControlPlaneProvider.ListNodeModelCatalogAsync(cancellationToken);
+            return await CollectorProvider.ListNodeModelCatalogAsync(cancellationToken);
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
 

@@ -1,8 +1,8 @@
 kustomize:
   images:
-  - ghcr.io/denduka/api-gateway:dev-latest@sha256:302a7782bf6ff74f24745c3f837c6e1c9d5e21f68a35d32bd7378b08285f6463
-  - ghcr.io/denduka/auth-service:dev-latest@sha256:717422334bbb7d9a1ef562e34af05569332ce318d34088ffbbc079b683edf0f0
-  - ghcr.io/denduka/billing-service:dev-latest@sha256:339d40449373d0641d61ec379d1af8b27d42fd5b04b614586a53dc4a2619556f
-  - ghcr.io/denduka/control-plane:dev-latest@sha256:09dc14fc31c2a66e419eff2cda28c2a9c1cf54b174e6d18fd4e369741c5346fc
-  - ghcr.io/denduka/webapp:dev-latest@sha256:5720ffb771d3334b3f234822e9acdffab874e73092dabd648a6414b612ff052d
+  - ghcr.io/denduka/api-gateway:dev-latest@sha256:0daf6ec789dd68fb9db272e4a7ae738e9fac9d4629de1a261cf8676d6a844c42
+  - ghcr.io/denduka/auth-service:dev-latest@sha256:0e97dfd1b8721c9ebdb545ea49651813e673a7ac0efa045666e1bb6b29ae52dc
+  - ghcr.io/denduka/billing-service:dev-latest@sha256:64b9848ad5b35f1814706cb0bccc2ccc256aad50296a2d36b177b6f07297c5d1
+  - ghcr.io/denduka/control-plane:dev-latest@sha256:2e64d2903d10b3d6800d39888e5d841f6a9144ff5fb895d79080e0a59bd6a227
+  - ghcr.io/denduka/webapp:dev-latest@sha256:f4a7d6274db3b08d5690b821a080081bb7d3591a6e3db5ae35151bf4fe71ab92
   - ghcr.io/inc64/f9router:dev-latest@sha256:9286bf1d9cd7f1c5b347fda22f270a3b611f7b61f3e3e4568bbe517f6a60f831

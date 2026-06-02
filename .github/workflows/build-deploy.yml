@@ -164,8 +164,10 @@ jobs:
         uses: docker/login-action@v3.4.0
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer a PAT (write:packages) so brand-new packages like `collector` can be
+          # created/pushed; fall back to GITHUB_TOKEN for already-linked packages.
+          username: ${{ secrets.GHCR_PAT && env.OWNER || github.actor }}
+          password: ${{ secrets.GHCR_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.changed == 'true'

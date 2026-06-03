@@ -13,3 +13,5 @@ spec:
               value: "http://f9router.local"
             - name: NEXT_PUBLIC_BASE_URL
               value: "http://f9router.local"
+            - name: NODE_OPTIONS
+              value: "--dns-result-order=ipv4first"

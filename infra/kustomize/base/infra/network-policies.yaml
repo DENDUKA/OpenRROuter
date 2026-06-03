@@ -76,12 +76,12 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-          values:
-            - api-gateway
-            - control-plane
-            - webapp
-            - f9router
-            - f9router-2
+        values:
+          - api-gateway
+          - control-plane
+          - webapp
+          - f9router
+          - f9router-2
   policyTypes:
     - Egress
   egress:

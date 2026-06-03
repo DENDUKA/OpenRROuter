@@ -134,6 +134,10 @@ services:
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       Seq__Url: "http://seq:80"
+      # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
+      # config (host/port/sender noreply@web-point.top) ships in appsettings.json.
+      Email__SmtpUsername: "${EMAIL_SMTP_USERNAME}"
+      Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD}"
     mem_limit: 512m
     cpus: 0.75
 

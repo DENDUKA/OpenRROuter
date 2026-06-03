@@ -17,6 +17,9 @@
     <!-- Web/API/Auth -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+
+    <!-- Email -->
+    <PackageVersion Include="MailKit" Version="4.17.0" />
     
     <!-- Quartz -->
     <PackageVersion Include="Quartz" Version="3.13.1" />

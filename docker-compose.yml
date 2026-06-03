@@ -158,6 +158,10 @@ services:
       GrpcServices__ControlPlane: "http://control-plane:8080"
       GrpcServices__Collector: "http://collector:8080"
       Seq__Url: "http://seq:80"
+      # Brevo SMTP credentials — set on the box in a (gitignored) .env, not committed here.
+      # Non-secret Email config (host/port/sender) comes from appsettings.json.
+      Email__SmtpUsername: "${EMAIL_SMTP_USERNAME:-}"
+      Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD:-}"
 
   prometheus:
     image: prom/prometheus:v2.51.2

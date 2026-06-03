@@ -17,6 +17,7 @@ patches:
 - path: f9router-2-nodeport.yaml
 - path: control-plane-env-patch.yaml
 - path: webapp-env-patch.yaml
+- path: webapp-email-patch.yaml
 commonAnnotations:
   argocd.argoproj.io/sync-wave: "1"
   orr.dev/version: dev

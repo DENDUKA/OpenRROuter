@@ -14,6 +14,7 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
+using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 
@@ -165,6 +166,8 @@ builder.Services.AddHttpClient("DirectNodeChat", client =>
 });
 
 builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
+
+builder.Services.AddEmailInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 

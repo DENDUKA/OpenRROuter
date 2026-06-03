@@ -1,8 +1,12 @@
 # Email integration plan — invite delivery + broadcast
 
-**Status:** planned, not started. Drafted 2026-06-02 (from the VPN project, hence saved here
-so we continue *in this repo*). Reusable patterns live in the global Claude skill
-`~/.claude/skills/email-broadcast/` (auto-loads in any project).
+**Status:** ✅ **implemented 2026-06-03** (code complete, builds, 6 unit tests green; the live
+SMTP smoke test + secret provisioning are the only manual steps left — see "Implemented"
+below). Drafted 2026-06-02 (from the VPN project, hence saved here so we continue *in this
+repo*). Reusable patterns live in the global Claude skill `~/.claude/skills/email-broadcast/`.
+
+**Decisions confirmed on resume:** scope = **A + B**; broadcast UI = **dedicated
+`/admin/broadcast` page**; Brevo key = **shared with the VPN bot for now**.
 
 ## Decisions so far
 - **Landing service: WebApp** ✅ (confirmed) — it has the admin UI, gRPC clients, knows its
@@ -85,3 +89,54 @@ SMTP connection:
 - Skill: `~/.claude/skills/email-broadcast/` — `SKILL.md` (design), `references/dotnet.md`
   (wiring + adaptable verification/broadcast code), `references/brevo-setup.md` (provider),
   `templates/dotnet/` (copy-paste infra).
+
+## Implemented (2026-06-03)
+
+**Code — all under WebApp, namespace `OpenRussiaRouter.WebApp.Email`:**
+- `Email/` — `IEmailSender`+`EmailMessage`/`EmailAttachment`, `SmtpEmailSender` (MailKit),
+  `EmailSettings`, `IEmailDispatchQueue`+`EmailDispatchQueue` (bounded channel),
+  `EmailDispatchWorker` (sequential drain, 3 attempts @ 1/2/4 s, throttle), `EmailTemplates`
+  (invite builder), `EmailBroadcastService`, `EmailServiceCollectionExtensions`
+  (`AddEmailInfrastructure`).
+- `Program.cs` — `builder.Services.AddEmailInfrastructure(builder.Configuration)`.
+- `appsettings.json` — `Email` section (host/port/sender/`BatchDelayMs`; **no secrets**).
+- **(A)** `Pages/Admin/Users.cshtml.cs` — after `CreateInviteAsync`, enqueues
+  `EmailTemplates.InviteEmail(email, link)`; token still shown as fallback (enqueue failure
+  is swallowed + logged).
+- **(B)** `Pages/Admin/Broadcast.cshtml(.cs)` — compose → preview (recipient count) → send;
+  nav link added to `_AdminLayout.cshtml`. Recipients via AuthService `ListUsers` (no
+  verified-email filter — every user has an email by construction).
+- Pkg: `MailKit 4.17.0` (central `Directory.Packages.props` + WebApp `.csproj`).
+
+**Tests:** `tests/OpenRussiaRouter.WebApp.Tests/` (added to the .sln) — invite link builder,
+broadcast `BuildMessages` (N msgs, skips blanks), queue enqueue/batch, worker retry→discard→
+continue. `dotnet test` → **6 passed**.
+
+**Secrets (NOT in repo — `SmtpUsername`/`SmtpPassword` read from env/secrets at runtime):**
+- Local: `dotnet user-secrets set "Email:SmtpUsername" "a734bb001@smtp-brevo.com"` and
+  `dotnet user-secrets set "Email:SmtpPassword" "<brevo-smtp-key>"` (run in
+  `src/OpenRussiaRouter.WebApp`).
+- **k8s (dev):** `infra/.../overlays/dev/services/webapp-email-patch.yaml` injects
+  `Email__SmtpUsername`/`Email__SmtpPassword` from Secret **`webapp-email-secret`** (keys
+  `smtp-username` / `smtp-password`). Create it manually (selfHeal-safe), mirroring
+  `webapp-google-secret`/`f9router-secret`:
+
+  ```bash
+  kubectl create secret generic webapp-email-secret -n orr-dev \
+    --from-literal=smtp-username='a734bb001@smtp-brevo.com' \
+    --from-literal=smtp-password='<brevo-smtp-key>'
+  ```
+
+- **Compose VPS** (`/opt/orr/`, box 31.76.49.2): server compose is
+  `deploy/compose/compose.yml` (NOT the repo-root `docker-compose.yml`, which is for local dev).
+  Its webapp passes `Email__SmtpUsername`/`Email__SmtpPassword` from
+  `${EMAIL_SMTP_USERNAME}`/`${EMAIL_SMTP_PASSWORD}`; fill those in **`/opt/orr/.env`** (which
+  lives one level *above* the `app/` git clone, so it's outside any repo — see
+  `deploy/compose/.env.example`). Then `./update.sh orr` (git pull → rebuild → restart).
+
+**Manual smoke (left to do):** set the secret, create an invite to your own address → the
+`/invite/{token}` link should arrive in **Inbox** (From `@web-point.top`); confirm in Brevo →
+Logs (delivered). Then `/admin/broadcast` → send a test to all users.
+
+**Note:** in-memory queue → messages still queued at shutdown are lost (acceptable for invite/
+broadcast; matches the documented BILLING-004 outbox gap pattern if durability is wanted later).

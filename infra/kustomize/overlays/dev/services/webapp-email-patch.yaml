@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: webapp
+          env:
+            # Brevo SMTP credentials. Not stored in the repo — create the Secret manually
+            # (shared SMTP key with the VPN bot for now):
+            #   kubectl create secret generic webapp-email-secret -n orr-dev \
+            #     --from-literal=smtp-username='a734bb001@smtp-brevo.com' \
+            #     --from-literal=smtp-password='<brevo-smtp-key>'
+            # Do NOT use `kubectl set env` — ArgoCD selfHeal reverts it in ~1–2 min.
+            - name: Email__SmtpUsername
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-email-secret
+                  key: smtp-username
+            - name: Email__SmtpPassword
+              valueFrom:
+                secretKeyRef:
+                  name: webapp-email-secret
+                  key: smtp-password

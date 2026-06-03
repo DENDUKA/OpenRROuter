@@ -1,0 +1,65 @@
+@page
+@model Admin.BroadcastModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Broadcast - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Broadcast</h2>
+    <p>Send an email to every user.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+@if (Model.ShowConfirm)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Confirm broadcast</div>
+        <div class="adm-card-body">
+            <div class="alert alert-warning">
+                About to send to <strong>@Model.RecipientCount</strong> recipient(s).
+            </div>
+            <p><strong>Subject:</strong> @Model.Input.Subject</p>
+            <pre class="adm-key-preview" style="white-space: pre-wrap;">@Model.Input.Body</pre>
+            <form method="post" asp-page-handler="Send">
+                <input type="hidden" asp-for="Input.Subject" />
+                <input type="hidden" asp-for="Input.Body" />
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Send to @Model.RecipientCount user(s)</button>
+                    <a class="btn btn-secondary" href="/admin/broadcast">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="adm-card">
+        <div class="adm-card-header adm-card-header--split">
+            <span>Compose</span>
+            <span class="text-muted">@Model.RecipientCount recipient(s)</span>
+        </div>
+        <div class="adm-card-body">
+            <form method="post" asp-page-handler="Preview">
+                <div class="form-group">
+                    <label asp-for="Input.Subject" class="form-label">Subject</label>
+                    <input asp-for="Input.Subject" class="form-control" />
+                    <span asp-validation-for="Input.Subject" class="validation-message"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Input.Body" class="form-label">Message</label>
+                    <textarea asp-for="Input.Body" class="form-control" rows="10"></textarea>
+                    <span asp-validation-for="Input.Body" class="validation-message"></span>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Preview &amp; send</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

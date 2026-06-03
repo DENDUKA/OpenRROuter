@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -8,10 +9,11 @@ using OpenRussiaRouter.WebApp.Services.State;
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class UsersModel(AuthProvider authProvider, BillingProvider billingProvider, ILogger<UsersModel> logger) : PageModelBase
+public class UsersModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, ILogger<UsersModel> logger) : PageModelBase
 {
     private readonly AuthProvider _authClient = authProvider;
     private readonly BillingProvider _billingClient = billingProvider;
+    private readonly IEmailDispatchQueue _emailQueue = emailQueue;
     private readonly ILogger<UsersModel> _logger = logger;
 
     public IReadOnlyList<UserInfo> Users { get; set; } = [];
@@ -38,6 +40,18 @@ public class UsersModel(AuthProvider authProvider, BillingProvider billingProvid
         {
             var result = await _authClient.CreateInviteAsync(Invite.Email, Invite.Role, User.GetUserId());
             NewInviteLink = $"{Request.Scheme}://{Request.Host}/invite/{result.RawToken}";
+
+            // Email the link; failure here must not break invite creation — the token is
+            // still shown in the UI as a fallback for the admin to share manually.
+            try
+            {
+                await _emailQueue.EnqueueAsync(EmailTemplates.InviteEmail(Invite.Email, NewInviteLink));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to enqueue invite email. Email={Email}", Invite.Email);
+            }
+
             await LoadUsers();
             return Page();
         }

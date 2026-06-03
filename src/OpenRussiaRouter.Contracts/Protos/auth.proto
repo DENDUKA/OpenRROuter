@@ -7,6 +7,9 @@ option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Auth.V1";
 service AuthService {
   rpc ValidateApiKey (ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
   rpc Login (LoginRequest) returns (LoginResponse);
+  rpc RegisterUser (RegisterUserRequest) returns (RegisterUserResponse);
+  rpc VerifyEmail (VerifyEmailRequest) returns (LoginResponse);
+  rpc ResendVerification (ResendVerificationRequest) returns (ResendVerificationResponse);
   rpc CreateInvite (CreateInviteRequest) returns (CreateInviteResponse);
   rpc CompleteInvite (CompleteInviteRequest) returns (CompleteInviteResponse);
   rpc CreateApiKey (CreateApiKeyRequest) returns (CreateApiKeyResponse);
@@ -43,6 +46,35 @@ message LoginResponse {
   string user_id = 3;
   string role = 4;
   string error_code = 5;
+}
+
+message RegisterUserRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message RegisterUserResponse {
+  bool succeeded = 1;
+  string user_id = 2;
+  string email = 3;
+  string verification_code = 4;
+  string error_code = 5;
+}
+
+message VerifyEmailRequest {
+  string email = 1;
+  string code = 2;
+}
+
+message ResendVerificationRequest {
+  string email = 1;
+}
+
+message ResendVerificationResponse {
+  bool succeeded = 1;
+  string email = 2;
+  string verification_code = 3;
+  string error_code = 4;
 }
 
 message CreateInviteRequest {

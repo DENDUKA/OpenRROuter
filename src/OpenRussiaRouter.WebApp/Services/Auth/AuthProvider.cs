@@ -15,6 +15,37 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
     }
 
+    public async Task<RegistrationResult> RegisterAsync(string email, string password, CancellationToken cancellationToken = default)
+    {
+        var response = await client.RegisterUserAsync(new RegisterUserRequest { Email = email, Password = password }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+        return new RegistrationResult(response.UserId, response.Email, response.VerificationCode);
+    }
+
+    public async Task<LoginResponse> VerifyEmailAsync(string email, string code, CancellationToken cancellationToken = default)
+    {
+        var response = await client.VerifyEmailAsync(new VerifyEmailRequest { Email = email, Code = code }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+        return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
+    }
+
+    /// <summary>Re-issues a verification code for a pending signup; returns the raw code to email.</summary>
+    public async Task<string> ResendVerificationAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var response = await client.ResendVerificationAsync(new ResendVerificationRequest { Email = email }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+        return response.VerificationCode;
+    }
+
     public async Task<LoginResponse?> LoginOrRegisterWithGoogleAsync(string googleSub, string email, CancellationToken cancellationToken = default)
     {
         var response = await client.LoginOrRegisterWithGoogleAsync(

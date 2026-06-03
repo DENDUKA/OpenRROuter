@@ -18,6 +18,17 @@ public class EmailTemplatesTests
         msg.TextBody.Should().Contain(link);
         msg.Attachments.Should().BeNull();
     }
+
+    [Fact]
+    public void VerificationEmail_carries_recipient_and_code()
+    {
+        var msg = EmailTemplates.VerificationEmail("user@example.com", "123456");
+
+        msg.To.Should().Be("user@example.com");
+        msg.Subject.Should().NotBeNullOrWhiteSpace();
+        msg.TextBody.Should().Contain("123456");
+        msg.Attachments.Should().BeNull();
+    }
 }
 
 public class EmailBroadcastBuildMessagesTests

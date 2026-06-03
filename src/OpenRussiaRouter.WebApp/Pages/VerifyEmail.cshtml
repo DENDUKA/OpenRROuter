@@ -1,0 +1,47 @@
+@page "/verify-email"
+@model VerifyEmailModel
+@{ ViewData["Title"] = "Verify email"; }
+
+<div class="auth-container">
+    <div class="auth-header">
+        <div class="auth-wordmark">OPENRUSSIAROUTER</div>
+        <div class="auth-title">Verify your email</div>
+    </div>
+
+    @if (Model.StatusMessage != null)
+    {
+        <div class="alert alert-success" role="alert">@Model.StatusMessage</div>
+    }
+    @if (Model.ErrorMessage != null)
+    {
+        <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+    }
+
+    <p class="auth-hint">Enter the 6-digit code we emailed to <strong>@Model.Email</strong>.</p>
+
+    <form method="post">
+        <input type="hidden" asp-for="Email" />
+        <div class="form-group">
+            <label asp-for="Code" class="form-label">Verification code</label>
+            <input asp-for="Code" class="form-control" inputmode="numeric" autocomplete="one-time-code"
+                   maxlength="6" pattern="\d{6}" placeholder="000000" />
+            <span asp-validation-for="Code" class="validation-message"></span>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Verify &amp; continue</button>
+    </form>
+
+    <form method="post" asp-page-handler="Resend" class="resend-form">
+        <input type="hidden" asp-for="Email" />
+        <button type="submit" class="btn btn-secondary w-100">Resend code</button>
+    </form>
+</div>
+
+<style>
+    .auth-container { max-width: 400px; margin: 0 auto; padding: var(--spacing-section) 0; }
+    .auth-header { text-align: center; margin-bottom: var(--spacing-xl); }
+    .auth-wordmark { font-size: 16px; font-weight: 500; letter-spacing: 2px; color: var(--color-ink); margin-bottom: var(--spacing-lg); }
+    .auth-title { font-size: 38px; font-weight: 400; color: var(--color-ink); }
+    .auth-hint { text-align: center; color: var(--color-body-mid); font-size: 14px; margin-bottom: var(--spacing-lg); }
+    .form-group { margin-bottom: var(--spacing-lg); }
+    .resend-form { margin-top: var(--spacing-md); }
+</style>

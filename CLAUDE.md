@@ -110,12 +110,13 @@ gRPC service URLs and DB connection strings live in `appsettings.json` per servi
 
 SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `004_*.sql`).
 
-Current migration counts: auth (4), billing (5), control (3).
+Current migration counts: auth (6), billing (5), control (3).
 
 ### WebApp Pages
 
 ```
 /login, /logout, /invite/{token}
+/signup, /verify-email     — Self-serve email+password signup + 6-digit code confirm
 /                          — Workspace Index (balance overview)
 /workspace/api-keys        — Create / rename / revoke API keys
 /workspace/activity        — Usage records table
@@ -290,7 +291,7 @@ kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
 | gRPC error interceptors | Нет structured gRPC error details (PLATFORM-002) |
 | Metrics / tracing | Нет OpenTelemetry, нет метрик request count/latency (PLATFORM-003) |
 | Log redaction | Нет явного хелпера для redact sensitive fields в логах |
-| Invite delivery | Invite token виден только в admin create response, нет email и явного UI-отображения |
+| ~~Invite delivery~~ | Реализовано: invite-email + self-serve signup (`/signup` → email+пароль → 6-значный код на почту → `/verify-email` → активация). Пользователь создаётся со статусом `PendingVerification`, login заблокирован до подтверждения. Invite-механизм (admin) сохранён. Требует настроенного Email SMTP-секрета (см. `docs/email-integration-plan.md`) — без него код не уходит |
 | Immutable price history | В `billing.model_prices` один active row на модель, не versioned history (BILLING-003) |
 | Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox (BILLING-004) |
 | Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` (CONTROL-002) |

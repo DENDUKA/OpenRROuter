@@ -64,6 +64,14 @@ public class LoginModel : PageModelBase
         }
         catch (AuthException ex)
         {
+            if (ex.ErrorCode == "email_not_verified")
+            {
+                // Account exists but the email was never confirmed — send them to the
+                // verify page (where they can enter or resend the code).
+                TempData["StatusMessage"] = "Please confirm your email to finish signing up. Enter the code below or request a new one.";
+                return RedirectToPage("/VerifyEmail", new { email = Input.Email });
+            }
+
             ErrorMessage = ex.ErrorCode switch
             {
                 "invalid_credentials" => "Invalid email or password.",

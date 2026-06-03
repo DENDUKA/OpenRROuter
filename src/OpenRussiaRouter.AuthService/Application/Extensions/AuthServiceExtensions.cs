@@ -34,6 +34,7 @@ public static class AuthServiceExtensions
         services.AddSingleton<Pbkdf2PasswordHasher>();
         services.AddSingleton<ISecretGenerator, SecretGenerator>();
         services.AddSingleton<InviteRegistrationService>();
+        services.AddSingleton<EmailVerificationService>();
         services.AddSingleton<ApiKeyFactory>();
         services.AddSingleton<LoginService>();
         services.AddSingleton<GoogleAuthService>();

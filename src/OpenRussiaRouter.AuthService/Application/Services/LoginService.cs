@@ -29,6 +29,11 @@ public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher, ISecretGen
             return LoginResult.Failed(AuthErrorCodes.UserDisabled);
         }
 
+        if (user.Status == UserStatus.PendingVerification)
+        {
+            return LoginResult.Failed(AuthErrorCodes.EmailNotVerified);
+        }
+
         if (user.PasswordHash is null)
         {
             return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
@@ -39,14 +44,27 @@ public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher, ISecretGen
             return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
         }
 
-        var session = new UserSession(
+        return LoginResult.Success(IssueSession(user, nowUtc, sessionLifetime));
+    }
+
+    /// <summary>
+    /// Mints a session for an already-authenticated user (e.g. right after a
+    /// successful email verification), bypassing the password check.
+    /// </summary>
+    public UserSession IssueSession(UserAccount user, DateTimeOffset nowUtc, TimeSpan sessionLifetime)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        if (sessionLifetime <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(nameof(sessionLifetime), "Session lifetime must be positive.");
+        }
+
+        return new UserSession(
             secretGenerator.Generate(SessionPrefix, 32),
             user.Id,
             user.Role,
             nowUtc,
             nowUtc.Add(sessionLifetime));
-
-        return LoginResult.Success(session);
     }
 }
 

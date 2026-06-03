@@ -140,3 +140,41 @@ Logs (delivered). Then `/admin/broadcast` → send a test to all users.
 
 **Note:** in-memory queue → messages still queued at shutdown are lost (acceptable for invite/
 broadcast; matches the documented BILLING-004 outbox gap pattern if durability is wanted later).
+
+## Follow-up: self-serve signup with email verification (2026-06-03)
+
+**Why:** the landing "Signup" button pointed at a fake `/invite/demo` token — there was no
+public registration, only admin invites. Decision (user): drop invite-only as the *primary*
+path and add a real signup (email + password → confirm email → done). Invite mechanism
+**kept** as an admin tool. Verification method = **6-digit code** (no public base-URL needed,
+works on IP-only/compose deploys; reuses the same SMTP infra above). Build green, **+14
+unit tests** (AuthService 64, WebApp 7).
+
+**Flow:** `/signup` (email + password ≥12) → AuthService `RegisterUser` creates a
+`PendingVerification` user + a hashed 6-digit code (raw code returned to WebApp, mailed via
+`EmailTemplates.VerificationEmail`) → redirect to `/verify-email?email=` → `VerifyEmail`
+confirms the code, activates the account, and issues a session (auto-login) → workspace.
+`Resend` re-issues a code (60 s cooldown). Login of an unconfirmed account returns
+`email_not_verified` and bounces to `/verify-email`.
+
+**Code:**
+
+- AuthService — `UserStatus.PendingVerification`; `UserAccount.CreateForEmailSignup/Activate/
+  Restore`; `EmailVerification` entity; `EmailVerificationService` (15-min TTL, 5 attempts,
+  60 s resend cooldown; SHA-256 of the code, never the code); `AuthAccountApplicationService`
+  `RegisterUserAsync`/`VerifyEmailAsync`/`ResendVerificationAsync` (+ result records);
+  `LoginService` blocks pending + `IssueSession` helper; 4 new `IAuthRepository` methods
+  (InMemory + Dapper + the test double).
+- proto — `RegisterUser`, `VerifyEmail` (→ `LoginResponse`), `ResendVerification`.
+- DB — `db/migrations/auth/006_add_email_verifications.sql` (auto-applied on startup; auth now
+  at 6).
+- WebApp — `Pages/Signup`, `Pages/VerifyEmail`; `AuthProvider` Register/VerifyEmail/Resend;
+  `EmailTemplates.VerificationEmail`; landing "Signup" → `/signup`; `/login` ↔ `/signup` links.
+
+**⚠ Requires the Email SMTP secret to be set** (same `webapp-email-secret` / `EMAIL_SMTP_*`
+as above). Without it the code email never sends, so signup creates the pending account but the
+user gets no code — set the secret before this is usable end-to-end.
+
+**Manual smoke (left to do):** deploy → open `/`, click Signup, register your own address →
+6-digit code arrives in Inbox (From `@web-point.top`) → enter it on `/verify-email` → lands in
+the workspace logged in. Also: wrong code, expired code, and "Resend".

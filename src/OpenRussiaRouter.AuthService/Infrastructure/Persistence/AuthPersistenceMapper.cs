@@ -23,13 +23,13 @@ public static class AuthPersistenceMapper
     public static UserAccount ToDomain(UserAccountEntity entity)
     {
         ArgumentNullException.ThrowIfNull(entity);
-        var user = new UserAccount(entity.Id, entity.Email, entity.Role, entity.PasswordHash, entity.CreatedAtUtc);
-        if (entity.Status == UserStatus.Disabled)
-        {
-            user.Disable();
-        }
-
-        return user;
+        return UserAccount.Restore(
+            entity.Id,
+            entity.Email,
+            entity.Role,
+            entity.PasswordHash,
+            entity.Status,
+            entity.CreatedAtUtc);
     }
 
     public static InviteEntity ToEntity(Invite invite)
@@ -114,5 +114,16 @@ public static class AuthPersistenceMapper
     {
         ArgumentNullException.ThrowIfNull(entity);
         return new ExternalLogin(entity.Id, entity.UserId, entity.Provider, entity.ProviderSub, entity.CreatedAtUtc);
+    }
+
+    public static EmailVerification ToDomain(EmailVerificationEntity entity)
+    {
+        ArgumentNullException.ThrowIfNull(entity);
+        return new EmailVerification(
+            entity.UserId,
+            entity.CodeHash,
+            entity.ExpiresAtUtc,
+            entity.SentAtUtc,
+            entity.Attempts);
     }
 }

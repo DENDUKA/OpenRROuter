@@ -67,6 +67,21 @@ public sealed class LoginServiceTests
         result.ErrorCode.Should().Be("user_disabled");
     }
 
+    [Fact]
+    public void Login_PendingVerificationUser_ReturnsEmailNotVerified()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = UserAccount.CreateForEmailSignup(
+            "user-1", "user@example.com", UserRole.User, _passwordHasher.HashPassword("StrongPassword123!"), now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+
+        var result = service.Login(user, "StrongPassword123!", now, TimeSpan.FromHours(8));
+
+        result.Succeeded.Should().BeFalse();
+        result.Session.Should().BeNull();
+        result.ErrorCode.Should().Be("email_not_verified");
+    }
+
     private UserAccount CreateUser(string password, DateTimeOffset createdAtUtc)
     {
         return new UserAccount(

@@ -39,4 +39,12 @@ public interface IAuthRepository
     Task AddExternalLoginAsync(ExternalLogin login, CancellationToken ct = default);
 
     Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default);
+
+    Task AddUserWithEmailVerificationAsync(UserAccount user, EmailVerification verification, CancellationToken ct = default);
+
+    Task<EmailVerification?> GetEmailVerificationAsync(string userId, CancellationToken ct = default);
+
+    Task UpdateEmailVerificationAsync(EmailVerification verification, CancellationToken ct = default);
+
+    Task ActivateUserAndDeleteVerificationAsync(string userId, CancellationToken ct = default);
 }

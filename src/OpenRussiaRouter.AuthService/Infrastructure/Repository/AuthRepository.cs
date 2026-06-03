@@ -336,6 +336,99 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
+    public async Task AddUserWithEmailVerificationAsync(UserAccount user, EmailVerification verification, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(verification);
+        using var connection = connectionFactory.CreateConnection();
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.users
+                (id, email, role, status, password_hash, created_at_utc)
+            values
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+            """,
+            ToParameters(user),
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.email_verifications
+                (user_id, code_hash, expires_at_utc, sent_at_utc, attempts)
+            values
+                (@UserId, @CodeHash, @ExpiresAtUtc, @SentAtUtc, @Attempts);
+            """,
+            ToParameters(verification),
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+    }
+
+    public async Task<EmailVerification?> GetEmailVerificationAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<EmailVerificationEntity>(new CommandDefinition(
+            EmailVerificationSelectSql + " where user_id = @UserId;",
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
+    public async Task UpdateEmailVerificationAsync(EmailVerification verification, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(verification);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.email_verifications
+            set code_hash = @CodeHash,
+                expires_at_utc = @ExpiresAtUtc,
+                sent_at_utc = @SentAtUtc,
+                attempts = @Attempts
+            where user_id = @UserId;
+            """,
+            ToParameters(verification),
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task ActivateUserAndDeleteVerificationAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "update auth.users set status = 'Active' where id = @UserId;",
+            new { UserId = userId },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "delete from auth.email_verifications where user_id = @UserId;",
+            new { UserId = userId },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+    }
+
+    private static object ToParameters(EmailVerification verification) => new
+    {
+        verification.UserId,
+        verification.CodeHash,
+        verification.ExpiresAtUtc,
+        verification.SentAtUtc,
+        verification.Attempts
+    };
+
     private static object ToParameters(UserAccount user) => new
     {
         user.Id,
@@ -407,6 +500,16 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             last_used_at_utc as LastUsedAtUtc,
             revoked_at_utc as RevokedAtUtc
         from auth.api_keys
+        """;
+
+    private const string EmailVerificationSelectSql = """
+        select
+            user_id as UserId,
+            code_hash as CodeHash,
+            expires_at_utc as ExpiresAtUtc,
+            sent_at_utc as SentAtUtc,
+            attempts as Attempts
+        from auth.email_verifications
         """;
 
     private const string ExternalLoginSelectSql = """

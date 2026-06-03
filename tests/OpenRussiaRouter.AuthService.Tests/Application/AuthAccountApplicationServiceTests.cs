@@ -90,9 +90,12 @@ public sealed class AuthAccountApplicationServiceTests
     {
         var secretHasher = new Sha256SecretHasher();
         var secretGenerator = new SecretGenerator();
+        var passwordHasher = new Pbkdf2PasswordHasher();
         return new AuthAccountApplicationService(
             repository,
-            new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher(), secretGenerator),
+            new InviteRegistrationService(secretHasher, passwordHasher, secretGenerator),
+            new EmailVerificationService(secretHasher),
+            passwordHasher,
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);
     }
@@ -184,6 +187,31 @@ public sealed class AuthAccountApplicationServiceTests
         public Task AddUserWithExternalLoginAsync(UserAccount user, ExternalLogin login, CancellationToken ct = default)
         {
             Users[user.Id] = user;
+            return Task.CompletedTask;
+        }
+
+        public Dictionary<string, EmailVerification> EmailVerifications { get; } = new(StringComparer.Ordinal);
+
+        public Task AddUserWithEmailVerificationAsync(UserAccount user, EmailVerification verification, CancellationToken ct = default)
+        {
+            Users[user.Id] = user;
+            EmailVerifications[verification.UserId] = verification;
+            return Task.CompletedTask;
+        }
+
+        public Task<EmailVerification?> GetEmailVerificationAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(EmailVerifications.GetValueOrDefault(userId));
+
+        public Task UpdateEmailVerificationAsync(EmailVerification verification, CancellationToken ct = default)
+        {
+            EmailVerifications[verification.UserId] = verification;
+            return Task.CompletedTask;
+        }
+
+        public Task ActivateUserAndDeleteVerificationAsync(string userId, CancellationToken ct = default)
+        {
+            if (Users.TryGetValue(userId, out var user)) user.Activate();
+            EmailVerifications.Remove(userId);
             return Task.CompletedTask;
         }
     }

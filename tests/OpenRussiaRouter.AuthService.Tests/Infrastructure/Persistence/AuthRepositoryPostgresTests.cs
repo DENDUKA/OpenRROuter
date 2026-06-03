@@ -30,6 +30,8 @@ public sealed class AuthRepositoryPostgresTests
         var service = new AuthAccountApplicationService(
             new AuthRepository(new AuthDbConnectionFactory(connectionString)),
             new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher(), secretGenerator),
+            new EmailVerificationService(secretHasher),
+            new Pbkdf2PasswordHasher(),
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);
         var now = DateTimeOffset.UtcNow;

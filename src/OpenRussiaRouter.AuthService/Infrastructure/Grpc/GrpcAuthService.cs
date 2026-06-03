@@ -52,6 +52,74 @@ public sealed class GrpcAuthService(
         };
     }
 
+    public override async Task<RegisterUserResponse> RegisterUser(
+        RegisterUserRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.RegisterUserAsync(
+            request.Email,
+            request.Password,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        if (!result.Succeeded)
+        {
+            logger.LogInformation("RegisterUser rejected. ErrorCode={ErrorCode}", result.ErrorCode);
+            return new RegisterUserResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+        }
+
+        return new RegisterUserResponse
+        {
+            Succeeded = true,
+            UserId = result.UserId,
+            Email = result.Email,
+            VerificationCode = result.RawCode
+        };
+    }
+
+    public override async Task<LoginResponse> VerifyEmail(
+        VerifyEmailRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.VerifyEmailAsync(
+            request.Email,
+            request.Code,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        if (!result.Succeeded)
+            return new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+
+        var session = loginService.IssueSession(result.User!, DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+        return new LoginResponse
+        {
+            Succeeded = true,
+            SessionToken = session.Token,
+            UserId = session.UserId,
+            Role = session.Role.ToString()
+        };
+    }
+
+    public override async Task<ResendVerificationResponse> ResendVerification(
+        ResendVerificationRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.ResendVerificationAsync(
+            request.Email,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        if (!result.Succeeded)
+            return new ResendVerificationResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+
+        return new ResendVerificationResponse
+        {
+            Succeeded = true,
+            Email = result.Email,
+            VerificationCode = result.RawCode
+        };
+    }
+
     public override async Task<LoginResponse> LoginOrRegisterWithGoogle(
         LoginWithGoogleRequest request,
         ServerCallContext context)

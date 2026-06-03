@@ -10,6 +10,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     private readonly List<Invite> _invites = [];
     private readonly List<ApiKey> _apiKeys = [];
     private readonly List<ExternalLogin> _externalLogins = [];
+    private readonly Dictionary<string, EmailVerification> _emailVerifications = [];
 
     public Task AddInviteAsync(Invite invite, CancellationToken ct = default)
     {
@@ -181,6 +182,37 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         {
             _users[user.Id] = user;
             _externalLogins.Add(login);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task AddUserWithEmailVerificationAsync(UserAccount user, EmailVerification verification, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            _users[user.Id] = user;
+            _emailVerifications[verification.UserId] = verification;
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<EmailVerification?> GetEmailVerificationAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_gate) { return Task.FromResult(_emailVerifications.GetValueOrDefault(userId)); }
+    }
+
+    public Task UpdateEmailVerificationAsync(EmailVerification verification, CancellationToken ct = default)
+    {
+        lock (_gate) { _emailVerifications[verification.UserId] = verification; }
+        return Task.CompletedTask;
+    }
+
+    public Task ActivateUserAndDeleteVerificationAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (_users.TryGetValue(userId, out var user)) user.Activate();
+            _emailVerifications.Remove(userId);
         }
         return Task.CompletedTask;
     }

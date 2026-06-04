@@ -8,7 +8,9 @@ using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
-using OpenRussiaRouter.ControlPlane.Domain.Entities;
+using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
+// ...
+
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 
@@ -395,6 +397,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             control,
             repo ?? new InMemoryControlPlaneRepository(),
             providerClient ?? NoOpProviderClient,
+            new Moq.Mock<AuthGrpc.AuthServiceClient>().Object,
             NullLogger<GrpcRouterControlPlaneService>.Instance);
     }
 
@@ -414,32 +417,32 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private sealed class NoOpRouterNodeProvider : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             bool includeInactive,
             CancellationToken cancellationToken) =>
             Task.FromResult(new RouterProviderQuotaResponse());
 
         public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             CancellationToken cancellationToken) =>
             Task.FromResult(new RouterIntegrationKeysResponse());
 
         public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string connectionId,
             bool isActive,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string name,
             string key,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string keyId,
             bool isActive,
             CancellationToken cancellationToken) =>
@@ -449,30 +452,30 @@ public sealed class GrpcRouterControlPlaneServiceTests
     private sealed class ThrowingProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
-            RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, bool includeInactive, CancellationToken cancellationToken) =>
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
 
         public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
-            RouterNode node, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, CancellationToken cancellationToken) =>
             throw new RouterNodeProviderException(System.Net.HttpStatusCode.ServiceUnavailable, "unavailable", "Provider unavailable");
 
         public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
-            RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
-            RouterNode node, string name, string key, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string name, string key, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
-            RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
     private sealed class HangingProviderClient : IRouterNodeProvider
     {
         public async Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             bool includeInactive,
             CancellationToken cancellationToken)
         {
@@ -481,7 +484,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }
 
         public async Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             CancellationToken cancellationToken)
         {
             await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
@@ -489,22 +492,22 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }
 
         public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
-            RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string connectionId, bool isActive, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
-            RouterNode node, string name, string key, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string name, string key, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
-            RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
     private sealed class StubProviderClient : IRouterNodeProvider
     {
         public Task<RouterProviderQuotaResponse> GetProviderQuotaAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             bool includeInactive,
             CancellationToken cancellationToken)
         {
@@ -529,7 +532,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }
 
         public Task<RouterIntegrationKeysResponse> ListIntegrationKeysAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             CancellationToken cancellationToken)
         {
             return Task.FromResult(new RouterIntegrationKeysResponse
@@ -551,21 +554,21 @@ public sealed class GrpcRouterControlPlaneServiceTests
         }
 
         public Task<RouterProviderStatusResponse> UpdateProviderStatusAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string connectionId,
             bool isActive,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyCreateResponse> CreateIntegrationKeyAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string name,
             string key,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
-            RouterNode node,
+            Domain.Entities.RouterNode node,
             string keyId,
             bool isActive,
             CancellationToken cancellationToken) =>

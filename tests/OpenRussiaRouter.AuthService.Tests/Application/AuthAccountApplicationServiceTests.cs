@@ -162,6 +162,10 @@ public sealed class AuthAccountApplicationServiceTests
             Task.FromResult<IReadOnlyCollection<(string, string)>>(
                 ApiKeys.Where(k => k.RevokedAtUtc is null).Select(k => (k.Prefix, k.SecretHash)).ToArray());
 
+        public Task<IReadOnlyCollection<(string ApiKeyId, string RawKey, string UserId, string Name)>> ListAllActiveApiKeysRawAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyCollection<(string, string, string, string)>>(
+                ApiKeys.Where(k => k.RevokedAtUtc is null && k.RawKey is not null).Select(k => (k.Id, k.RawKey!, k.UserId, k.Name)).ToArray());
+
         public Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys
                 .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)

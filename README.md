@@ -59,15 +59,11 @@ Verify that the updater is visible in Argo CD and running:
 
 ```powershell
 kubectl get applications -n argocd
-kubectl get deployment -n argocd argocd-image-updater-controller
-kubectl get pods -n argocd -l control-plane=argocd-image-updater-controller
-kubectl logs -n argocd -l control-plane=argocd-image-updater-controller --tail=100
 ```
 
 Expected Argo CD applications after bootstrap:
 
 ```text
-orr-argocd-image-updater   Synced   Healthy
 orr-infra                  Synced   Healthy
 orr-services               Synced   Healthy
 ```

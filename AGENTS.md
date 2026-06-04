@@ -101,19 +101,17 @@ Dev Kubernetes image delivery is owned by Argo CD Image Updater, not GitHub Acti
 When recreating or bootstrapping the cluster:
 
 ```powershell
-kubectl apply -f infra/argocd/orr-image-updater-app.yaml
-kubectl -n argocd annotate application orr-argocd-image-updater argocd.argoproj.io/refresh=hard --overwrite
+# Apply argo apps
+# kubectl apply -f infra/argocd/orr-dev-app.yaml
 ```
 
 Then verify:
 
 ```powershell
 kubectl get applications -n argocd
-kubectl get deployment -n argocd argocd-image-updater-controller
-kubectl get pods -n argocd -l control-plane=argocd-image-updater-controller
 ```
 
-Expected Argo CD apps include `orr-argocd-image-updater`, `orr-infra`, and `orr-services`.
+Expected Argo CD apps include `orr-infra`, and `orr-services`.
 
 Keep the ownership boundary clear:
 

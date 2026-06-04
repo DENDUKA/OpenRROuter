@@ -276,6 +276,19 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyCollection<(string ApiKeyId, string RawKey, string UserId, string Name)>> ListAllActiveApiKeysRawAsync(CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return (await connection.QueryAsync<(string ApiKeyId, string RawKey, string UserId, string Name)>(new CommandDefinition(
+            """
+            select id as ApiKeyId, raw_key as RawKey, user_id as UserId, name as Name
+            from auth.api_keys
+            where revoked_at_utc is null
+              and raw_key is not null;
+            """,
+            cancellationToken: ct)).ConfigureAwait(false)).ToArray();
+    }
+
     public async Task<ExternalLogin?> GetExternalLoginAsync(string provider, string providerSub, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();

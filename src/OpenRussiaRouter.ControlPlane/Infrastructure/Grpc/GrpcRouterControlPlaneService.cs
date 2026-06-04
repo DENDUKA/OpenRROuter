@@ -32,6 +32,7 @@ public sealed class GrpcRouterControlPlaneService(
                 DateTimeOffset.UtcNow,
                 request.PreferredNodeId,
                 request.PreferredNodeControlToken,
+                request.ExcludedNodeIds,
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             return new SelectRouterNodeResponse
             {

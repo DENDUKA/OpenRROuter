@@ -392,6 +392,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             string requestId,
             string? preferredNodeId,
             string? preferredNodeControlToken,
+            IReadOnlyCollection<string>? excludedNodeIds,
             CancellationToken ct)
         {
             LastPreferredNodeId = preferredNodeId;

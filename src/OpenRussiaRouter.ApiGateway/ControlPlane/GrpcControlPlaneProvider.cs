@@ -17,18 +17,26 @@ public sealed class GrpcControlPlaneProvider(
         string requestId,
         string? preferredNodeId,
         string? preferredNodeControlToken,
+        IReadOnlyCollection<string>? excludedNodeIds,
         CancellationToken cancellationToken)
     {
         try
         {
+            var request = new SelectRouterNodeRequest
+            {
+                ModelId = modelId,
+                RequestId = requestId,
+                PreferredNodeId = preferredNodeId ?? string.Empty,
+                PreferredNodeControlToken = preferredNodeControlToken ?? string.Empty
+            };
+
+            if (excludedNodeIds != null)
+            {
+                request.ExcludedNodeIds.AddRange(excludedNodeIds);
+            }
+
             var response = await controlClient.SelectRouterNodeAsync(
-                new SelectRouterNodeRequest
-                {
-                    ModelId = modelId,
-                    RequestId = requestId,
-                    PreferredNodeId = preferredNodeId ?? string.Empty,
-                    PreferredNodeControlToken = preferredNodeControlToken ?? string.Empty
-                },
+                request,
                 cancellationToken: cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(response.ErrorCode) ||

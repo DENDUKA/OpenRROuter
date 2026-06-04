@@ -37,36 +37,65 @@ public sealed class ChatCompletionHandler(
                 return;
             }
 
-            var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
-            if (auth is null) return;
+            HashSet<string>? excludedNodes = null;
+            RouterProxyResponse? lastResponse = null;
 
-            var patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
-                auth.RouterModelId,
-                body.Metadata.Model ?? "");
-            var startedAt = DateTimeOffset.UtcNow;
-
-            var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-            var completedAt = DateTimeOffset.UtcNow;
-
-            if (response.StatusCode >= 500)
+            while (true)
             {
-                logger.LogError("Chat completion downstream error. StatusCode: {StatusCode}, Body: {Body}", response.StatusCode, response.Body);
+                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, excludedNodes, context.RequestAborted);
+                
+                // If auth is null on the first try, pipeline already wrote the error response.
+                // If it's null on a subsequent try, it means no more nodes are available.
+                if (auth is null)
+                {
+                    if (lastResponse != null)
+                    {
+                        // We exhausted nodes and had a previous error. Return it.
+                        context.Response.StatusCode = lastResponse.StatusCode;
+                        context.Response.ContentType = lastResponse.ContentType;
+                        await context.Response.WriteAsync(lastResponse.Body);
+                    }
+                    return;
+                }
+
+                var patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                    SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                    auth.RouterModelId,
+                    body.Metadata.Model ?? "");
+                var startedAt = DateTimeOffset.UtcNow;
+
+                var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
+                var completedAt = DateTimeOffset.UtcNow;
+
+                bool isError = response.StatusCode >= 400;
+
+                await controlPlaneProvider.ReleaseRouterNodeAsync(
+                    auth.Lease.LeaseId,
+                    isError ? "failed" : "completed",
+                    context.RequestAborted);
+
+                if (isError)
+                {
+                    logger.LogWarning("Chat completion downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", response.StatusCode, auth.Lease.NodeId, response.Body);
+                    
+                    excludedNodes ??= new HashSet<string>();
+                    excludedNodes.Add(auth.Lease.NodeId);
+                    lastResponse = response;
+                    
+                    // Loop again
+                    continue;
+                }
+
+                var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
+                var status = hasUsage ? "completed" : "usage_missing";
+
+                RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt);
+
+                context.Response.StatusCode = response.StatusCode;
+                context.Response.ContentType = response.ContentType;
+                await context.Response.WriteAsync(response.Body);
+                return;
             }
-
-            await controlPlaneProvider.ReleaseRouterNodeAsync(
-                auth.Lease.LeaseId,
-                response.StatusCode >= 500 ? "failed" : "completed",
-                context.RequestAborted);
-
-            var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
-            var status = response.StatusCode >= 500 ? "failed" : hasUsage ? "completed" : "usage_missing";
-
-            RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt);
-
-            context.Response.StatusCode = response.StatusCode;
-            context.Response.ContentType = response.ContentType;
-            await context.Response.WriteAsync(response.Body);
         }
         catch (OperationCanceledException)
         {
@@ -91,70 +120,75 @@ public sealed class ChatCompletionHandler(
     {
         try
         {
-            var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
-            if (auth is null) return;
+            HashSet<string>? excludedNodes = null;
+            RouterStreamSession? lastFailedSession = null;
 
-            var patchedJson = SseRequestPatcher.InjectStreamOptions(
-                GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                    SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
-                    auth.RouterModelId,
-                    body.Metadata.Model ?? ""));
-            var lease = auth.Lease;
-
-            var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-
-            // GATEWAY-004: single retry on a different node before any bytes reach the client
-            if (!session.IsSuccess)
+            while (true)
             {
-                await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
-
-                var fallbackLease = await controlPlaneProvider.SelectRouterNodeAsync(
-                    auth.RouterModelId,
-                    requestId,
-                    preferredNodeId: null,
-                    preferredNodeControlToken: null,
-                    cancellationToken: context.RequestAborted);
-                if (fallbackLease is null)
+                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, excludedNodes, context.RequestAborted);
+                if (auth is null)
                 {
-                    await PassThroughErrorAsync(context, session, context.RequestAborted);
+                    if (lastFailedSession != null)
+                    {
+                        await PassThroughErrorAsync(context, lastFailedSession, context.RequestAborted);
+                    }
                     return;
                 }
 
-                await session.DisposeAsync();
+                var patchedJson = SseRequestPatcher.InjectStreamOptions(
+                    GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                        SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                        auth.RouterModelId,
+                        body.Metadata.Model ?? ""));
+                var lease = auth.Lease;
 
-                session = await routerProxy.BeginStreamChatCompletionAsync(fallbackLease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-                lease = fallbackLease;
+                var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
 
                 if (!session.IsSuccess)
                 {
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
-                    await PassThroughErrorAsync(context, session, context.RequestAborted);
-                    return;
+                    
+                    excludedNodes ??= new HashSet<string>();
+                    excludedNodes.Add(lease.NodeId);
+
+                    if (lastFailedSession != null)
+                    {
+                        await lastFailedSession.DisposeAsync();
+                    }
+                    lastFailedSession = session;
+                    
+                    continue; // Try next node
                 }
+
+                if (lastFailedSession != null)
+                {
+                    await lastFailedSession.DisposeAsync();
+                }
+
+                // Commit SSE response — no error returns possible after this point
+                context.Response.ContentType = "text/event-stream";
+                context.Response.Headers["Cache-Control"] = "no-cache";
+                context.Response.Headers["X-Accel-Buffering"] = "no";
+
+                var startedAt = DateTimeOffset.UtcNow;
+                TokenUsage usage;
+                string? providerName;
+                string? providerAccount;
+
+                await using (session)
+                {
+                    providerName = session.ProviderName;
+                    providerAccount = session.ProviderAccount;
+                    usage = await session.CopyToAsync(context.Response.Body, context.RequestAborted);
+                }
+
+                var completedAt = DateTimeOffset.UtcNow;
+                await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
+
+                var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
+                RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt);
+                return;
             }
-
-            // Commit SSE response — no error returns possible after this point
-            context.Response.ContentType = "text/event-stream";
-            context.Response.Headers["Cache-Control"] = "no-cache";
-            context.Response.Headers["X-Accel-Buffering"] = "no";
-
-            var startedAt = DateTimeOffset.UtcNow;
-            TokenUsage usage;
-            string? providerName;
-            string? providerAccount;
-
-            await using (session)
-            {
-                providerName = session.ProviderName;
-                providerAccount = session.ProviderAccount;
-                usage = await session.CopyToAsync(context.Response.Body, context.RequestAborted);
-            }
-
-            var completedAt = DateTimeOffset.UtcNow;
-            await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
-
-            var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
-            RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt);
         }
         catch (OperationCanceledException)
         {

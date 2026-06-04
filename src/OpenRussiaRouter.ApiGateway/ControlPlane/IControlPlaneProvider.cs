@@ -8,6 +8,7 @@ public interface IControlPlaneProvider
         string requestId,
         string? preferredNodeId,
         string? preferredNodeControlToken,
+        IReadOnlyCollection<string>? excludedNodeIds,
         CancellationToken cancellationToken);
 
     Task ReleaseRouterNodeAsync(string leaseId, string status, CancellationToken cancellationToken);

@@ -18,6 +18,7 @@ public interface IGatewayPipeline
         HttpContext context,
         string? model,
         string requestId,
+        IReadOnlyCollection<string>? excludedNodeIds,
         CancellationToken cancellationToken);
 }
 
@@ -30,6 +31,7 @@ public sealed class GatewayPipeline(
         HttpContext context,
         string? model,
         string requestId,
+        IReadOnlyCollection<string>? excludedNodeIds,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(model))
@@ -75,6 +77,7 @@ public sealed class GatewayPipeline(
             requestId,
             preferredNodeId,
             preferredNodeControlToken,
+            excludedNodeIds,
             cancellationToken);
         if (lease is null)
         {

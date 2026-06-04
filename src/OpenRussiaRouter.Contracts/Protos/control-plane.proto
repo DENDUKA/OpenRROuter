@@ -25,6 +25,7 @@ message SelectRouterNodeRequest {
   string request_id = 2;
   string preferred_node_id = 3;
   string preferred_node_control_token = 4;
+  repeated string excluded_node_ids = 5;
 }
 
 message SelectRouterNodeResponse {

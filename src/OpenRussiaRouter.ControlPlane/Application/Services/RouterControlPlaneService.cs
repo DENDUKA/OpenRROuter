@@ -89,6 +89,7 @@ public sealed class RouterControlPlaneService(
         DateTimeOffset nowUtc,
         string? preferredNodeId = null,
         string? preferredNodeControlToken = null,
+        IReadOnlyCollection<string>? excludedNodeIds = null,
         CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(requestId))
@@ -106,6 +107,12 @@ public sealed class RouterControlPlaneService(
         IEnumerable<RouterNode> candidates = all;
         if (!string.IsNullOrWhiteSpace(modelId) && !capabilityStore.IsEmpty)
             candidates = all.Where(n => capabilityStore.NodeSupportsModel(n.Id, modelId));
+
+        if (excludedNodeIds != null && excludedNodeIds.Count > 0)
+        {
+            var excludedSet = new HashSet<string>(excludedNodeIds, StringComparer.OrdinalIgnoreCase);
+            candidates = candidates.Where(n => !excludedSet.Contains(n.Id));
+        }
 
         if (!string.IsNullOrWhiteSpace(preferredNodeId))
         {

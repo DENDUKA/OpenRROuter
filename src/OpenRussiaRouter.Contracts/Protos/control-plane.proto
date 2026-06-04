@@ -17,6 +17,7 @@ service RouterControlPlane {
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
   rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
+  rpc SyncNodeIntegrationKeys (SyncNodeIntegrationKeysRequest) returns (SyncNodeIntegrationKeysResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -179,4 +180,16 @@ message RevokeUserIntegrationKeyRequest {
 message RevokeUserIntegrationKeyResponse {
   int32 revoked_count = 1;
 }
+
+message SyncNodeIntegrationKeysRequest {
+  string node_id = 1;
+}
+
+message SyncNodeIntegrationKeysResponse {
+  int32 added_count = 1;
+  int32 disabled_count = 2;
+  int32 reactivated_count = 3;
+  string error_code = 4;
+}
+
 

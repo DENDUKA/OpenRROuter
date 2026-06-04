@@ -447,6 +447,12 @@ public sealed class GrpcRouterControlPlaneServiceTests
             bool isActive,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+            Domain.Entities.RouterNode node,
+            IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new RouterIntegrationKeysSyncResponse());
     }
 
     private sealed class ThrowingProviderClient : IRouterNodeProvider
@@ -469,6 +475,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
             Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+            Domain.Entities.RouterNode node, IReadOnlyList<RouterIntegrationKeySyncEntry> keys, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
@@ -501,6 +511,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
             Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+            Domain.Entities.RouterNode node, IReadOnlyList<RouterIntegrationKeySyncEntry> keys, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }
 
@@ -571,6 +585,12 @@ public sealed class GrpcRouterControlPlaneServiceTests
             Domain.Entities.RouterNode node,
             string keyId,
             bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+            Domain.Entities.RouterNode node,
+            IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
     }

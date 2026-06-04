@@ -116,6 +116,23 @@ public class NodeDetailsModel(
         }
     }
 
+    public async Task<IActionResult> OnPostSyncKeysAsync(string nodeId)
+    {
+        try
+        {
+            var result = await ControlPlaneProvider.SyncNodeIntegrationKeysAsync(nodeId, HttpContext.RequestAborted);
+            SuccessMessage = $"Sync complete. Added: {result.Added}, Disabled: {result.Disabled}, Reactivated: {result.Reactivated}.";
+            return RedirectToPage(new { nodeId });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to sync keys for node. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to sync integration keys.";
+            await OnGetAsync(nodeId);
+            return Page();
+        }
+    }
+
     public static string GetStatusBadge(bool isActive) =>
         isActive ? "badge-success" : "badge-secondary";
 

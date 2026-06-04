@@ -147,7 +147,14 @@
     </div>
 
     <div class="adm-card" data-testid="integration-keys-card">
-        <div class="adm-card-header">Service-managed Keys</div>
+        <div class="adm-card-header adm-card-header--split">
+            <span>Service-managed Keys</span>
+            <form method="post" asp-route-nodeId="@details.Node.NodeId" class="m-0">
+                <button type="submit" class="btn btn-sm btn-primary" asp-page-handler="SyncKeys" data-testid="btn-sync-keys">
+                    Sync Keys
+                </button>
+            </form>
+        </div>
         <div class="adm-card-body">
             @if (details.Keys.Count == 0)
             {

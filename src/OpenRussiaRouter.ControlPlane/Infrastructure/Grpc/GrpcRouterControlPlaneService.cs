@@ -6,6 +6,7 @@ using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
+using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
 
@@ -13,6 +14,7 @@ public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
     IControlPlaneRepository repository,
     IRouterNodeProvider providerClient,
+    AuthGrpc.AuthServiceClient authClient,
     ILogger<GrpcRouterControlPlaneService> logger)
     : ControlGrpc.RouterControlPlaneBase
 {
@@ -323,6 +325,94 @@ public sealed class GrpcRouterControlPlaneService(
         await repository.RemoveIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         return new RevokeUserIntegrationKeyResponse { RevokedCount = revokedCount };
+    }
+
+    public override async Task<SyncNodeIntegrationKeysResponse> SyncNodeIntegrationKeys(
+        SyncNodeIntegrationKeysRequest request,
+        ServerCallContext context)
+    {
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        if (node is null)
+            return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.ValidationFailed };
+
+        var dbKeysResponse = await authClient.ListAllActiveApiKeysRawAsync(
+            new Contracts.Grpc.Auth.V1.ListAllActiveApiKeysRawRequest(),
+            cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        
+        var dbKeys = dbKeysResponse.Keys.ToDictionary(k => k.ApiKeyId);
+
+        var nodeKeysResponse = await providerClient.ListIntegrationKeysAsync(node, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var nodeKeys = nodeKeysResponse.Keys.ToList();
+
+        int addedCount = 0;
+        int disabledCount = 0;
+        int reactivatedCount = 0;
+
+        // Add missing or reactivate existing valid
+        foreach (var dbKey in dbKeys.Values)
+        {
+            var existingNodeKey = nodeKeys.FirstOrDefault(k => k.Name == dbKey.Name);
+            if (existingNodeKey == null)
+            {
+                try
+                {
+                    var result = await providerClient.CreateIntegrationKeyAsync(
+                        node, dbKey.Name, dbKey.RawKey, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                    addedCount++;
+                    await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, result.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to create integration key on node {NodeId} for ApiKey {ApiKeyId}", node.Id, dbKey.ApiKeyId);
+                }
+            }
+            else if (!existingNodeKey.IsActive)
+            {
+                try
+                {
+                    await providerClient.UpdateIntegrationKeyStatusAsync(
+                        node, existingNodeKey.Id, isActive: true, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                    reactivatedCount++;
+                    await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, existingNodeKey.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to reactivate integration key on node {NodeId} for ApiKey {ApiKeyId}", node.Id, dbKey.ApiKeyId);
+                }
+            }
+            else
+            {
+                // Ensure mapping exists
+                await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, existingNodeKey.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            }
+        }
+
+        // Disable extra keys on node
+        foreach (var nodeKey in nodeKeys)
+        {
+            // If the node key's name is not in our active db keys list, disable it
+            var shouldBeActive = dbKeys.Values.Any(k => k.Name == nodeKey.Name);
+            if (!shouldBeActive && nodeKey.IsActive)
+            {
+                try
+                {
+                    await providerClient.UpdateIntegrationKeyStatusAsync(
+                        node, nodeKey.Id, isActive: false, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                    disabledCount++;
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to disable integration key on node {NodeId}. RouterKeyId: {RouterKeyId}", node.Id, nodeKey.Id);
+                }
+            }
+        }
+
+        return new SyncNodeIntegrationKeysResponse
+        {
+            AddedCount = addedCount,
+            DisabledCount = disabledCount,
+            ReactivatedCount = reactivatedCount
+        };
     }
 
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>

@@ -188,8 +188,9 @@
             event.stopPropagation();
             var btn = event.currentTarget;
             var id = btn.getAttribute('data-model-id');
-            if (!id) return;
-            navigator.clipboard.writeText(id).then(function () {
+            var textToCopy = id;
+            if (!textToCopy) return;
+            navigator.clipboard.writeText(textToCopy).then(function () {
                 btn.classList.add('copied');
                 var original = btn.getAttribute('title');
                 btn.setAttribute('title', 'Copied!');

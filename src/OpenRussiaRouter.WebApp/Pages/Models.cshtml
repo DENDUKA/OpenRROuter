@@ -80,8 +80,9 @@
                                     <div class="model-cell">
                                         <div class="model-icon" aria-hidden="true">@initials</div>
                                         <div>
+                                            <div class="model-name">@m.DisplayName</div>
                                             <div style="display: flex; align-items: center; gap: 6px;">
-                                                <div class="model-name">@m.DisplayName</div>
+                                                <div class="model-slug">@m.Id</div>
                                                 <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="Copy Model ID" aria-label="Copy Model ID">
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                                 </button>
@@ -186,5 +187,36 @@
         });
         const countEl = document.getElementById('model-count');
         if (countEl) countEl.textContent = visible + ' model' + (visible === 1 ? '' : 's') + ' available';
+    }
+
+    function copyModelId(event) {
+        event.stopPropagation();
+        const btn = event.currentTarget;
+        const id = btn.getAttribute('data-model-id');
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(id).then(() => {
+                const originalSvg = btn.innerHTML;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                setTimeout(() => btn.innerHTML = originalSvg, 2000);
+            }).catch(err => console.error('Failed to copy text: ', err));
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = id;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const originalSvg = btn.innerHTML;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                setTimeout(() => btn.innerHTML = originalSvg, 2000);
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
     }
 </script>

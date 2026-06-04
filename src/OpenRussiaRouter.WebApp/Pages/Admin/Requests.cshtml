@@ -80,8 +80,12 @@
                 if (Model.ProviderFilter != null) nextUrl += $"&provider={Uri.EscapeDataString(Model.ProviderFilter)}";
                 if (Model.FromUtc != null) nextUrl += $"&from={Uri.EscapeDataString(Model.FromUtc)}";
                 if (Model.ToUtc != null) nextUrl += $"&to={Uri.EscapeDataString(Model.ToUtc)}";
-                <div class="mt-2">
-                    <a href="@nextUrl" class="btn btn-sm btn-primary">Next page</a>
+                <div class="mt-3 mb-2 d-flex gap-2">
+                    @if (Model.Cursor != null)
+                    {
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="history.back()">← Previous page</button>
+                    }
+                    <a href="@nextUrl" class="btn btn-sm btn-primary">Next page →</a>
                 </div>
             }
         }

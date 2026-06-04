@@ -327,6 +327,22 @@ public sealed class GrpcAuthService(
         return new GetFirstActiveApiKeyRawResponse { RawKey = rawKey ?? string.Empty };
     }
 
+    public override async Task<ListAllActiveApiKeysRawResponse> ListAllActiveApiKeysRaw(
+        ListAllActiveApiKeysRawRequest request,
+        ServerCallContext context)
+    {
+        var keys = await repository.ListAllActiveApiKeysRawAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var response = new ListAllActiveApiKeysRawResponse();
+        response.Keys.AddRange(keys.Select(k => new ActiveApiKeyRaw
+        {
+            ApiKeyId = k.ApiKeyId,
+            RawKey = k.RawKey,
+            UserId = k.UserId,
+            Name = k.Name
+        }));
+        return response;
+    }
+
     private static UserRole ParseRole(string role)
     {
         return Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsed)

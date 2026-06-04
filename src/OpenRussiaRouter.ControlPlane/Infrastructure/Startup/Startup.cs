@@ -34,6 +34,21 @@ public static class Startup
 
         var grpcCallDeadline = TimeSpan.FromSeconds(
             configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
+
+        var authUrl = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
+        services.AddGrpcClient<OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService.AuthServiceClient>(
+                o => o.Address = new Uri(authUrl))
+            .ConfigureChannel(o =>
+            {
+                o.HttpHandler = new SocketsHttpHandler
+                {
+                    PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                };
+            })
+            .AddInterceptor(() => new OpenRussiaRouter.BuildingBlocks.Grpc.GrpcDeadlineInterceptor(grpcCallDeadline));
+
         var collectorUrl = configuration["GrpcServices:Collector"] ?? "http://localhost:5005";
         services.AddGrpcClient<OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector.CollectorClient>(
                 o => o.Address = new Uri(collectorUrl))

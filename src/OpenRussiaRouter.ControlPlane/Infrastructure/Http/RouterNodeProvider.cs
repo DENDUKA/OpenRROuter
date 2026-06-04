@@ -89,6 +89,21 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
             cancellationToken);
     }
 
+    public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+        RouterNode node,
+        IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(keys);
+
+        return SendAsync<RouterIntegrationKeysSyncResponse>(
+            node,
+            HttpMethod.Post,
+            "/api/integrations/keys/sync",
+            JsonContent.Create(new SyncIntegrationKeysRequest(keys), options: JsonOptions),
+            cancellationToken);
+    }
+
     private async Task<TResponse> SendAsync<TResponse>(
         RouterNode node,
         HttpMethod method,
@@ -155,4 +170,5 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
 
     private sealed record ProviderStatusRequest(bool IsActive);
     private sealed record CreateIntegrationKeyRequest(string Name, string Key);
+    private sealed record SyncIntegrationKeysRequest(IReadOnlyList<RouterIntegrationKeySyncEntry> Keys);
 }

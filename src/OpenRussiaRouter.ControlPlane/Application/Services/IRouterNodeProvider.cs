@@ -30,4 +30,10 @@ public interface IRouterNodeProvider
         string keyId,
         bool isActive,
         CancellationToken cancellationToken);
+
+    Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
+        RouterNode node,
+        IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
+        CancellationToken cancellationToken);
 }
+

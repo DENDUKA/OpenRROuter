@@ -59,6 +59,19 @@ public sealed record RouterIntegrationKeyCreateResponse
     public string Id { get; init; } = string.Empty;
 }
 
+public sealed record RouterIntegrationKeySyncEntry
+{
+    public string Name { get; init; } = string.Empty;
+    public string Key { get; init; } = string.Empty;
+}
+
+public sealed record RouterIntegrationKeysSyncResponse
+{
+    public int AddedCount { get; init; }
+    public int DisabledCount { get; init; }
+    public int ReactivatedCount { get; init; }
+}
+
 public sealed class RouterNodeProviderException : Exception
 {
     public RouterNodeProviderException(

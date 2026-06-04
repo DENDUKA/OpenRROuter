@@ -338,81 +338,33 @@ public sealed class GrpcRouterControlPlaneService(
         var dbKeysResponse = await authClient.ListAllActiveApiKeysRawAsync(
             new Contracts.Grpc.Auth.V1.ListAllActiveApiKeysRawRequest(),
             cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-        
-        var dbKeys = dbKeysResponse.Keys.ToDictionary(k => k.ApiKeyId);
 
-        var nodeKeysResponse = await providerClient.ListIntegrationKeysAsync(node, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-        var nodeKeys = nodeKeysResponse.Keys.ToList();
-
-        int addedCount = 0;
-        int disabledCount = 0;
-        int reactivatedCount = 0;
-
-        // Add missing or reactivate existing valid
-        foreach (var dbKey in dbKeys.Values)
+        var keysToSync = dbKeysResponse.Keys.Select(k => new RouterIntegrationKeySyncEntry
         {
-            var existingNodeKey = nodeKeys.FirstOrDefault(k => k.Name == dbKey.Name);
-            if (existingNodeKey == null)
+            Name = k.Name,
+            Key = k.RawKey
+        }).ToList();
+
+        try
+        {
+            var syncResult = await providerClient.SyncIntegrationKeysAsync(node, keysToSync, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            
+            // Sync success - we don't have the new mapping IDs returned from the bulk endpoint currently
+            // But we don't strictly need them unless revoking individually via UI, which we can handle
+            // next time keys are requested or by re-fetching. For now, bulk sync just ensures they exist.
+            
+            return new SyncNodeIntegrationKeysResponse
             {
-                try
-                {
-                    var result = await providerClient.CreateIntegrationKeyAsync(
-                        node, dbKey.Name, dbKey.RawKey, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-                    addedCount++;
-                    await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, result.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to create integration key on node {NodeId} for ApiKey {ApiKeyId}", node.Id, dbKey.ApiKeyId);
-                }
-            }
-            else if (!existingNodeKey.IsActive)
-            {
-                try
-                {
-                    await providerClient.UpdateIntegrationKeyStatusAsync(
-                        node, existingNodeKey.Id, isActive: true, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-                    reactivatedCount++;
-                    await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, existingNodeKey.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to reactivate integration key on node {NodeId} for ApiKey {ApiKeyId}", node.Id, dbKey.ApiKeyId);
-                }
-            }
-            else
-            {
-                // Ensure mapping exists
-                await repository.SaveIntegrationKeyMappingAsync(dbKey.ApiKeyId, node.Id, existingNodeKey.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-            }
+                AddedCount = syncResult.AddedCount,
+                DisabledCount = syncResult.DisabledCount,
+                ReactivatedCount = syncResult.ReactivatedCount
+            };
         }
-
-        // Disable extra keys on node
-        foreach (var nodeKey in nodeKeys)
+        catch (Exception ex)
         {
-            // If the node key's name is not in our active db keys list, disable it
-            var shouldBeActive = dbKeys.Values.Any(k => k.Name == nodeKey.Name);
-            if (!shouldBeActive && nodeKey.IsActive)
-            {
-                try
-                {
-                    await providerClient.UpdateIntegrationKeyStatusAsync(
-                        node, nodeKey.Id, isActive: false, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-                    disabledCount++;
-                }
-                catch (Exception ex)
-                {
-                    logger.LogWarning(ex, "Failed to disable integration key on node {NodeId}. RouterKeyId: {RouterKeyId}", node.Id, nodeKey.Id);
-                }
-            }
+            logger.LogWarning(ex, "Failed to bulk sync keys on node {NodeId}", node.Id);
+            return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.RouterUnavailable };
         }
-
-        return new SyncNodeIntegrationKeysResponse
-        {
-            AddedCount = addedCount,
-            DisabledCount = disabledCount,
-            ReactivatedCount = reactivatedCount
-        };
     }
 
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>

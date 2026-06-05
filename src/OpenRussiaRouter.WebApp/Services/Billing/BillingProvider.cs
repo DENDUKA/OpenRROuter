@@ -16,10 +16,10 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
         return new BalanceInfo(decimal.Parse(response.BalanceUsd, System.Globalization.CultureInfo.InvariantCulture));
     }
 
-    public async Task<IReadOnlyList<UsageInfo>> ListUsageAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<UsageInfo> Items, bool HasMore, string? NextCursor)> ListUsageAsync(string userId, string? afterCursor = null, CancellationToken cancellationToken = default)
     {
-        var response = await client.ListUsageAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListUsageRequest { UserId = userId }, cancellationToken: cancellationToken);
-        return response.Records.Select(r => new UsageInfo(
+        var response = await client.ListUsageAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListUsageRequest { UserId = userId, AfterCursor = afterCursor ?? string.Empty }, cancellationToken: cancellationToken);
+        var items = response.Records.Select(r => new UsageInfo(
             r.RequestId,
             r.UserId,
             r.ApiKeyId,
@@ -30,6 +30,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             decimal.Parse(r.CostUsd, System.Globalization.CultureInfo.InvariantCulture),
             r.Status,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+        return (items, response.HasMore, response.NextCursor);
     }
 
     public async Task<string?> RecordUsageAsync(
@@ -77,7 +78,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
         DateTimeOffset? toUtc = null,
         string? modelIdFilter = null,
         string? apiKeyIdFilter = null,
-        DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterCursor = null,
         int pageSize = 0,
         CancellationToken cancellationToken = default)
     {
@@ -90,10 +91,11 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
             ModelIdFilter = modelIdFilter ?? string.Empty,
             ApiKeyIdFilter = apiKeyIdFilter ?? string.Empty,
-            AfterCreatedAtUtc = afterCreatedAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            AfterCursor = afterCursor ?? string.Empty,
             PageSize = pageSize
         };
-        request.ApiKeyIds.AddRange(apiKeyIds);
+        request.ApiKeyIds.Add(apiKeyIds);
+
         var response = await client.ListActivityByTokenAsync(request, cancellationToken: cancellationToken);
 
         var items = response.Records.Select(r => new ActivityByTokenInfo(

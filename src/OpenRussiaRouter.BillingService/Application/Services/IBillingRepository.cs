@@ -25,7 +25,7 @@ public interface IBillingRepository
 
     Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default);
 
-    Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default);
+    Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterRequestId = null, string? userId = null, CancellationToken ct = default);
 
     Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default);
 
@@ -37,6 +37,7 @@ public interface IBillingRepository
         string? modelIdFilter = null,
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterRequestId = null,
         CancellationToken ct = default);
 
     Task<ActivitySummary> GetActivitySummaryAsync(
@@ -47,7 +48,7 @@ public interface IBillingRepository
 
     Task AddAnomalyAsync(BillingAnomaly anomaly, CancellationToken ct = default);
 
-    Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default);
+    Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default);
 
     Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
         int limit,

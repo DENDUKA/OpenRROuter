@@ -99,7 +99,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     public Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default) =>
         Task.FromResult(_usageByRequestId.GetValueOrDefault(requestId));
 
-    public Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterRequestId = null, string? userId = null, CancellationToken ct = default)
     {
         var query = _usageByRequestId.Values.AsEnumerable();
         if (userId != null)
@@ -109,7 +109,11 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
         query = query.OrderByDescending(u => u.CreatedAtUtc).ThenByDescending(u => u.RequestId);
 
-        if (afterCreatedAtUtc.HasValue)
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterRequestId))
+        {
+            query = query.Where(u => u.CreatedAtUtc < afterCreatedAtUtc.Value || (u.CreatedAtUtc == afterCreatedAtUtc.Value && string.Compare(u.RequestId, afterRequestId, StringComparison.Ordinal) < 0));
+        }
+        else if (afterCreatedAtUtc.HasValue)
         {
             query = query.Where(u => u.CreatedAtUtc < afterCreatedAtUtc.Value);
         }
@@ -134,18 +138,30 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         string? modelIdFilter = null,
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterRequestId = null,
         CancellationToken ct = default)
     {
         var keySet = new HashSet<string>(apiKeyIds);
+
         var query = _activityByRequestId.Values.Where(a => keySet.Contains(a.ApiKeyId));
 
         if (fromUtc.HasValue) query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
         if (toUtc.HasValue) query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
-        if (!string.IsNullOrEmpty(modelIdFilter)) query = query.Where(a => a.ModelId == modelIdFilter);
-        if (!string.IsNullOrEmpty(apiKeyIdFilter)) query = query.Where(a => a.ApiKeyId == apiKeyIdFilter);
-        if (afterCreatedAtUtc.HasValue) query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
+        if (modelIdFilter != null) query = query.Where(a => a.ModelId == modelIdFilter);
+        if (apiKeyIdFilter != null) query = query.Where(a => a.ApiKeyId == apiKeyIdFilter);
 
-        var items = query.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.RequestId).Take(limit + 1).ToList();
+        query = query.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.RequestId);
+
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterRequestId))
+        {
+            query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value || (a.CreatedAtUtc == afterCreatedAtUtc.Value && string.Compare(a.RequestId, afterRequestId, StringComparison.Ordinal) < 0));
+        }
+        else if (afterCreatedAtUtc.HasValue)
+        {
+            query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
+        }
+
+        var items = query.Take(limit + 1).ToList();
         var hasMore = items.Count > limit;
         if (hasMore) items = items.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore));
@@ -217,11 +233,15 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         return Task.CompletedTask;
     }
 
-    public Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
     {
         var query = _anomalies.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.Id).AsEnumerable();
 
-        if (afterCreatedAtUtc.HasValue)
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterId))
+        {
+            query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value || (a.CreatedAtUtc == afterCreatedAtUtc.Value && string.Compare(a.Id, afterId, StringComparison.Ordinal) < 0));
+        }
+        else if (afterCreatedAtUtc.HasValue)
         {
             query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
         }

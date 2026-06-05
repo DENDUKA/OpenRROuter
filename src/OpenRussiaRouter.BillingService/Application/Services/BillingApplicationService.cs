@@ -173,16 +173,42 @@ public sealed class BillingApplicationService(
         return (await repository.ListTopUpsAsync(Preconditions.RequireValue(userId, nameof(userId)), pageSize, ct).ConfigureAwait(false)).Items;
     }
 
-    public async Task<IReadOnlyCollection<BillingAnomaly>> ListAnomaliesAsync(CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(string? afterCursor = null, CancellationToken ct = default)
     {
         var pageSize = paginationOptions.Value.EffectivePageSize;
-        return (await repository.ListAnomaliesAsync(pageSize, null, ct).ConfigureAwait(false)).Items;
+        DateTimeOffset? afterCreatedAtUtc = null;
+        string? afterId = null;
+
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            var parts = afterCursor.Split('|', 2);
+            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                afterCreatedAtUtc = parsedDate;
+                afterId = parts[1];
+            }
+        }
+
+        return await repository.ListAnomaliesAsync(pageSize, afterCreatedAtUtc, afterId, ct).ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyCollection<UsageRecord>> ListUsageAsync(string? userId = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(string? userId = null, string? afterCursor = null, CancellationToken ct = default)
     {
         var pageSize = paginationOptions.Value.EffectivePageSize;
-        return (await repository.ListUsageAsync(pageSize, null, userId, ct).ConfigureAwait(false)).Items;
+        DateTimeOffset? afterCreatedAtUtc = null;
+        string? afterRequestId = null;
+
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            var parts = afterCursor.Split('|', 2);
+            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                afterCreatedAtUtc = parsedDate;
+                afterRequestId = parts[1];
+            }
+        }
+
+        return await repository.ListUsageAsync(pageSize, afterCreatedAtUtc, afterRequestId, userId, ct).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
@@ -191,7 +217,7 @@ public sealed class BillingApplicationService(
         DateTimeOffset? toUtc = null,
         string? modelIdFilter = null,
         string? apiKeyIdFilter = null,
-        DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterCursor = null,
         int? pageSize = null,
         CancellationToken ct = default)
     {
@@ -199,8 +225,22 @@ public sealed class BillingApplicationService(
             return (Array.Empty<ActivityByTokenRecord>(), false);
 
         var limit = pageSize ?? paginationOptions.Value.EffectivePageSize;
+        
+        DateTimeOffset? afterCreatedAtUtc = null;
+        string? afterRequestId = null;
+
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            var parts = afterCursor.Split('|', 2);
+            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+            {
+                afterCreatedAtUtc = parsedDate;
+                afterRequestId = parts[1];
+            }
+        }
+
         return await repository.ListActivityByTokenAsync(
-            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, ct).ConfigureAwait(false);
+            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, ct).ConfigureAwait(false);
     }
 
     public async Task<ActivitySummary> GetActivitySummaryAsync(

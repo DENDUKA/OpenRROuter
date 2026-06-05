@@ -287,13 +287,19 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 : null;
     }
 
-    public async Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? userId = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterRequestId = null, string? userId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var conditions = new List<string>();
         var parameters = new DynamicParameters();
         parameters.Add("Limit", limit + 1);
-        if (afterCreatedAtUtc.HasValue)
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterRequestId))
+        {
+            conditions.Add("(created_at_utc, request_id) < (@AfterCreatedAtUtc, @AfterRequestId)");
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+            parameters.Add("AfterRequestId", afterRequestId);
+        }
+        else if (afterCreatedAtUtc.HasValue)
         {
             conditions.Add("created_at_utc < @AfterCreatedAtUtc");
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
@@ -383,6 +389,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         string? modelIdFilter = null,
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterRequestId = null,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
@@ -399,7 +406,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
         if (!string.IsNullOrEmpty(modelIdFilter)) { conditions.Add("a.model_id = @ModelIdFilter"); parameters.Add("ModelIdFilter", modelIdFilter); }
         if (!string.IsNullOrEmpty(apiKeyIdFilter)) { conditions.Add("a.api_key_id = @ApiKeyIdFilter"); parameters.Add("ApiKeyIdFilter", apiKeyIdFilter); }
-        if (afterCreatedAtUtc.HasValue) { conditions.Add("a.created_at_utc < @AfterCreatedAtUtc"); parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value); }
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterRequestId))
+        {
+            conditions.Add("(a.created_at_utc, a.request_id) < (@AfterCreatedAtUtc, @AfterRequestId)");
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+            parameters.Add("AfterRequestId", afterRequestId);
+        }
+        else if (afterCreatedAtUtc.HasValue)
+        {
+            conditions.Add("a.created_at_utc < @AfterCreatedAtUtc");
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+        }
 
         var items = (await connection.QueryAsync<ActivityByTokenEntity>(new CommandDefinition(
                 ActivityByTokenSelectSql +
@@ -510,13 +527,19 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
-    public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
         parameters.Add("Limit", limit + 1);
         var afterCondition = "";
-        if (afterCreatedAtUtc.HasValue)
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterId))
+        {
+            afterCondition = "where (created_at_utc, id) < (@AfterCreatedAtUtc, @AfterId)\n";
+            parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
+            parameters.Add("AfterId", afterId);
+        }
+        else if (afterCreatedAtUtc.HasValue)
         {
             afterCondition = "where created_at_utc < @AfterCreatedAtUtc\n";
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
@@ -559,8 +582,18 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var conditions = new List<string>();
         if (!string.IsNullOrEmpty(afterCursor))
         {
-            conditions.Add("a.created_at_utc < @AfterCursor");
-            parameters.Add("AfterCursor", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
+            var parts = afterCursor.Split('|', 2);
+            if (parts.Length == 2)
+            {
+                conditions.Add("(a.created_at_utc, a.request_id) < (@AfterCursorDate, @AfterCursorId)");
+                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind));
+                parameters.Add("AfterCursorId", parts[1]);
+            }
+            else
+            {
+                conditions.Add("a.created_at_utc < @AfterCursorDate");
+                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
+            }
         }
         if (!string.IsNullOrEmpty(modelFilter)) { conditions.Add("a.model_id = @ModelFilter"); parameters.Add("ModelFilter", modelFilter); }
         if (!string.IsNullOrEmpty(providerFilter)) { conditions.Add("a.provider_name = @ProviderFilter"); parameters.Add("ProviderFilter", providerFilter); }

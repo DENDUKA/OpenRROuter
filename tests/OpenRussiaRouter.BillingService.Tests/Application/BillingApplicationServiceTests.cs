@@ -165,7 +165,7 @@ public sealed class BillingApplicationServiceTests
         result.Accepted.Should().BeTrue();
         result.ErrorCode.Should().BeNull();
         result.Cost.Should().Be(MoneyAmount.Usd(0));
-        (await service.ListAnomaliesAsync()).Should().ContainSingle();
+        (await service.ListAnomaliesAsync()).Items.Should().ContainSingle();
     }
 
     [Fact]
@@ -177,7 +177,7 @@ public sealed class BillingApplicationServiceTests
 
         result.Accepted.Should().BeFalse();
         result.ErrorCode.Should().Be("invalid_token_count");
-        (await service.ListAnomaliesAsync()).Should().ContainSingle();
+        (await service.ListAnomaliesAsync()).Items.Should().ContainSingle();
     }
 
     [Fact]

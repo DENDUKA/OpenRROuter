@@ -136,6 +136,7 @@ message UpsertModelPriceResponse {
 }
 
 message ListBillingAnomaliesRequest {
+  string after_cursor = 1;
 }
 
 message ListModelsRequest {
@@ -172,6 +173,7 @@ message BillingAnomaly {
 
 message ListUsageRequest {
   string user_id = 1;
+  string after_cursor = 2;
 }
 
 message UsageRecord {
@@ -189,6 +191,8 @@ message UsageRecord {
 
 message ListUsageResponse {
   repeated UsageRecord records = 1;
+  bool has_more = 2;
+  string next_cursor = 3;
 }
 
 message ListActivityByTokenRequest {
@@ -197,7 +201,7 @@ message ListActivityByTokenRequest {
   string to_utc = 3;
   string model_id_filter = 4;
   string api_key_id_filter = 5;
-  string after_created_at_utc = 6;
+  string after_cursor = 6;
   int32 page_size = 7;
 }
 
@@ -259,6 +263,8 @@ message GetActivitySummaryResponse {
 
 message ListBillingAnomaliesResponse {
   repeated BillingAnomaly anomalies = 1;
+  bool has_more = 2;
+  string next_cursor = 3;
 }
 
 message ListTopUpsRequest {

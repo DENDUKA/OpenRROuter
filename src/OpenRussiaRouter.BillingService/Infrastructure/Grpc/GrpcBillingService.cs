@@ -195,9 +195,18 @@ public sealed class GrpcBillingService(
         ServerCallContext context)
     {
         var response = new ListBillingAnomaliesResponse();
+        var cursor = string.IsNullOrWhiteSpace(request.AfterCursor) ? null : request.AfterCursor;
+        var (items, hasMore) = await billing.ListAnomaliesAsync(cursor, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        
+        response.HasMore = hasMore;
+        if (hasMore && items.Count > 0)
+        {
+            var last = items.Last();
+            response.NextCursor = $"{last.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)}|{last.Id}";
+        }
+
         response.Anomalies.AddRange(
-            (await billing.ListAnomaliesAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
-            .Select(anomaly => new Contracts.Grpc.Billing.V1.BillingAnomaly
+            items.Select(anomaly => new Contracts.Grpc.Billing.V1.BillingAnomaly
             {
                 Id = anomaly.Id,
                 RequestId = anomaly.RequestId,
@@ -248,9 +257,18 @@ public sealed class GrpcBillingService(
     {
         var response = new ListUsageResponse();
         var userId = string.IsNullOrWhiteSpace(request.UserId) ? null : request.UserId;
+        var cursor = string.IsNullOrWhiteSpace(request.AfterCursor) ? null : request.AfterCursor;
+        var (items, hasMore) = await billing.ListUsageAsync(userId, cursor, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        
+        response.HasMore = hasMore;
+        if (hasMore && items.Count > 0)
+        {
+            var last = items.Last();
+            response.NextCursor = $"{last.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)}|{last.RequestId}";
+        }
+
         response.Records.AddRange(
-            (await billing.ListUsageAsync(userId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
-            .Select(usage => new Contracts.Grpc.Billing.V1.UsageRecord
+            items.Select(usage => new Contracts.Grpc.Billing.V1.UsageRecord
             {
                 RequestId = usage.RequestId,
                 UserId = usage.UserId,
@@ -282,13 +300,16 @@ public sealed class GrpcBillingService(
             toUtc: ParseOptionalTimestamp(request.ToUtc),
             modelIdFilter: string.IsNullOrEmpty(request.ModelIdFilter) ? null : request.ModelIdFilter,
             apiKeyIdFilter: string.IsNullOrEmpty(request.ApiKeyIdFilter) ? null : request.ApiKeyIdFilter,
-            afterCreatedAtUtc: ParseOptionalTimestamp(request.AfterCreatedAtUtc),
+            afterCursor: string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
             pageSize: request.PageSize > 0 ? request.PageSize : null,
             ct: ct).ConfigureAwait(false);
 
         var response = new ListActivityByTokenResponse { HasMore = hasMore };
         if (hasMore && items.Count > 0)
-            response.NextCursor = items.Last().CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+        {
+            var last = items.Last();
+            response.NextCursor = $"{last.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)}|{last.RequestId}";
+        }
 
         response.Records.AddRange(items.Select(activity => new Contracts.Grpc.Billing.V1.ActivityByTokenRecord
         {
@@ -388,7 +409,10 @@ public sealed class GrpcBillingService(
 
         var response = new ListAdminRequestsResponse();
         if (hasMore && items.Count > 0)
-            response.NextCursor = items.Last().CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture);
+        {
+            var last = items.Last();
+            response.NextCursor = $"{last.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)}|{last.RequestId}";
+        }
 
         response.Records.AddRange(items.Select(r => new Contracts.Grpc.Billing.V1.AdminRequestRecord
         {

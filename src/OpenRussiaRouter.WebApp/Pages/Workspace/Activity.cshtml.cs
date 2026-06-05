@@ -66,11 +66,9 @@ public class ActivityModel : PageModelBase
                 if (!string.IsNullOrEmpty(ToDate) && DateOnly.TryParseExact(ToDate, "yyyy-MM-dd", out var td))
                     toUtc = td.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Local).ToUniversalTime();
 
-                DateTimeOffset? afterUtc = null;
-                if (!string.IsNullOrEmpty(After) && DateTimeOffset.TryParse(
-                        System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(After)),
-                        CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsedAfter))
-                    afterUtc = parsedAfter.ToUniversalTime();
+                var afterCursor = string.IsNullOrEmpty(After) 
+                    ? null 
+                    : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(After));
 
                 var (items, hasMore, nextCursor) = await _billingClient.ListActivityByTokenAsync(
                     keyIds,
@@ -78,7 +76,7 @@ public class ActivityModel : PageModelBase
                     toUtc: toUtc,
                     modelIdFilter: string.IsNullOrEmpty(ModelFilter) ? null : ModelFilter,
                     apiKeyIdFilter: string.IsNullOrEmpty(KeyFilter) ? null : KeyFilter,
-                    afterCreatedAtUtc: afterUtc,
+                    afterCursor: afterCursor,
                     pageSize: PageSize,
                     cancellationToken: HttpContext.RequestAborted);
 

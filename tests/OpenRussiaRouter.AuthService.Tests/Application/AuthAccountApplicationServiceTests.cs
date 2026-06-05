@@ -86,6 +86,37 @@ public sealed class AuthAccountApplicationServiceTests
         key.RevokedAtUtc.Should().Be(revokedAt);
     }
 
+    [Fact]
+    public async Task DeleteApiKey_RevokedKey_HidesFromListButKeepsRow()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
+        var now = DateTimeOffset.UtcNow.AddMinutes(1);
+        await service.RevokeApiKeyAsync("user-1", created.ApiKey.Id, now);
+
+        await service.DeleteApiKeyAsync("user-1", created.ApiKey.Id, now.AddMinutes(1));
+
+        repository.ApiKeys.Single().IsDeleted.Should().BeTrue();
+        (await service.ListApiKeysAsync("user-1")).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteApiKey_ActiveKey_Throws()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
+
+        await ((Func<Task>)(() =>
+            service.DeleteApiKeyAsync("user-1", created.ApiKey.Id, DateTimeOffset.UtcNow))).Should().ThrowAsync<KeyNotFoundException>();
+        repository.ApiKeys.Single().IsDeleted.Should().BeFalse();
+    }
+
     private static AuthAccountApplicationService CreateService(TestAuthRepository repository)
     {
         var secretHasher = new Sha256SecretHasher();
@@ -140,7 +171,7 @@ public sealed class AuthAccountApplicationServiceTests
             Task.FromResult(ApiKeys.SingleOrDefault(key => key.Id == apiKeyId));
 
         public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default) =>
-            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId).ToArray(), false));
+            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId && !key.IsDeleted).ToArray(), false));
 
         public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
         {
@@ -155,6 +186,14 @@ public sealed class AuthAccountApplicationServiceTests
             var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
             if (key is null) return Task.FromResult(false);
             key.Revoke(revokedAtUtc);
+            return Task.FromResult(true);
+        }
+
+        public Task<bool> DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)
+        {
+            var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
+            if (key is null || key.IsActive || key.IsDeleted) return Task.FromResult(false);
+            key.Delete(deletedAtUtc);
             return Task.FromResult(true);
         }
 

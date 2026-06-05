@@ -245,6 +245,22 @@ public sealed class GrpcAuthService(
         }
     }
 
+    public override async Task<DeleteApiKeyResponse> DeleteApiKey(
+        DeleteApiKeyRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await accounts.DeleteApiKeyAsync(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DeleteApiKeyResponse { IsDeleted = true };
+        }
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
+        {
+            logger.LogWarning(ex, "DeleteApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new DeleteApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
     public override async Task<ListApiKeysResponse> ListApiKeys(
         ListApiKeysRequest request,
         ServerCallContext context)

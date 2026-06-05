@@ -1,5 +1,7 @@
 # AGENTS.md
 
+> **IMPORTANT**: ALWAYS respond to the user in the Russian language (Всегда отвечай на русском языке).
+
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Build & Test Commands

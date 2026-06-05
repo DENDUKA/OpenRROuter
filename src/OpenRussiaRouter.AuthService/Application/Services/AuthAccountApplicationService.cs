@@ -173,6 +173,18 @@ public sealed class AuthAccountApplicationService(
         }
     }
 
+    public async Task DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)
+    {
+        if (!await repository.DeleteApiKeyAsync(
+                Preconditions.RequireValue(userId, nameof(userId)),
+                Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
+                deletedAtUtc,
+                ct).ConfigureAwait(false))
+        {
+            throw new KeyNotFoundException("API key was not found or is not revoked.");
+        }
+    }
+
     public async Task<IReadOnlyCollection<ApiKey>> ListApiKeysAsync(string userId, CancellationToken ct = default)
     {
         return (await repository.ListApiKeysAsync(

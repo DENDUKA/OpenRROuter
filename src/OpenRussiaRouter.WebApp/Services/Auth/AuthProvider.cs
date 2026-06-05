@@ -106,6 +106,15 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         }
     }
 
+    public async Task DeleteApiKeyAsync(string userId, string apiKeyId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.DeleteApiKeyAsync(new DeleteApiKeyRequest { UserId = userId, ApiKeyId = apiKeyId }, cancellationToken: cancellationToken);
+        if (!response.IsDeleted)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+    }
+
     public async Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken cancellationToken = default)
     {
         var response = await client.GetFirstActiveApiKeyRawAsync(

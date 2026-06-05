@@ -81,7 +81,8 @@ public static class AuthPersistenceMapper
             RawKey = apiKey.RawKey,
             CreatedAtUtc = apiKey.CreatedAtUtc,
             LastUsedAtUtc = apiKey.LastUsedAtUtc,
-            RevokedAtUtc = apiKey.RevokedAtUtc
+            RevokedAtUtc = apiKey.RevokedAtUtc,
+            DeletedAtUtc = apiKey.DeletedAtUtc
         };
     }
 
@@ -105,6 +106,11 @@ public static class AuthPersistenceMapper
         if (entity.RevokedAtUtc.HasValue)
         {
             apiKey.Revoke(entity.RevokedAtUtc.Value);
+        }
+
+        if (entity.DeletedAtUtc.HasValue)
+        {
+            apiKey.Delete(entity.DeletedAtUtc.Value);
         }
 
         return apiKey;

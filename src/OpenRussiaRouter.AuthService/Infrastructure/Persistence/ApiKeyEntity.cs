@@ -21,4 +21,6 @@ public sealed class ApiKeyEntity
     public DateTimeOffset? LastUsedAtUtc { get; set; }
 
     public DateTimeOffset? RevokedAtUtc { get; set; }
+
+    public DateTimeOffset? DeletedAtUtc { get; set; }
 }

@@ -26,6 +26,8 @@ public interface IAuthRepository
 
     Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default);
 
+    Task<bool> DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default);
+
     Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default);
 
     Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default);

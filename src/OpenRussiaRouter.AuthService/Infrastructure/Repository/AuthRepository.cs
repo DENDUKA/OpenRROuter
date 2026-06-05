@@ -163,7 +163,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         }
 
         var items = (await connection.QueryAsync<ApiKeyEntity>(new CommandDefinition(
-                ApiKeySelectSql + " where user_id = @UserId " + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
+                ApiKeySelectSql + " where user_id = @UserId and deleted_at_utc is null " + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
@@ -201,6 +201,22 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
               and revoked_at_utc is null;
             """,
             new { UserId = userId, ApiKeyId = apiKeyId, RevokedAtUtc = revokedAtUtc },
+            cancellationToken: ct)).ConfigureAwait(false) == 1;
+    }
+
+    public async Task<bool> DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.api_keys
+            set deleted_at_utc = @DeletedAtUtc
+            where id = @ApiKeyId
+              and user_id = @UserId
+              and revoked_at_utc is not null
+              and deleted_at_utc is null;
+            """,
+            new { UserId = userId, ApiKeyId = apiKeyId, DeletedAtUtc = deletedAtUtc },
             cancellationToken: ct)).ConfigureAwait(false) == 1;
     }
 
@@ -511,7 +527,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             raw_key as RawKey,
             created_at_utc as CreatedAtUtc,
             last_used_at_utc as LastUsedAtUtc,
-            revoked_at_utc as RevokedAtUtc
+            revoked_at_utc as RevokedAtUtc,
+            deleted_at_utc as DeletedAtUtc
         from auth.api_keys
         """;
 

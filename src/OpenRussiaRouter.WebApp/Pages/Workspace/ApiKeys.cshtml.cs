@@ -107,6 +107,22 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
         }
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(string keyId)
+    {
+        try
+        {
+            await _authClient.DeleteApiKeyAsync(User.GetUserId(), keyId);
+            return RedirectToPage();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
+            ErrorMessage = "Failed to delete key.";
+            await OnGetAsync();
+            return Page();
+        }
+    }
+
     public class CreateKeyInput
     {
         public string Name { get; set; } = "";

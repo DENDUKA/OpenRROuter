@@ -34,13 +34,31 @@ public sealed class ApiKey
 
     public DateTimeOffset? RevokedAtUtc { get; private set; }
 
+    public DateTimeOffset? DeletedAtUtc { get; private set; }
+
     public bool IsActive => !RevokedAtUtc.HasValue;
+
+    public bool IsDeleted => DeletedAtUtc.HasValue;
 
     public void Rename(string name) => Name = Preconditions.RequireValue(name, nameof(name));
 
     public void Revoke(DateTimeOffset revokedAtUtc)
     {
         RevokedAtUtc ??= revokedAtUtc;
+    }
+
+    /// <summary>
+    /// Soft-deletes the key so it is hidden from the user's list. Only a revoked
+    /// key may be deleted; an active key must be revoked first.
+    /// </summary>
+    public void Delete(DateTimeOffset deletedAtUtc)
+    {
+        if (!RevokedAtUtc.HasValue)
+        {
+            throw new InvalidOperationException("Active API key cannot be deleted; revoke it first.");
+        }
+
+        DeletedAtUtc ??= deletedAtUtc;
     }
 
     public void MarkUsed(DateTimeOffset usedAtUtc)

@@ -146,6 +146,9 @@ public sealed class ChatCompletionHandler(
 
                 if (!session.IsSuccess)
                 {
+                    var errorBody = await session.ReadErrorBodyAsync(context.RequestAborted);
+                    logger.LogWarning("Chat completion stream downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", session.StatusCode, lease.NodeId, errorBody);
+
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", context.RequestAborted);
                     
                     excludedNodes ??= new HashSet<string>();

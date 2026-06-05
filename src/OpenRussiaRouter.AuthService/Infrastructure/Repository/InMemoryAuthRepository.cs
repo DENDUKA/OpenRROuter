@@ -78,7 +78,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default)
     {
         var query = _apiKeys
-            .Where(k => k.UserId == userId)
+            .Where(k => k.UserId == userId && !k.IsDeleted)
             .OrderByDescending(k => k.CreatedAtUtc)
             .AsEnumerable();
             
@@ -115,6 +115,17 @@ public sealed class InMemoryAuthRepository : IAuthRepository
             var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
             if (key is null) return Task.FromResult(false);
             key.Revoke(revokedAtUtc);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            if (key is null || key.IsActive || key.IsDeleted) return Task.FromResult(false);
+            key.Delete(deletedAtUtc);
             return Task.FromResult(true);
         }
     }

@@ -323,9 +323,44 @@ public sealed class GrpcRouterControlPlaneService(
             }
         }
 
+        // Маппинг НЕ удаляем: ключ на ноде лишь деактивирован, а связь (api_key_id → node, router_key_id)
+        // нужна для последующего полного удаления (DeleteUserIntegrationKey).
+        return new RevokeUserIntegrationKeyResponse { RevokedCount = revokedCount };
+    }
+
+    public override async Task<DeleteUserIntegrationKeyResponse> DeleteUserIntegrationKey(
+        DeleteUserIntegrationKeyRequest request,
+        ServerCallContext context)
+    {
+        if (string.IsNullOrWhiteSpace(request.ApiKeyId))
+            return new DeleteUserIntegrationKeyResponse { DeletedCount = 0 };
+
+        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var deletedCount = 0;
+
+        foreach (var (nodeId, routerKeyId) in mappings)
+        {
+            var node = await repository.GetNodeAsync(nodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            if (node is null) continue;
+
+            try
+            {
+                await providerClient.DeleteIntegrationKeyAsync(
+                    node, routerKeyId, context?.CancellationToken ?? CancellationToken.None)
+                    .ConfigureAwait(false);
+                deletedCount++;
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Не удалось удалить integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
+                    nodeId, routerKeyId);
+            }
+        }
+
+        // Связь зачищаем только после попытки физического удаления на нодах.
         await repository.RemoveIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-        return new RevokeUserIntegrationKeyResponse { RevokedCount = revokedCount };
+        return new DeleteUserIntegrationKeyResponse { DeletedCount = deletedCount };
     }
 
     public override async Task<SyncNodeIntegrationKeysResponse> SyncNodeIntegrationKeys(
@@ -357,8 +392,8 @@ public sealed class GrpcRouterControlPlaneService(
             return new SyncNodeIntegrationKeysResponse
             {
                 AddedCount = syncResult.AddedCount,
-                DisabledCount = syncResult.DisabledCount,
-                ReactivatedCount = syncResult.ReactivatedCount
+                DisabledCount = 0,
+                ReactivatedCount = 0
             };
         }
         catch (Exception ex)

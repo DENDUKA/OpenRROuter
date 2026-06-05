@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
@@ -59,6 +60,12 @@ public sealed record RouterIntegrationKeyCreateResponse
     public string Id { get; init; } = string.Empty;
 }
 
+public sealed record RouterIntegrationKeyDeleteResponse
+{
+    public bool Deleted { get; init; }
+    public string Id { get; init; } = string.Empty;
+}
+
 public sealed record RouterIntegrationKeySyncEntry
 {
     public string Name { get; init; } = string.Empty;
@@ -67,9 +74,8 @@ public sealed record RouterIntegrationKeySyncEntry
 
 public sealed record RouterIntegrationKeysSyncResponse
 {
+    [JsonPropertyName("synced")]
     public int AddedCount { get; init; }
-    public int DisabledCount { get; init; }
-    public int ReactivatedCount { get; init; }
 }
 
 public sealed class RouterNodeProviderException : Exception

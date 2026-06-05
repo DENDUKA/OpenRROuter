@@ -5,4 +5,4 @@ kustomize:
   - ghcr.io/denduka/billing-service:dev-latest@sha256:4f1f276a38dcb494cea555e5a84716e19025508941a8d09f992e637def2c2e48
   - ghcr.io/denduka/control-plane:dev-latest@sha256:6144e18c7597db524f60973349a827bb295fd461d231e2ec7b5b5939e71733cf
   - ghcr.io/denduka/webapp:dev-latest@sha256:01766b59f259009887c32ec112ae43871f8edf93e13871e1e41d6a4aeff12610
-  - ghcr.io/inc64/f9router:dev-latest@sha256:94ddc1c8583485247a0e63a75355e7349d48e4d24d460b971076ac6553cf30f3
+  - ghcr.io/inc64/f9router:dev-latest@sha256:1fe1c241c6e105abc07f9a8cde3661e0ac2887f4686f4e765e489d050127c1d4

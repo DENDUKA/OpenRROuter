@@ -89,7 +89,14 @@
                 </li>
                 <li>
                     <a class="quickstart-link" href="/models">
-                        <span class="step-number">04</span>
+                        @if (Model.CurrentUser != null && Model.HasBalance && Model.HasApiKey)
+                        {
+                            <span class="step-number">🚀</span>
+                        }
+                        else
+                        {
+                            <span class="step-number">04</span>
+                        }
                         <div>
                             <h3>Choose a model</h3>
                             <p>Browse the catalog and copy the public model ID.</p>

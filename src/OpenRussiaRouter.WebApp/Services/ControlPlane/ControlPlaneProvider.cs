@@ -145,6 +145,14 @@ public sealed class ControlPlaneProvider(
         }, cancellationToken: cancellationToken);
     }
 
+    public async Task DeleteUserIntegrationKeyAsync(string apiKeyId, CancellationToken cancellationToken = default)
+    {
+        await client.DeleteUserIntegrationKeyAsync(new DeleteUserIntegrationKeyRequest
+        {
+            ApiKeyId = apiKeyId
+        }, cancellationToken: cancellationToken);
+    }
+
     public async Task<(int Added, int Disabled, int Reactivated)> SyncNodeIntegrationKeysAsync(string nodeId, CancellationToken cancellationToken = default)
     {
         var response = await client.SyncNodeIntegrationKeysAsync(new SyncNodeIntegrationKeysRequest

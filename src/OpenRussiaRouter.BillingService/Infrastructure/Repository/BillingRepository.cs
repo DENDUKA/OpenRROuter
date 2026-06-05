@@ -381,6 +381,117 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false));
     }
 
+    public async Task RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(activity);
+
+        using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+
+        try
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                insert into billing.activity_by_token
+                    (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
+                     input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc,
+                     provider_name, provider_account)
+                values
+                    (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
+                     @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc,
+                     @ProviderName, @ProviderAccount)
+                on conflict (request_id) do nothing;
+                """,
+                new
+                {
+                    activity.RequestId,
+                    activity.ApiKeyId,
+                    activity.ApiKeyPrefix,
+                    activity.ModelId,
+                    activity.RouterNodeId,
+                    activity.Usage.InputTokens,
+                    activity.Usage.OutputTokens,
+                    activity.Usage.CacheTokens,
+                    activity.Status,
+                    activity.CreatedAtUtc,
+                    activity.CompletedAtUtc,
+                    ProviderName = activity.ProviderName ?? (object)DBNull.Value,
+                    ProviderAccount = activity.ProviderAccount ?? (object)DBNull.Value
+                },
+                transaction,
+                cancellationToken: ct)).ConfigureAwait(false);
+
+            if (usage is not null)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    insert into billing.usage_records
+                        (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
+                         input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc,
+                         provider_name, provider_account)
+                    values
+                        (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
+                         @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
+                         @ProviderName, @ProviderAccount)
+                    on conflict (request_id) do nothing;
+                    """,
+                    new
+                    {
+                        usage.RequestId,
+                        usage.UserId,
+                        usage.ApiKeyId,
+                        usage.ModelId,
+                        usage.PriceVersion,
+                        usage.RouterNodeId,
+                        usage.Usage.InputTokens,
+                        usage.Usage.OutputTokens,
+                        usage.Usage.CacheTokens,
+                        CostAmount = usage.Cost.Amount,
+                        CostCurrency = usage.Cost.Currency.ToString(),
+                        usage.Status,
+                        usage.CreatedAtUtc,
+                        ProviderName = usage.ProviderName ?? (object)DBNull.Value,
+                        ProviderAccount = usage.ProviderAccount ?? (object)DBNull.Value
+                    },
+                    transaction,
+                    cancellationToken: ct)).ConfigureAwait(false);
+            }
+
+            if (ledgerEntry is not null)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    insert into billing.ledger_entries
+                        (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
+                    values
+                        (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
+                    on conflict (idempotency_key) do nothing;
+                    """,
+                    new
+                    {
+                        ledgerEntry.Id,
+                        ledgerEntry.UserId,
+                        Type = ledgerEntry.Type.ToString(),
+                        ledgerEntry.Amount.Amount,
+                        Currency = ledgerEntry.Amount.Currency.ToString(),
+                        ledgerEntry.IdempotencyKey,
+                        ledgerEntry.Reason,
+                        ledgerEntry.CreatedAtUtc
+                    },
+                    transaction,
+                    cancellationToken: ct)).ConfigureAwait(false);
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            transaction.Rollback();
+            throw;
+        }
+    }
+
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,

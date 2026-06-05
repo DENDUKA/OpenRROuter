@@ -147,4 +147,41 @@ public sealed class BillingRepositoryPostgresTests
             .Which.SqlState.Should().Be(PostgresErrorCodes.CheckViolation);
     }
 
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task RecordUsageWithTransactionAsync_PersistsActivityUsageAndLedger()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+
+        var activity = new ActivityByTokenRecord(
+            "tx-req-1", "key-1", "sk-...", "gpt-test", "node-1",
+            new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.001m), "succeeded", now, now, null, null);
+
+        var usage = new UsageRecord(
+            "tx-req-1", "user-1", "key-1", "gpt-test", "v1", "node-1",
+            new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.001m), "succeeded", now, null, null);
+
+        var ledgerEntry = new LedgerEntry(
+            "tx-ledger-1", "user-1", LedgerEntryType.UsageCharge,
+            MoneyAmount.Usd(-0.001m), "usage:tx-req-1", "charge", now);
+
+        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry);
+
+        var savedUsage = await repository.GetUsageAsync("tx-req-1");
+        savedUsage.Should().NotBeNull();
+        savedUsage!.Cost.Amount.Should().Be(0.001m);
+
+        var (activities, _) = await repository.ListActivityByTokenAsync(["key-1"], 10);
+        activities.Should().ContainSingle().Which.RequestId.Should().Be("tx-req-1");
+
+        var balance = await repository.GetBalanceAsync("user-1");
+        balance.Amount.Should().Be(-0.001m);
+    }
+
 }

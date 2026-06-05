@@ -448,6 +448,12 @@ public sealed class GrpcRouterControlPlaneServiceTests
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
+        public Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+            Domain.Entities.RouterNode node,
+            string keyId,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
         public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
             Domain.Entities.RouterNode node,
             IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
@@ -475,6 +481,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
             Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+            Domain.Entities.RouterNode node, string keyId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
@@ -511,6 +521,10 @@ public sealed class GrpcRouterControlPlaneServiceTests
 
         public Task<RouterIntegrationKeyInfo> UpdateIntegrationKeyStatusAsync(
             Domain.Entities.RouterNode node, string keyId, bool isActive, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+            Domain.Entities.RouterNode node, string keyId, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
@@ -585,6 +599,12 @@ public sealed class GrpcRouterControlPlaneServiceTests
             Domain.Entities.RouterNode node,
             string keyId,
             bool isActive,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+            Domain.Entities.RouterNode node,
+            string keyId,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 

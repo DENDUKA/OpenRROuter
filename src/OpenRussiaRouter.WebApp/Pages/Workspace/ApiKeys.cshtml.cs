@@ -112,6 +112,9 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
         try
         {
             await _authClient.DeleteApiKeyAsync(User.GetUserId(), keyId);
+            // Physically remove the key from router nodes (best-effort; the key is already
+            // revoked + soft-deleted on our side, so a node failure must not block the user).
+            _ = _controlPlaneClient.DeleteUserIntegrationKeyAsync(keyId);
             return RedirectToPage();
         }
         catch (Exception ex)

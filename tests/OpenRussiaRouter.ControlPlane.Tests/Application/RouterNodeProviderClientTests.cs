@@ -144,6 +144,22 @@ public sealed class RouterNodeProviderTests
     }
 
     [Fact]
+    public async Task DeleteIntegrationKeyAsync_SendsDeleteRequest()
+    {
+        var handler = new CapturingHandler(JsonResponse("""{ "deleted": true, "id": "key-1" }"""));
+        var client = CreateClient(handler);
+
+        var result = await client.DeleteIntegrationKeyAsync(CreateNode(), "key-1", CancellationToken.None);
+
+        handler.LastMethod.Should().Be(HttpMethod.Delete);
+        handler.LastUri.Should().Be("https://router.example/api/integrations/keys/key-1");
+        handler.Authorization.Should().Be("Bearer control-token");
+        handler.Body.Should().BeNull();
+        result.Deleted.Should().BeTrue();
+        result.Id.Should().Be("key-1");
+    }
+
+    [Fact]
     public void ListIntegrationKeysAsync_MissingToken_ThrowsAtNodeConstruction()
     {
         ((Action)(() => CreateNode(string.Empty))).Should().Throw<ArgumentException>();

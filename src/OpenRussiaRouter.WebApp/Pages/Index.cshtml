@@ -41,7 +41,14 @@
             <ol class="quickstart-list">
                 <li>
                     <a class="quickstart-link" href="/signup">
-                        <span class="step-number">01</span>
+                        @if (Model.CurrentUser != null)
+                        {
+                            <span class="step-number step-done">✓</span>
+                        }
+                        else
+                        {
+                            <span class="step-number">01</span>
+                        }
                         <div>
                             <h3>Signup</h3>
                             <p>Create your account and open the workspace.</p>
@@ -50,7 +57,14 @@
                 </li>
                 <li>
                     <a class="quickstart-link" href="/workspace/credits">
-                        <span class="step-number">02</span>
+                        @if (Model.HasBalance)
+                        {
+                            <span class="step-number step-done">✓</span>
+                        }
+                        else
+                        {
+                            <span class="step-number">02</span>
+                        }
                         <div>
                             <h3>Buy credits</h3>
                             <p>Add USD balance once and use it across available models.</p>
@@ -58,20 +72,27 @@
                     </a>
                 </li>
                 <li>
-                    <a class="quickstart-link" href="/models">
-                        <span class="step-number">03</span>
+                    <a class="quickstart-link" href="/workspace/apikeys">
+                        @if (Model.HasApiKey)
+                        {
+                            <span class="step-number step-done">✓</span>
+                        }
+                        else
+                        {
+                            <span class="step-number">03</span>
+                        }
                         <div>
-                            <h3>Choose a model</h3>
-                            <p>Browse the catalog and copy the public model ID.</p>
+                            <h3>Get your API key</h3>
+                            <p>Create a key and send your first OpenAI-compatible request.</p>
                         </div>
                     </a>
                 </li>
                 <li>
-                    <a class="quickstart-link" href="/workspace/apikeys">
+                    <a class="quickstart-link" href="/models">
                         <span class="step-number">04</span>
                         <div>
-                            <h3>Get your API key</h3>
-                            <p>Create a key and send your first OpenAI-compatible request.</p>
+                            <h3>Choose a model</h3>
+                            <p>Browse the catalog and copy the public model ID.</p>
                         </div>
                     </a>
                 </li>
@@ -261,8 +282,12 @@
         color: var(--color-ink);
         text-decoration: none;
     }
-    .quickstart-link:hover .step-number,
-    .quickstart-link:focus-visible .step-number {
+    .step-number.step-done {
+        color: #10b981; /* green-500 */
+        font-size: 18px;
+    }
+    .quickstart-link:hover .step-number:not(.step-done),
+    .quickstart-link:focus-visible .step-number:not(.step-done) {
         border-color: var(--color-border);
         color: var(--color-ink);
     }

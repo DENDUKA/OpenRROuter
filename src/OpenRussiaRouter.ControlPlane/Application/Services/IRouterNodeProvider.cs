@@ -31,6 +31,11 @@ public interface IRouterNodeProvider
         bool isActive,
         CancellationToken cancellationToken);
 
+    Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+        RouterNode node,
+        string keyId,
+        CancellationToken cancellationToken);
+
     Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
         RouterNode node,
         IReadOnlyList<RouterIntegrationKeySyncEntry> keys,

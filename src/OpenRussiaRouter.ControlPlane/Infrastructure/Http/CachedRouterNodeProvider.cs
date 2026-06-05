@@ -65,6 +65,17 @@ public sealed class CachedRouterNodeProvider(
         return response;
     }
 
+    public async Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+        RouterNode node,
+        string keyId,
+        CancellationToken cancellationToken)
+    {
+        var response = await inner.DeleteIntegrationKeyAsync(node, keyId, cancellationToken)
+            .ConfigureAwait(false);
+        cache.InvalidateNode(node.Id);
+        return response;
+    }
+
     public async Task<RouterIntegrationKeysSyncResponse> SyncIntegrationKeysAsync(
         RouterNode node,
         IReadOnlyList<RouterIntegrationKeySyncEntry> keys,

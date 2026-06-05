@@ -130,6 +130,25 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         return Task.FromResult(_activityByRequestId.GetOrAdd(record.RequestId, record));
     }
 
+    public Task RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(activity);
+
+        _activityByRequestId.TryAdd(activity.RequestId, activity);
+
+        if (usage is not null)
+        {
+            _usageByRequestId.TryAdd(usage.RequestId, usage);
+        }
+
+        if (ledgerEntry is not null)
+        {
+            _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry);
+        }
+
+        return Task.CompletedTask;
+    }
+
     public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,

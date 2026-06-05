@@ -12,6 +12,7 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
     private const string ProviderStatusPathTemplate = "/api/integrations/providers/{0}/status";
     private const string IntegrationKeysPath = "/api/integrations/keys";
     private const string IntegrationKeyStatusPathTemplate = "/api/integrations/keys/{0}/status";
+    private const string IntegrationKeyPathTemplate = "/api/integrations/keys/{0}";
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
@@ -86,6 +87,24 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
                 IntegrationKeyStatusPathTemplate,
                 Uri.EscapeDataString(keyId)),
             JsonContent.Create(new ProviderStatusRequest(isActive), options: JsonOptions),
+            cancellationToken);
+    }
+
+    public Task<RouterIntegrationKeyDeleteResponse> DeleteIntegrationKeyAsync(
+        RouterNode node,
+        string keyId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(keyId);
+
+        return SendAsync<RouterIntegrationKeyDeleteResponse>(
+            node,
+            HttpMethod.Delete,
+            string.Format(
+                System.Globalization.CultureInfo.InvariantCulture,
+                IntegrationKeyPathTemplate,
+                Uri.EscapeDataString(keyId)),
+            content: null,
             cancellationToken);
     }
 

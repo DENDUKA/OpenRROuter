@@ -11,7 +11,7 @@ using OpenRussiaRouter.Contracts.Billing;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
-public sealed class BillingApplicationService(
+public sealed partial class BillingApplicationService(
     IBillingRepository repository,
     IUsageCostCalculator usageCostCalculator,
     IOptions<BillingPaginationOptions> paginationOptions,
@@ -57,6 +57,7 @@ public sealed class BillingApplicationService(
         var model = adminBypassDisabled
             ? await repository.GetModelAsync(resolvedModelId, ct).ConfigureAwait(false)
             : await repository.GetEnabledModelAsync(resolvedModelId, ct).ConfigureAwait(false);
+            
         if (model is null)
             return new BalanceCheckResult(false, modelId, modelId, null, balance, ErrorCodes.ModelUnavailable);
 
@@ -68,7 +69,6 @@ public sealed class BillingApplicationService(
                 modelId);
         }
 
-        // Free models (all prices are zero) are accessible regardless of balance.
         var isFreeModel = model.Price.InputPerMillion.Amount == 0
                        && model.Price.OutputPerMillion.Amount == 0
                        && model.Price.CachePerMillion.Amount == 0;
@@ -112,56 +112,72 @@ public sealed class BillingApplicationService(
             return new RecordUsageResult(false, null, MoneyAmount.Usd(0), "invalid_token_count");
         }
 
-        await repository.AddActivityByTokenAsync(new ActivityByTokenRecord(
+        var cost = MoneyAmount.Usd(0);
+        string? priceVersion = null;
+
+        if (usageEvent.Usage.TotalTokens > 0)
+        {
+            var model = await repository.GetEnabledModelAsync(usageEvent.ModelId, ct).ConfigureAwait(false);
+            if (model is null)
+            {
+                await AddAnomalyAsync(usageEvent.RequestId, "model_price_missing", "Enabled model price was not found.", nowUtc, ct).ConfigureAwait(false);
+                logger.LogError("Model price not found for model {ModelId}, request {RequestId}. Usage recorded with zero cost.", usageEvent.ModelId, usageEvent.RequestId);
+            }
+            else
+            {
+                cost = usageCostCalculator.Calculate(usageEvent.Usage, model.Price);
+                priceVersion = model.PriceVersion;
+            }
+        }
+
+        // ВНИМАНИЕ: Здесь нужна единая транзакция (Unit of Work) на уровне репозитория.
+        // Иначе частичные отказы сломают баланс.
+        var activity = new ActivityByTokenRecord(
             usageEvent.RequestId,
             usageEvent.ApiKeyId,
             usageEvent.ApiKeyPrefix,
             usageEvent.ModelId,
             usageEvent.RouterNodeId,
             usageEvent.Usage,
-            MoneyAmount.Usd(0),
+            cost,
             usageEvent.Status,
             nowUtc,
             usageEvent.CompletedAtUtc,
             usageEvent.ProviderName,
-            usageEvent.ProviderAccount), ct).ConfigureAwait(false);
+            usageEvent.ProviderAccount);
 
-        if (usageEvent.Usage.TotalTokens == 0)
-            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Usd(0), null);
-
-        var model = await repository.GetEnabledModelAsync(usageEvent.ModelId, ct).ConfigureAwait(false);
-        if (model is null)
+        if (usageEvent.Usage.TotalTokens == 0 || priceVersion is null)
         {
-            await AddAnomalyAsync(usageEvent.RequestId, "model_price_missing", "Enabled model price was not found.", nowUtc, ct).ConfigureAwait(false);
-            logger.LogError("Model price not found for model {ModelId}, request {RequestId}. Usage recorded with zero cost.", usageEvent.ModelId, usageEvent.RequestId);
-            return new RecordUsageResult(true, usageEvent.RequestId, MoneyAmount.Usd(0), null);
+            await repository.RecordUsageWithTransactionAsync(activity, null, null, ct).ConfigureAwait(false);
+            return new RecordUsageResult(true, usageEvent.RequestId, cost, null);
         }
 
-        var cost = usageCostCalculator.Calculate(usageEvent.Usage, model.Price);
-        var record = await repository.AddUsageAsync(new UsageRecord(
+        var usage = new UsageRecord(
             usageEvent.RequestId,
             usageEvent.UserId,
             usageEvent.ApiKeyId,
             usageEvent.ModelId,
-            model.PriceVersion,
+            priceVersion,
             usageEvent.RouterNodeId,
             usageEvent.Usage,
             cost,
             usageEvent.Status,
             nowUtc,
             usageEvent.ProviderName,
-            usageEvent.ProviderAccount), ct).ConfigureAwait(false);
+            usageEvent.ProviderAccount);
 
-        await repository.AddLedgerEntryAsync(new LedgerEntry(
+        var ledgerEntry = new LedgerEntry(
             Guid.NewGuid().ToString("N"),
             usageEvent.UserId,
             LedgerEntryType.UsageCharge,
-            MoneyAmount.Usd(-record.Cost.Amount),
+            MoneyAmount.Usd(-cost.Amount),
             $"usage:{usageEvent.RequestId}",
             $"Usage charge for {usageEvent.ModelId}",
-            nowUtc), ct).ConfigureAwait(false);
+            nowUtc);
 
-        return new RecordUsageResult(true, record.RequestId, record.Cost, null);
+        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry, ct).ConfigureAwait(false);
+
+        return new RecordUsageResult(true, usage.RequestId, usage.Cost, null);
     }
 
     public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default) =>
@@ -175,40 +191,14 @@ public sealed class BillingApplicationService(
 
     public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(string? afterCursor = null, CancellationToken ct = default)
     {
-        var pageSize = paginationOptions.Value.EffectivePageSize;
-        DateTimeOffset? afterCreatedAtUtc = null;
-        string? afterId = null;
-
-        if (!string.IsNullOrEmpty(afterCursor))
-        {
-            var parts = afterCursor.Split('|', 2);
-            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
-            {
-                afterCreatedAtUtc = parsedDate;
-                afterId = parts[1];
-            }
-        }
-
-        return await repository.ListAnomaliesAsync(pageSize, afterCreatedAtUtc, afterId, ct).ConfigureAwait(false);
+        ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterId);
+        return await repository.ListAnomaliesAsync(paginationOptions.Value.EffectivePageSize, afterCreatedAtUtc, afterId, ct).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(string? userId = null, string? afterCursor = null, CancellationToken ct = default)
     {
-        var pageSize = paginationOptions.Value.EffectivePageSize;
-        DateTimeOffset? afterCreatedAtUtc = null;
-        string? afterRequestId = null;
-
-        if (!string.IsNullOrEmpty(afterCursor))
-        {
-            var parts = afterCursor.Split('|', 2);
-            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
-            {
-                afterCreatedAtUtc = parsedDate;
-                afterRequestId = parts[1];
-            }
-        }
-
-        return await repository.ListUsageAsync(pageSize, afterCreatedAtUtc, afterRequestId, userId, ct).ConfigureAwait(false);
+        ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterRequestId);
+        return await repository.ListUsageAsync(paginationOptions.Value.EffectivePageSize, afterCreatedAtUtc, afterRequestId, userId, ct).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
@@ -225,19 +215,7 @@ public sealed class BillingApplicationService(
             return (Array.Empty<ActivityByTokenRecord>(), false);
 
         var limit = pageSize ?? paginationOptions.Value.EffectivePageSize;
-        
-        DateTimeOffset? afterCreatedAtUtc = null;
-        string? afterRequestId = null;
-
-        if (!string.IsNullOrEmpty(afterCursor))
-        {
-            var parts = afterCursor.Split('|', 2);
-            if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
-            {
-                afterCreatedAtUtc = parsedDate;
-                afterRequestId = parts[1];
-            }
-        }
+        ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterRequestId);
 
         return await repository.ListActivityByTokenAsync(
             apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, ct).ConfigureAwait(false);
@@ -278,7 +256,7 @@ public sealed class BillingApplicationService(
         var displayName = Preconditions.RequireValue(tag.DisplayName, nameof(tag.DisplayName));
         var color = string.IsNullOrWhiteSpace(tag.Color) ? null : tag.Color.Trim();
 
-        if (!TagIdPattern.IsMatch(id))
+        if (!TagIdRegex().IsMatch(id))
             throw new ArgumentException("Tag ID must be alphanumeric with dashes, underscores, dots or slashes.", nameof(tag.Id));
 
         if (id.Length > 50)
@@ -287,7 +265,7 @@ public sealed class BillingApplicationService(
         if (displayName.Length > 100)
             throw new ArgumentException("Tag display name cannot be longer than 100 characters.", nameof(tag.DisplayName));
 
-        if (color is not null && !HexColorPattern.IsMatch(color))
+        if (color is not null && !HexColorRegex().IsMatch(color))
             throw new ArgumentException("Tag color must be a hex color starting with #.", nameof(tag.Color));
 
         return repository.UpsertTagAsync(tag with { Id = id, DisplayName = displayName, Color = color }, ct);
@@ -310,6 +288,25 @@ public sealed class BillingApplicationService(
         await repository.AddAnomalyAsync(new BillingAnomaly(Guid.NewGuid().ToString("N"), requestId, type, message, nowUtc), ct).ConfigureAwait(false);
     }
 
-    private static readonly Regex TagIdPattern = new(@"^[a-zA-Z0-9_\-./]+$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
-    private static readonly Regex HexColorPattern = new(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static void ParseCursor(string? cursor, out DateTimeOffset? date, out string? id)
+    {
+        date = null;
+        id = null;
+        
+        if (string.IsNullOrEmpty(cursor)) 
+            return;
+
+        var parts = cursor.Split('|', 2);
+        if (parts.Length == 2 && DateTimeOffset.TryParse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind, out var parsedDate))
+        {
+            date = parsedDate;
+            id = parts[1];
+        }
+    }
+
+    [GeneratedRegex(@"^[a-zA-Z0-9_\-./]+$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex TagIdRegex();
+
+    [GeneratedRegex(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex HexColorRegex();
 }

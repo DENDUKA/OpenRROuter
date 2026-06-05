@@ -130,7 +130,34 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.Email,
             u.Role,
             u.Status,
-            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds))).ToList();
+            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
+            u.HasDisplayName ? u.DisplayName : null,
+            u.MaxApiKeys)).ToList();
+    }
+
+    public async Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetUserAsync(new GetUserRequest { UserId = userId }, cancellationToken: cancellationToken);
+        if (response.User == null) return null;
+        var u = response.User;
+        return new UserInfo(
+            u.Id, u.Email, u.Role, u.Status,
+            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
+            u.HasDisplayName ? u.DisplayName : null,
+            u.MaxApiKeys);
+    }
+
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, CancellationToken cancellationToken = default)
+    {
+        var request = new UpdateUserRequest
+        {
+            UserId = userId,
+            MaxApiKeys = maxApiKeys
+        };
+        if (displayName != null) request.DisplayName = displayName;
+
+        var response = await client.UpdateUserAsync(request, cancellationToken: cancellationToken);
+        if (!response.Succeeded) throw new AuthException(response.ErrorCode);
     }
 
     public async Task<(string RawToken, string Email, string Role)> CreateInviteAsync(string email, string role, string adminId, CancellationToken cancellationToken = default)

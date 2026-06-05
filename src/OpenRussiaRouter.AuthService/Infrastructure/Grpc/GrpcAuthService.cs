@@ -265,7 +265,7 @@ public sealed class GrpcAuthService(
         ListApiKeysRequest request,
         ServerCallContext context)
     {
-        var keys = await accounts.ListApiKeysAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var keys = await accounts.ListApiKeysAsync(request.UserId, request.IncludeDeleted, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         return new ListApiKeysResponse
         {
             Keys =
@@ -278,7 +278,8 @@ public sealed class GrpcAuthService(
                     CreatedAtUnixTimeSeconds = k.CreatedAtUtc.ToUnixTimeSeconds(),
                     LastUsedAtUnixTimeSeconds = k.LastUsedAtUtc?.ToUnixTimeSeconds() ?? 0,
                     RevokedAtUnixTimeSeconds = k.RevokedAtUtc?.ToUnixTimeSeconds() ?? 0,
-                    IsActive = k.IsActive
+                    IsActive = k.IsActive,
+                    IsDeleted = k.IsDeleted
                 })
             }
         };
@@ -315,7 +316,9 @@ public sealed class GrpcAuthService(
                     Email = u.Email,
                     Role = u.Role.ToString(),
                     Status = u.Status.ToString(),
-                    CreatedAtUnixTimeSeconds = u.CreatedAtUtc.ToUnixTimeSeconds()
+                    CreatedAtUnixTimeSeconds = u.CreatedAtUtc.ToUnixTimeSeconds(),
+                    DisplayName = u.DisplayName ?? "",
+                    MaxApiKeys = u.MaxApiKeys
                 })
             }
         };
@@ -349,14 +352,50 @@ public sealed class GrpcAuthService(
     {
         var keys = await repository.ListAllActiveApiKeysRawAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         var response = new ListAllActiveApiKeysRawResponse();
-        response.Keys.AddRange(keys.Select(k => new ActiveApiKeyRaw
-        {
-            ApiKeyId = k.ApiKeyId,
-            RawKey = k.RawKey,
-            UserId = k.UserId,
-            Name = k.Name
-        }));
+        response.Keys.AddRange(keys.Select(k => new ActiveApiKeyRaw { ApiKeyId = k.ApiKeyId, RawKey = k.RawKey, UserId = k.UserId, Name = k.Name }));
         return response;
+    }
+
+    public override async Task<GetUserResponse> GetUser(GetUserRequest request, ServerCallContext context)
+    {
+        var user = await repository.GetUserAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        if (user == null) return new GetUserResponse();
+
+        return new GetUserResponse
+        {
+            User = new UserInfo
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Role = user.Role.ToString(),
+                Status = user.Status.ToString(),
+                CreatedAtUnixTimeSeconds = user.CreatedAtUtc.ToUnixTimeSeconds(),
+                DisplayName = user.DisplayName ?? "",
+                MaxApiKeys = user.MaxApiKeys
+            }
+        };
+    }
+
+    public override async Task<UpdateUserResponse> UpdateUser(UpdateUserRequest request, ServerCallContext context)
+    {
+        try
+        {
+            await accounts.UpdateUserAsync(
+                request.UserId,
+                request.HasDisplayName ? request.DisplayName : null,
+                request.MaxApiKeys,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new UpdateUserResponse { Succeeded = true };
+        }
+        catch (InvalidOperationException)
+        {
+            return new UpdateUserResponse { Succeeded = false, ErrorCode = ErrorCodes.ValidationFailed };
+        }
+        catch (ArgumentException)
+        {
+            return new UpdateUserResponse { Succeeded = false, ErrorCode = ErrorCodes.ValidationFailed };
+        }
     }
 
     private static UserRole ParseRole(string role)

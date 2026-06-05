@@ -170,8 +170,13 @@ public sealed class AuthAccountApplicationServiceTests
         public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys.SingleOrDefault(key => key.Id == apiKeyId));
 
-        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default) =>
-            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId && !key.IsDeleted).ToArray(), false));
+        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, bool includeDeleted = false, CancellationToken ct = default) =>
+            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId && (includeDeleted || !key.IsDeleted)).ToArray(), false));
+
+        public Task UpdateUserAsync(UserAccount user, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task<int> CountApiKeysAsync(string userId, CancellationToken ct = default) => 
+            Task.FromResult(ApiKeys.Count(key => key.UserId == userId && !key.IsDeleted));
 
         public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
         {

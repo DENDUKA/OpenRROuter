@@ -16,7 +16,9 @@ public static class AuthPersistenceMapper
             Role = user.Role,
             Status = user.Status,
             PasswordHash = user.PasswordHash,
-            CreatedAtUtc = user.CreatedAtUtc
+            CreatedAtUtc = user.CreatedAtUtc,
+            DisplayName = user.DisplayName,
+            MaxApiKeys = user.MaxApiKeys
         };
     }
 
@@ -29,7 +31,9 @@ public static class AuthPersistenceMapper
             entity.Role,
             entity.PasswordHash,
             entity.Status,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            entity.DisplayName,
+            entity.MaxApiKeys);
     }
 
     public static InviteEntity ToEntity(Invite invite)

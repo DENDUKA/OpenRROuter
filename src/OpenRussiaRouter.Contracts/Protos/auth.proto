@@ -22,6 +22,8 @@ service AuthService {
   rpc GetFirstActiveApiKeyRaw (GetFirstActiveApiKeyRawRequest) returns (GetFirstActiveApiKeyRawResponse);
   rpc LoginOrRegisterWithGoogle (LoginWithGoogleRequest) returns (LoginResponse);
   rpc ListAllActiveApiKeysRaw (ListAllActiveApiKeysRawRequest) returns (ListAllActiveApiKeysRawResponse);
+  rpc GetUser (GetUserRequest) returns (GetUserResponse);
+  rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -146,6 +148,7 @@ message DeleteApiKeyResponse {
 
 message ListApiKeysRequest {
   string user_id = 1;
+  bool include_deleted = 2;
 }
 
 message ListApiKeysResponse {
@@ -160,6 +163,7 @@ message ApiKeyInfo {
   int64 last_used_at_unix_time_seconds = 5;
   int64 revoked_at_unix_time_seconds = 6;
   bool is_active = 7;
+  bool is_deleted = 8;
 }
 
 message RenameApiKeyRequest {
@@ -186,6 +190,8 @@ message UserInfo {
   string role = 3;
   string status = 4;
   int64 created_at_unix_time_seconds = 5;
+  optional string display_name = 6;
+  int32 max_api_keys = 7;
 }
 
 message ListActiveApiKeyHashesRequest {}
@@ -223,4 +229,23 @@ message ActiveApiKeyRaw {
 
 message ListAllActiveApiKeysRawResponse {
   repeated ActiveApiKeyRaw keys = 1;
+}
+
+message GetUserRequest {
+  string user_id = 1;
+}
+
+message GetUserResponse {
+  UserInfo user = 1;
+}
+
+message UpdateUserRequest {
+  string user_id = 1;
+  optional string display_name = 2;
+  int32 max_api_keys = 3;
+}
+
+message UpdateUserResponse {
+  bool succeeded = 1;
+  string error_code = 2;
 }

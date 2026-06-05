@@ -122,6 +122,30 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         return (items, hasMore);
     }
 
+    public async Task UpdateUserAsync(UserAccount user, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.users
+            set display_name = @DisplayName,
+                max_api_keys = @MaxApiKeys
+            where id = @Id;
+            """,
+            ToParameters(user),
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<int> CountApiKeysAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "select count(*) from auth.api_keys where user_id = @UserId and deleted_at_utc is null;",
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
     public async Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(apiKey);
@@ -148,7 +172,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 : null;
     }
 
-    public async Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, bool includeDeleted = false, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
@@ -162,8 +186,10 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             parameters.Add("AfterApiKeyId", afterApiKeyId);
         }
 
+        var deletedCondition = includeDeleted ? "" : " and deleted_at_utc is null ";
+
         var items = (await connection.QueryAsync<ApiKeyEntity>(new CommandDefinition(
-                ApiKeySelectSql + " where user_id = @UserId and deleted_at_utc is null " + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
+                ApiKeySelectSql + " where user_id = @UserId" + deletedCondition + afterCondition + " order by created_at_utc desc, id desc limit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(AuthPersistenceMapper.ToDomain)
@@ -465,7 +491,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         Role = user.Role.ToString(),
         Status = user.Status.ToString(),
         user.PasswordHash,
-        user.CreatedAtUtc
+        user.CreatedAtUtc,
+        user.DisplayName,
+        user.MaxApiKeys
     };
 
     private static object ToParameters(Invite invite) => new
@@ -500,7 +528,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             role as Role,
             status as Status,
             password_hash as PasswordHash,
-            created_at_utc as CreatedAtUtc
+            created_at_utc as CreatedAtUtc,
+            display_name as DisplayName,
+            max_api_keys as MaxApiKeys
         from auth.users
         """;
 

@@ -34,7 +34,7 @@ public class EmailTemplatesTests
 public class EmailBroadcastBuildMessagesTests
 {
     private static UserInfo User(string id, string email) =>
-        new(id, email, "User", "Active", DateTimeOffset.UtcNow);
+        new(id, email, "User", "Active", DateTimeOffset.UtcNow, null, 10);
 
     [Fact]
     public void BuildMessages_creates_one_message_per_user_with_same_subject_and_body()

@@ -64,6 +64,27 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         return Task.FromResult(((IReadOnlyCollection<UserAccount>)items, hasMore));
     }
 
+    public Task UpdateUserAsync(UserAccount user, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(user);
+        lock (_gate)
+        {
+            if (_users.ContainsKey(user.Id))
+            {
+                _users[user.Id] = user;
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<int> CountApiKeysAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            return Task.FromResult(_apiKeys.Count(k => k.UserId == userId && !k.IsDeleted));
+        }
+    }
+
     public Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default)
     {
         lock (_gate) { _apiKeys.Add(apiKey); }
@@ -75,26 +96,30 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate) { return Task.FromResult(_apiKeys.SingleOrDefault(k => k.Id == apiKeyId)); }
     }
 
-    public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, bool includeDeleted = false, CancellationToken ct = default)
     {
-        var query = _apiKeys
-            .Where(k => k.UserId == userId && !k.IsDeleted)
-            .OrderByDescending(k => k.CreatedAtUtc)
-            .AsEnumerable();
-            
-        if (afterApiKeyId != null)
+        lock (_gate)
         {
-            var key = _apiKeys.FirstOrDefault(k => k.Id == afterApiKeyId);
-            if (key != null)
-            {
-                query = query.Where(k => k.CreatedAtUtc < key.CreatedAtUtc || (k.CreatedAtUtc == key.CreatedAtUtc && string.Compare(k.Id, key.Id, StringComparison.Ordinal) < 0));
-            }
-        }
+            var query = _apiKeys
+                .Where(k => k.UserId == userId && (includeDeleted || !k.IsDeleted))
+                .OrderByDescending(k => k.CreatedAtUtc)
+                .ThenByDescending(k => k.Id)
+                .AsEnumerable();
             
-        var items = query.Take(limit + 1).ToList();
-        var hasMore = items.Count > limit;
-        if (hasMore) items = items.Take(limit).ToList();
-        return Task.FromResult(((IReadOnlyCollection<ApiKey>)items, hasMore));
+            if (afterApiKeyId != null)
+            {
+                var key = _apiKeys.FirstOrDefault(k => k.Id == afterApiKeyId);
+                if (key != null)
+                {
+                    query = query.Where(k => k.CreatedAtUtc < key.CreatedAtUtc || (k.CreatedAtUtc == key.CreatedAtUtc && string.Compare(k.Id, key.Id, StringComparison.Ordinal) < 0));
+                }
+            }
+                
+            var items = query.Take(limit + 1).ToList();
+            var hasMore = items.Count > limit;
+            if (hasMore) items = items.Take(limit).ToList();
+            return Task.FromResult(((IReadOnlyCollection<ApiKey>)items, hasMore));
+        }
     }
 
     public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)

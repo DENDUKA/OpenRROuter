@@ -1,0 +1,48 @@
+@page "/admin/users/{userId}/edit"
+@model Admin.UserEditModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Edit User - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Edit User</h2>
+    <p>Update user details and limits.</p>
+</div>
+
+<div class="adm-btn-row">
+    <a class="btn btn-secondary" href="/admin/users">Back to users</a>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (Model.TargetUser is { } user)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">
+            <span>@user.Email</span>
+            <span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">@user.Status</span>
+        </div>
+        <div class="adm-card-body">
+            <form method="post">
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.DisplayName" class="form-label">Display Name</label>
+                        <input asp-for="Form.DisplayName" class="form-control" />
+                        <span asp-validation-for="Form.DisplayName" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.MaxApiKeys" class="form-label">Max API Keys</label>
+                        <input asp-for="Form.MaxApiKeys" class="form-control" type="number" min="0" />
+                        <span asp-validation-for="Form.MaxApiKeys" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

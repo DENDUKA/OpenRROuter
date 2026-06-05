@@ -76,16 +76,17 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new CreateApiKeyResponse(response.ApiKeyId, response.RawKey, response.Name);
     }
 
-    public async Task<IReadOnlyList<ApiKeyInfo>> ListApiKeysAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ApiKeyInfo>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
-        var response = await client.ListApiKeysAsync(new ListApiKeysRequest { UserId = userId }, cancellationToken: cancellationToken);
+        var response = await client.ListApiKeysAsync(new ListApiKeysRequest { UserId = userId, IncludeDeleted = includeDeleted }, cancellationToken: cancellationToken);
         return response.Keys.Select(k => new ApiKeyInfo(
             k.Id,
             k.Name,
             k.Prefix,
             DateTimeOffset.FromUnixTimeSeconds(k.CreatedAtUnixTimeSeconds),
             k.LastUsedAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.LastUsedAtUnixTimeSeconds) : null,
-            k.IsActive)).ToList();
+            k.IsActive,
+            k.IsDeleted)).ToList();
     }
 
     public async Task RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken cancellationToken = default)
@@ -130,7 +131,34 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.Email,
             u.Role,
             u.Status,
-            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds))).ToList();
+            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
+            u.HasDisplayName ? u.DisplayName : null,
+            u.MaxApiKeys)).ToList();
+    }
+
+    public async Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetUserAsync(new GetUserRequest { UserId = userId }, cancellationToken: cancellationToken);
+        if (response.User == null) return null;
+        var u = response.User;
+        return new UserInfo(
+            u.Id, u.Email, u.Role, u.Status,
+            DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
+            u.HasDisplayName ? u.DisplayName : null,
+            u.MaxApiKeys);
+    }
+
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, CancellationToken cancellationToken = default)
+    {
+        var request = new UpdateUserRequest
+        {
+            UserId = userId,
+            MaxApiKeys = maxApiKeys
+        };
+        if (displayName != null) request.DisplayName = displayName;
+
+        var response = await client.UpdateUserAsync(request, cancellationToken: cancellationToken);
+        if (!response.Succeeded) throw new AuthException(response.ErrorCode);
     }
 
     public async Task<(string RawToken, string Email, string Role)> CreateInviteAsync(string email, string role, string adminId, CancellationToken cancellationToken = default)

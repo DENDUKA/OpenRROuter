@@ -139,10 +139,27 @@ public sealed class AuthAccountApplicationService(
         return ResendVerificationResult.Success(user.Email, code);
     }
 
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, CancellationToken ct = default)
+    {
+        var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
+        if (user == null)
+            throw new InvalidOperationException("User not found.");
+
+        user.UpdateDetails(displayName, maxApiKeys);
+        await repository.UpdateUserAsync(user, ct).ConfigureAwait(false);
+    }
+
     public async Task<CreatedApiKey> CreateApiKeyAsync(string userId, string name, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
-        if (await repository.GetUserAsync(userId, ct).ConfigureAwait(false) is not { Status: UserStatus.Active })
+        var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
+        if (user is not { Status: UserStatus.Active })
             throw new InvalidOperationException("User is not active.");
+
+        var currentKeysCount = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
+        if (currentKeysCount >= user.MaxApiKeys)
+        {
+            throw new InvalidOperationException($"API key limit reached. Maximum allowed: {user.MaxApiKeys}.");
+        }
 
         var created = apiKeyFactory.Create(userId, name, nowUtc);
         await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
@@ -185,12 +202,13 @@ public sealed class AuthAccountApplicationService(
         }
     }
 
-    public async Task<IReadOnlyCollection<ApiKey>> ListApiKeysAsync(string userId, CancellationToken ct = default)
+    public async Task<IReadOnlyCollection<ApiKey>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken ct = default)
     {
         return (await repository.ListApiKeysAsync(
             Preconditions.RequireValue(userId, nameof(userId)),
             DefaultPageSize,
             null,
+            includeDeleted,
             ct).ConfigureAwait(false)).Items;
     }
 

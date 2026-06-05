@@ -12,6 +12,10 @@ public sealed class UserAccountEntity
 
     public UserStatus Status { get; set; }
 
+    public string? DisplayName { get; set; }
+
+    public int MaxApiKeys { get; set; } = 10;
+
     public string? PasswordHash { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }

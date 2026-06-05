@@ -5,7 +5,23 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "1"
-    # argocd-image-updater removed
+    # Auto-update to the latest GHCR image WITHOUT committing to git.
+    # write-back-method: argocd → image-updater patches the live Application's
+    # .spec.source.kustomize.images directly (no .argocd-source file, no commits).
+    argocd-image-updater.argoproj.io/image-list: >-
+      api-gateway=ghcr.io/denduka/api-gateway:dev-latest,
+      auth-service=ghcr.io/denduka/auth-service:dev-latest,
+      billing-service=ghcr.io/denduka/billing-service:dev-latest,
+      control-plane=ghcr.io/denduka/control-plane:dev-latest,
+      webapp=ghcr.io/denduka/webapp:dev-latest,
+      f9router=ghcr.io/inc64/f9router:dev-latest
+    argocd-image-updater.argoproj.io/api-gateway.update-strategy: digest
+    argocd-image-updater.argoproj.io/auth-service.update-strategy: digest
+    argocd-image-updater.argoproj.io/billing-service.update-strategy: digest
+    argocd-image-updater.argoproj.io/control-plane.update-strategy: digest
+    argocd-image-updater.argoproj.io/webapp.update-strategy: digest
+    argocd-image-updater.argoproj.io/f9router.update-strategy: digest
+    argocd-image-updater.argoproj.io/write-back-method: argocd
 
 spec:
   project: default

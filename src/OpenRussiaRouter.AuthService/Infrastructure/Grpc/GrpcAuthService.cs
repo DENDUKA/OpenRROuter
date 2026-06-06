@@ -229,21 +229,38 @@ public sealed class GrpcAuthService(
         }
     }
 
-    public override async Task<RevokeApiKeyResponse> RevokeApiKey(
-        RevokeApiKeyRequest request,
+    public override async Task<DisableApiKeyResponse> DisableApiKey(
+        DisableApiKeyRequest request,
         ServerCallContext context)
     {
         try
         {
-            await accounts.RevokeApiKeyAsync(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-            return new RevokeApiKeyResponse { IsRevoked = true };
+            await accounts.DisableApiKeyAsync(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DisableApiKeyResponse { IsDisabled = true };
         }
-        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
+        catch (Exception ex)
         {
-            logger.LogWarning(ex, "RevokeApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
-            return new RevokeApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
+            logger.LogWarning(ex, "DisableApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new DisableApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
+
+    public override async Task<EnableApiKeyResponse> EnableApiKey(
+        EnableApiKeyRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await accounts.EnableApiKeyAsync(request.UserId, request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new EnableApiKeyResponse { IsEnabled = true };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "EnableApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new EnableApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
 
     public override async Task<DeleteApiKeyResponse> DeleteApiKey(
         DeleteApiKeyRequest request,
@@ -277,7 +294,7 @@ public sealed class GrpcAuthService(
                     Prefix = k.Prefix,
                     CreatedAtUnixTimeSeconds = k.CreatedAtUtc.ToUnixTimeSeconds(),
                     LastUsedAtUnixTimeSeconds = k.LastUsedAtUtc?.ToUnixTimeSeconds() ?? 0,
-                    RevokedAtUnixTimeSeconds = k.RevokedAtUtc?.ToUnixTimeSeconds() ?? 0,
+                    DisabledAtUnixTimeSeconds = k.DisabledAtUtc?.ToUnixTimeSeconds() ?? 0,
                     IsActive = k.IsActive,
                     IsDeleted = k.IsDeleted
                 })

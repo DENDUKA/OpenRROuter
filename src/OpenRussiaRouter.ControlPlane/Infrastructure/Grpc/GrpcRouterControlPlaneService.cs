@@ -294,15 +294,15 @@ public sealed class GrpcRouterControlPlaneService(
         return new PushUserIntegrationKeyResponse { PushedCount = pushedCount };
     }
 
-    public override async Task<RevokeUserIntegrationKeyResponse> RevokeUserIntegrationKey(
-        RevokeUserIntegrationKeyRequest request,
+    public override async Task<UpdateUserIntegrationKeyStatusResponse> UpdateUserIntegrationKeyStatus(
+        UpdateUserIntegrationKeyStatusRequest request,
         ServerCallContext context)
     {
         if (string.IsNullOrWhiteSpace(request.ApiKeyId))
-            return new RevokeUserIntegrationKeyResponse { RevokedCount = 0 };
+            return new UpdateUserIntegrationKeyStatusResponse { UpdatedCount = 0 };
 
         var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-        var revokedCount = 0;
+        var updatedCount = 0;
 
         foreach (var (nodeId, routerKeyId) in mappings)
         {
@@ -312,20 +312,18 @@ public sealed class GrpcRouterControlPlaneService(
             try
             {
                 await providerClient.UpdateIntegrationKeyStatusAsync(
-                    node, routerKeyId, isActive: false, context?.CancellationToken ?? CancellationToken.None)
+                    node, routerKeyId, request.IsActive, context?.CancellationToken ?? CancellationToken.None)
                     .ConfigureAwait(false);
-                revokedCount++;
+                updatedCount++;
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось отозвать integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
+                logger.LogWarning(ex, "Не удалось обновить статус integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
                     nodeId, routerKeyId);
             }
         }
 
-        // Маппинг НЕ удаляем: ключ на ноде лишь деактивирован, а связь (api_key_id → node, router_key_id)
-        // нужна для последующего полного удаления (DeleteUserIntegrationKey).
-        return new RevokeUserIntegrationKeyResponse { RevokedCount = revokedCount };
+        return new UpdateUserIntegrationKeyStatusResponse { UpdatedCount = updatedCount };
     }
 
     public override async Task<DeleteUserIntegrationKeyResponse> DeleteUserIntegrationKey(

@@ -153,9 +153,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.api_keys
-                (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, revoked_at_utc)
+                (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, disabled_at_utc)
             values
-                (@Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @RevokedAtUtc);
+                (@Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @DisabledAtUtc);
             """,
             ToParameters(apiKey),
             cancellationToken: ct)).ConfigureAwait(false);
@@ -209,24 +209,39 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             set name = @Name
             where id = @ApiKeyId
               and user_id = @UserId
-              and revoked_at_utc is null;
+              and disabled_at_utc is null;
             """,
             new { UserId = userId, ApiKeyId = apiKeyId, Name = name },
             cancellationToken: ct)).ConfigureAwait(false) == 1;
     }
 
-    public async Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
+    public async Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         return await connection.ExecuteAsync(new CommandDefinition(
             """
             update auth.api_keys
-            set revoked_at_utc = coalesce(revoked_at_utc, @RevokedAtUtc)
+            set disabled_at_utc = coalesce(disabled_at_utc, @DisabledAtUtc)
             where id = @ApiKeyId
               and user_id = @UserId
-              and revoked_at_utc is null;
+              and disabled_at_utc is null;
             """,
-            new { UserId = userId, ApiKeyId = apiKeyId, RevokedAtUtc = revokedAtUtc },
+            new { UserId = userId, ApiKeyId = apiKeyId, DisabledAtUtc = disabledAtUtc },
+            cancellationToken: ct)).ConfigureAwait(false) == 1;
+    }
+
+    public async Task<bool> EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.api_keys
+            set disabled_at_utc = null
+            where id = @ApiKeyId
+              and user_id = @UserId
+              and disabled_at_utc is not null;
+            """,
+            new { UserId = userId, ApiKeyId = apiKeyId },
             cancellationToken: ct)).ConfigureAwait(false) == 1;
     }
 
@@ -239,7 +254,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             set deleted_at_utc = @DeletedAtUtc
             where id = @ApiKeyId
               and user_id = @UserId
-              and revoked_at_utc is not null
+              and disabled_at_utc is not null
               and deleted_at_utc is null;
             """,
             new { UserId = userId, ApiKeyId = apiKeyId, DeletedAtUtc = deletedAtUtc },
@@ -253,7 +268,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             """
             select prefix as Prefix, secret_hash as SecretHash
             from auth.api_keys
-            where revoked_at_utc is null
+            where disabled_at_utc is null
             limit 10000;
             """,
             cancellationToken: ct)).ConfigureAwait(false)).ToArray();
@@ -273,11 +288,11 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 ak.raw_key as RawKey,
                 ak.created_at_utc as CreatedAtUtc,
                 ak.last_used_at_utc as LastUsedAtUtc,
-                ak.revoked_at_utc as RevokedAtUtc
+                ak.disabled_at_utc as DisabledAtUtc
             from auth.api_keys ak
             inner join auth.users u on u.id = ak.user_id
             where ak.secret_hash = @SecretHash
-              and ak.revoked_at_utc is null
+              and ak.disabled_at_utc is null
               and u.status = 'Active'
             limit 1;
             """,
@@ -309,7 +324,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             select raw_key
             from auth.api_keys
             where user_id = @UserId
-              and revoked_at_utc is null
+              and disabled_at_utc is null
               and raw_key is not null
             order by created_at_utc desc
             limit 1;
@@ -325,7 +340,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             """
             select id as ApiKeyId, raw_key as RawKey, user_id as UserId, name as Name
             from auth.api_keys
-            where revoked_at_utc is null
+            where disabled_at_utc is null
               and raw_key is not null;
             """,
             cancellationToken: ct)).ConfigureAwait(false)).ToArray();
@@ -518,7 +533,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         apiKey.RawKey,
         apiKey.CreatedAtUtc,
         apiKey.LastUsedAtUtc,
-        apiKey.RevokedAtUtc
+        apiKey.DisabledAtUtc
     };
 
     private const string UserSelectSql = """
@@ -557,7 +572,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             raw_key as RawKey,
             created_at_utc as CreatedAtUtc,
             last_used_at_utc as LastUsedAtUtc,
-            revoked_at_utc as RevokedAtUtc,
+            disabled_at_utc as DisabledAtUtc,
             deleted_at_utc as DeletedAtUtc
         from auth.api_keys
         """;

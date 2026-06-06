@@ -14,5 +14,6 @@ public sealed record ApiKeySummary(
     string Prefix,
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? LastUsedAtUtc,
-    DateTimeOffset? RevokedAtUtc);
+    DateTimeOffset? DisabledAtUtc,
+    bool IsDeleted);
 

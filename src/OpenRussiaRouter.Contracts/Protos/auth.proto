@@ -13,7 +13,8 @@ service AuthService {
   rpc CreateInvite (CreateInviteRequest) returns (CreateInviteResponse);
   rpc CompleteInvite (CompleteInviteRequest) returns (CompleteInviteResponse);
   rpc CreateApiKey (CreateApiKeyRequest) returns (CreateApiKeyResponse);
-  rpc RevokeApiKey (RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+  rpc DisableApiKey (DisableApiKeyRequest) returns (DisableApiKeyResponse);
+  rpc EnableApiKey (EnableApiKeyRequest) returns (EnableApiKeyResponse);
   rpc DeleteApiKey (DeleteApiKeyRequest) returns (DeleteApiKeyResponse);
   rpc ListApiKeys (ListApiKeysRequest) returns (ListApiKeysResponse);
   rpc RenameApiKey (RenameApiKeyRequest) returns (RenameApiKeyResponse);
@@ -126,13 +127,23 @@ message CreateApiKeyResponse {
   string error_code = 7;
 }
 
-message RevokeApiKeyRequest {
+message DisableApiKeyRequest {
   string user_id = 1;
   string api_key_id = 2;
 }
 
-message RevokeApiKeyResponse {
-  bool is_revoked = 1;
+message DisableApiKeyResponse {
+  bool is_disabled = 1;
+  string error_code = 2;
+}
+
+message EnableApiKeyRequest {
+  string user_id = 1;
+  string api_key_id = 2;
+}
+
+message EnableApiKeyResponse {
+  bool is_enabled = 1;
   string error_code = 2;
 }
 
@@ -161,7 +172,7 @@ message ApiKeyInfo {
   string prefix = 3;
   int64 created_at_unix_time_seconds = 4;
   int64 last_used_at_unix_time_seconds = 5;
-  int64 revoked_at_unix_time_seconds = 6;
+  int64 disabled_at_unix_time_seconds = 6;
   bool is_active = 7;
   bool is_deleted = 8;
 }

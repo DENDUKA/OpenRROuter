@@ -114,35 +114,29 @@
                         <tr data-testid="key-row" data-key-name="@k.Name">
                             <td data-testid="key-name">@k.Name</td>
                             <td><code>@k.Prefix***</code></td>
-                            <td>@k.CreatedAt.ToLocalTime().ToString("g")</td>
-                            <td>@(k.LastUsed?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td>@k.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                            <td>@(k.LastUsedAtUtc?.ToLocalTime().ToString("g") ?? "Never")</td>
                             <td>
-                                <span class="badge @(k.IsActive ? "badge-success" : "badge-secondary")" data-testid="key-status">
-                                    @(k.IsActive ? "Active" : "Revoked")
+                                <span class="badge @(k.DisabledAtUtc == null ? "badge-success" : "badge-secondary")" data-testid="key-status">
+                                    @(k.DisabledAtUtc == null ? "Active" : "Disabled")
                                 </span>
                             </td>
-                            <td class="ws-actions-cell">
-                                @if (k.IsActive)
-                                {
-                                    <a class="btn-icon" title="Rename" aria-label="Rename" data-testid="btn-rename"
-                                       href="?action=rename&keyId=@k.Id">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                        </svg>
-                                    </a>
-                                    <form method="post" asp-page-handler="Revoke" style="display:inline">
-                                        <input type="hidden" name="keyId" value="@k.Id" />
-                                        <button type="submit" class="btn-icon btn-icon-danger" title="Revoke" aria-label="Revoke"
-                                                data-testid="btn-revoke"
-                                                onclick="return confirm('Revoke key &quot;@k.Name&quot;? This cannot be undone.')">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <polyline points="3 6 5 6 21 6"/>
-                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-                                            </svg>
-                                        </button>
-                                    </form>
-                                }
+                                <td>
+                                    <div class="d-flex gap-2">
+                                        @if (k.DisabledAtUtc == null)
+                                        {
+                                            <form method="post" asp-page-handler="DisableKey">
+                                                <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-warning">Disable</button>
+                                            </form>
+                                        }
+                                        else
+                                        {
+                                            <form method="post" asp-page-handler="EnableKey">
+                                                <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                                <button type="submit" class="btn btn-sm btn-outline-success">Enable</button>
+                                            </form>
+                                        }
                                 else
                                 {
                                     <form method="post" asp-page-handler="Delete" style="display:inline">

@@ -137,11 +137,12 @@ public sealed class ControlPlaneProvider(
         }, cancellationToken: cancellationToken);
     }
 
-    public async Task RevokeUserIntegrationKeyAsync(string apiKeyId, CancellationToken cancellationToken = default)
+    public async Task UpdateUserIntegrationKeyStatusAsync(string apiKeyId, bool isActive, CancellationToken cancellationToken = default)
     {
-        await client.RevokeUserIntegrationKeyAsync(new RevokeUserIntegrationKeyRequest
+        await client.UpdateUserIntegrationKeyStatusAsync(new UpdateUserIntegrationKeyStatusRequest
         {
-            ApiKeyId = apiKeyId
+            ApiKeyId = apiKeyId,
+            IsActive = isActive
         }, cancellationToken: cancellationToken);
     }
 

@@ -178,27 +178,34 @@ public sealed class AuthAccountApplicationService(
         }
     }
 
-    public async Task RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
+    public async Task DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
     {
-        if (!await repository.RevokeApiKeyAsync(
-                Preconditions.RequireValue(userId, nameof(userId)),
-                Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
-                revokedAtUtc,
-                ct).ConfigureAwait(false))
-        {
-            throw new KeyNotFoundException("API key was not found.");
-        }
+        Preconditions.RequireValue(userId, nameof(userId));
+        Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
+
+        await repository.DisableApiKeyAsync(userId, apiKeyId, disabledAtUtc, ct).ConfigureAwait(false);
+    }
+
+    public async Task EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        Preconditions.RequireValue(userId, nameof(userId));
+        Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
+
+        await repository.EnableApiKeyAsync(userId, apiKeyId, ct).ConfigureAwait(false);
     }
 
     public async Task DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)
     {
+        Preconditions.RequireValue(userId, nameof(userId));
+        Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
+
         if (!await repository.DeleteApiKeyAsync(
-                Preconditions.RequireValue(userId, nameof(userId)),
-                Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
+                userId,
+                apiKeyId,
                 deletedAtUtc,
                 ct).ConfigureAwait(false))
         {
-            throw new KeyNotFoundException("API key was not found or is not revoked.");
+            throw new KeyNotFoundException("API key was not found or is not disabled.");
         }
     }
 
@@ -238,3 +245,5 @@ public sealed record ResendVerificationResult(bool Succeeded, string? Email, str
 
     public static ResendVerificationResult Failed(string errorCode) => new(false, null, null, errorCode);
 }
+
+

@@ -28,7 +28,9 @@ public interface IAuthRepository
 
     Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default);
 
-    Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default);
+    Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default);
+
+    Task<bool> EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default);
 
     Task<bool> DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default);
 

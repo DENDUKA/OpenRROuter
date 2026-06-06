@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -13,7 +15,7 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
     private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
     private readonly ILogger<ApiKeysModel> _logger = logger;
 
-    public IReadOnlyList<ApiKeyInfo> Keys { get; set; } = [];
+    public IReadOnlyList<ApiKeySummary> Keys { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? Action => Request.Query["action"];
     public string? ActionKeyId => Request.Query["keyId"];
@@ -59,6 +61,13 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
             }
             return RedirectToPage();
         }
+        catch (AuthException ex) when (ex.ErrorCode == "validation_failed")
+        {
+            _logger.LogWarning(ex, "Failed to create API key due to validation/limit. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
+            ErrorMessage = "Cannot create API key. Limit reached or name is invalid.";
+            await OnGetAsync();
+            return Page();
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create API key. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
@@ -90,22 +99,40 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
         }
     }
 
-    public async Task<IActionResult> OnPostRevokeAsync(string keyId)
+    public async Task<IActionResult> OnPostDisableKeyAsync(string keyId)
     {
         try
         {
-            await _authClient.RevokeApiKeyAsync(User.GetUserId(), keyId);
-            _ = _controlPlaneClient.RevokeUserIntegrationKeyAsync(keyId);
+            await _authClient.DisableApiKeyAsync(User.GetUserId(), keyId);
+            _ = _controlPlaneClient.UpdateUserIntegrationKeyStatusAsync(keyId, false);
             return RedirectToPage();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to revoke API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to revoke key.";
+            _logger.LogError(ex, "Failed to disable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
+            ErrorMessage = "Failed to disable key.";
             await OnGetAsync();
             return Page();
         }
     }
+
+    public async Task<IActionResult> OnPostEnableKeyAsync(string keyId)
+    {
+        try
+        {
+            await _authClient.EnableApiKeyAsync(User.GetUserId(), keyId);
+            _ = _controlPlaneClient.UpdateUserIntegrationKeyStatusAsync(keyId, true);
+            return RedirectToPage();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to enable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
+            ErrorMessage = "Failed to enable key.";
+            await OnGetAsync();
+            return Page();
+        }
+    }
+
 
     public async Task<IActionResult> OnPostDeleteAsync(string keyId)
     {
@@ -113,7 +140,7 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
         {
             await _authClient.DeleteApiKeyAsync(User.GetUserId(), keyId);
             // Physically remove the key from router nodes (best-effort; the key is already
-            // revoked + soft-deleted on our side, so a node failure must not block the user).
+            // disabled + soft-deleted on our side, so a node failure must not block the user).
             _ = _controlPlaneClient.DeleteUserIntegrationKeyAsync(keyId);
             return RedirectToPage();
         }

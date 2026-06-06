@@ -16,7 +16,7 @@ service RouterControlPlane {
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
-  rpc RevokeUserIntegrationKey (RevokeUserIntegrationKeyRequest) returns (RevokeUserIntegrationKeyResponse);
+  rpc UpdateUserIntegrationKeyStatus (UpdateUserIntegrationKeyStatusRequest) returns (UpdateUserIntegrationKeyStatusResponse);
   rpc DeleteUserIntegrationKey (DeleteUserIntegrationKeyRequest) returns (DeleteUserIntegrationKeyResponse);
   rpc SyncNodeIntegrationKeys (SyncNodeIntegrationKeysRequest) returns (SyncNodeIntegrationKeysResponse);
 }
@@ -175,8 +175,13 @@ message PushUserIntegrationKeyResponse {
   int32 pushed_count = 1;
 }
 
-message RevokeUserIntegrationKeyRequest {
-  string api_key_id = 1; // наш внутренний ID ключа
+message UpdateUserIntegrationKeyStatusRequest {
+  string api_key_id = 1;
+  bool is_active = 2;
+}
+
+message UpdateUserIntegrationKeyStatusResponse {
+  int32 updated_count = 1;
 }
 
 message RevokeUserIntegrationKeyResponse {

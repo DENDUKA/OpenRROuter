@@ -133,13 +133,32 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
-    public Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
+    public Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
     {
         lock (_gate)
         {
-            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
-            if (key is null) return Task.FromResult(false);
-            key.Revoke(revokedAtUtc);
+            var key = _apiKeys.FirstOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            if (key is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            key.Disable(disabledAtUtc);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            var key = _apiKeys.FirstOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            if (key is null)
+            {
+                return Task.FromResult(false);
+            }
+
+            key.Enable();
             return Task.FromResult(true);
         }
     }
@@ -160,7 +179,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             IReadOnlyCollection<(string, string)> result = _apiKeys
-                .Where(k => k.RevokedAtUtc is null)
+                .Where(k => k.DisabledAtUtc is null)
                 .Select(k => (k.Prefix, k.SecretHash))
                 .ToArray();
             return Task.FromResult(result);
@@ -172,7 +191,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             var raw = _apiKeys
-                .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
+                .Where(k => k.UserId == userId && k.DisabledAtUtc is null && k.RawKey is not null)
                 .OrderByDescending(k => k.CreatedAtUtc)
                 .Select(k => k.RawKey)
                 .FirstOrDefault();
@@ -185,7 +204,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             IReadOnlyCollection<(string, string, string, string)> result = _apiKeys
-                .Where(k => k.RevokedAtUtc is null && k.RawKey is not null)
+                .Where(k => k.DisabledAtUtc is null && k.RawKey is not null)
                 .Select(k => (k.Id, k.RawKey!, k.UserId, k.Name))
                 .ToArray();
             return Task.FromResult(result);
@@ -196,9 +215,12 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     {
         lock (_gate)
         {
-            return Task.FromResult(_apiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null));
+            var key = _apiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.IsActive);
+            return Task.FromResult(key);
         }
     }
+
+
 
     public Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default)
     {

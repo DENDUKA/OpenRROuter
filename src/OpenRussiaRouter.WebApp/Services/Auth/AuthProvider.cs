@@ -1,4 +1,5 @@
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
+using OpenRussiaRouter.Contracts.Auth;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.WebApp.Services.Auth;
@@ -76,16 +77,18 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new CreateApiKeyResponse(response.ApiKeyId, response.RawKey, response.Name);
     }
 
-    public async Task<IReadOnlyList<ApiKeyInfo>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<ApiKeySummary>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
         var response = await client.ListApiKeysAsync(new ListApiKeysRequest { UserId = userId, IncludeDeleted = includeDeleted }, cancellationToken: cancellationToken);
-        return response.Keys.Select(k => new ApiKeyInfo(
+        return response.Keys.Select(k => new ApiKeySummary(
             k.Id,
             k.Name,
             k.Prefix,
             DateTimeOffset.FromUnixTimeSeconds(k.CreatedAtUnixTimeSeconds),
             k.LastUsedAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.LastUsedAtUnixTimeSeconds) : null,
-            k.IsActive)).ToList();
+            k.DisabledAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.DisabledAtUnixTimeSeconds) : null,
+            k.IsDeleted
+        )).ToList();
     }
 
     public async Task RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken cancellationToken = default)
@@ -97,10 +100,19 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         }
     }
 
-    public async Task RevokeApiKeyAsync(string userId, string apiKeyId, CancellationToken cancellationToken = default)
+    public async Task DisableApiKeyAsync(string userId, string apiKeyId, CancellationToken cancellationToken = default)
     {
-        var response = await client.RevokeApiKeyAsync(new RevokeApiKeyRequest { UserId = userId, ApiKeyId = apiKeyId }, cancellationToken: cancellationToken);
-        if (!response.IsRevoked)
+        var response = await client.DisableApiKeyAsync(new DisableApiKeyRequest { UserId = userId, ApiKeyId = apiKeyId }, cancellationToken: cancellationToken);
+        if (!response.IsDisabled)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+    }
+
+    public async Task EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.EnableApiKeyAsync(new EnableApiKeyRequest { UserId = userId, ApiKeyId = apiKeyId }, cancellationToken: cancellationToken);
+        if (!response.IsEnabled)
         {
             throw new AuthException(response.ErrorCode);
         }

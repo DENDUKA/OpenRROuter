@@ -32,30 +32,35 @@ public sealed class ApiKey
 
     public DateTimeOffset? LastUsedAtUtc { get; private set; }
 
-    public DateTimeOffset? RevokedAtUtc { get; private set; }
+    public DateTimeOffset? DisabledAtUtc { get; private set; }
 
     public DateTimeOffset? DeletedAtUtc { get; private set; }
 
-    public bool IsActive => !RevokedAtUtc.HasValue;
+    public bool IsActive => !DisabledAtUtc.HasValue;
 
     public bool IsDeleted => DeletedAtUtc.HasValue;
 
     public void Rename(string name) => Name = Preconditions.RequireValue(name, nameof(name));
 
-    public void Revoke(DateTimeOffset revokedAtUtc)
+    public void Disable(DateTimeOffset disabledAtUtc)
     {
-        RevokedAtUtc ??= revokedAtUtc;
+        DisabledAtUtc ??= disabledAtUtc;
+    }
+
+    public void Enable()
+    {
+        DisabledAtUtc = null;
     }
 
     /// <summary>
-    /// Soft-deletes the key so it is hidden from the user's list. Only a revoked
-    /// key may be deleted; an active key must be revoked first.
+    /// Soft-deletes the key so it is hidden from the user's list. Only a disabled
+    /// key may be deleted; an active key must be disabled first.
     /// </summary>
     public void Delete(DateTimeOffset deletedAtUtc)
     {
-        if (!RevokedAtUtc.HasValue)
+        if (!DisabledAtUtc.HasValue)
         {
-            throw new InvalidOperationException("Active API key cannot be deleted; revoke it first.");
+            throw new InvalidOperationException("Active API key cannot be deleted; disable it first.");
         }
 
         DeletedAtUtc ??= deletedAtUtc;
@@ -65,7 +70,7 @@ public sealed class ApiKey
     {
         if (!IsActive)
         {
-            throw new InvalidOperationException("Revoked API key cannot be used.");
+            throw new InvalidOperationException("Disabled API key cannot be used.");
         }
 
         LastUsedAtUtc = usedAtUtc;

@@ -1,6 +1,8 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -34,7 +36,7 @@ public class ActivityModel : PageModelBase
     public ActivitySummaryInfo? Summary { get; set; }
 
     // Shared
-    public IReadOnlyList<ApiKeyInfo> ApiKeys { get; set; } = [];
+    public IReadOnlyList<ApiKeySummary> ApiKeys { get; set; } = [];
     public IReadOnlyList<string> AvailableModels { get; set; } = [];
     public string? ErrorMessage { get; set; }
 

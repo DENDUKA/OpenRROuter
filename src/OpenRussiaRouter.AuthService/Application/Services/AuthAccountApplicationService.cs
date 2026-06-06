@@ -149,21 +149,20 @@ public sealed class AuthAccountApplicationService(
         await repository.UpdateUserAsync(user, ct).ConfigureAwait(false);
     }
 
-    public async Task<CreatedApiKey> CreateApiKeyAsync(string userId, string name, DateTimeOffset nowUtc, CancellationToken ct = default)
+    public async Task<CreateApiKeyResult> CreateApiKeyAsync(string userId, string name, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
         if (user is not { Status: UserStatus.Active })
             throw new InvalidOperationException("User is not active.");
 
-        var currentKeysCount = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
-        if (currentKeysCount >= user.MaxApiKeys)
-        {
-            throw new InvalidOperationException($"API key limit reached. Maximum allowed: {user.MaxApiKeys}.");
-        }
+        var count = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
+        if (count >= user.MaxApiKeys)
+            return CreateApiKeyResult.Failed(AuthErrorCodes.ApiKeyLimitReached);
 
         var created = apiKeyFactory.Create(userId, name, nowUtc);
         await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
-        return created;
+
+        return CreateApiKeyResult.Success(created);
     }
 
     public async Task RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)

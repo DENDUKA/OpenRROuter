@@ -40,3 +40,9 @@ public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher, ISecretGenera
 
 public sealed record CreatedApiKey(ApiKey ApiKey, string RawKey);
 
+public sealed record CreateApiKeyResult(bool Succeeded, CreatedApiKey? Created, string? ErrorCode)
+{
+    public static CreateApiKeyResult Success(CreatedApiKey created) => new(true, created, null);
+    public static CreateApiKeyResult Failed(string errorCode) => new(false, null, errorCode);
+}
+

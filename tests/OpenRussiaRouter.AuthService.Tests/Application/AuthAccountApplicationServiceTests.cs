@@ -69,25 +69,25 @@ public sealed class AuthAccountApplicationServiceTests
     }
 
     [Fact]
-    public async Task RenameAndDisableApiKey_ExistingKey_UpdatesMetadata()
+    public async Task RenameAndRevokeApiKey_ExistingKey_UpdatesMetadata()
     {
         var repository = new TestAuthRepository();
         var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
         repository.Users[user.Id] = user;
         var service = CreateService(repository);
         var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
-        var disabledAt = DateTimeOffset.UtcNow.AddMinutes(1);
+        var revokedAt = DateTimeOffset.UtcNow.AddMinutes(1);
 
         await service.RenameApiKeyAsync("user-1", created.ApiKey.Id, "renamed");
-        await service.DisableApiKeyAsync("user-1", created.ApiKey.Id, disabledAt);
+        await service.RevokeApiKeyAsync("user-1", created.ApiKey.Id, revokedAt);
 
         var key = repository.ApiKeys.Should().ContainSingle().Which;
         key.Name.Should().Be("renamed");
-        key.DisabledAtUtc.Should().Be(disabledAt);
+        key.RevokedAtUtc.Should().Be(revokedAt);
     }
 
     [Fact]
-    public async Task DeleteApiKey_DisabledKey_HidesFromListButKeepsRow()
+    public async Task DeleteApiKey_RevokedKey_HidesFromListButKeepsRow()
     {
         var repository = new TestAuthRepository();
         var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
@@ -95,7 +95,7 @@ public sealed class AuthAccountApplicationServiceTests
         var service = CreateService(repository);
         var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
         var now = DateTimeOffset.UtcNow.AddMinutes(1);
-        await service.DisableApiKeyAsync("user-1", created.ApiKey.Id, now);
+        await service.RevokeApiKeyAsync("user-1", created.ApiKey.Id, now);
 
         await service.DeleteApiKeyAsync("user-1", created.ApiKey.Id, now.AddMinutes(1));
 
@@ -170,13 +170,8 @@ public sealed class AuthAccountApplicationServiceTests
         public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys.SingleOrDefault(key => key.Id == apiKeyId));
 
-        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, bool includeDeleted = false, CancellationToken ct = default) =>
-            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId && (includeDeleted || !key.IsDeleted)).ToArray(), false));
-
-        public Task UpdateUserAsync(UserAccount user, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task<int> CountApiKeysAsync(string userId, CancellationToken ct = default) => 
-            Task.FromResult(ApiKeys.Count(key => key.UserId == userId && !key.IsDeleted));
+        public Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, CancellationToken ct = default) =>
+            Task.FromResult<(IReadOnlyCollection<ApiKey>, bool)>((ApiKeys.Where(key => key.UserId == userId && !key.IsDeleted).ToArray(), false));
 
         public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default)
         {
@@ -186,19 +181,11 @@ public sealed class AuthAccountApplicationServiceTests
             return Task.FromResult(true);
         }
 
-        public Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
+        public Task<bool> RevokeApiKeyAsync(string userId, string apiKeyId, DateTimeOffset revokedAtUtc, CancellationToken ct = default)
         {
             var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
             if (key is null) return Task.FromResult(false);
-            key.Disable(disabledAtUtc);
-            return Task.FromResult(true);
-        }
-
-        public Task<bool> EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
-        {
-            var key = ApiKeys.SingleOrDefault(candidate => candidate.UserId == userId && candidate.Id == apiKeyId);
-            if (key is null) return Task.FromResult(false);
-            key.Enable();
+            key.Revoke(revokedAtUtc);
             return Task.FromResult(true);
         }
 
@@ -212,21 +199,21 @@ public sealed class AuthAccountApplicationServiceTests
 
         public Task<IReadOnlyCollection<(string Prefix, string SecretHash)>> ListActiveApiKeyHashesAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyCollection<(string, string)>>(
-                ApiKeys.Where(k => k.DisabledAtUtc is null).Select(k => (k.Prefix, k.SecretHash)).ToArray());
+                ApiKeys.Where(k => k.RevokedAtUtc is null).Select(k => (k.Prefix, k.SecretHash)).ToArray());
 
         public Task<IReadOnlyCollection<(string ApiKeyId, string RawKey, string UserId, string Name)>> ListAllActiveApiKeysRawAsync(CancellationToken ct = default) =>
             Task.FromResult<IReadOnlyCollection<(string, string, string, string)>>(
-                ApiKeys.Where(k => k.DisabledAtUtc is null && k.RawKey is not null).Select(k => (k.Id, k.RawKey!, k.UserId, k.Name)).ToArray());
+                ApiKeys.Where(k => k.RevokedAtUtc is null && k.RawKey is not null).Select(k => (k.Id, k.RawKey!, k.UserId, k.Name)).ToArray());
 
         public Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys
-                .Where(k => k.UserId == userId && k.DisabledAtUtc is null && k.RawKey is not null)
+                .Where(k => k.UserId == userId && k.RevokedAtUtc is null && k.RawKey is not null)
                 .OrderByDescending(k => k.CreatedAtUtc)
                 .Select(k => k.RawKey)
                 .FirstOrDefault());
 
         public Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default) =>
-            Task.FromResult(ApiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.DisabledAtUtc is null));
+            Task.FromResult(ApiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.RevokedAtUtc is null));
 
         public Task MarkApiKeyUsedAsync(string apiKeyId, DateTimeOffset lastUsedAtUtc, CancellationToken ct = default)
         {

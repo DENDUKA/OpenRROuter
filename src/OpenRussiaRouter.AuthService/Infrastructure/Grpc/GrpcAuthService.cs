@@ -206,20 +206,26 @@ public sealed class GrpcAuthService(
     {
         try
         {
-            var created = await accounts.CreateApiKeyAsync(
+            var result = await accounts.CreateApiKeyAsync(
                 request.UserId,
                 request.Name,
                 DateTimeOffset.UtcNow,
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
+            if (!result.Succeeded)
+            {
+                logger.LogWarning("CreateApiKey failed. UserId: {UserId}; Name: {Name}; Error: {Error}", request.UserId, request.Name, result.ErrorCode);
+                return new CreateApiKeyResponse { ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+            }
+
             return new CreateApiKeyResponse
             {
                 IsCreated = true,
-                ApiKeyId = created.ApiKey.Id,
-                RawKey = created.RawKey,
-                Prefix = created.ApiKey.Prefix,
-                Name = created.ApiKey.Name,
-                CreatedAtUnixTimeSeconds = created.ApiKey.CreatedAtUtc.ToUnixTimeSeconds()
+                ApiKeyId = result.Created!.ApiKey.Id,
+                RawKey = result.Created.RawKey,
+                Prefix = result.Created.ApiKey.Prefix,
+                Name = result.Created.ApiKey.Name,
+                CreatedAtUnixTimeSeconds = result.Created.ApiKey.CreatedAtUtc.ToUnixTimeSeconds()
             };
         }
         catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)

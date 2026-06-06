@@ -25,7 +25,7 @@ public sealed class AuthRepositoryListKeyHashesTests
             insert into auth.users (id, email, role, status, password_hash, created_at_utc)
             values ('user-1', 'user1@example.com', 'user', 'active', 'x', @Now);
             """, new { Now = now });
-        // Insert one active and one revoked key directly
+        // Insert one active and one disabled key directly
         connection.Execute(
             """
             insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc)
@@ -33,9 +33,9 @@ public sealed class AuthRepositoryListKeyHashesTests
             """, new { Id = "key-1", Now = now });
         connection.Execute(
             """
-            insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc, revoked_at_utc)
-            values (@Id, 'user-1', 'revoked', 'orr_xyz', 'hash-revoked', @Now, @RevokedAt);
-            """, new { Id = "key-2", Now = now, RevokedAt = now.AddMinutes(1) });
+            insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc, disabled_at_utc)
+            values (@Id, 'user-1', 'disabled', 'orr_xyz', 'hash-disabled', @Now, @DisabledAt);
+            """, new { Id = "key-2", Now = now, DisabledAt = now.AddMinutes(1) });
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
         var hashes = await repo.ListActiveApiKeyHashesAsync();

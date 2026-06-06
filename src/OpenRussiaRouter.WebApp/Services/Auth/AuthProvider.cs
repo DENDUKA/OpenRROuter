@@ -85,8 +85,7 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             k.Prefix,
             DateTimeOffset.FromUnixTimeSeconds(k.CreatedAtUnixTimeSeconds),
             k.LastUsedAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.LastUsedAtUnixTimeSeconds) : null,
-            k.IsActive,
-            k.IsDeleted)).ToList();
+            k.IsActive)).ToList();
     }
 
     public async Task RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken cancellationToken = default)

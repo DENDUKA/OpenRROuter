@@ -38,14 +38,15 @@ public sealed class AuthRepositoryPostgresTests
 
         var invite = await service.CreateInviteAsync("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
         var user = await service.CompleteInviteAsync(invite.RawToken, "StrongPassword123!", now.AddMinutes(1));
-        var apiKey = await service.CreateApiKeyAsync(user.Id, "default", now.AddMinutes(2));
+        var apiKeyResult = await service.CreateApiKeyAsync(user.Id, "default", now.AddMinutes(2));
+        var apiKey = apiKeyResult.Created!;
         await service.RenameApiKeyAsync(user.Id, apiKey.ApiKey.Id, "renamed");
-        await service.RevokeApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3));
+        await service.DisableApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3));
 
         Assert.Equal(1, connection.ExecuteScalar<int>("select count(*) from auth.users;"));
         Assert.NotNull(connection.ExecuteScalar<DateTime?>("select used_at_utc from auth.invites limit 1;"));
         Assert.Equal("renamed", connection.ExecuteScalar<string>("select name from auth.api_keys limit 1;"));
-        Assert.NotNull(connection.ExecuteScalar<DateTime?>("select revoked_at_utc from auth.api_keys limit 1;"));
+        Assert.NotNull(connection.ExecuteScalar<DateTime?>("select disabled_at_utc from auth.api_keys limit 1;"));
         Assert.Equal(0, connection.ExecuteScalar<int>(
             "select count(*) from auth.api_keys where secret_hash = @RawKey;",
             new { apiKey.RawKey }));
@@ -53,7 +54,7 @@ public sealed class AuthRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
-    public async Task DeleteApiKey_RevokedKey_SoftDeletesAndHidesFromList()
+    public async Task DeleteApiKey_DisabledKey_SoftDeletesAndHidesFromList()
     {
         await using var database = await PostgresTestDatabase.StartAsync();
         if (database is null)
@@ -79,14 +80,15 @@ public sealed class AuthRepositoryPostgresTests
 
         var invite = await service.CreateInviteAsync("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
         var user = await service.CompleteInviteAsync(invite.RawToken, "StrongPassword123!", now.AddMinutes(1));
-        var apiKey = await service.CreateApiKeyAsync(user.Id, "default", now.AddMinutes(2));
+        var apiKeyResult = await service.CreateApiKeyAsync(user.Id, "default", now.AddMinutes(2));
+        var apiKey = apiKeyResult.Created!;
 
-        // Cannot delete an active (not yet revoked) key.
+        // Cannot delete an active (not yet disabled) key.
         (await repository.DeleteApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(3))).Should().BeFalse();
 
-        await service.RevokeApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(4));
+        await service.DisableApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(4));
 
-        // Deleting a revoked key succeeds and is idempotent (second call returns false).
+        // Deleting a disabled key succeeds and is idempotent (second call returns false).
         (await repository.DeleteApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(5))).Should().BeTrue();
         (await repository.DeleteApiKeyAsync(user.Id, apiKey.ApiKey.Id, now.AddMinutes(6))).Should().BeFalse();
 

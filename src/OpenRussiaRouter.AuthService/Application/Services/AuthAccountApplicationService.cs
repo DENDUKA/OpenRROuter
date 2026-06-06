@@ -153,15 +153,16 @@ public sealed class AuthAccountApplicationService(
     {
         var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
         if (user is not { Status: UserStatus.Active })
-            throw new InvalidOperationException("User is not active.");
+            return CreateApiKeyResult.Failed(AuthErrorCodes.UserDisabled);
 
-        var count = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
-        if (count >= user.MaxApiKeys)
+        var currentKeysCount = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
+        if (currentKeysCount >= user.MaxApiKeys)
+        {
             return CreateApiKeyResult.Failed(AuthErrorCodes.ApiKeyLimitReached);
+        }
 
         var created = apiKeyFactory.Create(userId, name, nowUtc);
         await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
-
         return CreateApiKeyResult.Success(created);
     }
 
@@ -182,7 +183,10 @@ public sealed class AuthAccountApplicationService(
         Preconditions.RequireValue(userId, nameof(userId));
         Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
 
-        await repository.DisableApiKeyAsync(userId, apiKeyId, disabledAtUtc, ct).ConfigureAwait(false);
+        if (!await repository.DisableApiKeyAsync(userId, apiKeyId, disabledAtUtc, ct).ConfigureAwait(false))
+        {
+            throw new KeyNotFoundException("API key was not found or already disabled.");
+        }
     }
 
     public async Task EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
@@ -190,7 +194,22 @@ public sealed class AuthAccountApplicationService(
         Preconditions.RequireValue(userId, nameof(userId));
         Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
 
-        await repository.EnableApiKeyAsync(userId, apiKeyId, ct).ConfigureAwait(false);
+        if (!await repository.EnableApiKeyAsync(userId, apiKeyId, ct).ConfigureAwait(false))
+        {
+            throw new KeyNotFoundException("API key was not found or already enabled.");
+        }
+    }
+    }
+
+    public async Task EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        Preconditions.RequireValue(userId, nameof(userId));
+        Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
+
+        if (!await repository.EnableApiKeyAsync(userId, apiKeyId, ct).ConfigureAwait(false))
+        {
+            throw new KeyNotFoundException("API key was not found.");
+        }
     }
 
     public async Task DeleteApiKeyAsync(string userId, string apiKeyId, DateTimeOffset deletedAtUtc, CancellationToken ct = default)

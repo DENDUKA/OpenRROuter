@@ -77,7 +77,7 @@ public sealed class GrpcAuthServiceTests
             UserId = user.UserId,
             Name = "default"
         }, context: null!);
-        var revoked = await service.RevokeApiKey(new RevokeApiKeyRequest
+        var disabled = await service.DisableApiKey(new DisableApiKeyRequest
         {
             UserId = user.UserId,
             ApiKeyId = apiKey.ApiKeyId
@@ -93,7 +93,7 @@ public sealed class GrpcAuthServiceTests
         apiKey.IsCreated.Should().BeTrue();
         apiKey.RawKey.Should().StartWith("sk-or-");
         apiKey.Prefix.Should().NotBeNullOrEmpty();
-        revoked.IsRevoked.Should().BeTrue();
+        disabled.IsDisabled.Should().BeTrue();
     }
 
     [Fact]
@@ -174,17 +174,17 @@ public sealed class GrpcAuthServiceTests
     }
 
     [Fact]
-    public async Task RevokeApiKey_NonExistentKey_ReturnsValidationFailed()
+    public async Task DisableApiKey_NonExistentKey_ReturnsValidationFailed()
     {
         var (service, _) = CreateServiceWithSharedRepo();
 
-        var response = await service.RevokeApiKey(new RevokeApiKeyRequest
+        var response = await service.DisableApiKey(new DisableApiKeyRequest
         {
             UserId = "user-1",
             ApiKeyId = "key-does-not-exist"
         }, context: null!);
 
-        response.IsRevoked.Should().BeFalse();
+        response.IsDisabled.Should().BeFalse();
         response.ErrorCode.Should().Be("validation_failed");
     }
 

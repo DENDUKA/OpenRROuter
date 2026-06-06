@@ -43,12 +43,12 @@ public sealed class AuthPersistenceMapperTests
     }
 
     [Fact]
-    public void ApiKey_RoundTrip_PreservesLastUsedAndRevokedAt()
+    public void ApiKey_RoundTrip_PreservesLastUsedAndDisabledAt()
     {
         var now = DateTimeOffset.UtcNow;
         var apiKey = new ApiKey("key-1", "user-1", "default", "orr_1234", "secret-hash", now.AddDays(-1));
         apiKey.MarkUsed(now);
-        apiKey.Revoke(now.AddMinutes(1));
+        apiKey.Disable(now.AddMinutes(1));
 
         var mapped = AuthPersistenceMapper.ToDomain(AuthPersistenceMapper.ToEntity(apiKey));
 
@@ -58,7 +58,7 @@ public sealed class AuthPersistenceMapperTests
         mapped.Prefix.Should().Be(apiKey.Prefix);
         mapped.SecretHash.Should().Be(apiKey.SecretHash);
         mapped.LastUsedAtUtc.Should().Be(now);
-        mapped.RevokedAtUtc.Should().Be(now.AddMinutes(1));
+        mapped.DisabledAtUtc.Should().Be(now.AddMinutes(1));
         mapped.IsActive.Should().BeFalse();
     }
 }

@@ -38,7 +38,7 @@ public sealed class GrpcAuthServiceIntegrationTests : IClassFixture<WebApplicati
             Name = "default"
         });
         var validation = await client.ValidateApiKeyAsync(new ValidateApiKeyRequest { RawKey = apiKey.RawKey });
-        var revoked = await client.RevokeApiKeyAsync(new RevokeApiKeyRequest
+        var disabled = await client.DisableApiKeyAsync(new DisableApiKeyRequest
         {
             UserId = user.UserId,
             ApiKeyId = apiKey.ApiKeyId
@@ -53,7 +53,7 @@ public sealed class GrpcAuthServiceIntegrationTests : IClassFixture<WebApplicati
         Assert.True(validation.IsValid);
         Assert.Equal(user.UserId, validation.UserId);
         Assert.Equal(apiKey.ApiKeyId, validation.ApiKeyId);
-        Assert.True(revoked.IsRevoked);
+        Assert.True(disabled.IsDisabled);
         Assert.False(revokedValidation.IsValid);
         Assert.Equal("invalid_api_key", revokedValidation.ErrorCode);
     }

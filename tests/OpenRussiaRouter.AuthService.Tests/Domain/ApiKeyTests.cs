@@ -20,13 +20,13 @@ public sealed class ApiKeyTests
     }
 
     [Fact]
-    public void Delete_RevokedKey_MarksDeleted()
+    public void Delete_DisabledKey_MarksDeleted()
     {
         var key = CreateKey();
-        var revokedAt = DateTimeOffset.UtcNow;
-        key.Revoke(revokedAt);
+        var disabledAt = DateTimeOffset.UtcNow;
+        key.Disable(disabledAt);
 
-        var deletedAt = revokedAt.AddMinutes(1);
+        var deletedAt = disabledAt.AddMinutes(1);
         key.Delete(deletedAt);
 
         key.IsDeleted.Should().BeTrue();
@@ -37,9 +37,9 @@ public sealed class ApiKeyTests
     public void Delete_AlreadyDeleted_KeepsFirstTimestamp()
     {
         var key = CreateKey();
-        var revokedAt = DateTimeOffset.UtcNow;
-        key.Revoke(revokedAt);
-        var firstDelete = revokedAt.AddMinutes(1);
+        var disabledAt = DateTimeOffset.UtcNow;
+        key.Disable(disabledAt);
+        var firstDelete = disabledAt.AddMinutes(1);
         key.Delete(firstDelete);
 
         key.Delete(firstDelete.AddMinutes(5));

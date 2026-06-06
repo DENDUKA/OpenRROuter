@@ -44,10 +44,10 @@ public sealed class ApiKeyFactoryTests
     }
 
     [Fact]
-    public void VerifyAndMarkUsed_RevokedKey_ReturnsFalse()
+    public void VerifyAndMarkUsed_DisabledKey_ReturnsFalse()
     {
         var created = _factory.Create("user-1", "default", DateTimeOffset.UtcNow);
-        created.ApiKey.Revoke(DateTimeOffset.UtcNow);
+        created.ApiKey.Disable(DateTimeOffset.UtcNow);
 
         var result = _factory.VerifyAndMarkUsed(created.RawKey, created.ApiKey, DateTimeOffset.UtcNow);
 

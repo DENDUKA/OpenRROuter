@@ -28,4 +28,6 @@ public static class AuthErrorCodes
     public const string ResendCooldown = "resend_cooldown";
 
     public const string NoPendingVerification = "no_pending_verification";
+
+    public const string ApiKeyLimitReached = "api_key_limit_reached";
 }

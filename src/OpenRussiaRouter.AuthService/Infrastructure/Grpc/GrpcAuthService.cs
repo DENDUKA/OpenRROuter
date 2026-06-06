@@ -244,7 +244,7 @@ public sealed class GrpcAuthService(
             await accounts.DisableApiKeyAsync(request.UserId, request.ApiKeyId, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             return new DisableApiKeyResponse { IsDisabled = true };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
         {
             logger.LogWarning(ex, "DisableApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
             return new DisableApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
@@ -260,7 +260,7 @@ public sealed class GrpcAuthService(
             await accounts.EnableApiKeyAsync(request.UserId, request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
             return new EnableApiKeyResponse { IsEnabled = true };
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
         {
             logger.LogWarning(ex, "EnableApiKey failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
             return new EnableApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };

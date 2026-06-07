@@ -126,14 +126,14 @@
                                       @if (k.DisabledAtUtc == null)
                                       {
                                           <form method="post" asp-page-handler="DisableKey">
-                                              <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                              <input type="hidden" name="keyId" value="@k.Id" />
                                               <button type="submit" class="btn btn-sm btn-outline-warning">Disable</button>
                                           </form>
                                       }
                                       else
                                       {
                                           <form method="post" asp-page-handler="EnableKey">
-                                              <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                              <input type="hidden" name="keyId" value="@k.Id" />
                                               <button type="submit" class="btn btn-sm btn-outline-success">Enable</button>
                                           </form>
                                       }

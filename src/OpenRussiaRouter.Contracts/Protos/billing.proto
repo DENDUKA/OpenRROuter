@@ -79,6 +79,7 @@ message PublicModel {
   string description = 8;
   repeated string tag_ids = 9;
   string provider = 10;
+  string cache_price_per_1m_usd = 11;
 }
 
 message ListPublicModelsResponse {

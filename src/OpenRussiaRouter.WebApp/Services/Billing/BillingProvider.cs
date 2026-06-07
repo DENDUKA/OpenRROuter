@@ -184,7 +184,7 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             "",
             string.IsNullOrEmpty(m.InputPricePer1MUsd) ? 0m : decimal.Parse(m.InputPricePer1MUsd, CultureInfo.InvariantCulture),
             string.IsNullOrEmpty(m.OutputPricePer1MUsd) ? 0m : decimal.Parse(m.OutputPricePer1MUsd, CultureInfo.InvariantCulture),
-            0m,
+            string.IsNullOrEmpty(m.CachePricePer1MUsd) ? 0m : decimal.Parse(m.CachePricePer1MUsd, CultureInfo.InvariantCulture),
             true,
             Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,

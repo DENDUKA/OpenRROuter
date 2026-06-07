@@ -55,6 +55,7 @@ public sealed class GrpcBillingService(
                     UpstreamModelId = price?.RouterModelId ?? string.Empty,
                     InputPricePer1MUsd = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                     OutputPricePer1MUsd = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                    CachePricePer1MUsd = price?.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
                     ContextLength = price?.ContextLength ?? 0,
                     Modalities = price?.Modalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,

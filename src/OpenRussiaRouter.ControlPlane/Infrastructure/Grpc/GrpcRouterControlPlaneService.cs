@@ -399,6 +399,70 @@ public sealed class GrpcRouterControlPlaneService(
         }
     }
 
+    public override async Task<CheckNodeIntegrationKeysSyncResponse> CheckNodeIntegrationKeysSync(
+        CheckNodeIntegrationKeysSyncRequest request,
+        ServerCallContext context)
+    {
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        if (node is null)
+            return new CheckNodeIntegrationKeysSyncResponse { ErrorCode = ErrorCodes.ValidationFailed };
+
+        var dbKeysResponse = await authClient.ListAllNonDeletedApiKeysRawAsync(
+            new Contracts.Grpc.Auth.V1.ListAllNonDeletedApiKeysRawRequest(),
+            cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        try
+        {
+            var nodeKeysResponse = await providerClient.ListIntegrationKeysAsync(
+                node,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            var dbKeysDict = dbKeysResponse.Keys.ToDictionary(k => k.RawKey, k => k);
+            var nodeKeysDict = nodeKeysResponse.Keys.ToDictionary(k => k.Id, k => k);
+
+            var toAdd = 0;
+            var toDisable = 0;
+            var toReactivate = 0;
+            var toDelete = 0;
+
+            foreach (var dbKey in dbKeysResponse.Keys)
+            {
+                if (nodeKeysDict.TryGetValue(dbKey.RawKey, out var nodeKey))
+                {
+                    if (dbKey.IsActive && !nodeKey.IsActive)
+                        toReactivate++;
+                    else if (!dbKey.IsActive && nodeKey.IsActive)
+                        toDisable++;
+                }
+                else
+                {
+                    toAdd++;
+                }
+            }
+
+            foreach (var nodeKey in nodeKeysResponse.Keys)
+            {
+                if (nodeKey.ManagedBy == "service" && !dbKeysDict.ContainsKey(nodeKey.Id))
+                {
+                    toDelete++;
+                }
+            }
+
+            return new CheckNodeIntegrationKeysSyncResponse
+            {
+                ToAddCount = toAdd,
+                ToDisableCount = toDisable,
+                ToReactivateCount = toReactivate,
+                ToDeleteCount = toDelete
+            };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to check bulk sync keys on node {NodeId}", node.Id);
+            return new CheckNodeIntegrationKeysSyncResponse { ErrorCode = ErrorCodes.RouterUnavailable };
+        }
+    }
+
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>
         new()
         {

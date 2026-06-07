@@ -140,7 +140,7 @@
                                       
                                       <form method="post" asp-page-handler="Delete" style="display:inline">
                                           <input type="hidden" name="keyId" value="@k.Id" />
-                                          <button type="submit" class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete"
+                                          <button type="submit" class="btn btn-sm btn-outline-danger ws-toggle-btn" title="Delete" aria-label="Delete"
                                                   data-testid="btn-delete"
                                                   onclick="return confirm('Remove key &quot;@k.Name&quot; from the list? This cannot be undone.')">
                                               Delete

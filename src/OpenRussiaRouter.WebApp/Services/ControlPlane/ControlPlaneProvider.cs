@@ -169,6 +169,22 @@ public sealed class ControlPlaneProvider(
         return (response.AddedCount, response.DisabledCount, response.ReactivatedCount, response.DeletedCount);
     }
 
+    public async Task<(int TotalOutOfSync, int ToAdd, int ToDisable, int ToReactivate, int ToDelete)> CheckNodeIntegrationKeysSyncAsync(string nodeId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.CheckNodeIntegrationKeysSyncAsync(new CheckNodeIntegrationKeysSyncRequest
+        {
+            NodeId = nodeId ?? string.Empty
+        }, cancellationToken: cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+        {
+            throw new InvalidOperationException($"CheckNodeIntegrationKeysSync failed: {response.ErrorCode}");
+        }
+
+        var total = response.ToAddCount + response.ToDisableCount + response.ToReactivateCount + response.ToDeleteCount;
+        return (total, response.ToAddCount, response.ToDisableCount, response.ToReactivateCount, response.ToDeleteCount);
+    }
+
     private static RouterNodeInfo MapNode(RouterNodeSummary n)
     {
         return new RouterNodeInfo(

@@ -613,5 +613,11 @@ public sealed class GrpcRouterControlPlaneServiceTests
             IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
             CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public Task<RouterIntegrationKeysSyncResponse> CheckIntegrationKeysSyncAsync(
+            Domain.Entities.RouterNode node,
+            IReadOnlyList<RouterIntegrationKeySyncEntry> keys,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

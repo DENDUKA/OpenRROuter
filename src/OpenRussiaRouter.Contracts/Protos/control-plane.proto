@@ -19,6 +19,7 @@ service RouterControlPlane {
   rpc UpdateUserIntegrationKeyStatus (UpdateUserIntegrationKeyStatusRequest) returns (UpdateUserIntegrationKeyStatusResponse);
   rpc DeleteUserIntegrationKey (DeleteUserIntegrationKeyRequest) returns (DeleteUserIntegrationKeyResponse);
   rpc SyncNodeIntegrationKeys (SyncNodeIntegrationKeysRequest) returns (SyncNodeIntegrationKeysResponse);
+  rpc CheckNodeIntegrationKeysSync (CheckNodeIntegrationKeysSyncRequest) returns (CheckNodeIntegrationKeysSyncResponse);
 }
 
 message SelectRouterNodeRequest {
@@ -206,6 +207,18 @@ message SyncNodeIntegrationKeysResponse {
   int32 reactivated_count = 3;
   string error_code = 4;
   int32 deleted_count = 5;
+}
+
+message CheckNodeIntegrationKeysSyncRequest {
+  string node_id = 1;
+}
+
+message CheckNodeIntegrationKeysSyncResponse {
+  int32 to_add_count = 1;
+  int32 to_disable_count = 2;
+  int32 to_reactivate_count = 3;
+  int32 to_delete_count = 4;
+  string error_code = 5;
 }
 
 

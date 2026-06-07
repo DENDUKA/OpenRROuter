@@ -150,6 +150,9 @@
         <div class="adm-card-header adm-card-header--split">
             <span>Service-managed Keys</span>
             <form method="post" asp-route-nodeId="@details.Node.NodeId" class="m-0">
+                <button type="submit" class="btn btn-sm btn-secondary mr-2" asp-page-handler="CheckSync" data-testid="btn-check-sync">
+                    Is Sync
+                </button>
                 <button type="submit" class="btn btn-sm btn-primary" asp-page-handler="SyncKeys" data-testid="btn-sync-keys">
                     Sync Keys
                 </button>

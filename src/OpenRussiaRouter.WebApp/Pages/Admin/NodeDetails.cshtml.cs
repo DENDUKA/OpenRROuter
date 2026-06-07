@@ -133,6 +133,30 @@ public class NodeDetailsModel(
         }
     }
 
+    public async Task<IActionResult> OnPostCheckSyncAsync(string nodeId)
+    {
+        try
+        {
+            var result = await ControlPlaneProvider.CheckNodeIntegrationKeysSyncAsync(nodeId, HttpContext.RequestAborted);
+            if (result.TotalOutOfSync == 0)
+            {
+                SuccessMessage = "All keys are synchronized.";
+            }
+            else
+            {
+                ErrorMessage = $"Not synchronized. To add: {result.ToAdd}, To disable: {result.ToDisable}, To reactivate: {result.ToReactivate}, To delete: {result.ToDelete}.";
+            }
+            return RedirectToPage(new { nodeId });
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to check sync status for node. NodeId: {NodeId}", nodeId);
+            ErrorMessage = "Failed to check sync status.";
+            await OnGetAsync(nodeId);
+            return Page();
+        }
+    }
+
     public static string GetStatusBadge(bool isActive) =>
         isActive ? "badge-success" : "badge-secondary";
 

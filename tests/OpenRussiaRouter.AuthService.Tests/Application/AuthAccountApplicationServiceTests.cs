@@ -223,6 +223,10 @@ public sealed class AuthAccountApplicationServiceTests
             Task.FromResult<IReadOnlyCollection<(string, string, string, string)>>(
                 ApiKeys.Where(k => k.DisabledAtUtc is null && k.RawKey is not null).Select(k => (k.Id, k.RawKey!, k.UserId, k.Name)).ToArray());
 
+        public Task<IReadOnlyCollection<(string ApiKeyId, string RawKey, string UserId, string Name, bool IsActive)>> ListAllNonDeletedApiKeysRawAsync(CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyCollection<(string, string, string, string, bool)>>(
+                ApiKeys.Where(k => k.DeletedAtUtc is null && k.RawKey is not null).Select(k => (k.Id, k.RawKey!, k.UserId, k.Name, k.IsActive)).ToArray());
+
         public Task<string?> GetFirstActiveApiKeyRawAsync(string userId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys
                 .Where(k => k.UserId == userId && k.DisabledAtUtc is null && k.RawKey is not null)

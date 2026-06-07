@@ -369,29 +369,27 @@ public sealed class GrpcRouterControlPlaneService(
         if (node is null)
             return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.ValidationFailed };
 
-        var dbKeysResponse = await authClient.ListAllActiveApiKeysRawAsync(
-            new Contracts.Grpc.Auth.V1.ListAllActiveApiKeysRawRequest(),
+        var dbKeysResponse = await authClient.ListAllNonDeletedApiKeysRawAsync(
+            new Contracts.Grpc.Auth.V1.ListAllNonDeletedApiKeysRawRequest(),
             cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         var keysToSync = dbKeysResponse.Keys.Select(k => new RouterIntegrationKeySyncEntry
         {
             Name = k.Name,
-            Key = k.RawKey
+            Key = k.RawKey,
+            IsActive = k.IsActive
         }).ToList();
 
         try
         {
             var syncResult = await providerClient.SyncIntegrationKeysAsync(node, keysToSync, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
-            
-            // Sync success - we don't have the new mapping IDs returned from the bulk endpoint currently
-            // But we don't strictly need them unless revoking individually via UI, which we can handle
-            // next time keys are requested or by re-fetching. For now, bulk sync just ensures they exist.
-            
+
             return new SyncNodeIntegrationKeysResponse
             {
                 AddedCount = syncResult.AddedCount,
-                DisabledCount = 0,
-                ReactivatedCount = 0
+                DisabledCount = syncResult.DisabledCount,
+                ReactivatedCount = syncResult.ReactivatedCount,
+                DeletedCount = syncResult.DeletedCount
             };
         }
         catch (Exception ex)

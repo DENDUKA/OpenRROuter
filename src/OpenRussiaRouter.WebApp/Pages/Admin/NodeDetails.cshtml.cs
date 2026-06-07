@@ -121,7 +121,7 @@ public class NodeDetailsModel(
         try
         {
             var result = await ControlPlaneProvider.SyncNodeIntegrationKeysAsync(nodeId, HttpContext.RequestAborted);
-            SuccessMessage = $"Sync complete. Added: {result.Added}, Disabled: {result.Disabled}, Reactivated: {result.Reactivated}.";
+            SuccessMessage = $"Sync complete. Added: {result.Added}, Disabled: {result.Disabled}, Reactivated: {result.Reactivated}, Deleted: {result.Deleted}.";
             return RedirectToPage(new { nodeId });
         }
         catch (Exception ex)

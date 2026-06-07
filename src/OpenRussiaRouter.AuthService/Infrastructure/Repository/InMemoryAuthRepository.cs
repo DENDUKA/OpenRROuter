@@ -211,6 +211,18 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
     }
 
+    public Task<IReadOnlyCollection<(string ApiKeyId, string RawKey, string UserId, string Name, bool IsActive)>> ListAllNonDeletedApiKeysRawAsync(CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            IReadOnlyCollection<(string, string, string, string, bool)> result = _apiKeys
+                .Where(k => k.DeletedAtUtc is null && k.RawKey is not null)
+                .Select(k => (k.Id, k.RawKey!, k.UserId, k.Name, k.IsActive))
+                .ToArray();
+            return Task.FromResult(result);
+        }
+    }
+
     public Task<ApiKey?> FindActiveApiKeyBySecretHashAsync(string secretHash, CancellationToken ct = default)
     {
         lock (_gate)

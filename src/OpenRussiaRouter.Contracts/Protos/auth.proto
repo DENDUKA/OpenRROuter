@@ -23,6 +23,7 @@ service AuthService {
   rpc GetFirstActiveApiKeyRaw (GetFirstActiveApiKeyRawRequest) returns (GetFirstActiveApiKeyRawResponse);
   rpc LoginOrRegisterWithGoogle (LoginWithGoogleRequest) returns (LoginResponse);
   rpc ListAllActiveApiKeysRaw (ListAllActiveApiKeysRawRequest) returns (ListAllActiveApiKeysRawResponse);
+  rpc ListAllNonDeletedApiKeysRaw (ListAllNonDeletedApiKeysRawRequest) returns (ListAllNonDeletedApiKeysRawResponse);
   rpc GetUser (GetUserRequest) returns (GetUserResponse);
   rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
 }
@@ -240,6 +241,20 @@ message ActiveApiKeyRaw {
 
 message ListAllActiveApiKeysRawResponse {
   repeated ActiveApiKeyRaw keys = 1;
+}
+
+message ListAllNonDeletedApiKeysRawRequest {}
+
+message NonDeletedApiKeyRaw {
+  string api_key_id = 1;
+  string raw_key = 2;
+  string user_id = 3;
+  string name = 4;
+  bool is_active = 5;
+}
+
+message ListAllNonDeletedApiKeysRawResponse {
+  repeated NonDeletedApiKeyRaw keys = 1;
 }
 
 message GetUserRequest {

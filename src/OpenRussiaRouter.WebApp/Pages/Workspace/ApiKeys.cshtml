@@ -122,35 +122,34 @@
                                 </span>
                             </td>
                                 <td>
-                                    <div class="d-flex gap-2">
-                                        @if (k.DisabledAtUtc == null)
-                                        {
-                                            <form method="post" asp-page-handler="DisableKey">
-                                                <input type="hidden" name="apiKeyId" value="@k.Id" />
-                                                <button type="submit" class="btn btn-sm btn-outline-warning">Disable</button>
-                                            </form>
-                                        }
-                                        else
-                                        {
-                                            <form method="post" asp-page-handler="EnableKey">
-                                                <input type="hidden" name="apiKeyId" value="@k.Id" />
-                                                <button type="submit" class="btn btn-sm btn-outline-success">Enable</button>
-                                            </form>
-                                        }
-                                else
-                                {
-                                    <form method="post" asp-page-handler="Delete" style="display:inline">
-                                        <input type="hidden" name="keyId" value="@k.Id" />
-                                        <button type="submit" class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete"
-                                                data-testid="btn-delete"
-                                                onclick="return confirm('Remove key &quot;@k.Name&quot; from the list? This cannot be undone.')">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                                <line x1="18" y1="6" x2="6" y2="18"/>
-                                                <line x1="6" y1="6" x2="18" y2="18"/>
-                                            </svg>
-                                        </button>
-                                    </form>
-                                }
+                                  <div class="d-flex gap-2">
+                                      @if (k.DisabledAtUtc == null)
+                                      {
+                                          <form method="post" asp-page-handler="DisableKey">
+                                              <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                              <button type="submit" class="btn btn-sm btn-outline-warning">Disable</button>
+                                          </form>
+                                      }
+                                      else
+                                      {
+                                          <form method="post" asp-page-handler="EnableKey">
+                                              <input type="hidden" name="apiKeyId" value="@k.Id" />
+                                              <button type="submit" class="btn btn-sm btn-outline-success">Enable</button>
+                                          </form>
+                                      }
+                                      
+                                      <form method="post" asp-page-handler="Delete" style="display:inline">
+                                          <input type="hidden" name="keyId" value="@k.Id" />
+                                          <button type="submit" class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete"
+                                                  data-testid="btn-delete"
+                                                  onclick="return confirm('Remove key &quot;@k.Name&quot; from the list? This cannot be undone.')">
+                                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                                  <line x1="18" y1="6" x2="6" y2="18"/>
+                                                  <line x1="6" y1="6" x2="18" y2="18"/>
+                                              </svg>
+                                          </button>
+                                      </form>
+                                  </div>
                             </td>
                         </tr>
                     }

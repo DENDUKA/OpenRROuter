@@ -154,7 +154,7 @@ public sealed class ControlPlaneProvider(
         }, cancellationToken: cancellationToken);
     }
 
-    public async Task<(int Added, int Disabled, int Reactivated)> SyncNodeIntegrationKeysAsync(string nodeId, CancellationToken cancellationToken = default)
+    public async Task<(int Added, int Disabled, int Reactivated, int Deleted)> SyncNodeIntegrationKeysAsync(string nodeId, CancellationToken cancellationToken = default)
     {
         var response = await client.SyncNodeIntegrationKeysAsync(new SyncNodeIntegrationKeysRequest
         {
@@ -166,7 +166,7 @@ public sealed class ControlPlaneProvider(
             throw new InvalidOperationException($"SyncNodeIntegrationKeys failed: {response.ErrorCode}");
         }
 
-        return (response.AddedCount, response.DisabledCount, response.ReactivatedCount);
+        return (response.AddedCount, response.DisabledCount, response.ReactivatedCount, response.DeletedCount);
     }
 
     private static RouterNodeInfo MapNode(RouterNodeSummary n)

@@ -70,12 +70,22 @@ public sealed record RouterIntegrationKeySyncEntry
 {
     public string Name { get; init; } = string.Empty;
     public string Key { get; init; } = string.Empty;
+    public bool IsActive { get; init; } = true;
 }
 
 public sealed record RouterIntegrationKeysSyncResponse
 {
-    [JsonPropertyName("synced")]
+    [JsonPropertyName("addedCount")]
     public int AddedCount { get; init; }
+
+    [JsonPropertyName("disabledCount")]
+    public int DisabledCount { get; init; }
+
+    [JsonPropertyName("reactivatedCount")]
+    public int ReactivatedCount { get; init; }
+
+    [JsonPropertyName("deletedCount")]
+    public int DeletedCount { get; init; }
 }
 
 public sealed class RouterNodeProviderException : Exception

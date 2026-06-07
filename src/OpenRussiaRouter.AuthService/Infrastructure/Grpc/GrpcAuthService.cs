@@ -379,6 +379,23 @@ public sealed class GrpcAuthService(
         return response;
     }
 
+    public override async Task<ListAllNonDeletedApiKeysRawResponse> ListAllNonDeletedApiKeysRaw(
+        ListAllNonDeletedApiKeysRawRequest request,
+        ServerCallContext context)
+    {
+        var keys = await repository.ListAllNonDeletedApiKeysRawAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var response = new ListAllNonDeletedApiKeysRawResponse();
+        response.Keys.AddRange(keys.Select(k => new NonDeletedApiKeyRaw
+        {
+            ApiKeyId = k.ApiKeyId,
+            RawKey = k.RawKey,
+            UserId = k.UserId,
+            Name = k.Name,
+            IsActive = k.IsActive
+        }));
+        return response;
+    }
+
     public override async Task<GetUserResponse> GetUser(GetUserRequest request, ServerCallContext context)
     {
         var user = await repository.GetUserAsync(request.UserId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);

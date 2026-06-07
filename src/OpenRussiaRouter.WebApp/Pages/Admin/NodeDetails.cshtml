@@ -149,14 +149,20 @@
     <div class="adm-card" data-testid="integration-keys-card">
         <div class="adm-card-header adm-card-header--split">
             <span>Service-managed Keys</span>
-            <form method="post" asp-route-nodeId="@details.Node.NodeId" class="m-0">
-                <button type="submit" class="btn btn-sm btn-secondary mr-2" asp-page-handler="CheckSync" data-testid="btn-check-sync">
+            <div class="m-0 d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-secondary mr-2" id="btn-check-sync" data-nodeid="@details.Node.NodeId">
                     Is Sync
                 </button>
-                <button type="submit" class="btn btn-sm btn-primary" asp-page-handler="SyncKeys" data-testid="btn-sync-keys">
-                    Sync Keys
-                </button>
-            </form>
+                <form method="post" asp-route-nodeId="@details.Node.NodeId" class="m-0" id="sync-form">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-sm btn-primary" asp-page-handler="SyncKeys" data-testid="btn-sync-keys">
+                        Sync Keys
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="adm-card-body" id="sync-status-container" style="display: none; margin-bottom: 1rem;">
+            <div id="sync-status-alert" class="alert" role="alert" style="margin-bottom: 0;"></div>
         </div>
         <div class="adm-card-body">
             @if (details.Keys.Count == 0)
@@ -191,4 +197,60 @@
             }
         </div>
     </div>
+}
+
+@section Scripts {
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var btnCheckSync = document.getElementById('btn-check-sync');
+        if (btnCheckSync) {
+            btnCheckSync.addEventListener('click', function(e) {
+                e.preventDefault();
+                var nodeId = this.getAttribute('data-nodeid');
+                var token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+                
+                var originalText = this.innerText;
+                this.innerText = 'Checking...';
+                this.disabled = true;
+                
+                var container = document.getElementById('sync-status-container');
+                var alert = document.getElementById('sync-status-alert');
+                container.style.display = 'none';
+
+                fetch('/admin/nodes/' + encodeURIComponent(nodeId) + '?handler=CheckSyncJson', {
+                    method: 'POST',
+                    headers: {
+                        'RequestVerificationToken': token,
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    container.style.display = 'block';
+                    if (data.success) {
+                        if (data.isSync) {
+                            alert.className = 'alert alert-success';
+                            alert.innerText = data.message;
+                        } else {
+                            alert.className = 'alert alert-warning';
+                            alert.innerText = data.message;
+                        }
+                    } else {
+                        alert.className = 'alert alert-danger';
+                        alert.innerText = data.message || 'Failed to check sync status.';
+                    }
+                })
+                .catch(err => {
+                    container.style.display = 'block';
+                    alert.className = 'alert alert-danger';
+                    alert.innerText = 'Network error while checking sync status.';
+                })
+                .finally(() => {
+                    this.innerText = originalText;
+                    this.disabled = false;
+                });
+            });
+        }
+    });
+</script>
 }

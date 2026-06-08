@@ -86,8 +86,15 @@ public sealed class FxQuoteService(
             lock (sync)
                 snapshot = new FxSnapshot(rubPerUsd, rubPerEur, "cbr", DateTimeOffset.UtcNow);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
+            throw; // genuine shutdown — let the host stop
+        }
+        catch (Exception ex)
+        {
+            // Includes HttpClient.Timeout, which surfaces as TaskCanceledException (an
+            // OperationCanceledException) even though our ct was NOT cancelled. Must NOT
+            // escape ExecuteAsync, or BackgroundServiceExceptionBehavior=StopHost kills Billing.
             logger.LogWarning(ex, "Failed to refresh Billing FX rates; keeping last-known-good or fallback rates.");
         }
     }

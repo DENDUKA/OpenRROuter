@@ -204,6 +204,7 @@ message UserInfo {
   int64 created_at_unix_time_seconds = 5;
   optional string display_name = 6;
   int32 max_api_keys = 7;
+  optional string display_currency = 8;
 }
 
 message ListActiveApiKeyHashesRequest {}
@@ -268,7 +269,8 @@ message GetUserResponse {
 message UpdateUserRequest {
   string user_id = 1;
   optional string display_name = 2;
-  int32 max_api_keys = 3;
+  optional int32 max_api_keys = 3;
+  optional string display_currency = 4;
 }
 
 message UpdateUserResponse {

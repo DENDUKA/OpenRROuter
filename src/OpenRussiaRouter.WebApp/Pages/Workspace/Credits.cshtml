@@ -4,7 +4,7 @@
 
 <div class="ws-section-header">
     <h2>Credits</h2>
-    <p class="ws-section-desc">Your current $ balance used for API request billing.</p>
+    <p class="ws-section-desc">Your current balance used for API request billing.</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -22,9 +22,36 @@
         else
         {
             <div class="ws-balance-amount">
-                @Model.Balance.Amount.ToString("N2") <span class="ws-balance-currency">$</span>
+                @Model.FormatAmount(Model.Balance.Amount)
             </div>
         }
+    </div>
+</div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Top Up</div>
+    <div class="ws-panel-body">
+        <form method="post" asp-page-handler="TopUp">
+            <div class="mb-3 d-flex gap-2 align-items-end">
+                <div>
+                    <label class="form-label" asp-for="TopUpAmount">Amount</label>
+                    <input type="number" asp-for="TopUpAmount" class="form-control"
+                           min="0.01" step="0.01" placeholder="0.00" required style="width: 160px;" />
+                </div>
+                <div>
+                    <label class="form-label" asp-for="SelectedCurrency">Currency</label>
+                    <select asp-for="SelectedCurrency" class="form-select" style="width: 100px;">
+                        <option value="RUB">RUB</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">Top Up</button>
+                </div>
+            </div>
+            <p class="text-muted" style="font-size: 13px;">Minimum: $@Model.MinTopUpUsd USD. Authoritative limit enforced server-side.</p>
+        </form>
     </div>
 </div>
 
@@ -50,7 +77,7 @@
                     {
                         <tr>
                             <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                            <td>@topUp.Amount.ToString("N2") $</td>
+                            <td>@Model.FormatAmount(topUp.Amount)</td>
                             <td>@topUp.Reason</td>
                         </tr>
                     }

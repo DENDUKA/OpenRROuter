@@ -144,7 +144,8 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.Status,
             DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
             u.HasDisplayName ? u.DisplayName : null,
-            u.MaxApiKeys)).ToList();
+            u.MaxApiKeys,
+            u.HasDisplayCurrency ? u.DisplayCurrency : "RUB")).ToList();
     }
 
     public async Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
@@ -156,10 +157,11 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.Id, u.Email, u.Role, u.Status,
             DateTimeOffset.FromUnixTimeSeconds(u.CreatedAtUnixTimeSeconds),
             u.HasDisplayName ? u.DisplayName : null,
-            u.MaxApiKeys);
+            u.MaxApiKeys,
+            u.HasDisplayCurrency ? u.DisplayCurrency : "RUB");
     }
 
-    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, CancellationToken cancellationToken = default)
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, CancellationToken cancellationToken = default)
     {
         var request = new UpdateUserRequest
         {
@@ -167,6 +169,7 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
             MaxApiKeys = maxApiKeys
         };
         if (displayName != null) request.DisplayName = displayName;
+        if (displayCurrency != null) request.DisplayCurrency = displayCurrency;
 
         var response = await client.UpdateUserAsync(request, cancellationToken: cancellationToken);
         if (!response.Succeeded) throw new AuthException(response.ErrorCode);

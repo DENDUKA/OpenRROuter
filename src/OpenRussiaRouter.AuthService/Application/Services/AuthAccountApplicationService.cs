@@ -139,13 +139,13 @@ public sealed class AuthAccountApplicationService(
         return ResendVerificationResult.Success(user.Email, code);
     }
 
-    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, CancellationToken ct = default)
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, CancellationToken ct = default)
     {
         var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
         if (user == null)
             throw new InvalidOperationException("User not found.");
 
-        user.UpdateDetails(displayName, maxApiKeys);
+        user.UpdateDetails(displayName, maxApiKeys, displayCurrency);
         await repository.UpdateUserAsync(user, ct).ConfigureAwait(false);
     }
 

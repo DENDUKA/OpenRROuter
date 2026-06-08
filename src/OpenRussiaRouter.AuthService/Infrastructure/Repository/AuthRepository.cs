@@ -51,9 +51,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.users
-                (id, email, role, status, password_hash, created_at_utc)
+                (id, email, role, status, password_hash, created_at_utc, display_name, max_api_keys, display_currency)
             values
-                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc, @DisplayName, @MaxApiKeys, @DisplayCurrency);
             """,
             ToParameters(user),
             transaction,
@@ -130,7 +130,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             """
             update auth.users
             set display_name = @DisplayName,
-                max_api_keys = @MaxApiKeys
+                max_api_keys = @MaxApiKeys,
+                display_currency = @DisplayCurrency
             where id = @Id;
             """,
             ToParameters(user),
@@ -401,9 +402,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.users
-                (id, email, role, status, password_hash, created_at_utc)
+                (id, email, role, status, password_hash, created_at_utc, display_name, max_api_keys, display_currency)
             values
-                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc, @DisplayName, @MaxApiKeys, @DisplayCurrency);
             """,
             ToParameters(user),
             transaction,
@@ -435,9 +436,9 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into auth.users
-                (id, email, role, status, password_hash, created_at_utc)
+                (id, email, role, status, password_hash, created_at_utc, display_name, max_api_keys, display_currency)
             values
-                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc);
+                (@Id, @Email, @Role, @Status, @PasswordHash, @CreatedAtUtc, @DisplayName, @MaxApiKeys, @DisplayCurrency);
             """,
             ToParameters(user),
             transaction,
@@ -525,7 +526,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         user.PasswordHash,
         user.CreatedAtUtc,
         user.DisplayName,
-        user.MaxApiKeys
+        user.MaxApiKeys,
+        user.DisplayCurrency
     };
 
     private static object ToParameters(Invite invite) => new
@@ -562,7 +564,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             password_hash as PasswordHash,
             created_at_utc as CreatedAtUtc,
             display_name as DisplayName,
-            max_api_keys as MaxApiKeys
+            max_api_keys as MaxApiKeys,
+            display_currency as DisplayCurrency
         from auth.users
         """;
 

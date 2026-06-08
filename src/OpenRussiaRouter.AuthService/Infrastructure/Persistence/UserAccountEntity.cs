@@ -16,6 +16,8 @@ public sealed class UserAccountEntity
 
     public int MaxApiKeys { get; set; } = 10;
 
+    public string DisplayCurrency { get; set; } = "RUB";
+
     public string? PasswordHash { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }

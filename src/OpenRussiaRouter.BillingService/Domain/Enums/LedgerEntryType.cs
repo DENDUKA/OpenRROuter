@@ -4,6 +4,7 @@ public enum LedgerEntryType
 {
     VirtualTopUp = 0,
     UsageCharge = 1,
-    Correction = 2
+    Correction = 2,
+    ExternalTopUp = 3
 }
 

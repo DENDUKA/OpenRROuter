@@ -3,6 +3,7 @@ using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
+using OpenRussiaRouter.BuildingBlocks.Errors;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
@@ -13,6 +14,9 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     private readonly ConcurrentDictionary<string, UsageRecord> _usageByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ActivityByTokenRecord> _activityByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentBag<BillingAnomaly> _anomalies = [];
+    private readonly Dictionary<string, Payment> _payments = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, PaymentEvent> _paymentEvents = new(StringComparer.Ordinal);
+    private readonly object _paymentSync = new();
 
     public Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default) =>
         Task.FromResult(_ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry));
@@ -20,7 +24,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         var items = _ledgerByIdempotencyKey.Values
-            .Where(e => e.UserId == userId && e.Type == LedgerEntryType.VirtualTopUp)
+            .Where(e => e.UserId == userId && e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp)
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
             .Take(limit + 1)
@@ -357,4 +361,226 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
         return Task.CompletedTask;
     }
+
+    public Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var existing = _payments.Values.FirstOrDefault(p =>
+                p.UserId == payment.UserId && p.ClientToken == payment.ClientToken);
+            if (existing is not null)
+                return Task.FromResult(existing);
+            _payments.Add(payment.Id, payment);
+            return Task.FromResult(payment);
+        }
+    }
+
+    public Task<bool> AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            if (!_payments.TryGetValue(paymentId, out var payment) || payment.Status != PaymentStatus.Created)
+                return Task.FromResult(false);
+            if (_payments.Values.Any(p => p.Provider == payment.Provider && p.ProviderPaymentId == providerPaymentId && p.Id != paymentId))
+                return Task.FromResult(false);
+            _payments[paymentId] = payment with
+            {
+                ProviderPaymentId = providerPaymentId,
+                PayUrl = payUrl,
+                ExpiresAtUtc = expiresAt,
+                UpdatedAtUtc = DateTimeOffset.UtcNow
+            };
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<Payment?> GetPaymentAsync(string id, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+            return Task.FromResult(_payments.GetValueOrDefault(id));
+    }
+
+    public Task<Payment?> FindPaymentAsync(string provider, string? providerPaymentId, string? orderId, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+            return Task.FromResult(_payments.Values.FirstOrDefault(p =>
+                p.Provider == provider &&
+                ((!string.IsNullOrEmpty(providerPaymentId) && p.ProviderPaymentId == providerPaymentId) ||
+                 (!string.IsNullOrEmpty(orderId) && p.OrderId == orderId))));
+    }
+
+    public Task<(IReadOnlyCollection<Payment> Items, bool HasMore)> ListPaymentsAsync(string userId, int limit, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var items = _payments.Values.Where(p => p.UserId == userId)
+                .OrderByDescending(p => p.CreatedAtUtc).Take(limit + 1).ToArray();
+            var hasMore = items.Length > limit;
+            return Task.FromResult(((IReadOnlyCollection<Payment>)(hasMore ? items.Take(limit).ToArray() : items), hasMore));
+        }
+    }
+
+    public Task<ConfirmOutcome> ConfirmPaymentAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var payment = FindPaymentUnsafe(evt);
+            if (payment is null)
+                return Task.FromResult(new ConfirmOutcome(false, null, null, 0, ErrorCodes.PaymentNotFound));
+            var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
+            if (payment.Status == PaymentStatus.Paid)
+            {
+                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), null));
+            }
+            if (payment.Status != PaymentStatus.Created)
+            {
+                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentInvalidTransition));
+            }
+            if (payment.ProviderAmount != evt.ConfirmedAmount ||
+                !string.Equals(payment.ProviderCurrency, evt.ConfirmedCurrency, StringComparison.OrdinalIgnoreCase))
+            {
+                _anomalies.Add(new BillingAnomaly(Guid.NewGuid().ToString("N"), payment.Id, "payment_amount_mismatch", "Confirmed amount or currency did not match payment.", nowUtc));
+                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentAmountMismatch));
+            }
+
+            payment = payment with { Status = PaymentStatus.Paid, ConfirmedAtUtc = nowUtc, UpdatedAtUtc = nowUtc, LeaseOwner = null, LeaseUntilUtc = null };
+            _payments[payment.Id] = payment;
+            var ledger = _ledgerByIdempotencyKey.GetOrAdd($"payment:{payment.Id}", _ => new LedgerEntry(
+                Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.ExternalTopUp,
+                payment.CreditedUsd, $"payment:{payment.Id}", $"External payment {payment.Id}", nowUtc));
+            MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+            return Task.FromResult(new ConfirmOutcome(true, payment, ledger.Id, BalanceUnsafe(payment.UserId), null));
+        }
+    }
+
+    public Task<ApplyOutcome> ApplyPaymentEventAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var payment = FindPaymentUnsafe(evt);
+            if (payment is null)
+                return Task.FromResult(new ApplyOutcome(false, null, null, ErrorCodes.PaymentNotFound));
+            var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
+            var eventType = evt.EventType.ToLowerInvariant();
+            var target = eventType switch
+            {
+                "canceled" => PaymentStatus.Canceled,
+                "expired" => PaymentStatus.Expired,
+                "refunded" => PaymentStatus.Refunded,
+                "chargeback" => PaymentStatus.ChargedBack,
+                _ => (PaymentStatus?)null
+            };
+            var valid = target.HasValue && (payment.Status == PaymentStatus.Created && target is PaymentStatus.Canceled or PaymentStatus.Expired ||
+                payment.Status == PaymentStatus.Paid && target is PaymentStatus.Refunded or PaymentStatus.ChargedBack);
+            if (!valid)
+            {
+                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+                return Task.FromResult(new ApplyOutcome(false, payment, null, ErrorCodes.PaymentInvalidTransition));
+            }
+
+            payment = payment with
+            {
+                Status = target!.Value,
+                CancelReason = evt.Reason,
+                CanceledAtUtc = target is PaymentStatus.Canceled or PaymentStatus.Expired ? nowUtc : payment.CanceledAtUtc,
+                UpdatedAtUtc = nowUtc,
+                LeaseOwner = null,
+                LeaseUntilUtc = null
+            };
+            _payments[payment.Id] = payment;
+            LedgerEntry? ledger = null;
+            if (target == PaymentStatus.Refunded || target == PaymentStatus.ChargedBack && autoReverseChargeback)
+            {
+                var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
+                ledger = _ledgerByIdempotencyKey.GetOrAdd($"{prefix}:{payment.Id}", _ => new LedgerEntry(
+                    Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
+                    MoneyAmount.Usd(-payment.CreditedUsd.Amount), $"{prefix}:{payment.Id}",
+                    $"{target} payment {payment.Id}", nowUtc));
+            }
+            MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+            return Task.FromResult(new ApplyOutcome(true, payment, ledger?.Id, null));
+        }
+    }
+
+    public Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+            return Task.FromResult((IReadOnlyCollection<PaymentEvent>)_paymentEvents.Values.Where(e => !e.Processed).Take(limit).ToArray());
+    }
+
+    public Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var stale = _payments.Values
+                .Where(p => p.Status == PaymentStatus.Created
+                    && p.CreatedAtUtc < olderThanUtc
+                    && (p.LeaseOwner is null || p.LeaseUntilUtc < now))
+                .OrderBy(p => p.CreatedAtUtc)
+                .Take(limit)
+                .ToList();
+            var leaseUntil = now.Add(lease);
+            foreach (var p in stale)
+                _payments[p.Id] = p with { LeaseOwner = workerId, LeaseUntilUtc = leaseUntil, UpdatedAtUtc = now };
+            return Task.FromResult<IReadOnlyCollection<Payment>>(stale.Select(p => _payments[p.Id]).ToList());
+        }
+    }
+
+    public Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var events = _paymentEvents.Values.Where(e => !e.Processed).Take(limit).ToArray();
+            foreach (var evt in events)
+            {
+                var input = ToRecoveryInput(evt);
+                if (string.Equals(evt.EventType, "paid", StringComparison.OrdinalIgnoreCase))
+                    ConfirmPaymentAtomicAsync(input, nowUtc, ct).GetAwaiter().GetResult();
+                else
+                    ApplyPaymentEventAtomicAsync(input, nowUtc, autoReverseChargeback, ct).GetAwaiter().GetResult();
+            }
+
+            return Task.FromResult(events.Length);
+        }
+    }
+
+    public void InjectPaymentEvent(PaymentEvent evt)
+    {
+        lock (_paymentSync)
+            _paymentEvents[evt.Id] = evt;
+    }
+
+    private Payment? FindPaymentUnsafe(PaymentEventInput evt) =>
+        _payments.Values.FirstOrDefault(p => p.Provider == evt.Provider &&
+            ((!string.IsNullOrEmpty(evt.ProviderPaymentId) && p.ProviderPaymentId == evt.ProviderPaymentId) ||
+             (!string.IsNullOrEmpty(evt.OrderId) && p.OrderId == evt.OrderId)));
+
+    private PaymentEvent AddEventUnsafe(Payment payment, PaymentEventInput evt, DateTimeOffset nowUtc)
+    {
+        var existing = _paymentEvents.Values.FirstOrDefault(e => e.Provider == evt.Provider &&
+            (!string.IsNullOrEmpty(evt.ProviderEventId)
+                ? e.ProviderEventId == evt.ProviderEventId
+                : e.PaymentId == payment.Id && e.EventType == evt.EventType));
+        if (existing is not null)
+            return existing;
+        var added = new PaymentEvent(Guid.NewGuid().ToString("N"), payment.Id, evt.Provider, evt.ProviderEventId,
+            evt.ProviderPaymentId, evt.EventType, evt.OrderId, evt.ConfirmedAmount, evt.ConfirmedCurrency,
+            evt.Reason, evt.RawPayload, evt.SignatureOk, false, 0, nowUtc, null);
+        _paymentEvents.Add(added.Id, added);
+        return added;
+    }
+
+    private void MarkEventProcessedUnsafe(PaymentEvent paymentEvent, DateTimeOffset nowUtc) =>
+        _paymentEvents[paymentEvent.Id] = paymentEvent with { Processed = true, Attempts = paymentEvent.Attempts + 1, ProcessedAtUtc = nowUtc };
+
+    private static PaymentEventInput ToRecoveryInput(PaymentEvent evt) =>
+        new(evt.Provider, evt.ProviderPaymentId, evt.OrderId, evt.EventType, evt.ConfirmedAmount,
+            evt.ConfirmedCurrency, evt.Reason, evt.ProviderEventId, null, evt.SignatureOk);
+
+    private decimal BalanceUnsafe(string userId) =>
+        _ledgerByIdempotencyKey.Values.Where(e => e.UserId == userId).Sum(e => e.Amount.Amount);
 }

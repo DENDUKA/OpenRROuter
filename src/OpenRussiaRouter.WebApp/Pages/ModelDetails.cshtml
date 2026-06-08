@@ -15,9 +15,9 @@
 
         <div class="metrics-grid" aria-label="Model metrics">
             <div class="metric"><div class="metric-label">Modalities</div><div class="metric-value">@Model.ModalitiesDisplay</div></div>
-            <div class="metric"><div class="metric-label">Input Price / 1M</div><div class="metric-value">@(Model.HasPricing ? $"{Model.InputPrice:N0} $" : "Route")</div></div>
-            <div class="metric"><div class="metric-label">Output Price / 1M</div><div class="metric-value">@(Model.HasPricing ? $"{Model.OutputPrice:N0} $" : "Route")</div></div>
-            <div class="metric"><div class="metric-label">Cache Price / 1M</div><div class="metric-value">@(Model.HasPricing ? $"{Model.CachePrice:N0} $" : "Route")</div></div>
+            <div class="metric"><div class="metric-label">Input Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : "Route")</div></div>
+            <div class="metric"><div class="metric-label">Output Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.OutputPrice) : "Route")</div></div>
+            <div class="metric"><div class="metric-label">Cache Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : "Route")</div></div>
             <div class="metric"><div class="metric-label">Context</div><div class="metric-value">@Model.ContextDisplay</div></div>
             <div class="metric"><div class="metric-label">Status</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? "Disabled" : "Available")</div></div>
             <div class="metric"><div class="metric-label">Provider</div><div class="metric-value">@Model.ProviderTitle</div></div>

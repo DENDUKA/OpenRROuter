@@ -1,13 +1,17 @@
 using Microsoft.Extensions.Caching.Memory;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane; // NodeModelCatalogResult, NodeModelCatalogEntry
+using OpenRussiaRouter.WebApp.Services.Currency;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class ModelsModel(
     BillingProvider BillingProvider,
     CollectorProvider CollectorProvider,
+    CurrencyFormatter currencyFormatter,
+    AuthProvider authProvider,
     IMemoryCache memoryCache,
     ILogger<ModelsModel> logger) : PageModelBase
 {
@@ -17,10 +21,15 @@ public class ModelsModel(
     public string? ErrorMessage { get; private set; }
     public bool CatalogMetadataUnavailable { get; private set; }
 
+    /// <summary>Display currency for catalog prices: profile choice for signed-in users, RUB for anonymous.</summary>
+    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Rub;
+    public string CurrencySymbol => Currency.Symbol();
+
     public static readonly string[] Categories = ["All", "OpenAI", "Anthropic", "Google", "Meta", "Text", "Vision", "Coding"];
 
     public async Task OnGetAsync()
     {
+        Currency = await ResolveCurrencyAsync();
         try
         {
             var billingModelsTask = BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
@@ -61,8 +70,24 @@ public class ModelsModel(
         return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
     }
 
-    public static string FormatPrice(decimal price) =>
-        $"{price:0.##} $";
+    public string FormatPrice(decimal usdPrice) =>
+        currencyFormatter.Format(usdPrice, Currency);
+
+    private async Task<DisplayCurrency> ResolveCurrencyAsync()
+    {
+        var userId = CurrentUser?.UserId;
+        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Rub;
+        try
+        {
+            var user = await authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
+            return DisplayCurrencyExtensions.Parse(user?.DisplayCurrency);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to load currency for catalog. UserId={UserId}", userId);
+            return DisplayCurrency.Rub;
+        }
+    }
 
     public static string FormatContext(int? tokens) =>
         tokens is > 0

@@ -64,4 +64,15 @@ public interface IBillingRepository
     Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default);
     Task UpsertTagAsync(Tag tag, CancellationToken ct = default);
     Task DeleteTagAsync(string id, CancellationToken ct = default);
+
+    Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default);
+    Task<bool> AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default);
+    Task<Payment?> GetPaymentAsync(string id, CancellationToken ct = default);
+    Task<Payment?> FindPaymentAsync(string provider, string? providerPaymentId, string? orderId, CancellationToken ct = default);
+    Task<(IReadOnlyCollection<Payment> Items, bool HasMore)> ListPaymentsAsync(string userId, int limit, CancellationToken ct = default);
+    Task<ConfirmOutcome> ConfirmPaymentAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default);
+    Task<ApplyOutcome> ApplyPaymentEventAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);
+    Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default);
+    Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default);
+    Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);
 }

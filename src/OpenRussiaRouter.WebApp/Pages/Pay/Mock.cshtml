@@ -1,0 +1,43 @@
+@page "/pay/mock/{paymentId}"
+@model Pay.MockModel
+@{ Layout = "~/Pages/Shared/_Layout.cshtml"; ViewData["Title"] = "Complete Payment"; }
+
+<div class="container" style="max-width: 480px; margin: 60px auto;">
+    <div class="ws-panel">
+        <div class="ws-panel-header">
+            <span>Mock Checkout</span>
+            <span class="badge bg-warning text-dark ms-2" style="font-size: 11px;">DEV ONLY</span>
+        </div>
+        <div class="ws-panel-body">
+            @if (Model.ErrorMessage != null)
+            {
+                <div class="alert alert-danger">@Model.ErrorMessage</div>
+            }
+
+            @if (Model.Payment == null && Model.ErrorMessage != null)
+            {
+                <a class="btn btn-secondary" href="/workspace/credits">Back to Credits</a>
+            }
+            else
+            {
+                <p class="text-muted mb-1" style="font-size: 13px;">Payment ID: <code>@Model.PaymentId</code></p>
+
+                @if (Model.Payment != null)
+                {
+                    <div class="ws-balance-amount mb-3">
+                        @Model.Payment.ProviderAmount.ToString("N2") <span style="font-size: 16px; font-weight: 400;">@Model.Payment.ProviderCurrency</span>
+                    </div>
+                }
+
+                <div class="d-flex gap-2 mt-3">
+                    <form method="post" asp-page-handler="Pay" asp-route-paymentId="@Model.PaymentId">
+                        <button type="submit" class="btn btn-primary">Pay</button>
+                    </form>
+                    <form method="post" asp-page-handler="Cancel" asp-route-paymentId="@Model.PaymentId">
+                        <button type="submit" class="btn btn-secondary">Cancel</button>
+                    </form>
+                </div>
+            }
+        </div>
+    </div>
+</div>

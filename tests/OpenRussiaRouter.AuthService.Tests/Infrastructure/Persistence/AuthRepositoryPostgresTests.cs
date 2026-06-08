@@ -2,6 +2,7 @@ using Dapper;
 using FluentAssertions;
 using Npgsql;
 using OpenRussiaRouter.AuthService.Application.Services;
+using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
@@ -11,6 +12,53 @@ namespace OpenRussiaRouter.AuthService.Tests.Infrastructure.Persistence;
 
 public sealed class AuthRepositoryPostgresTests
 {
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task UpdateUser_DisplayCurrency_PersistsAndReadsProfileFields()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        var connectionString = database.ConnectionString;
+        database.ApplyAuthMigration();
+        database.TruncateAuth();
+        var repository = new AuthRepository(new AuthDbConnectionFactory(connectionString));
+        var user = new UserAccount(
+            "currency-user",
+            "currency@example.com",
+            UserRole.User,
+            passwordHash: null,
+            DateTimeOffset.UtcNow);
+        var invite = new Invite(
+            "currency-invite",
+            user.Email,
+            UserRole.User,
+            "token-hash",
+            DateTimeOffset.UtcNow.AddDays(1),
+            "admin-1",
+            DateTimeOffset.UtcNow);
+        invite.MarkUsed(DateTimeOffset.UtcNow);
+
+        await repository.AddInviteAsync(invite);
+        await repository.AddUserAndMarkInviteUsedAsync(user, invite);
+
+        var created = await repository.GetUserAsync(user.Id);
+        created.Should().NotBeNull();
+        created!.DisplayCurrency.Should().Be("RUB");
+
+        created.UpdateDetails("Currency User", 5, "EUR");
+        await repository.UpdateUserAsync(created);
+
+        var updated = await repository.GetUserAsync(user.Id);
+        updated.Should().NotBeNull();
+        updated!.DisplayName.Should().Be("Currency User");
+        updated.MaxApiKeys.Should().Be(5);
+        updated.DisplayCurrency.Should().Be("EUR");
+    }
+
     [Fact]
     [Trait("Category", "PostgreSQL")]
     public async Task Repository_AppliedMigration_PersistsInviteUserAndApiKeyLifecycle()

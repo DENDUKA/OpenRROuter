@@ -489,6 +489,175 @@ public sealed class GrpcBillingService(
         }
     }
 
+    public override Task<GetFxQuoteResponse> GetFxQuote(GetFxQuoteRequest request, ServerCallContext context)
+    {
+        try
+        {
+            var quote = billing.GetFxQuote(request.ProviderCurrency, DateTimeOffset.UtcNow);
+            return Task.FromResult(new GetFxQuoteResponse
+            {
+                Rate = quote.Rate.ToString(CultureInfo.InvariantCulture),
+                UsdPerUnit = quote.UsdPerUnit.ToString(CultureInfo.InvariantCulture),
+                FxSource = quote.Source,
+                FxAt = quote.FxAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                QuoteId = quote.QuoteId,
+                ExpiresAt = quote.ExpiresAt.ToString("O", CultureInfo.InvariantCulture)
+            });
+        }
+        catch (FxQuoteException ex)
+        {
+            return Task.FromResult(new GetFxQuoteResponse { ErrorCode = ex.ErrorCode });
+        }
+    }
+
+    public override async Task<CreatePaymentResponse> CreatePayment(CreatePaymentRequest request, ServerCallContext context)
+    {
+        try
+        {
+            var payment = await billing.CreatePaymentAsync(
+                request.UserId, request.Provider,
+                decimal.Parse(request.ProviderAmount, CultureInfo.InvariantCulture), request.ProviderCurrency,
+                decimal.Parse(request.DisplayAmount, CultureInfo.InvariantCulture), request.DisplayCurrency,
+                request.ClientToken, DateTimeOffset.UtcNow, context.CancellationToken).ConfigureAwait(false);
+            return new CreatePaymentResponse
+            {
+                PaymentId = payment.Id,
+                OrderId = payment.OrderId,
+                CreditedUsdAmount = payment.CreditedUsd.Amount.ToString(CultureInfo.InvariantCulture),
+                FxRate = payment.FxRate.ToString(CultureInfo.InvariantCulture)
+            };
+        }
+        catch (FxQuoteException ex)
+        {
+            return new CreatePaymentResponse { ErrorCode = ex.ErrorCode };
+        }
+        catch (PaymentOperationException ex)
+        {
+            return new CreatePaymentResponse { ErrorCode = ex.ErrorCode };
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
+        {
+            logger.LogWarning(ex, "CreatePayment validation failed for user {UserId}.", request.UserId);
+            return new CreatePaymentResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<AttachProviderRefResponse> AttachProviderRef(AttachProviderRefRequest request, ServerCallContext context)
+    {
+        try
+        {
+            await billing.AttachProviderRefAsync(request.PaymentId, request.ProviderPaymentId,
+                string.IsNullOrEmpty(request.PayUrl) ? null : request.PayUrl,
+                ParseOptionalTimestamp(request.ExpiresAtUtc), context.CancellationToken).ConfigureAwait(false);
+            return new AttachProviderRefResponse { Ok = true };
+        }
+        catch (PaymentOperationException ex)
+        {
+            return new AttachProviderRefResponse { ErrorCode = ex.ErrorCode };
+        }
+    }
+
+    public override async Task<ConfirmPaymentByProviderResponse> ConfirmPaymentByProvider(ConfirmPaymentByProviderRequest request, ServerCallContext context)
+    {
+        if (!request.SignatureOk)
+            return new ConfirmPaymentByProviderResponse { ErrorCode = ErrorCodes.PaymentProviderUnavailable };
+        try
+        {
+            var outcome = await billing.ConfirmPaymentByProviderAsync(new PaymentEventInput(
+                request.Provider, EmptyToNull(request.ProviderPaymentId), EmptyToNull(request.OrderId), "paid",
+                decimal.Parse(request.ConfirmedAmount, CultureInfo.InvariantCulture), request.ConfirmedCurrency,
+                null, EmptyToNull(request.ProviderEventId), EmptyToNull(request.RawPayload), request.SignatureOk),
+                DateTimeOffset.UtcNow, context.CancellationToken).ConfigureAwait(false);
+            return new ConfirmPaymentByProviderResponse
+            {
+                Confirmed = outcome.Confirmed,
+                LedgerEntryId = outcome.LedgerEntryId ?? "",
+                BalanceUsd = outcome.BalanceUsd.ToString(CultureInfo.InvariantCulture),
+                ErrorCode = outcome.ErrorCode ?? ""
+            };
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
+        {
+            return new ConfirmPaymentByProviderResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<ApplyPaymentEventResponse> ApplyPaymentEvent(ApplyPaymentEventRequest request, ServerCallContext context)
+    {
+        if (!request.SignatureOk)
+            return new ApplyPaymentEventResponse { ErrorCode = ErrorCodes.PaymentProviderUnavailable };
+        decimal? amount = string.IsNullOrEmpty(request.ConfirmedAmount)
+            ? null : decimal.Parse(request.ConfirmedAmount, CultureInfo.InvariantCulture);
+        var outcome = await billing.ApplyPaymentEventAsync(new PaymentEventInput(
+            request.Provider, EmptyToNull(request.ProviderPaymentId), EmptyToNull(request.OrderId), request.EventType,
+            amount, EmptyToNull(request.ConfirmedCurrency), EmptyToNull(request.Reason),
+            EmptyToNull(request.ProviderEventId), EmptyToNull(request.RawPayload), request.SignatureOk),
+            DateTimeOffset.UtcNow, context.CancellationToken).ConfigureAwait(false);
+        return new ApplyPaymentEventResponse
+        {
+            Applied = outcome.Applied,
+            LedgerEntryId = outcome.LedgerEntryId ?? "",
+            ErrorCode = outcome.ErrorCode ?? ""
+        };
+    }
+
+    public override async Task<Contracts.Grpc.Billing.V1.PaymentRecord> GetPayment(GetPaymentRequest request, ServerCallContext context)
+    {
+        try
+        {
+            return ToGrpcPayment(await billing.GetPaymentAsync(request.PaymentId, context.CancellationToken).ConfigureAwait(false));
+        }
+        catch (PaymentOperationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.NotFound, ex.ErrorCode));
+        }
+    }
+
+    public override async Task<ListPaymentsResponse> ListPayments(ListPaymentsRequest request, ServerCallContext context)
+    {
+        var response = new ListPaymentsResponse();
+        response.Records.AddRange((await billing.ListPaymentsAsync(request.UserId,
+            request.PageSize > 0 ? request.PageSize : null, context.CancellationToken).ConfigureAwait(false)).Select(ToGrpcPayment));
+        return response;
+    }
+
+    public override async Task<AcquireStalePaymentsResponse> AcquireStalePayments(AcquireStalePaymentsRequest request, ServerCallContext context)
+    {
+        var olderThan = ParseOptionalTimestamp(request.OlderThanUtc) ?? DateTimeOffset.UtcNow.AddMinutes(-30);
+        var lease = TimeSpan.FromSeconds(request.LeaseSeconds > 0 ? request.LeaseSeconds : 60);
+        var limit = request.Limit > 0 ? request.Limit : 10;
+        var payments = await billing.AcquireStalePaymentsAsync(
+            request.WorkerId, lease, olderThan, limit, context.CancellationToken).ConfigureAwait(false);
+        var response = new AcquireStalePaymentsResponse();
+        response.Records.AddRange(payments.Select(ToGrpcPayment));
+        return response;
+    }
+
+    private static Contracts.Grpc.Billing.V1.PaymentRecord ToGrpcPayment(Payment payment) => new()
+    {
+        Id = payment.Id,
+        UserId = payment.UserId,
+        Provider = payment.Provider,
+        ProviderPaymentId = payment.ProviderPaymentId ?? "",
+        OrderId = payment.OrderId,
+        DisplayAmount = payment.DisplayAmount.ToString(CultureInfo.InvariantCulture),
+        DisplayCurrency = payment.DisplayCurrency,
+        ProviderAmount = payment.ProviderAmount.ToString(CultureInfo.InvariantCulture),
+        ProviderCurrency = payment.ProviderCurrency,
+        CreditedUsdAmount = payment.CreditedUsd.Amount.ToString(CultureInfo.InvariantCulture),
+        FxRate = payment.FxRate.ToString(CultureInfo.InvariantCulture),
+        FxSource = payment.FxSource,
+        FxAtUtc = payment.FxAtUtc.ToString("O", CultureInfo.InvariantCulture),
+        Status = payment.Status.ToString(),
+        CancelReason = payment.CancelReason ?? "",
+        CreatedAtUtc = payment.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+        ExpiresAtUtc = payment.ExpiresAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? "",
+        ConfirmedAtUtc = payment.ConfirmedAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? "",
+        CanceledAtUtc = payment.CanceledAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? ""
+    };
+
+    private static string? EmptyToNull(string value) => string.IsNullOrEmpty(value) ? null : value;
+
     private DateTimeOffset ParseTimestamp(string value)
     {
         if (DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed))

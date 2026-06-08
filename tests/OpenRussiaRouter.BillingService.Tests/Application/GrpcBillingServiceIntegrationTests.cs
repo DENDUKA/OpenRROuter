@@ -1,26 +1,26 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
-using OpenRussiaRouter.BillingService.Domain.Entities;
-using OpenRussiaRouter.BillingService.Domain.Enums;
+using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.BillingService.Infrastructure.Auth;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 
 namespace OpenRussiaRouter.BillingService.Tests.Application;
 
-public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplicationFactory<Program>>
+/// <summary>
+/// Integration tests that verify the s2s auth interceptor is wired up correctly.
+/// Each test creates its own <see cref="WebApplicationFactory{TEntryPoint}"/> so
+/// the test host is started fresh with a guaranteed-correct configuration.
+/// </summary>
+public sealed class GrpcBillingServiceIntegrationTests
 {
-    private readonly WebApplicationFactory<Program> factory;
-
-    public GrpcBillingServiceIntegrationTests(WebApplicationFactory<Program> factory)
-    {
-        this.factory = factory;
-    }
-
     [Fact]
     public async Task BillingGrpcServer_AdminAndUsageWorkflow_ReturnsExpectedResponses()
     {
-        var client = CreateClient();
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
 
         var model = await client.UpsertModelPriceAsync(new UpsertModelPriceRequest
         {
@@ -32,7 +32,7 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
             OutputPricePer1MUsd = "20",
             CachePricePer1MUsd = "1",
             Enabled = true
-        });
+        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
         var topUp = await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
         {
             AdminId = "admin-1",
@@ -40,7 +40,7 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
             AmountUsd = "100",
             Reason = "test",
             IdempotencyKey = "topup-1"
-        });
+        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
         var check = await client.CheckBalanceAndModelAsync(new CheckBalanceAndModelRequest
         {
             UserId = "user-1",
@@ -57,7 +57,7 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
             Status = "succeeded",
             StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
             CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
-        });
+        }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway));
         var records = await client.ListUsageAsync(new ListUsageRequest());
 
         Assert.True(model.Upserted);
@@ -67,16 +67,203 @@ public sealed class GrpcBillingServiceIntegrationTests : IClassFixture<WebApplic
         Assert.Equal("req-1", Assert.Single(records.Records).RequestId);
     }
 
-    private global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient CreateClient()
+    [Theory]
+    [InlineData("RecordUsage")]
+    [InlineData("CreateVirtualTopUp")]
+    [InlineData("UpsertModelPrice")]
+    [InlineData("UpsertTag")]
+    [InlineData("DeleteTag")]
+    [InlineData("CreatePayment")]
+    [InlineData("AttachProviderRef")]
+    [InlineData("ConfirmPaymentByProvider")]
+    [InlineData("ApplyPaymentEvent")]
+    [InlineData("AcquireStalePayments")]
+    public async Task MutatingMethod_WithoutS2sToken_ReturnsUnauthenticated(string methodName)
     {
-        var configuredFactory = factory.WithWebHostBuilder(builder =>
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            await InvokeMutatingMethodWithoutAuthAsync(client, methodName));
+        Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task RecordUsage_WithMissingMethodPolicy_FailsClosed()
+    {
+        await using var factory = BuildFactory(opts => opts.MethodPolicies.Remove("RecordUsage"));
+        var client = CreateClient(factory);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            await client.RecordUsageAsync(new RecordUsageRequest
+            {
+                RequestId = "req-missing-policy",
+                UserId = "user-1",
+                ApiKeyId = "key-1",
+                ModelId = "router/gpt-test",
+                RouterNodeId = "node-1",
+                Usage = new TokenUsage { InputTokens = 1 },
+                Status = "succeeded",
+                StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
+                CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
+            }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway)));
+        Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_WithWrongCaller_ReturnsPermissionDenied()
+    {
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
+            {
+                AdminId = "admin-1",
+                UserId = "user-1",
+                AmountUsd = "5",
+                Reason = "test",
+                IdempotencyKey = "topup-wrong"
+            }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway)));
+        Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_WithUnknownCaller_ReturnsUnauthenticated()
+    {
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
+            {
+                AdminId = "admin-1",
+                UserId = "user-1",
+                AmountUsd = "5",
+                Reason = "test",
+                IdempotencyKey = "topup-unknown"
+            }, S2sHeaders("rogue-caller", "rogue-token")));
+        Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_WithTokenMismatch_ReturnsUnauthenticated()
+    {
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
+
+        var ex = await Assert.ThrowsAsync<RpcException>(async () =>
+            await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
+            {
+                AdminId = "admin-1",
+                UserId = "user-1",
+                AmountUsd = "5",
+                Reason = "test",
+                IdempotencyKey = "topup-mismatch"
+            }, S2sHeaders("webapp-admin", "wrong-token")));
+        Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
+    }
+
+    [Fact]
+    public async Task ReadMethods_WithoutS2sToken_StillSucceed()
+    {
+        await using var factory = BuildFactory();
+        var client = CreateClient(factory);
+
+        // No metadata - read methods stay open.
+        var models = await client.ListPublicModelsAsync(new ListPublicModelsRequest());
+        Assert.NotNull(models);
+    }
+
+    private static WebApplicationFactory<Program> BuildFactory(Action<ServiceAuthOptions>? configureAuth = null)
+    {
+        return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["SqlMigrations:Enabled"] = "false"
-                })));
-        var httpClient = configuredFactory.CreateDefaultClient();
+                }));
+            // Authoritatively replace ServiceAuthOptions so we don't depend on appsettings.json
+            // being copied to the test bin output.
+            builder.ConfigureServices(services =>
+            {
+                services.PostConfigure<ServiceAuthOptions>(opts =>
+                {
+                    opts.Tokens["api-gateway"] = S2sTestTokens.ApiGateway;
+                    opts.Tokens["webapp-admin"] = S2sTestTokens.WebappAdmin;
+                    opts.MethodPolicies["RecordUsage"] = new[] { "api-gateway" };
+                    opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["UpsertModelPrice"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["UpsertTag"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["DeleteTag"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["CreatePayment"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["AttachProviderRef"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["ConfirmPaymentByProvider"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["ApplyPaymentEvent"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["AcquireStalePayments"] = new[] { "webapp-admin" };
+                    configureAuth?.Invoke(opts);
+                });
+            });
+        });
+    }
+
+    private static global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient CreateClient(
+        WebApplicationFactory<Program> factory)
+    {
+        var httpClient = factory.CreateDefaultClient();
         var channel = GrpcChannel.ForAddress(httpClient.BaseAddress!, new GrpcChannelOptions { HttpClient = httpClient });
         return new global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient(channel);
+    }
+
+    private static CallOptions S2sHeaders(string caller, string token)
+    {
+        var headers = new Metadata
+        {
+            { ServiceAuthOptions.CallerMetadataKey, caller },
+            { ServiceAuthOptions.TokenMetadataKey, token }
+        };
+        return new CallOptions(headers: headers);
+    }
+
+    private static async Task InvokeMutatingMethodWithoutAuthAsync(
+        global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient client,
+        string methodName)
+    {
+        switch (methodName)
+        {
+            case "RecordUsage":
+                await client.RecordUsageAsync(new RecordUsageRequest());
+                break;
+            case "CreateVirtualTopUp":
+                await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest());
+                break;
+            case "UpsertModelPrice":
+                await client.UpsertModelPriceAsync(new UpsertModelPriceRequest());
+                break;
+            case "UpsertTag":
+                await client.UpsertTagAsync(new UpsertTagRequest());
+                break;
+            case "DeleteTag":
+                await client.DeleteTagAsync(new DeleteTagRequest());
+                break;
+            case "CreatePayment":
+                await client.CreatePaymentAsync(new CreatePaymentRequest());
+                break;
+            case "AttachProviderRef":
+                await client.AttachProviderRefAsync(new AttachProviderRefRequest());
+                break;
+            case "ConfirmPaymentByProvider":
+                await client.ConfirmPaymentByProviderAsync(new ConfirmPaymentByProviderRequest());
+                break;
+            case "ApplyPaymentEvent":
+                await client.ApplyPaymentEventAsync(new ApplyPaymentEventRequest());
+                break;
+            case "AcquireStalePayments":
+                await client.AcquireStalePaymentsAsync(new AcquireStalePaymentsRequest());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(methodName), methodName, null);
+        }
     }
 }

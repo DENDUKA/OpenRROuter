@@ -14,6 +14,88 @@ public sealed class BillingRepositoryPostgresTests
 {
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task AcquireStalePayments_PersistentLeasePreventsSecondWorker()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+        database.ApplyMigration();
+        database.Truncate();
+        var firstRepository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var secondRepository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+        await firstRepository.CreatePaymentAsync(CreatePayment("payment-lease", now.AddHours(-1)));
+
+        var first = await firstRepository.AcquireStalePaymentsAsync(
+            "worker-1", TimeSpan.FromMinutes(5), now, 10);
+        var second = await secondRepository.AcquireStalePaymentsAsync(
+            "worker-2", TimeSpan.FromMinutes(5), now, 10);
+
+        first.Should().ContainSingle(p => p.Id == "payment-lease");
+        second.Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task AcquireUnprocessedEvents_ConcurrentReplicas_ProcessEventOnce()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+        database.ApplyMigration();
+        database.Truncate();
+        var firstRepository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var secondRepository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+        var payment = await firstRepository.CreatePaymentAsync(CreatePayment("payment-recovery", now));
+        await using (var connection = new NpgsqlConnection(database.ConnectionString))
+        {
+            await connection.ExecuteAsync(
+                """
+                insert into billing.payment_events (
+                    id, payment_id, provider, provider_event_id, provider_payment_id, event_type,
+                    order_id, confirmed_amount, confirmed_currency, reason, raw_payload, signature_ok,
+                    processed, attempts, received_at_utc)
+                values (
+                    'event-recovery', @PaymentId, 'mock', 'provider-event-recovery', null, 'paid',
+                    @OrderId, 10, 'USD', null, '{"ignored":true}', true, false, 0, @Now);
+                """,
+                new { PaymentId = payment.Id, payment.OrderId, Now = now });
+        }
+
+        var results = await Task.WhenAll(
+            firstRepository.AcquireUnprocessedEventsAsync(10, now),
+            secondRepository.AcquireUnprocessedEventsAsync(10, now));
+
+        results.Sum().Should().Be(1);
+        (await firstRepository.GetBalanceAsync(payment.UserId)).Amount.Should().Be(10);
+        (await firstRepository.ListUnprocessedEventsAsync(10)).Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task ConfirmPaymentAtomic_PersistsPaidEventAndExternalTopUp()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+        var payment = new Payment("payment-1", "user-1", "mock", null, "payment-1", "client-1",
+            1000, "RUB", 1000, "RUB", MoneyAmount.Usd(10), 100, "fallback", now,
+            PaymentStatus.Created, null, null, null, now, now, null, null, null);
+        await repository.CreatePaymentAsync(payment);
+
+        var outcome = await repository.ConfirmPaymentAtomicAsync(new PaymentEventInput(
+            "mock", null, "payment-1", "paid", 1000, "RUB", null, "provider-event-1", "{}", true), now);
+
+        outcome.Confirmed.Should().BeTrue();
+        (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(10);
+        (await repository.ListTopUpsAsync("user-1", 10)).Items.Should().ContainSingle(e => e.Type == LedgerEntryType.ExternalTopUp);
+        (await repository.ListUnprocessedEventsAsync(10)).Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task Store_AppliedMigration_PersistsLedgerModelUsageAndAnomaly()
     {
         await using var database = await PostgresTestDatabase.StartAsync();
@@ -183,5 +265,10 @@ public sealed class BillingRepositoryPostgresTests
         var balance = await repository.GetBalanceAsync("user-1");
         balance.Amount.Should().Be(-0.001m);
     }
+
+    private static Payment CreatePayment(string id, DateTimeOffset createdAt) =>
+        new(id, "user-1", "mock", null, id, $"client-{id}",
+            10, "USD", 10, "USD", MoneyAmount.Usd(10), 1, "fallback", createdAt,
+            PaymentStatus.Created, null, null, null, createdAt, createdAt, null, null, null);
 
 }

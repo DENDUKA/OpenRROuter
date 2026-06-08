@@ -14,9 +14,13 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
+using OpenRussiaRouter.WebApp.Api;
+using OpenRussiaRouter.WebApp.Services.Payments;
+using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -63,6 +67,15 @@ builder.Services.AddAuthorization();
 var grpcCallDeadline = TimeSpan.FromSeconds(
     builder.Configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
 
+// TS-003: s2s credentials for outbound BillingService calls from WebApp.
+var billingS2sCaller = builder.Configuration["ServiceAuth:BillingCaller"] ?? "webapp-admin";
+var billingS2sToken = builder.Configuration["ServiceAuth:BillingToken"];
+if (string.IsNullOrWhiteSpace(billingS2sToken))
+{
+    throw new InvalidOperationException(
+        "ServiceAuth:BillingToken is required for WebApp. Configure the shared s2s token in appsettings or a secret store.");
+}
+
 var authGrpcUrl = builder.Configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
 builder.Services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
 {
@@ -94,7 +107,8 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
         KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
     };
 })
-.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline))
+.AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
 builder.Services.AddScoped<BillingProvider>();
 
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
@@ -169,7 +183,57 @@ builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
 
 builder.Services.AddEmailInfrastructure(builder.Configuration);
 
+// TS-005: display-only currency layer (CBR rates, RUB/USD/EUR)
+builder.Services.Configure<ExchangeRateSettings>(
+    builder.Configuration.GetSection(ExchangeRateSettings.SectionName));
+builder.Services.AddSingleton<CbrRateSnapshot>();
+builder.Services.AddHttpClient("Cbr");
+builder.Services.AddSingleton<CbrClient>();
+builder.Services.AddSingleton<IExchangeRateProvider, CbrExchangeRateProvider>();
+builder.Services.AddSingleton<CurrencyFormatter>();
+builder.Services.AddHostedService<CbrRateRefresher>();
+
+// TS-004: payments — provider-agnostic abstraction, mock provider (dev only), webhook pipeline,
+// checkout orchestration, reconciliation worker. The active provider is selected via Payments:ActiveProvider.
+builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection(PaymentSettings.SectionName));
+
+// Mock provider is registered only in Development — PaymentStartupGuard fails fast if it ends up
+// as the active provider in Production. Real providers will register unconditionally when added.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
+}
+
+builder.Services.AddSingleton<PaymentProviderRegistry>();
+builder.Services.AddScoped<PaymentCheckoutService>();
+builder.Services.AddScoped<PaymentWebhookProcessor>();
+builder.Services.AddHostedService<PaymentReconciliationWorker>();
+
+// Rate limiter for the webhook endpoint. Per-IP fixed window — providers typically retry on
+// non-2xx, so we want a generous ceiling that still absorbs a misbehaving script.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy(PaymentWebhookEndpoint.RateLimitPolicy, httpContext =>
+    {
+        // Per-IP fixed window: 60 requests / minute. The mock self-webhook fires once per user
+        // action, so this is well above any legitimate dev traffic.
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });
+    });
+});
+
 var app = builder.Build();
+
+// TS-004: fail-fast in Production if the active payment provider is mock or unconfigured.
+// In Development the mock is the expected active provider, so the guard is a no-op there.
+PaymentStartupGuard.Validate(app.Services, app.Environment);
 
 if (!app.Environment.IsDevelopment())
 {
@@ -181,11 +245,19 @@ app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Rate limiter MUST be wired up before the webhook endpoint is mapped, so the policy is
+// enforced on the request path. Other endpoints without a policy are unaffected.
+app.UseRateLimiter();
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapRazorPages();
 app.MapControllers();
 app.MapOpenTelemetryEndpoints();
+
+// TS-004: webhook endpoint — anonymous (providers can't authenticate as users), rate-limited,
+// body-capped, raw-body verify-then-parse. See PaymentWebhookEndpoint for details.
+PaymentWebhookEndpoint.Map(app);
 
 app.Run();
 

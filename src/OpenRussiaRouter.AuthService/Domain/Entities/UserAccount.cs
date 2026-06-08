@@ -27,6 +27,8 @@ public sealed class UserAccount
 
     public int MaxApiKeys { get; private set; } = 10;
 
+    public string DisplayCurrency { get; private set; } = "RUB";
+
     public string? PasswordHash { get; }
 
     public DateTimeOffset CreatedAtUtc { get; }
@@ -35,11 +37,12 @@ public sealed class UserAccount
 
     public void Activate() => Status = UserStatus.Active;
 
-    public void UpdateDetails(string? displayName, int maxApiKeys)
+    public void UpdateDetails(string? displayName, int maxApiKeys, string? displayCurrency = null)
     {
         if (maxApiKeys < 0) throw new ArgumentOutOfRangeException(nameof(maxApiKeys));
         DisplayName = displayName;
         MaxApiKeys = maxApiKeys;
+        if (displayCurrency != null) DisplayCurrency = displayCurrency;
     }
 
     public static UserAccount CreateForExternalLogin(string id, string email, UserRole role, DateTimeOffset createdAtUtc)
@@ -59,12 +62,13 @@ public sealed class UserAccount
     }
 
     /// <summary>Reconstructs a persisted account, preserving its stored status.</summary>
-    public static UserAccount Restore(string id, string email, UserRole role, string? passwordHash, UserStatus status, DateTimeOffset createdAtUtc, string? displayName = null, int maxApiKeys = 10)
+    public static UserAccount Restore(string id, string email, UserRole role, string? passwordHash, UserStatus status, DateTimeOffset createdAtUtc, string? displayName = null, int maxApiKeys = 10, string displayCurrency = "RUB")
     {
         var user = new UserAccount(id, email, role, passwordHash, createdAtUtc);
         user.Status = status;
         user.DisplayName = displayName;
         user.MaxApiKeys = maxApiKeys;
+        user.DisplayCurrency = displayCurrency;
         return user;
     }
 

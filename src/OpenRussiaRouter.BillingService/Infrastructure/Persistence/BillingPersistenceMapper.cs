@@ -200,4 +200,46 @@ public static class BillingPersistenceMapper
     {
         return new Tag(entity.Id, entity.DisplayName, entity.Color);
     }
+
+    public static PaymentEntity ToEntity(Payment payment) => new()
+    {
+        Id = payment.Id,
+        UserId = payment.UserId,
+        Provider = payment.Provider,
+        ProviderPaymentId = payment.ProviderPaymentId,
+        OrderId = payment.OrderId,
+        ClientToken = payment.ClientToken,
+        DisplayAmount = payment.DisplayAmount,
+        DisplayCurrency = payment.DisplayCurrency,
+        ProviderAmount = payment.ProviderAmount,
+        ProviderCurrency = payment.ProviderCurrency,
+        CreditedUsdAmount = payment.CreditedUsd.Amount,
+        FxRate = payment.FxRate,
+        FxSource = payment.FxSource,
+        FxAtUtc = payment.FxAtUtc,
+        Status = payment.Status,
+        CancelReason = payment.CancelReason,
+        PayUrl = payment.PayUrl,
+        LeaseOwner = payment.LeaseOwner,
+        LeaseUntilUtc = payment.LeaseUntilUtc,
+        CreatedAtUtc = payment.CreatedAtUtc,
+        UpdatedAtUtc = payment.UpdatedAtUtc,
+        ExpiresAtUtc = payment.ExpiresAtUtc,
+        ConfirmedAtUtc = payment.ConfirmedAtUtc,
+        CanceledAtUtc = payment.CanceledAtUtc
+    };
+
+    public static Payment ToDomain(PaymentEntity entity) => new(
+        entity.Id, entity.UserId, entity.Provider, entity.ProviderPaymentId, entity.OrderId,
+        entity.ClientToken, entity.DisplayAmount, entity.DisplayCurrency, entity.ProviderAmount,
+        entity.ProviderCurrency, MoneyAmount.Usd(entity.CreditedUsdAmount), entity.FxRate,
+        entity.FxSource, entity.FxAtUtc, entity.Status, entity.CancelReason, entity.LeaseOwner,
+        entity.LeaseUntilUtc, entity.CreatedAtUtc, entity.UpdatedAtUtc, entity.ExpiresAtUtc,
+        entity.ConfirmedAtUtc, entity.CanceledAtUtc, entity.PayUrl);
+
+    public static PaymentEvent ToDomain(PaymentEventEntity entity) => new(
+        entity.Id, entity.PaymentId, entity.Provider, entity.ProviderEventId, entity.ProviderPaymentId,
+        entity.EventType, entity.OrderId, entity.ConfirmedAmount, entity.ConfirmedCurrency, entity.Reason,
+        entity.RawPayload, entity.SignatureOk, entity.Processed, entity.Attempts, entity.ReceivedAtUtc,
+        entity.ProcessedAtUtc);
 }

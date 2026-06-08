@@ -31,7 +31,7 @@
                 <div class="toolbar-label">All models</div>
                 <div class="toolbar-count" id="model-count">@Model.Models.Count model@(Model.Models.Count == 1 ? "" : "s") available</div>
             </div>
-            <div class="toolbar-note">Prices in $</div>
+            <div class="toolbar-note">Prices in @Model.CurrencySymbol</div>
         </div>
 
         @if (Model.ErrorMessage != null)
@@ -105,9 +105,9 @@
                                         <span class="text-muted">-</span>
                                     }
                                 </td>
-                                <td class="num">@ModelsModel.FormatPrice(m.InputPrice)</td>
-                                <td class="num">@ModelsModel.FormatPrice(m.OutputPrice)</td>
-                                <td class="num">@ModelsModel.FormatPrice(m.CacheWritePrice)</td>
+                                <td class="num">@Model.FormatPrice(m.InputPrice)</td>
+                                <td class="num">@Model.FormatPrice(m.OutputPrice)</td>
+                                <td class="num">@Model.FormatPrice(m.CacheWritePrice)</td>
                                 <td class="num">@m.Context</td>
                                 <td><span class="badge badge-success">Available</span></td>
                             </tr>

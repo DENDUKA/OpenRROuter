@@ -78,6 +78,10 @@ _Scope: OpenRussiaRouter (.NET 8 microservices)_
   вызывающей стороны. Caller передаёт только `provider_amount` + `provider_currency` (сколько платит
   юзер); Billing берёт курс из **доверенного FX-quote** и вычисляет USD сам. Это закрывает атаку
   «provider_amount=1 RUB, credited=100000 USD».
+- **Денежная граница min/max — авторитетно в Billing.** После расчёта `credited_usd_amount` и до вставки
+  строки `CreatePayment` проверяет попадание в `[Payments:MinTopUpUsd, Payments:MaxTopUpUsd]`; вне диапазона
+  → `PaymentAmountOutOfRange`. UI-минимум в WebApp (Phase 5) — лишь UX и обходится; единственная
+  авторитетная проверка суммы — здесь.
 - **Доверенный FX-quote — на стороне Billing (выбрано: Billing сам поллит ЦБ).** `FxQuoteService` в Billing
   держит свой `CbrClient` + дневной refresh + fallback (как у WebApp, но **авторитетный** для денег).
   Зафиксировано: округление `credited_usd` — 6 знаков, half-up; **макс. свежесть `fx_at`** — 48 ч, иначе
@@ -162,7 +166,11 @@ confirmed_currency, reason, provider_event_id`) + `raw_payload` (только а
   **Ответ gRPC формируется по итогу tx2** (`confirmed/ledger_entry_id/balance_usd`); webhook ACK-ается после
   возврата Billing. `processed=false` — это **сеть безопасности на случай краха между tx1 и tx2**, не
   нормальный async-путь. (Прежняя формулировка «ACK после tx1 до tx2» снята как противоречивая.)
-- **Recovery-worker:** добирает `processed=false`, повторно применяет идемпотентно, инкрементит `attempts`.
+- **Recovery-worker (multi-replica-safe):** в одной транзакции выбирает `processed=false` через
+  `AcquireUnprocessedEvents` с `FOR UPDATE SKIP LOCKED` (несколько реплик BillingService не берут одно
+  событие — лок держится до конца обработки), повторно применяет tx2 идемпотентно из нормализованных
+  колонок, инкрементит `attempts`, в той же транзакции ставит `processed=true`. Простой `ListUnprocessed`
+  без SKIP LOCKED недопустим (две реплики возьмут одно событие). Ledger-idempotency — backstop.
 - `raw_payload`: retention (напр. 90 дней) + redaction перед хранением.
 
 ### Reconciliation worker — каркас сейчас, логика при выборе провайдера
@@ -171,8 +179,10 @@ confirmed_currency, reason, provider_event_id`) + `raw_payload` (только а
 `FOR UPDATE SKIP LOCKED` держит лок только до конца транзакции выдачи — поэтому нужен **персистентный lease**:
 колонки `lease_owner`/`lease_until_utc` на `payments`; метод атомарно ставит их (SKIP LOCKED) и возвращает
 только строки с истёкшим/пустым lease. Цикл: acquire → `provider.GetPaymentAsync` →
-`ConfirmPaymentByProvider`/`ApplyPaymentEvent` → снять lease. Опрос зависит от API кассы; у мока — тривиален.
-Worker — в Phase 7 DI.
+`ConfirmPaymentByProvider`/`ApplyPaymentEvent`. **Снятие lease — без отдельного RPC:** успешный переход
+статуса в tx2 дополнительно зануляет `lease_owner`/`lease_until_utc`; платежи, оставшиеся `Created`,
+освобождаются по истечении lease. (`ReleasePaymentLease`/`CompleteReconciliation` не вводим.)
+Опрос зависит от API кассы; у мока — тривиален. Worker — в Phase 7 DI.
 
 ---
 
@@ -350,6 +360,7 @@ where user_id = @UserId and type in ('VirtualTopUp','ExternalTopUp')
 | `Services/Payments/PaymentDtos.cs` | **NEW.** `PaymentRequest`, `PaymentCreated`, `PaymentWebhookEvent`, `enum WebhookVerification` |
 | `Services/Payments/MockPaymentProvider.cs` | **NEW.** мок-касса |
 | `Services/Payments/PaymentProviderRegistry.cs` | **NEW.** резолв по `Name` |
+| `Services/Payments/PaymentCheckoutService.cs` | **NEW.** владелец create-checkout: `CreateAsync(...)` → Billing `CreatePayment` → provider `CreateAsync(order_id=payment_id)` → `AttachProviderRef`; **возвращает `payUrl`+`paymentId`** для UI |
 | `Services/Payments/PaymentWebhookProcessor.cs` | **NEW.** switch по статусу → BillingProvider gRPC |
 | `Services/Payments/PaymentSettings.cs` | **NEW.** конфиг |
 | `Api/PaymentWebhookEndpoint.cs` | **NEW.** minimal API `MapPost("/webhook/{provider}")` |
@@ -436,7 +447,7 @@ WebApp здесь — лишь предпросмотр для юзера, не 
 
 | Файл | Действие |
 |---|---|
-| `Pages/Workspace/Credits.cshtml` + `.cs` | Баланс/история — через `CurrencyFormatter`. Форма «Пополнить»: сумма + валюта (дефолт из профиля) → `OnPostTopUpAsync` → `CreatePayment` → redirect на `PayUrl` |
+| `Pages/Workspace/Credits.cshtml` + `.cs` | Баланс/история — через `CurrencyFormatter`. Форма «Пополнить»: сумма + валюта (дефолт из профиля) → `OnPostTopUpAsync` → `PaymentCheckoutService.CreateAsync` (НЕ напрямую `CreatePayment`/`AttachProviderRef`) → redirect на возвращённый `payUrl` |
 | `Pages/Pay/Mock.cshtml` + `.cs` | **NEW.** Fake-checkout: сумма + кнопки «Оплатить»/«Отменить» → POST `/pay/mock/{id}/complete` → self-webhook в `/webhook/mock` (прогон всего пути) |
 | `Pages/Workspace/PaymentSuccess.cshtml` | **NEW.** «Платёж обрабатывается, баланс обновится в течение минуты» |
 | `Pages/Workspace/Settings.cshtml` (+`.cs`) | Селектор валюты по умолчанию → сохранение в профиль (Phase 6). Сейчас страница-заглушка |
@@ -484,6 +495,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
 // реальные провайдеры регистрируются всегда, когда сконфигурированы
 builder.Services.AddSingleton<PaymentProviderRegistry>();
+builder.Services.AddScoped<PaymentCheckoutService>();              // владелец create-checkout, отдаёт payUrl
 builder.Services.AddScoped<PaymentWebhookProcessor>();
 builder.Services.AddHostedService<PaymentReconciliationWorker>();   // досведение зависших Created
 builder.Services.AddRateLimiter(/* "payment-webhook": fixed window по IP */);
@@ -497,7 +509,7 @@ PaymentWebhookEndpoint.Map(app);
 
 **`appsettings.json` (общий — БЕЗ mock):**
 ```json
-"Payments": { "ActiveProvider": "", "MinTopUpUsd": "1.00" },
+"Payments": { "ActiveProvider": "", "MinTopUpUsd": "1.00", "MaxTopUpUsd": "10000.00" },
 "ExchangeRates": {
   "Source": "cbr", "RefreshHourMsk": 12, "MarkupPercent": "0",
   "Fallback": { "RubPerUsd": "95.0", "RubPerEur": "103.0" }
@@ -512,6 +524,8 @@ Production: `ActiveProvider` = реальный провайдер; если п�
 > **BillingService DI/Startup МЕНЯЕТСЯ:** + `FxQuoteService` (свой `CbrClient` + дневной refresh + fallback),
 > + `PaymentEventRecoveryWorker` (hosted), + **s2s-auth интерсептор на ВСЕХ ledger-мутирующих gRPC** —
 > `CreateVirtualTopUp`, `RecordUsage` **и** payment-методы (см. Hardening), не только payment.
+> Billing `appsettings.json` несёт **авторитетные** `Payments:{ MinTopUpUsd, MaxTopUpUsd }` (проверка границы
+> при `CreatePayment`) и `ExchangeRates` для `FxQuoteService`. WebApp-овский `Payments:MinTopUpUsd` — лишь UI-хинт.
 
 ---
 

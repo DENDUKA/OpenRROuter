@@ -1,16 +1,33 @@
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Currency;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class ModelDetailsModel : PageModelBase
 {
     private readonly BillingProvider _billingClient;
+    private readonly CurrencyFormatter _currencyFormatter;
+    private readonly AuthProvider _authProvider;
+    private readonly ILogger<ModelDetailsModel> _logger;
 
-    public ModelDetailsModel(BillingProvider billingProvider)
+    public ModelDetailsModel(
+        BillingProvider billingProvider,
+        CurrencyFormatter currencyFormatter,
+        AuthProvider authProvider,
+        ILogger<ModelDetailsModel> logger)
     {
         _billingClient = billingProvider;
+        _currencyFormatter = currencyFormatter;
+        _authProvider = authProvider;
+        _logger = logger;
     }
+
+    /// <summary>Display currency: profile choice for signed-in users, RUB for anonymous.</summary>
+    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Rub;
+
+    public string FormatPrice(decimal usdPrice) => _currencyFormatter.Format(usdPrice, Currency);
 
     [BindProperty(SupportsGet = true)]
     public string Provider { get; set; } = "";
@@ -41,6 +58,7 @@ public class ModelDetailsModel : PageModelBase
 
     public async Task OnGetAsync()
     {
+        Currency = await ResolveCurrencyAsync();
         try
         {
             var models = await _billingClient.ListModelsAsync();
@@ -51,6 +69,22 @@ public class ModelDetailsModel : PageModelBase
         }
         catch
         {
+        }
+    }
+
+    private async Task<DisplayCurrency> ResolveCurrencyAsync()
+    {
+        var userId = CurrentUser?.UserId;
+        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Rub;
+        try
+        {
+            var user = await _authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
+            return DisplayCurrencyExtensions.Parse(user?.DisplayCurrency);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load currency for model details. UserId={UserId}", userId);
+            return DisplayCurrency.Rub;
         }
     }
 

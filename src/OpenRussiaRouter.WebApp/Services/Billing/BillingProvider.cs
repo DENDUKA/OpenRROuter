@@ -4,7 +4,7 @@ using BillingTokenUsage = OpenRussiaRouter.Contracts.Grpc.Billing.V1.TokenUsage;
 
 namespace OpenRussiaRouter.WebApp.Services.Billing;
 
-public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
+public class BillingProvider(BillingGrpc.BillingServiceClient client)
 {
     public async Task<BalanceInfo> GetBalanceAsync(string userId, CancellationToken cancellationToken = default)
     {
@@ -325,4 +325,223 @@ public sealed class BillingProvider(BillingGrpc.BillingServiceClient client)
             throw new BillingException(response.ErrorCode);
         }
     }
+
+   // ----- TS-004: payment gRPC wrappers -----
+   //
+   // WebApp never computes credited_usd — Billing does that from its trusted FX quote.
+   // WebApp only sends provider_amount/provider_currency (what the user pays) and display_*
+   // (for the user-facing history). The s2s token is attached by the registered interceptor.
+
+   /// <summary>
+   /// Get the trusted FX quote for a given provider currency. Used by the checkout UI to show
+   /// the user a preview of the credited amount. The authoritative source for the actual credit
+   /// is BillingService itself at <c>CreatePayment</c> time.
+   /// </summary>
+   public virtual async Task<(decimal Rate, string FxSource, DateTimeOffset FxAt, string? QuoteId)> GetFxQuoteAsync(
+       string providerCurrency,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.GetFxQuoteAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetFxQuoteRequest
+           {
+               ProviderCurrency = providerCurrency
+           },
+           cancellationToken: cancellationToken);
+
+       if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+       {
+           throw new BillingException(response.ErrorCode);
+       }
+
+       return (
+           Rate: decimal.Parse(response.Rate, CultureInfo.InvariantCulture),
+           FxSource: response.FxSource,
+           FxAt: DateTimeOffset.Parse(response.FxAt, CultureInfo.InvariantCulture),
+           QuoteId: string.IsNullOrEmpty(response.QuoteId) ? null : response.QuoteId);
+   }
+
+   /// <summary>
+   /// Create a payment row in Billing. Returns the internal payment id (= order id sent to the
+   /// provider) and the credited USD amount Billing computed from its trusted FX quote.
+   /// Idempotent by <paramref name="clientToken"/> per user.
+   /// </summary>
+   public virtual async Task<CreatedPaymentInfo> CreatePaymentAsync(
+       string userId,
+       string provider,
+       decimal providerAmount,
+       string providerCurrency,
+       decimal displayAmount,
+       string displayCurrency,
+       string clientToken,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.CreatePaymentAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.CreatePaymentRequest
+           {
+               UserId = userId,
+               Provider = provider,
+               ProviderAmount = providerAmount.ToString(CultureInfo.InvariantCulture),
+               ProviderCurrency = providerCurrency,
+               DisplayAmount = displayAmount.ToString(CultureInfo.InvariantCulture),
+               DisplayCurrency = displayCurrency,
+               ClientToken = clientToken
+           },
+           cancellationToken: cancellationToken);
+
+       if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+       {
+           throw new BillingException(response.ErrorCode);
+       }
+
+       return new CreatedPaymentInfo(
+           PaymentId: response.PaymentId,
+           OrderId: response.OrderId,
+           CreditedUsdAmount: decimal.Parse(response.CreditedUsdAmount, CultureInfo.InvariantCulture),
+           FxRate: decimal.Parse(response.FxRate, CultureInfo.InvariantCulture));
+   }
+
+   /// <summary>
+   /// Attach the provider-side payment id and pay URL to an existing payment. Atomic on the
+   /// Billing side — fails if the payment is no longer in <c>Created</c> (e.g. expired meanwhile).
+   /// </summary>
+   public virtual async Task AttachProviderRefAsync(
+       string paymentId,
+       string providerPaymentId,
+       string payUrl,
+       DateTimeOffset? expiresAtUtc,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.AttachProviderRefAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.AttachProviderRefRequest
+           {
+               PaymentId = paymentId,
+               ProviderPaymentId = providerPaymentId,
+               PayUrl = payUrl,
+               ExpiresAtUtc = expiresAtUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+           },
+           cancellationToken: cancellationToken);
+
+       if (!response.Ok)
+       {
+           throw new BillingException(response.ErrorCode);
+       }
+   }
+
+   /// <summary>
+   /// Confirm a payment as paid. Idempotent: re-calls with the same provider event resolve to
+   /// a no-op and return <c>Confirmed=true</c> with the original ledger entry id.
+   /// </summary>
+   public virtual async Task<ConfirmPaymentResult> ConfirmPaymentByProviderAsync(
+       string provider,
+       string? providerPaymentId,
+       string? orderId,
+       decimal confirmedAmount,
+       string confirmedCurrency,
+       string? providerEventId,
+       string rawPayload,
+       bool signatureOk,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.ConfirmPaymentByProviderAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ConfirmPaymentByProviderRequest
+           {
+               Provider = provider,
+               ProviderPaymentId = providerPaymentId ?? string.Empty,
+               OrderId = orderId ?? string.Empty,
+               ConfirmedAmount = confirmedAmount.ToString(CultureInfo.InvariantCulture),
+               ConfirmedCurrency = confirmedCurrency,
+               ProviderEventId = providerEventId ?? string.Empty,
+               RawPayload = rawPayload,
+               SignatureOk = signatureOk
+           },
+           cancellationToken: cancellationToken);
+
+       return new ConfirmPaymentResult(
+           Confirmed: response.Confirmed,
+           LedgerEntryId: string.IsNullOrEmpty(response.LedgerEntryId) ? null : response.LedgerEntryId,
+           BalanceUsd: string.IsNullOrEmpty(response.BalanceUsd) ? (decimal?)null : decimal.Parse(response.BalanceUsd, CultureInfo.InvariantCulture),
+           ErrorCode: string.IsNullOrEmpty(response.ErrorCode) ? null : response.ErrorCode);
+   }
+
+   /// <summary>
+   /// Apply a non-paid provider event (canceled / expired / refunded / chargeback). Billing
+   /// handles the state transition and, for refund/chargeback, the ledger reversal atomically.
+   /// </summary>
+   public virtual async Task<ApplyPaymentEventResult> ApplyPaymentEventAsync(
+       string provider,
+       string? providerPaymentId,
+       string? orderId,
+       string eventType,
+       string? reason,
+       decimal? confirmedAmount,
+       string? confirmedCurrency,
+       string? providerEventId,
+       string rawPayload,
+       bool signatureOk,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.ApplyPaymentEventAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ApplyPaymentEventRequest
+           {
+               Provider = provider,
+               ProviderPaymentId = providerPaymentId ?? string.Empty,
+               OrderId = orderId ?? string.Empty,
+               EventType = eventType,
+               Reason = reason ?? string.Empty,
+               ConfirmedAmount = confirmedAmount.HasValue ? confirmedAmount.Value.ToString(CultureInfo.InvariantCulture) : string.Empty,
+               ConfirmedCurrency = confirmedCurrency ?? string.Empty,
+               ProviderEventId = providerEventId ?? string.Empty,
+               RawPayload = rawPayload,
+               SignatureOk = signatureOk
+           },
+           cancellationToken: cancellationToken);
+
+       return new ApplyPaymentEventResult(
+           Applied: response.Applied,
+           LedgerEntryId: string.IsNullOrEmpty(response.LedgerEntryId) ? null : response.LedgerEntryId,
+           ErrorCode: string.IsNullOrEmpty(response.ErrorCode) ? null : response.ErrorCode);
+   }
+
+   /// <summary>
+   /// Get a single payment by its internal id. Returns <c>null</c> if the payment does not exist.
+   /// </summary>
+   public virtual async Task<PaymentInfo?> GetPaymentAsync(string paymentId, CancellationToken cancellationToken = default)
+   {
+       try
+       {
+           var record = await client.GetPaymentAsync(
+               new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetPaymentRequest { PaymentId = paymentId },
+               cancellationToken: cancellationToken);
+           return PaymentRecordMapper.ToInfo(record);
+       }
+       catch (Grpc.Core.RpcException ex) when (ex.StatusCode == Grpc.Core.StatusCode.NotFound)
+       {
+           return null;
+       }
+   }
+
+   /// <summary>
+   /// Acquire a batch of stale <c>Created</c> payments for reconciliation. Billing leases each
+   /// row to <paramref name="workerId"/> for <paramref name="leaseSeconds"/> using SKIP LOCKED,
+   /// so multiple WebApp replicas can sweep concurrently without collision.
+   /// </summary>
+   public virtual async Task<IReadOnlyList<PaymentInfo>> AcquireStalePaymentsAsync(
+       string workerId,
+       int leaseSeconds,
+       DateTimeOffset olderThanUtc,
+       int limit,
+       CancellationToken cancellationToken = default)
+   {
+       var response = await client.AcquireStalePaymentsAsync(
+           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.AcquireStalePaymentsRequest
+           {
+               WorkerId = workerId,
+               LeaseSeconds = leaseSeconds,
+               OlderThanUtc = olderThanUtc.ToString("O", CultureInfo.InvariantCulture),
+               Limit = limit
+           },
+           cancellationToken: cancellationToken);
+
+       return response.Records.Select(PaymentRecordMapper.ToInfo).ToList();
+   }
 }

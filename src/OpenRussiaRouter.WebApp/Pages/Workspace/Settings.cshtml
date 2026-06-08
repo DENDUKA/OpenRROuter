@@ -4,8 +4,17 @@
 
 <div class="ws-section-header">
     <h2>Settings</h2>
-    <p class="ws-section-desc">Account information.</p>
+    <p class="ws-section-desc">Account information and preferences.</p>
 </div>
+
+@if (Model.SaveMessage != null)
+{
+    <div class="alert alert-success">@Model.SaveMessage</div>
+}
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger">@Model.ErrorMessage</div>
+}
 
 <div class="ws-panel">
     <div class="ws-panel-header">Account</div>
@@ -22,5 +31,23 @@
             <span class="ws-info-label">Role</span>
             <span>@(Model.CurrentUser?.Role ?? "—")</span>
         </div>
+    </div>
+</div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Display Preferences</div>
+    <div class="ws-panel-body">
+        <form method="post" asp-page-handler="SaveCurrency">
+            <div class="mb-3">
+                <label class="form-label" asp-for="SelectedCurrency">Display Currency</label>
+                <select asp-for="SelectedCurrency" class="form-select" style="max-width: 260px;">
+                    <option value="RUB">RUB — Russian Ruble</option>
+                    <option value="USD">USD — US Dollar</option>
+                    <option value="EUR">EUR — Euro</option>
+                </select>
+                <div class="text-muted mt-1" style="font-size: 13px;">Balance, prices, and history will be shown in this currency.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save</button>
+        </form>
     </div>
 </div>

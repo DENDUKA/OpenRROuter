@@ -15,7 +15,9 @@ public sealed partial class BillingApplicationService(
     IBillingRepository repository,
     IUsageCostCalculator usageCostCalculator,
     IOptions<BillingPaginationOptions> paginationOptions,
-    ILogger<BillingApplicationService> logger)
+    ILogger<BillingApplicationService> logger,
+    FxQuoteService? fxQuoteService = null,
+    IOptions<PaymentOptions>? paymentOptions = null)
 {
     public async Task<LedgerEntry> CreateVirtualTopUpAsync(
         string adminId,
@@ -274,6 +276,84 @@ public sealed partial class BillingApplicationService(
     public Task DeleteTagAsync(string id, CancellationToken ct = default)
         => repository.DeleteTagAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
+    public FxQuote GetFxQuote(string providerCurrency, DateTimeOffset nowUtc) =>
+        RequireFx().GetQuote(Preconditions.RequireValue(providerCurrency, nameof(providerCurrency)), nowUtc);
+
+    public async Task<Payment> CreatePaymentAsync(
+        string userId,
+        string provider,
+        decimal providerAmount,
+        string providerCurrency,
+        decimal displayAmount,
+        string displayCurrency,
+        string clientToken,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
+    {
+        if (providerAmount <= 0 || displayAmount <= 0)
+            throw new PaymentOperationException(ErrorCodes.PaymentAmountOutOfRange);
+
+        var quote = RequireFx().GetQuote(providerCurrency, nowUtc);
+        var credited = decimal.Round(providerAmount * quote.UsdPerUnit, 6, MidpointRounding.AwayFromZero);
+        var limits = paymentOptions?.Value ?? new PaymentOptions();
+        if (credited < limits.MinTopUpUsd || credited > limits.MaxTopUpUsd)
+            throw new PaymentOperationException(ErrorCodes.PaymentAmountOutOfRange);
+
+        var id = Guid.NewGuid().ToString("N");
+        return await repository.CreatePaymentAsync(new Payment(
+            id,
+            Preconditions.RequireValue(userId, nameof(userId)),
+            Preconditions.RequireValue(provider, nameof(provider)),
+            null,
+            id,
+            Preconditions.RequireValue(clientToken, nameof(clientToken)),
+            displayAmount,
+            Preconditions.RequireValue(displayCurrency, nameof(displayCurrency)).ToUpperInvariant(),
+            providerAmount,
+            Preconditions.RequireValue(providerCurrency, nameof(providerCurrency)).ToUpperInvariant(),
+            MoneyAmount.Usd(credited),
+            quote.Rate,
+            quote.Source,
+            quote.FxAtUtc,
+            PaymentStatus.Created,
+            null,
+            null,
+            null,
+            nowUtc,
+            nowUtc,
+            null,
+            null,
+            null), ct).ConfigureAwait(false);
+    }
+
+    public async Task AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default)
+    {
+        if (!await repository.AttachProviderRefAsync(
+            Preconditions.RequireValue(paymentId, nameof(paymentId)),
+            Preconditions.RequireValue(providerPaymentId, nameof(providerPaymentId)),
+            payUrl, expiresAt, ct).ConfigureAwait(false))
+            throw new PaymentOperationException(ErrorCodes.PaymentInvalidTransition);
+    }
+
+    public Task<ConfirmOutcome> ConfirmPaymentByProviderAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default) =>
+        repository.ConfirmPaymentAtomicAsync(evt, nowUtc, ct);
+
+    public Task<ApplyOutcome> ApplyPaymentEventAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default) =>
+        repository.ApplyPaymentEventAtomicAsync(evt, nowUtc, paymentOptions?.Value.AutoReverseChargeback ?? false, ct);
+
+    public async Task<Payment> GetPaymentAsync(string id, CancellationToken ct = default) =>
+        await repository.GetPaymentAsync(Preconditions.RequireValue(id, nameof(id)), ct).ConfigureAwait(false)
+        ?? throw new PaymentOperationException(ErrorCodes.PaymentNotFound);
+
+    public async Task<IReadOnlyCollection<Payment>> ListPaymentsAsync(string userId, int? pageSize = null, CancellationToken ct = default)
+    {
+        var limit = pageSize is > 0 ? Math.Min(pageSize.Value, paginationOptions.Value.MaxPageSize) : paginationOptions.Value.EffectivePageSize;
+        return (await repository.ListPaymentsAsync(Preconditions.RequireValue(userId, nameof(userId)), limit, ct).ConfigureAwait(false)).Items;
+    }
+
+    public Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default) =>
+        repository.AcquireStalePaymentsAsync(Preconditions.RequireValue(workerId, nameof(workerId)), lease, olderThanUtc, limit, ct);
+
     private static void ValidatePositiveUsd(MoneyAmount amount, string name)
     {
         if (amount.Currency != Currency.Usd)
@@ -282,6 +362,9 @@ public sealed partial class BillingApplicationService(
         if (amount.Amount <= 0)
             throw new ArgumentOutOfRangeException(name, "Amount must be positive.");
     }
+
+    private FxQuoteService RequireFx() =>
+        fxQuoteService ?? throw new InvalidOperationException("FxQuoteService is not configured.");
 
     private async Task AddAnomalyAsync(string requestId, string type, string message, DateTimeOffset nowUtc, CancellationToken ct)
     {
@@ -309,4 +392,9 @@ public sealed partial class BillingApplicationService(
 
     [GeneratedRegex(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex HexColorRegex();
+}
+
+public sealed class PaymentOperationException(string errorCode) : Exception(errorCode)
+{
+    public string ErrorCode { get; } = errorCode;
 }

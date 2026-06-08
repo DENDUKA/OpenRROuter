@@ -341,7 +341,8 @@ public sealed class GrpcAuthService(
                     Status = u.Status.ToString(),
                     CreatedAtUnixTimeSeconds = u.CreatedAtUtc.ToUnixTimeSeconds(),
                     DisplayName = u.DisplayName ?? "",
-                    MaxApiKeys = u.MaxApiKeys
+                    MaxApiKeys = u.MaxApiKeys,
+                    DisplayCurrency = u.DisplayCurrency
                 })
             }
         };
@@ -411,20 +412,26 @@ public sealed class GrpcAuthService(
                 Status = user.Status.ToString(),
                 CreatedAtUnixTimeSeconds = user.CreatedAtUtc.ToUnixTimeSeconds(),
                 DisplayName = user.DisplayName ?? "",
-                MaxApiKeys = user.MaxApiKeys
+                MaxApiKeys = user.MaxApiKeys,
+                DisplayCurrency = user.DisplayCurrency
             }
         };
     }
 
     public override async Task<UpdateUserResponse> UpdateUser(UpdateUserRequest request, ServerCallContext context)
     {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
         try
         {
-            await accounts.UpdateUserAsync(
-                request.UserId,
-                request.HasDisplayName ? request.DisplayName : null,
-                request.MaxApiKeys,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var currentUser = await repository.GetUserAsync(request.UserId, ct).ConfigureAwait(false);
+            if (currentUser == null)
+                return new UpdateUserResponse { Succeeded = false, ErrorCode = ErrorCodes.ValidationFailed };
+
+            var displayName = request.HasDisplayName ? request.DisplayName : currentUser.DisplayName;
+            var maxApiKeys = request.HasMaxApiKeys ? request.MaxApiKeys : currentUser.MaxApiKeys;
+            var displayCurrency = request.HasDisplayCurrency ? request.DisplayCurrency : currentUser.DisplayCurrency;
+
+            await accounts.UpdateUserAsync(request.UserId, displayName, maxApiKeys, displayCurrency, ct).ConfigureAwait(false);
 
             return new UpdateUserResponse { Succeeded = true };
         }

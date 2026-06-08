@@ -21,6 +21,14 @@ service BillingService {
   rpc ListTags (ListTagsRequest) returns (ListTagsResponse);
   rpc UpsertTag (UpsertTagRequest) returns (UpsertTagResponse);
   rpc DeleteTag (DeleteTagRequest) returns (DeleteTagResponse);
+  rpc GetFxQuote (GetFxQuoteRequest) returns (GetFxQuoteResponse);
+  rpc CreatePayment (CreatePaymentRequest) returns (CreatePaymentResponse);
+  rpc AttachProviderRef (AttachProviderRefRequest) returns (AttachProviderRefResponse);
+  rpc ConfirmPaymentByProvider (ConfirmPaymentByProviderRequest) returns (ConfirmPaymentByProviderResponse);
+  rpc ApplyPaymentEvent (ApplyPaymentEventRequest) returns (ApplyPaymentEventResponse);
+  rpc GetPayment (GetPaymentRequest) returns (PaymentRecord);
+  rpc ListPayments (ListPaymentsRequest) returns (ListPaymentsResponse);
+  rpc AcquireStalePayments (AcquireStalePaymentsRequest) returns (AcquireStalePaymentsResponse);
 }
 
 message CheckBalanceAndModelRequest {
@@ -346,4 +354,131 @@ message DeleteTagRequest {
 message DeleteTagResponse {
   bool deleted = 1;
   string error_code = 2;
+}
+
+message GetFxQuoteRequest {
+  string provider_currency = 1;
+}
+
+message GetFxQuoteResponse {
+  string rate = 1;
+  string usd_per_unit = 2;
+  string fx_source = 3;
+  string fx_at = 4;
+  string quote_id = 5;
+  string expires_at = 6;
+  string error_code = 7;
+}
+
+message CreatePaymentRequest {
+  string user_id = 1;
+  string provider = 2;
+  string provider_amount = 3;
+  string provider_currency = 4;
+  string display_amount = 5;
+  string display_currency = 6;
+  string client_token = 7;
+}
+
+message CreatePaymentResponse {
+  string payment_id = 1;
+  string order_id = 2;
+  string credited_usd_amount = 3;
+  string fx_rate = 4;
+  string error_code = 5;
+}
+
+message AttachProviderRefRequest {
+  string payment_id = 1;
+  string provider_payment_id = 2;
+  string pay_url = 3;
+  string expires_at_utc = 4;
+}
+
+message AttachProviderRefResponse {
+  bool ok = 1;
+  string error_code = 2;
+}
+
+message PaymentRecord {
+  string id = 1;
+  string user_id = 2;
+  string provider = 3;
+  string provider_payment_id = 4;
+  string order_id = 5;
+  string display_amount = 6;
+  string display_currency = 7;
+  string provider_amount = 8;
+  string provider_currency = 9;
+  string credited_usd_amount = 10;
+  string fx_rate = 11;
+  string fx_source = 12;
+  string fx_at_utc = 13;
+  string status = 14;
+  string cancel_reason = 15;
+  string created_at_utc = 16;
+  string expires_at_utc = 17;
+  string confirmed_at_utc = 18;
+  string canceled_at_utc = 19;
+}
+
+message ConfirmPaymentByProviderRequest {
+  string provider = 1;
+  string provider_payment_id = 2;
+  string order_id = 3;
+  string confirmed_amount = 4;
+  string confirmed_currency = 5;
+  string provider_event_id = 6;
+  string raw_payload = 7;
+  bool signature_ok = 8;
+}
+
+message ConfirmPaymentByProviderResponse {
+  bool confirmed = 1;
+  string ledger_entry_id = 2;
+  string balance_usd = 3;
+  string error_code = 4;
+}
+
+message ApplyPaymentEventRequest {
+  string provider = 1;
+  string provider_payment_id = 2;
+  string order_id = 3;
+  string event_type = 4;
+  string reason = 5;
+  string confirmed_amount = 6;
+  string confirmed_currency = 7;
+  string provider_event_id = 8;
+  string raw_payload = 9;
+  bool signature_ok = 10;
+}
+
+message ApplyPaymentEventResponse {
+  bool applied = 1;
+  string ledger_entry_id = 2;
+  string error_code = 3;
+}
+
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+message ListPaymentsRequest {
+  string user_id = 1;
+  int32 page_size = 2;
+}
+
+message ListPaymentsResponse {
+  repeated PaymentRecord records = 1;
+}
+
+message AcquireStalePaymentsRequest {
+  string worker_id = 1;
+  int32 lease_seconds = 2;
+  string older_than_utc = 3;
+  int32 limit = 4;
+}
+
+message AcquireStalePaymentsResponse {
+  repeated PaymentRecord records = 1;
 }

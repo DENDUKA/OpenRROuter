@@ -18,7 +18,8 @@ public static class AuthPersistenceMapper
             PasswordHash = user.PasswordHash,
             CreatedAtUtc = user.CreatedAtUtc,
             DisplayName = user.DisplayName,
-            MaxApiKeys = user.MaxApiKeys
+            MaxApiKeys = user.MaxApiKeys,
+            DisplayCurrency = user.DisplayCurrency
         };
     }
 
@@ -33,7 +34,8 @@ public static class AuthPersistenceMapper
             entity.Status,
             entity.CreatedAtUtc,
             entity.DisplayName,
-            entity.MaxApiKeys);
+            entity.MaxApiKeys,
+            entity.DisplayCurrency);
     }
 
     public static InviteEntity ToEntity(Invite invite)

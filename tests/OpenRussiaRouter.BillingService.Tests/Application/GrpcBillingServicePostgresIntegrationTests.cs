@@ -1,7 +1,10 @@
+using Grpc.Core;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.BillingService.Infrastructure.Auth;
 using OpenRussiaRouter.BillingService.Tests.Infrastructure.Persistence;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 
@@ -32,7 +35,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             OutputPricePer1MUsd = "20",
             CachePricePer1MUsd = "1",
             Enabled = true
-        });
+        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
         _ = await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
         {
             AdminId = "admin-1",
@@ -40,7 +43,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             AmountUsd = "50",
             Reason = "pg test",
             IdempotencyKey = "pg-topup-1"
-        });
+        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
         _ = await client.RecordUsageAsync(new RecordUsageRequest
         {
             RequestId = "pg-req-1",
@@ -52,7 +55,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
             Status = "succeeded",
             StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
             CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
-        });
+        }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway));
 
         var balance = await client.GetBalanceAsync(new GetBalanceRequest { UserId = "user-pg" });
         var usage = await client.ListUsageAsync(new ListUsageRequest());
@@ -64,11 +67,31 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
     private static WebApplicationFactory<Program> CreateFactory(string connectionString)
     {
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+        {
             builder.ConfigureAppConfiguration((_, config) =>
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["ConnectionStrings:BillingDb"] = connectionString
-                })));
+                }));
+            builder.ConfigureServices(services =>
+            {
+                services.PostConfigure<ServiceAuthOptions>(opts =>
+                {
+                    opts.Tokens["api-gateway"] = S2sTestTokens.ApiGateway;
+                    opts.Tokens["webapp-admin"] = S2sTestTokens.WebappAdmin;
+                    opts.MethodPolicies["RecordUsage"] = new[] { "api-gateway" };
+                    opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["UpsertModelPrice"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["UpsertTag"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["DeleteTag"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["CreatePayment"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["AttachProviderRef"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["ConfirmPaymentByProvider"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["ApplyPaymentEvent"] = new[] { "webapp-admin" };
+                    opts.MethodPolicies["AcquireStalePayments"] = new[] { "webapp-admin" };
+                });
+            });
+        });
     }
 
     private static global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient CreateClient(
@@ -77,5 +100,15 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
         var httpClient = factory.CreateDefaultClient();
         var channel = GrpcChannel.ForAddress(httpClient.BaseAddress!, new GrpcChannelOptions { HttpClient = httpClient });
         return new global::OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService.BillingServiceClient(channel);
+    }
+
+    private static CallOptions S2sHeaders(string caller, string token)
+    {
+        var headers = new Metadata
+        {
+            { ServiceAuthOptions.CallerMetadataKey, caller },
+            { ServiceAuthOptions.TokenMetadataKey, token }
+        };
+        return new CallOptions(headers: headers);
     }
 }

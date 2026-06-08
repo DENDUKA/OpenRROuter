@@ -39,6 +39,15 @@ public static class ApiGatewayExtensions
         // Default per-call deadline for all gRPC clients (overridable via GrpcServices:CallDeadlineSeconds).
         var grpcCallDeadline = TimeSpan.FromSeconds(configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
 
+        // TS-003: s2s credentials for outbound BillingService calls.
+        var billingS2sCaller = configuration["ServiceAuth:BillingCaller"] ?? "api-gateway";
+        var billingS2sToken = configuration["ServiceAuth:BillingToken"];
+        if (string.IsNullOrWhiteSpace(billingS2sToken))
+        {
+            throw new InvalidOperationException(
+                "ServiceAuth:BillingToken is required for ApiGateway. Configure the shared s2s token in appsettings or a secret store.");
+        }
+
         var authGrpcUrl = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
         services.AddGrpcClient<AuthGrpc.AuthServiceClient>(options =>
         {
@@ -70,7 +79,8 @@ public static class ApiGatewayExtensions
                 KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
             };
         })
-        .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+        .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline))
+        .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
         services.AddScoped<IBillingProvider, GrpcBillingProvider>();
 
         var controlPlaneGrpcUrl = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";

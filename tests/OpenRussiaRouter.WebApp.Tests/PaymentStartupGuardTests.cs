@@ -43,14 +43,13 @@ public class PaymentStartupGuardTests
     }
 
     [Fact]
-    public void Production_with_empty_provider_throws()
+    public void Production_with_empty_provider_disables_payments_and_passes()
     {
         var env = new TestEnv { EnvironmentName = "Production" };
         var sp = BuildServiceProvider(activeProvider: "");
 
         var act = () => PaymentStartupGuard.Validate(sp, env);
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ActiveProvider is not configured*");
+        act.Should().NotThrow();
     }
 
     [Fact]

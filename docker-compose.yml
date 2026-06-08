@@ -78,6 +78,8 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__BillingDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres};Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleTimeout=300"
+      ServiceAuth__Tokens__api-gateway: "${S2S_API_GATEWAY_TOKEN:-dev-s2s-token-gateway-CHANGE-ME}"
+      ServiceAuth__Tokens__webapp-admin: "${S2S_WEBAPP_TOKEN:-dev-s2s-token-webapp-CHANGE-ME}"
       Seq__Url: "http://seq:80"
 
   control-plane:
@@ -137,6 +139,8 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
+      ServiceAuth__BillingCaller: "api-gateway"
+      ServiceAuth__BillingToken: "${S2S_API_GATEWAY_TOKEN:-dev-s2s-token-gateway-CHANGE-ME}"
       Seq__Url: "http://seq:80"
 
   webapp:
@@ -161,6 +165,8 @@ services:
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       GrpcServices__Collector: "http://collector:8081"
+      ServiceAuth__BillingCaller: "webapp-admin"
+      ServiceAuth__BillingToken: "${S2S_WEBAPP_TOKEN:-dev-s2s-token-webapp-CHANGE-ME}"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — set on the box in a (gitignored) .env, not committed here.
       # Non-secret Email config (host/port/sender) comes from appsettings.json.

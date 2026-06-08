@@ -10,7 +10,8 @@ public sealed class PaymentSettings
 
     /// <summary>
     /// Active provider name (matches <c>IPaymentProvider.Name</c>). Empty in production base config;
-    /// <c>PaymentStartupGuard</c> fails fast if it equals <c>"mock"</c> or unconfigured in Production.
+    /// An empty value disables payments; <c>PaymentStartupGuard</c> fails fast if it equals
+    /// <c>"mock"</c> or names an unknown provider in Production.
     /// </summary>
     public string ActiveProvider { get; set; } = string.Empty;
 

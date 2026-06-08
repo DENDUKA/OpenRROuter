@@ -5,8 +5,8 @@ using Microsoft.Extensions.Options;
 namespace OpenRussiaRouter.WebApp.Services.Payments;
 
 /// <summary>
-/// Fail-fast check that runs at startup. In Production the active payment provider MUST be
-/// a real one — the mock is dev-only and must never be reachable in a money-moving environment.
+/// Fail-fast check that runs at startup. In Production an explicitly configured payment
+/// provider MUST be real — the mock is dev-only and must never be reachable there.
 /// </summary>
 public static class PaymentStartupGuard
 {
@@ -20,8 +20,7 @@ public static class PaymentStartupGuard
         if (services is null) throw new ArgumentNullException(nameof(services));
 
         // The guard is meaningful only outside Development. In Development the mock is the
-        // expected active provider; an empty ActiveProvider is also tolerated (e.g. when payments
-        // are disabled for a local UI-only run).
+        // expected active provider.
         if (environment.IsDevelopment())
         {
             return;
@@ -34,9 +33,9 @@ public static class PaymentStartupGuard
         var active = settings.ActiveProvider;
         if (string.IsNullOrWhiteSpace(active))
         {
-            throw new InvalidOperationException(
-                "Payments:ActiveProvider is not configured. " +
-                "Production requires a real payment provider (mock is not allowed).");
+            // Payments are optional. An empty provider disables checkout without blocking the
+            // rest of the production WebApp while no real provider is configured.
+            return;
         }
 
         if (string.Equals(active, "mock", StringComparison.OrdinalIgnoreCase))

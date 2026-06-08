@@ -66,6 +66,8 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       Kestrel__EndpointDefaults__Protocols: "Http2"
       ConnectionStrings__BillingDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
+      ServiceAuth__Tokens__api-gateway: "${S2S_API_GATEWAY_TOKEN}"
+      ServiceAuth__Tokens__webapp-admin: "${S2S_WEBAPP_TOKEN}"
       Seq__Url: "http://seq:80"
     mem_limit: 512m
     cpus: 0.75
@@ -133,6 +135,8 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
+      ServiceAuth__BillingCaller: "api-gateway"
+      ServiceAuth__BillingToken: "${S2S_API_GATEWAY_TOKEN}"
       Seq__Url: "http://seq:80"
     mem_limit: 512m
     cpus: 0.75
@@ -159,6 +163,8 @@ services:
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       GrpcServices__Collector: "http://collector:8081"
+      ServiceAuth__BillingCaller: "webapp-admin"
+      ServiceAuth__BillingToken: "${S2S_WEBAPP_TOKEN}"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
       # config (host/port/sender noreply@web-point.top) ships in appsettings.json.

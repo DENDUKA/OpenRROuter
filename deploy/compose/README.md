@@ -1,9 +1,9 @@
 # Single-host Docker Compose deployment (dev)
 
-Runs the full stack — ApiGateway, AuthService, BillingService, ControlPlane, WebApp,
-Postgres, Seq, and the f9router node (`Inc64/F9Router` fork) — on one host via Docker
-Compose. This is the **dev** topology; production uses the k8s/Kustomize/ArgoCD setup
-under `infra/`.
+Runs the full stack — ApiGateway, AuthService, BillingService, ControlPlane,
+CollectorService, WebApp, Postgres, Seq, and the f9router node (`Inc64/F9Router`
+fork) — on one host via Docker Compose. This is the **dev** topology; production
+uses the k8s/Kustomize/ArgoCD setup under `infra/`.
 
 ## Layout on the server (`/opt/orr/`)
 
@@ -69,6 +69,8 @@ health-gate → **rollback** to the previous commit if health fails.
 |---|---|
 | API gateway | `http://<ip>:8080` |
 | WebApp | `http://<ip>:3000` |
+| Collector gRPC | `<ip>:5005` |
+| Collector health | `http://<ip>:5006/health` |
 | Seq | `http://<ip>:5341` |
 | f9router | `http://<ip>:20128` |
 
@@ -77,9 +79,9 @@ For production add a domain + reverse proxy (Caddy) with TLS and set
 
 ## Notes / gotchas baked into compose.yml
 
-- gRPC between services needs HTTP/2 cleartext — auth/billing/control set
-  `Kestrel__EndpointDefaults__Protocols=Http2`. Without it every gRPC call fails
-  `HTTP_1_1_REQUIRED` and WebApp login 500s.
+- gRPC between services needs HTTP/2 cleartext. Auth/billing/control use HTTP/2
+  on their service port; Collector has separate HTTP/1 health and HTTP/2 gRPC
+  endpoints. Without HTTP/2, calls fail with `HTTP_1_1_REQUIRED`.
 - No standalone `migrate` container: the .NET services apply SQL migrations
   idempotently on startup (`schema_migrations`), so a separate runner only causes
   non-idempotent re-run failures.

@@ -4,10 +4,11 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 DIR=app
-SERVICES="auth-service billing-service control-plane api-gateway webapp"
+SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
 
 health() {
   curl -fsS --max-time 8 http://127.0.0.1:8080/health >/dev/null 2>&1 || return 1
+  curl -fsS --max-time 8 http://127.0.0.1:5006/health >/dev/null 2>&1 || return 1
   local code
   code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 http://127.0.0.1:3000/login)
   [ "$code" = "200" ] || return 1   # /login exercises gRPC to auth-service
@@ -48,4 +49,4 @@ fi
 
 docker image prune -f >/dev/null
 echo "==> [orr] OK at ${after:0:9}"
-docker compose ps --format 'table {{.Service}}\t{{.Status}}' | grep -E 'auth|billing|control|gateway|webapp'
+docker compose ps --format 'table {{.Service}}\t{{.Status}}' | grep -E 'auth|billing|control|collector|gateway|webapp'

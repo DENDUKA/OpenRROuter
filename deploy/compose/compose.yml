@@ -85,9 +85,32 @@ services:
       Kestrel__EndpointDefaults__Protocols: "Http2"
       ConnectionStrings__ControlPlaneDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
       GrpcServices__Auth: "http://auth-service:8080"
+      GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
       RouterHealthChecks__HealthPath: "/api/health"
       RouterHealthChecks__NodeTokens: ""
+    mem_limit: 512m
+    cpus: 0.75
+
+  collector:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.CollectorService/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      control-plane:
+        condition: service_started
+    ports:
+      - "5005:8081"
+      - "5006:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      Kestrel__Endpoints__Http__Url: "http://+:8080"
+      Kestrel__Endpoints__Http__Protocols: "Http1"
+      Kestrel__Endpoints__Grpc__Url: "http://+:8081"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      GrpcServices__ControlPlane: "http://control-plane:8080"
+      Seq__Url: "http://seq:80"
     mem_limit: 512m
     cpus: 0.75
 
@@ -126,6 +149,8 @@ services:
         condition: service_started
       control-plane:
         condition: service_started
+      collector:
+        condition: service_started
     ports:
       - "3000:8080"
     environment:
@@ -133,6 +158,7 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
+      GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
       # config (host/port/sender noreply@web-point.top) ships in appsettings.json.

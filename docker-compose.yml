@@ -94,7 +94,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ConnectionStrings__ControlPlaneDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres};Pooling=true;MinPoolSize=5;MaxPoolSize=50;ConnectionIdleTimeout=300"
       GrpcServices__Auth: "http://auth-service:8080"
-      GrpcServices__Collector: "http://collector:8080"
+      GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
       RouterHealthChecks__NodeTokens: ""
 
@@ -107,12 +107,14 @@ services:
       control-plane:
         condition: service_started
     ports:
-      - "5005:8080"
+      - "5005:8081"
+      - "5006:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      # No explicit Kestrel endpoint: rely on the default http://+:8080 with
-      # Http1AndHttp2 so /metrics + /health (HTTP/1.1) and gRPC (h2c) share the port,
-      # matching the control-plane service.
+      Kestrel__Endpoints__Http__Url: "http://+:8080"
+      Kestrel__Endpoints__Http__Protocols: "Http1"
+      Kestrel__Endpoints__Grpc__Url: "http://+:8081"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       Seq__Url: "http://seq:80"
 
@@ -149,6 +151,8 @@ services:
         condition: service_started
       control-plane:
         condition: service_started
+      collector:
+        condition: service_started
     ports:
       - "3000:8080"
     environment:
@@ -156,7 +160,7 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
-      GrpcServices__Collector: "http://collector:8080"
+      GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — set on the box in a (gitignored) .env, not committed here.
       # Non-secret Email config (host/port/sender) comes from appsettings.json.

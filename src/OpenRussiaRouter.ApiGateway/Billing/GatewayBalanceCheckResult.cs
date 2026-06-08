@@ -8,5 +8,7 @@ public sealed record GatewayBalanceCheckResult(
     string RouterModelId,
     string? PriceVersion,
     MoneyAmount Balance,
-    string? ErrorCode);
+    string? ErrorCode,
+    bool SupportsReasoning = false,
+    IReadOnlyList<string>? AllowedReasoningEfforts = null);
 

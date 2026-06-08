@@ -22,15 +22,22 @@ public sealed class GrpcBillingService(
     {
         var result = await billing.CheckBalanceAndModelAsync(request.UserId, request.ModelId, request.AdminBypassDisabled, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-        return new CheckBalanceAndModelResponse
+        var response = new CheckBalanceAndModelResponse
         {
             Allowed = result.Allowed,
             ModelId = result.ModelId,
             RouterModelId = result.RouterModelId,
             PriceVersion = result.PriceVersion ?? string.Empty,
             BalanceUsd = result.CurrentBalance.Amount.ToString(CultureInfo.InvariantCulture),
-            ErrorCode = result.ErrorCode ?? string.Empty
+            ErrorCode = result.ErrorCode ?? string.Empty,
+            SupportsReasoning = result.SupportsReasoning
         };
+        if (result.AllowedReasoningEfforts is not null)
+        {
+            response.AllowedReasoningEfforts.AddRange(result.AllowedReasoningEfforts);
+        }
+
+        return response;
     }
 
     public override async Task<ListPublicModelsResponse> ListPublicModels(
@@ -60,7 +67,12 @@ public sealed class GrpcBillingService(
                     Modalities = price?.Modalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,
                     Provider = price?.Provider ?? string.Empty,
+                    SupportsReasoning = model.SupportsReasoning,
                 };
+                if (model.AllowedReasoningEfforts is not null)
+                {
+                    modelResponse.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
+                }
                 if (price?.TagIds != null)
                 {
                     modelResponse.TagIds.AddRange(price.TagIds);
@@ -175,7 +187,10 @@ public sealed class GrpcBillingService(
                 Modalities: string.IsNullOrEmpty(request.Modalities) ? null : request.Modalities,
                 DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource,
                 TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null,
-                Provider: string.IsNullOrEmpty(request.Provider) ? null : request.Provider),
+                Provider: string.IsNullOrEmpty(request.Provider) ? null : request.Provider,
+                SupportsReasoning: request.SupportsReasoning,
+                AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
+                DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -242,7 +257,13 @@ public sealed class GrpcBillingService(
                     Modalities = model.Modalities ?? string.Empty,
                     DescriptionSource = model.DescriptionSource ?? string.Empty,
                     Provider = model.Provider ?? string.Empty,
+                    SupportsReasoning = model.SupportsReasoning,
+                    DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                 };
+                if (model.AllowedReasoningEfforts is not null)
+                {
+                    m.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
+                }
                 if (model.TagIds != null)
                 {
                     m.TagIds.AddRange(model.TagIds);

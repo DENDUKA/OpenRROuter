@@ -20,4 +20,7 @@ public sealed class ModelPriceEntity
     public string? DescriptionSource { get; set; }
     public string[]? TagIds { get; set; }
     public string? Provider { get; set; }
+    public bool SupportsReasoning { get; set; }
+    public string AllowedReasoningEfforts { get; set; } = string.Empty;
+    public string? DefaultReasoningEffort { get; set; }
 }

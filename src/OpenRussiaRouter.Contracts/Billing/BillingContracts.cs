@@ -9,9 +9,16 @@ public sealed record BalanceCheckResult(
     string RouterModelId,
     string? PriceVersion,
     MoneyAmount CurrentBalance,
-    string? ErrorCode);
+    string? ErrorCode,
+    bool SupportsReasoning = false,
+    IReadOnlyList<string>? AllowedReasoningEfforts = null);
 
-public sealed record PublicModel(string Id, string DisplayName, bool Enabled);
+public sealed record PublicModel(
+    string Id,
+    string DisplayName,
+    bool Enabled,
+    bool SupportsReasoning = false,
+    IReadOnlyList<string>? AllowedReasoningEfforts = null);
 
 public sealed record UsageEvent(
     string RequestId,

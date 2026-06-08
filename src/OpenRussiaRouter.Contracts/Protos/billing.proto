@@ -44,6 +44,8 @@ message CheckBalanceAndModelResponse {
   string balance_usd = 4;
   string error_code = 5;
   string router_model_id = 6;
+  bool supports_reasoning = 7;
+  repeated string allowed_reasoning_efforts = 8;
 }
 
 message TokenUsage {
@@ -88,6 +90,8 @@ message PublicModel {
   repeated string tag_ids = 9;
   string provider = 10;
   string cache_price_per_1m_usd = 11;
+  bool supports_reasoning = 12;
+  repeated string allowed_reasoning_efforts = 13;
 }
 
 message ListPublicModelsResponse {
@@ -136,6 +140,9 @@ message UpsertModelPriceRequest {
   string description_source = 12;
   repeated string tag_ids = 13;
   string provider = 14;
+  bool supports_reasoning = 15;
+  repeated string allowed_reasoning_efforts = 16;
+  string default_reasoning_effort = 17;
 }
 
 message UpsertModelPriceResponse {
@@ -166,6 +173,9 @@ message ModelDetail {
   string description_source = 12;
   repeated string tag_ids = 13;
   string provider = 14;
+  bool supports_reasoning = 15;
+  repeated string allowed_reasoning_efforts = 16;
+  string default_reasoning_effort = 17;
 }
 
 message ListModelsResponse {

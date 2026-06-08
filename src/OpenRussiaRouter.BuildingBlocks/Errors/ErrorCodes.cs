@@ -8,6 +8,9 @@ public static class ErrorCodes
     public const string ModelUnavailable = "model_unavailable";
     public const string RouterUnavailable = "router_unavailable";
     public const string ValidationFailed = "validation_failed";
+    public const string UnsupportedReasoning = "unsupported_parameter";
+    public const string UnsupportedReasoningEffort = "unsupported_reasoning_effort";
+    public const string ConflictingParameters = "conflicting_parameters";
     public const string InternalError = "internal_error";
     public const string PaymentNotFound = "payment_not_found";
     public const string PaymentAlreadyProcessed = "payment_already_processed";

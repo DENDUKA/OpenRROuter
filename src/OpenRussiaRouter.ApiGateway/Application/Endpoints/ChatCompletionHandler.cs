@@ -58,8 +58,26 @@ public sealed class ChatCompletionHandler(
                     return;
                 }
 
-                var patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                    SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
+                var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
+                    patchedJson,
+                    body.Metadata.Reasoning,
+                    auth.SupportsReasoning,
+                    auth.AllowedReasoningEfforts ?? []);
+                if (!reasoningPatch.IsSuccess)
+                {
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", context.RequestAborted);
+                    await GatewayErrors.WriteAsync(
+                        context,
+                        "invalid_request_error",
+                        reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
+                        reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
+                        requestId);
+                    return;
+                }
+
+                patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                    reasoningPatch.PatchedJson,
                     auth.RouterModelId,
                     body.Metadata.Model ?? "");
                 var startedAt = DateTimeOffset.UtcNow;
@@ -135,9 +153,27 @@ public sealed class ChatCompletionHandler(
                     return;
                 }
 
-                var patchedJson = SseRequestPatcher.InjectStreamOptions(
+                var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
+                var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
+                    patchedJson,
+                    body.Metadata.Reasoning,
+                    auth.SupportsReasoning,
+                    auth.AllowedReasoningEfforts ?? []);
+                if (!reasoningPatch.IsSuccess)
+                {
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", context.RequestAborted);
+                    await GatewayErrors.WriteAsync(
+                        context,
+                        "invalid_request_error",
+                        reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
+                        reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
+                        requestId);
+                    return;
+                }
+
+                patchedJson = SseRequestPatcher.InjectStreamOptions(
                     GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                        SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId),
+                        reasoningPatch.PatchedJson,
                         auth.RouterModelId,
                         body.Metadata.Model ?? ""));
                 var lease = auth.Lease;

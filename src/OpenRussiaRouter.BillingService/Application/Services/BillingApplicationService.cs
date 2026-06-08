@@ -49,6 +49,32 @@ public sealed partial class BillingApplicationService(
         _ = Preconditions.RequireValue(model.RouterModelId, nameof(model.RouterModelId));
         _ = Preconditions.RequireValue(model.PriceVersion, nameof(model.PriceVersion));
         model.Price.EnsureValid();
+
+        var allowedReasoningEfforts = ReasoningEffort.NormalizeList(model.AllowedReasoningEfforts);
+        var defaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort);
+
+        foreach (var effort in allowedReasoningEfforts)
+        {
+            if (!ReasoningEffort.IsCanonical(effort))
+                throw new ArgumentException($"Unsupported reasoning effort '{effort}'.", nameof(model.AllowedReasoningEfforts));
+        }
+
+        if (!model.SupportsReasoning)
+        {
+            if (allowedReasoningEfforts.Count > 0 || defaultReasoningEffort is not null)
+                throw new ArgumentException("Reasoning efforts/default are only allowed when SupportsReasoning=true.", nameof(model));
+        }
+        else if (defaultReasoningEffort is not null && !allowedReasoningEfforts.Contains(defaultReasoningEffort, StringComparer.Ordinal))
+        {
+            throw new ArgumentException("DefaultReasoningEffort must be one of AllowedReasoningEfforts.", nameof(model.DefaultReasoningEffort));
+        }
+
+        model = model with
+        {
+            AllowedReasoningEfforts = allowedReasoningEfforts.Count == 0 ? null : allowedReasoningEfforts,
+            DefaultReasoningEffort = defaultReasoningEffort
+        };
+
         await repository.UpsertModelAsync(model, ct).ConfigureAwait(false);
     }
 
@@ -76,9 +102,25 @@ public sealed partial class BillingApplicationService(
                        && model.Price.CachePerMillion.Amount == 0;
 
         if (!isFreeModel && balance.Amount <= 0)
-            return new BalanceCheckResult(false, modelId, model.RouterModelId, model.PriceVersion, balance, ErrorCodes.InsufficientBalance);
+            return new BalanceCheckResult(
+                false,
+                modelId,
+                model.RouterModelId,
+                model.PriceVersion,
+                balance,
+                ErrorCodes.InsufficientBalance,
+                model.SupportsReasoning,
+                model.AllowedReasoningEfforts);
 
-        return new BalanceCheckResult(true, modelId, model.RouterModelId, model.PriceVersion, balance, null);
+        return new BalanceCheckResult(
+            true,
+            modelId,
+            model.RouterModelId,
+            model.PriceVersion,
+            balance,
+            null,
+            model.SupportsReasoning,
+            model.AllowedReasoningEfforts);
     }
 
     public async Task<IReadOnlyCollection<PublicModel>> ListPublicModelsAsync(CancellationToken ct = default)
@@ -86,7 +128,12 @@ public sealed partial class BillingApplicationService(
         var pageSize = paginationOptions.Value.EffectivePageSize;
         return (await repository.ListEnabledModelsAsync(pageSize, null, ct).ConfigureAwait(false))
             .Items
-            .Select(model => new PublicModel(model.RouterModelId, model.DisplayName, model.Enabled))
+            .Select(model => new PublicModel(
+                model.RouterModelId,
+                model.DisplayName,
+                model.Enabled,
+                model.SupportsReasoning,
+                model.AllowedReasoningEfforts))
             .ToArray();
     }
 

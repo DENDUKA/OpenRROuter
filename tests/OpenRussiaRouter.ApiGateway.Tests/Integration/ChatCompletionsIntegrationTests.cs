@@ -207,6 +207,30 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_UnsupportedReasoning_Returns400WithoutCallingRouter()
+    {
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: false)
+        };
+        var router = new StubRouterProxy();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertErrorCode(response, ErrorCodes.UnsupportedReasoning);
+        router.LastRequestJson.Should().BeNull();
+    }
+
+    [Fact]
     public async Task NonStreaming_HappyPath_RecordsUsageAfterSuccessfulResponse()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
@@ -284,7 +308,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     {
         var billing = new StubBillingProvider
         {
-            PublicModels = new[] { new GatewayPublicModel("gpt-4", "openai") }
+            PublicModels = new[] { new GatewayPublicModel("gpt-4", "openai", true, ["low", "high"]) }
         };
         var client = CreateClient(billing: billing);
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-ok_key");
@@ -294,6 +318,8 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         json.RootElement.GetProperty("object").GetString().Should().Be("list");
+        json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("supported").GetBoolean().Should().BeTrue();
+        json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("efforts")[0].GetString().Should().Be("low");
     }
 
     // --- Helpers ---

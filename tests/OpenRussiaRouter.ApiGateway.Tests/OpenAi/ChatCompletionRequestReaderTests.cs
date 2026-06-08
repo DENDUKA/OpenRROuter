@@ -20,7 +20,7 @@ public sealed class ChatCompletionRequestReaderTests
     [Fact]
     public async Task ReadBodyAsync_ReturnsRawJsonAndMetadata()
     {
-        const string json = """{"model":"gpt-test","stream":false}""";
+        const string json = """{"model":"gpt-test","stream":false,"reasoning":{"effort":"High"}}""";
         await using var body = ToStream(json);
 
         var result = await ChatCompletionRequestReader.ReadBodyAsync(body, CancellationToken.None);
@@ -28,6 +28,8 @@ public sealed class ChatCompletionRequestReaderTests
         result.Json.Should().Be(json);
         result.Metadata.Model.Should().Be("gpt-test");
         result.Metadata.Stream.Should().BeFalse();
+        result.Metadata.Reasoning.HasReasoningObject.Should().BeTrue();
+        result.Metadata.Reasoning.ReasoningObjectEffort.Should().Be("High");
     }
 
     [Fact]
@@ -39,6 +41,7 @@ public sealed class ChatCompletionRequestReaderTests
 
         result.Model.Should().BeNull();
         result.Stream.Should().BeFalse();
+        result.Reasoning.Should().Be(ChatCompletionReasoningMetadata.None);
     }
 
     private static MemoryStream ToStream(string json)

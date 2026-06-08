@@ -29,6 +29,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
+    public IReadOnlyList<string> ReasoningEfforts { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
 
     /// <summary>Set when per-model enrich could not auto-match — UI prompts for an explicit OpenRouter id.</summary>
     public bool EnrichNotFound { get; set; }
@@ -76,7 +77,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         ContextLength = m.ContextLength,
                         Modalities = m.Modalities,
                         Provider = m.Provider,
-                        TagIds = m.TagIds?.ToList() ?? []
+                        TagIds = m.TagIds?.ToList() ?? [],
+                        SupportsReasoning = m.SupportsReasoning,
+                        AllowedReasoningEfforts = m.AllowedReasoningEfforts?.ToList() ?? [],
+                        DefaultReasoningEffort = m.DefaultReasoningEffort
                     };
                 }
             }
@@ -100,6 +104,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     {
         ShowForm = true;
         IsAdd = isNew;
+
+        NormalizeAndValidateReasoning();
 
         if (!ModelState.IsValid)
         {
@@ -143,7 +149,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
                 DescriptionSource: DetermineSource(orig, Form),
                 Provider: string.IsNullOrWhiteSpace(Form.Provider) ? null : Form.Provider.Trim(),
-                TagIds: Form.TagIds);
+                TagIds: Form.TagIds,
+                SupportsReasoning: Form.SupportsReasoning,
+                AllowedReasoningEfforts: Form.AllowedReasoningEfforts.Count > 0 ? Form.AllowedReasoningEfforts : null,
+                DefaultReasoningEffort: Form.DefaultReasoningEffort);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -323,6 +332,46 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         }
     }
 
+    private void NormalizeAndValidateReasoning()
+    {
+        Form.AllowedReasoningEfforts = Form.AllowedReasoningEfforts
+            .Where(static effort => !string.IsNullOrWhiteSpace(effort))
+            .Select(static effort => effort.Trim().ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        Form.DefaultReasoningEffort = string.IsNullOrWhiteSpace(Form.DefaultReasoningEffort)
+            ? null
+            : Form.DefaultReasoningEffort.Trim().ToLowerInvariant();
+
+        foreach (var effort in Form.AllowedReasoningEfforts)
+        {
+            if (!ReasoningEfforts.Contains(effort, StringComparer.Ordinal))
+            {
+                ModelState.AddModelError(nameof(Form.AllowedReasoningEfforts), $"Unsupported reasoning effort '{effort}'.");
+            }
+        }
+
+        if (!Form.SupportsReasoning)
+        {
+            if (Form.AllowedReasoningEfforts.Count > 0)
+            {
+                ModelState.AddModelError(nameof(Form.AllowedReasoningEfforts), "Allowed efforts must be empty when reasoning is disabled.");
+            }
+
+            if (Form.DefaultReasoningEffort is not null)
+            {
+                ModelState.AddModelError(nameof(Form.DefaultReasoningEffort), "Default effort must be empty when reasoning is disabled.");
+            }
+
+            return;
+        }
+
+        if (Form.DefaultReasoningEffort is not null && !Form.AllowedReasoningEfforts.Contains(Form.DefaultReasoningEffort, StringComparer.Ordinal))
+        {
+            ModelState.AddModelError(nameof(Form.DefaultReasoningEffort), "Default effort must be one of allowed efforts.");
+        }
+    }
+
     private static string? DetermineSource(ModelInfo? orig, ModelFormInput form)
     {
         var descChanged = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
@@ -396,5 +445,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? Modalities { get; set; }
         public string? Provider { get; set; }
         public List<string> TagIds { get; set; } = [];
+        public bool SupportsReasoning { get; set; }
+        public List<string> AllowedReasoningEfforts { get; set; } = [];
+        public string? DefaultReasoningEffort { get; set; }
     }
 }

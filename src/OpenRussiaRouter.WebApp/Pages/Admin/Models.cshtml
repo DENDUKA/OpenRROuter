@@ -159,9 +159,42 @@
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label class="form-label">
+                            <input asp-for="Form.SupportsReasoning" type="checkbox" id="supportsReasoning" />
+                            Supports reasoning
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">
                             <input asp-for="Form.Enabled" type="checkbox" />
                             Enabled (model is available to API clients)
                         </label>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.AllowedReasoningEfforts" class="form-label">Allowed efforts</label>
+                        <select asp-for="Form.AllowedReasoningEfforts" class="form-control" multiple size="6" id="allowedReasoningEfforts">
+                            @foreach (var effort in Model.ReasoningEfforts)
+                            {
+                                var selected = Model.Form.AllowedReasoningEfforts.Contains(effort, StringComparer.Ordinal);
+                                <option value="@effort" selected="@(selected ? "selected" : null)">@effort</option>
+                            }
+                        </select>
+                        <small class="text-muted">Hold Ctrl/Cmd to select multiple values.</small>
+                        <span asp-validation-for="Form.AllowedReasoningEfforts" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.DefaultReasoningEffort" class="form-label">Default effort <small class="text-muted">(optional)</small></label>
+                        <select asp-for="Form.DefaultReasoningEffort" class="form-control" id="defaultReasoningEffort">
+                            <option value="">— none —</option>
+                            @foreach (var effort in Model.ReasoningEfforts)
+                            {
+                                var selected = string.Equals(Model.Form.DefaultReasoningEffort, effort, StringComparison.Ordinal);
+                                <option value="@effort" selected="@(selected ? "selected" : null)">@effort</option>
+                            }
+                        </select>
+                        <small class="text-muted">Must be one of the allowed efforts.</small>
+                        <span asp-validation-for="Form.DefaultReasoningEffort" class="validation-message"></span>
                     </div>
                 </div>
                 <div class="adm-btn-row">
@@ -286,3 +319,42 @@
     .copy-btn:hover { color: var(--color-primary); }
     .adm-enrich-row { display: flex; gap: 1rem; align-items: flex-end; }
 </style>
+
+<script>
+    (() => {
+        const supports = document.getElementById('supportsReasoning');
+        const allowed = document.getElementById('allowedReasoningEfforts');
+        const def = document.getElementById('defaultReasoningEffort');
+        if (!supports || !allowed || !def) return;
+
+        const syncReasoningControls = () => {
+            const enabled = supports.checked;
+            allowed.disabled = !enabled;
+            def.disabled = !enabled;
+
+            if (!enabled) {
+                Array.from(allowed.options).forEach(option => option.selected = false);
+                def.value = '';
+                Array.from(def.options).forEach(option => option.hidden = false);
+                return;
+            }
+
+            const selected = new Set(Array.from(allowed.selectedOptions).map(option => option.value));
+            Array.from(def.options).forEach(option => {
+                if (option.value === '') {
+                    option.hidden = false;
+                    return;
+                }
+
+                option.hidden = !selected.has(option.value);
+                if (option.hidden && option.selected) {
+                    def.value = '';
+                }
+            });
+        };
+
+        supports.addEventListener('change', syncReasoningControls);
+        allowed.addEventListener('change', syncReasoningControls);
+        syncReasoningControls();
+    })();
+</script>

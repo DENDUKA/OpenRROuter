@@ -27,7 +27,26 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
         var responseBody = new
         {
             @object = "list",
-            data = models.Select(m => new { id = m.Id, @object = "model", created = 0, owned_by = "openrussiarouter" })
+            data = models.Select(m => new
+            {
+                id = m.Id,
+                @object = "model",
+                created = 0,
+                owned_by = "openrussiarouter",
+                capabilities = new Dictionary<string, object?>
+                {
+                    ["reasoning"] = m.SupportsReasoning
+                        ? new Dictionary<string, object?>
+                        {
+                            ["supported"] = true,
+                            ["efforts"] = m.AllowedReasoningEfforts ?? []
+                        }
+                        : new Dictionary<string, object?>
+                        {
+                            ["supported"] = false
+                        }
+                }
+            })
         };
 
         context.Response.ContentType = "application/json";

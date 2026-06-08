@@ -12,4 +12,6 @@ public sealed record GatewayAuthorizedContext(
     string? PreferredNodeId,
     string? PreferredNodeControlToken,
     GatewayRouterLease Lease,
+    bool SupportsReasoning,
+    IReadOnlyList<string>? AllowedReasoningEfforts,
     bool IsAdmin = false);

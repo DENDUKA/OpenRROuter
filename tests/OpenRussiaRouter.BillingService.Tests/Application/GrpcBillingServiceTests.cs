@@ -201,6 +201,44 @@ public sealed class GrpcBillingServiceTests
     }
 
     [Fact]
+    public async Task ReasoningCapability_RoundTripsThroughGrpcMappings()
+    {
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance);
+        var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
+
+        var upsert = await service.UpsertModelPrice(new UpsertModelPriceRequest
+        {
+            ModelId = "gpt-reasoning",
+            DisplayName = "GPT Reasoning",
+            UpstreamModelId = "router/gpt-reasoning",
+            PriceVersion = "v1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
+            Enabled = true,
+            SupportsReasoning = true,
+            AllowedReasoningEfforts = { "low", "medium", "high" },
+            DefaultReasoningEffort = "medium"
+        }, context: null!);
+
+        var balance = await service.CheckBalanceAndModel(
+            new CheckBalanceAndModelRequest { UserId = "user-1", ModelId = "router/gpt-reasoning" },
+            context: null!);
+        var publicModels = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
+        var models = await service.ListModels(new ListModelsRequest(), context: null!);
+
+        upsert.Upserted.Should().BeTrue();
+        balance.SupportsReasoning.Should().BeTrue();
+        balance.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
+        publicModels.Models.Should().ContainSingle().Which.SupportsReasoning.Should().BeTrue();
+        models.Models.Should().ContainSingle().Which.DefaultReasoningEffort.Should().Be("medium");
+    }
+
+    [Fact]
     public async Task ListBillingAnomalies_AfterInvalidUsage_ReturnsAnomaly()
     {
         var billing = await CreateBillingWithModelAndBalanceAsync();

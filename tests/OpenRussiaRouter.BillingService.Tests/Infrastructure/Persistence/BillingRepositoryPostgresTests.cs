@@ -170,6 +170,38 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task ModelReasoningCapability_RoundTripsThroughRepository()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-reasoning",
+            "GPT Reasoning",
+            "router/gpt-reasoning",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true,
+            SupportsReasoning: true,
+            AllowedReasoningEfforts: ["low", "medium", "high"],
+            DefaultReasoningEffort: "medium"));
+
+        var model = await repository.GetModelAsync("gpt-reasoning");
+        model.Should().NotBeNull();
+        model!.SupportsReasoning.Should().BeTrue();
+        model.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
+        model.DefaultReasoningEffort.Should().Be("medium");
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task CurrencyMigration_NormalizesLegacyRubValuesAndPreventsNewOnes()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

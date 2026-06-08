@@ -190,7 +190,9 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
             Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
             Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
-            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
+            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            SupportsReasoning: m.SupportsReasoning,
+            AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -210,7 +212,10 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
             DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
             Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
-            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null)).ToList();
+            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            SupportsReasoning: m.SupportsReasoning,
+            AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
+            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort)).ToList();
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -229,11 +234,17 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             ContextLength = model.ContextLength ?? 0,
             Modalities = model.Modalities ?? string.Empty,
             DescriptionSource = model.DescriptionSource ?? string.Empty,
-            Provider = model.Provider ?? string.Empty
+            Provider = model.Provider ?? string.Empty,
+            SupportsReasoning = model.SupportsReasoning,
+            DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty
         };
         if (model.TagIds != null)
         {
             request.TagIds.AddRange(model.TagIds);
+        }
+        if (model.AllowedReasoningEfforts != null)
+        {
+            request.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
         }
 
         var response = await client.UpsertModelPriceAsync(request, cancellationToken: cancellationToken);

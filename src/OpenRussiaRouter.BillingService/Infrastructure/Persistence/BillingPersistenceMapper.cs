@@ -1,3 +1,4 @@
+using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -52,7 +53,10 @@ public static class BillingPersistenceMapper
             Modalities = model.Modalities,
             DescriptionSource = model.DescriptionSource,
             TagIds = model.TagIds?.ToArray(),
-            Provider = model.Provider
+            Provider = model.Provider,
+            SupportsReasoning = model.SupportsReasoning,
+            AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
+            DefaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort)
         };
     }
 
@@ -73,7 +77,10 @@ public static class BillingPersistenceMapper
             Modalities: entity.Modalities,
             DescriptionSource: entity.DescriptionSource,
             TagIds: entity.TagIds,
-            Provider: entity.Provider);
+            Provider: entity.Provider,
+            SupportsReasoning: entity.SupportsReasoning,
+            AllowedReasoningEfforts: ReasoningEffort.SplitCsv(entity.AllowedReasoningEfforts),
+            DefaultReasoningEffort: ReasoningEffort.NormalizeNullable(entity.DefaultReasoningEffort));
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)

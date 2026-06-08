@@ -90,14 +90,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
                 description, context_length, modalities, description_source,
-                tag_ids, provider
+                tag_ids, provider,
+                supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort
             )
             values (
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
                 @Description, @ContextLength, @Modalities, @DescriptionSource,
-                @TagIds, @Provider
+                @TagIds, @Provider,
+                @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort
             )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
@@ -110,6 +112,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 enabled = excluded.enabled,
                 tag_ids = excluded.tag_ids,
                 provider = excluded.provider,
+                supports_reasoning = excluded.supports_reasoning,
+                allowed_reasoning_efforts = excluded.allowed_reasoning_efforts,
+                default_reasoning_effort = excluded.default_reasoning_effort,
                 description = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description
@@ -147,7 +152,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model.Modalities,
                 model.DescriptionSource,
                 model.Provider,
-                TagIds = model.TagIds?.ToArray() ?? []
+                TagIds = model.TagIds?.ToArray() ?? [],
+                model.SupportsReasoning,
+                AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
+                DefaultReasoningEffort = model.DefaultReasoningEffort
             },
             cancellationToken: ct)).ConfigureAwait(false);
     }
@@ -1230,7 +1238,10 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             modalities as Modalities,
             description_source as DescriptionSource,
             tag_ids as TagIds,
-            provider as Provider
+            provider as Provider,
+            supports_reasoning as SupportsReasoning,
+            allowed_reasoning_efforts as AllowedReasoningEfforts,
+            default_reasoning_effort as DefaultReasoningEffort
         from billing.model_prices
 
         """;

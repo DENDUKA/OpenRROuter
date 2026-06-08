@@ -242,6 +242,55 @@ public sealed class BillingApplicationServiceTests
         (await service.ListTagsAsync()).Should().ContainSingle(t => t.Id == "cheap");
     }
 
+    [Fact]
+    public async Task UpsertModel_DefaultReasoningEffortOutsideAllowed_Throws()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.UpsertModelAsync(CreateModel("gpt-reasoning", enabled: true) with
+        {
+            SupportsReasoning = true,
+            AllowedReasoningEfforts = ["low", "medium"],
+            DefaultReasoningEffort = "high"
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task UpsertModel_InvalidReasoningEffort_Throws()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.UpsertModelAsync(CreateModel("gpt-reasoning", enabled: true) with
+        {
+            SupportsReasoning = true,
+            AllowedReasoningEfforts = ["ultra"]
+        });
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task InMemoryRepository_RoundTripsReasoningCapability()
+    {
+        var repository = new InMemoryBillingRepository();
+        var model = CreateModel("gpt-reasoning", enabled: true) with
+        {
+            SupportsReasoning = true,
+            AllowedReasoningEfforts = ["low", "medium", "high"],
+            DefaultReasoningEffort = "medium"
+        };
+
+        await repository.UpsertModelAsync(model);
+
+        var saved = await repository.GetModelAsync("router/gpt-reasoning");
+        saved.Should().NotBeNull();
+        saved!.SupportsReasoning.Should().BeTrue();
+        saved.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
+        saved.DefaultReasoningEffort.Should().Be("medium");
+    }
+
     private static BillingApplicationService CreateService()
     {
         return new BillingApplicationService(

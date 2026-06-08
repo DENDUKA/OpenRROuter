@@ -21,7 +21,11 @@ public sealed class GrpcBillingProvider(
             cancellationToken: cancellationToken);
 
         return response.Models
-            .Select(model => new GatewayPublicModel(model.Id, model.DisplayName))
+            .Select(model => new GatewayPublicModel(
+                model.Id,
+                model.DisplayName,
+                model.SupportsReasoning,
+                model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToArray() : null))
             .ToArray();
     }
 
@@ -52,7 +56,9 @@ public sealed class GrpcBillingProvider(
                 routerModelId,
                 string.IsNullOrWhiteSpace(response.PriceVersion) ? null : response.PriceVersion,
                 MoneyAmount.Usd(ParseDecimal(response.BalanceUsd)),
-                string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode);
+                string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode,
+                response.SupportsReasoning,
+                response.AllowedReasoningEfforts.Count > 0 ? response.AllowedReasoningEfforts.ToArray() : null);
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

@@ -13,6 +13,15 @@
     <PackageReference Include="Npgsql"  />
   </ItemGroup>
 
+  <!--
+    Microsoft.NET.Sdk (unlike Sdk.Web) does NOT include appsettings*.json as default
+    content items, so they were never published into the image.
+  -->
+  <ItemGroup>
+    <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.*.json" CopyToOutputDirectory="PreserveNewest" DependentUpon="appsettings.json" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>

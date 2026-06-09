@@ -34,16 +34,28 @@
 
 **Тесты.** Рядом с `OpenRouterCatalogClient` логика тестируема — добавить unit-тесты санитайзера на собранных примерах.
 
-### E. Setup guide (эндпоинты)
+### E. Setup guide (эндпоинты) — СДЕЛАНО во втором заходе
 
-**Что.** Пункт меню `/docs` («Setup guide») **уже есть** в навбаре `_Layout.cshtml:48` — нужна сама страница.
+Страница `Docs.cshtml` (`/docs`) уже существовала. Добавлено:
+- code-behind `Docs.cshtml.cs` — резолвит `ApiBaseUrl` из конфига `PublicApiBaseUrl`, фолбэк на request origin.
+- Секция **Endpoint**: Base URL (`{base}/v1`) с кнопкой-копией, Auth header, таблица методов (`POST /v1/chat/completions`, `GET /v1/models`).
+- Исправлен curl: реальный `@Model.ChatCompletionsUrl` вместо `curl /v1/...`.
+- Ключ `PublicApiBaseUrl` добавлен в `appsettings.json` (пустой).
 
-Содержимое: Base URL, Authentication (`Authorization: Bearer <key>`), `POST /v1/chat/completions`
-(curl + JSON пример), `GET /v1/models`, ссылка «Get API Key» (`/workspace/apikeys`).
-Везде кнопки-копии (после A работают).
+**Base URL теперь правится из админки** (Admin → Index → «Platform settings»), не только из конфига.
+Реализован persist-стор `billing.platform_settings` (KV): миграция `015`, proto `Get/SetPlatformSetting`,
+репозиторий (PG+in-memory), фасад, gRPC, `BillingProvider`, ключ `PlatformSettingKeys.PublicApiBaseUrl`.
+Цепочка в Docs: **admin-настройка → конфиг `PublicApiBaseUrl` → request origin**.
 
-**Открытое решение (отложено юзером).** На `/models` и детали модели — **блок** про эндпоинты ИЛИ **ссылка** на Setup guide.
-Рекомендация: сначала ссылка (дёшево, обратимо), инлайн-блок — вторым заходом если понадобится.
+**⚠️ Деплой-действие (ops).** На dev VPS WebApp = :3000, gateway = :8080 → задать base URL
+(`http://31.76.49.2:8080`) **в админке** (или конфигом). Без этого гайд покажет origin кабинета (:3000) — неверно.
+На kind (всё за одним ingress) фолбэк сам даёт правильный `http://<host>/v1`.
 
-**Источник Base URL.** Не хардкодить — взять из конфига (ApiGateway public URL). Проверить, есть ли уже
-конфиг с публичным URL гейтвея (`ApiGatewayUrl` named HttpClient есть, но это внутренний адрес — нужен внешний public).
+**Открытое решение (всё ещё отложено).** На `/models` / детали — инлайн-**блок** про эндпоинт ИЛИ **ссылка** на `/docs`.
+Пока ничего не добавлено (в топбаре есть пункт «Setup guide» → `/docs`). Рекомендация прежняя: ссылка, потом блок при желании.
+
+### Доп. правки второго захода (не из исходных A–E)
+
+- Каталог `/models`: добавлена узкая колонка **Author** (`m.Provider`) — по просьбе вернуть разработчика/владельца, подписан корректно.
+- **Переключатель валюты** (₽/$/€) в топбар-дропдауне: `Controllers/PreferencesController.cs` (`POST /preferences/currency`),
+  пишет в профиль (`displayCurrency`) + куку `orr_ccy` для подсветки активной. Settings-страница тоже ставит куку (синк). CSS — `.ccy-*` в `app.css`.

@@ -776,6 +776,14 @@ code.d-block {
 .dropdown-item--danger, .dropdown-item--danger.active, .dropdown-item--danger:hover { color: var(--color-danger) !important; }
 .dropdown-item--danger:hover { background: rgba(239,68,68,.1); }
 
+.dropdown-currency { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; }
+.dropdown-currency-label { color: var(--color-mute); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.ccy-switch { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+.ccy-btn { min-width: 30px; padding: 4px 8px; border: none; background: transparent; color: var(--color-body); font: inherit; font-size: 13px; cursor: pointer; transition: background 100ms ease, color 100ms ease; }
+.ccy-btn + .ccy-btn { border-left: 1px solid var(--color-border); }
+.ccy-btn:hover { background: var(--color-canvas-mid); color: var(--color-ink); }
+.ccy-btn.active { background: var(--color-canvas-card); color: var(--color-ink); font-weight: 600; }
+
 /* ── Left sidebar (public pages) ── */
 .sidebar {
     position: fixed;

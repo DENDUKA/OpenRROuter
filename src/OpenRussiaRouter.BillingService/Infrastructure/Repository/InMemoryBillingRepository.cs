@@ -14,6 +14,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     private readonly ConcurrentDictionary<string, UsageRecord> _usageByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ActivityByTokenRecord> _activityByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentBag<BillingAnomaly> _anomalies = [];
+    private readonly ConcurrentDictionary<string, string> _platformSettings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Payment> _payments = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PaymentEvent> _paymentEvents = new(StringComparer.Ordinal);
     private readonly object _paymentSync = new();
@@ -340,6 +341,15 @@ public sealed class InMemoryBillingRepository : IBillingRepository
     {
         ArgumentNullException.ThrowIfNull(tag);
         _tags[tag.Id] = tag;
+        return Task.CompletedTask;
+    }
+
+    public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
+        => Task.FromResult(_platformSettings.TryGetValue(key, out var value) ? value : null);
+
+    public Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default)
+    {
+        _platformSettings[key] = value;
         return Task.CompletedTask;
     }
 

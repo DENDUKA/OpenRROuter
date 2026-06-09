@@ -1,11 +1,33 @@
 @page "/docs"
+@model DocsModel
 @{ ViewData["Title"] = "Setup guide"; }
 
 <div class="docs-page">
     <section class="docs-hero" aria-labelledby="docs-title">
         <div class="section-label">Connection guide</div>
         <h1 id="docs-title">Setup guide</h1>
-        <p>Connect to OpenRussiaRouter with an OpenAI-compatible request flow.</p>
+        <p>Connect to OpenRussiaRouter with an OpenAI-compatible request flow. Point any OpenAI client at the endpoint below and authenticate with your API key.</p>
+    </section>
+
+    <section class="docs-section" aria-labelledby="endpoint-title">
+        <h2 id="endpoint-title">Endpoint</h2>
+        <p>Use this as the <code>base_url</code> (OpenAI SDK) or the request prefix. The API is OpenAI-compatible, so existing clients work unchanged.</p>
+        <div class="docs-field" aria-label="API base URL">
+            <span class="docs-field-label">Base URL</span>
+            <code class="docs-field-value" id="docs-base-url">@Model.V1BaseUrl</code>
+            <button type="button" class="docs-copy-btn" data-copy="@Model.V1BaseUrl" onclick="copyDocsValue(event)">Copy</button>
+        </div>
+        <div class="docs-field" aria-label="Authentication header">
+            <span class="docs-field-label">Auth header</span>
+            <code class="docs-field-value">Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>
+        </div>
+        <table class="table docs-endpoint-table">
+            <thead><tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Purpose</th></tr></thead>
+            <tbody>
+                <tr><td><code>POST</code></td><td><code>/v1/chat/completions</code></td><td>Chat completions (streaming &amp; non-streaming)</td></tr>
+                <tr><td><code>GET</code></td><td><code>/v1/models</code></td><td>List models available to your account</td></tr>
+            </tbody>
+        </table>
     </section>
 
     <section class="docs-section" aria-labelledby="steps-title">
@@ -46,11 +68,11 @@
         <h2 id="request-title">Example request</h2>
         <p>Use the same request shape as OpenAI chat completions.</p>
         <div class="docs-code-panel" aria-label="Example curl request">
-<pre><code>curl /v1/chat/completions \
+<pre><code>curl @Model.ChatCompletionsUrl \
   -H "Authorization: Bearer $ORR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "ORR/...",
+    "model": "<paste a model ID from the catalog>",
     "messages": [
       { "role": "user", "content": "Hello" }
     ]
@@ -98,6 +120,47 @@
     }
     .docs-step h3 { margin: 0 0 4px; font-size: 15px; }
     .docs-step p { margin: 0; }
+    .docs-field {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        margin-top: var(--spacing-md);
+        padding: 12px 14px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-md);
+        background: var(--color-canvas-soft);
+    }
+    .docs-field-label {
+        flex: 0 0 92px;
+        color: var(--color-mute);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+    .docs-field-value {
+        flex: 1 1 auto;
+        padding: 0;
+        background: transparent;
+        color: var(--color-ink);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        overflow-wrap: anywhere;
+    }
+    .docs-copy-btn {
+        flex: 0 0 auto;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--color-body);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        padding: 4px 10px;
+    }
+    .docs-copy-btn:hover { color: var(--color-ink); border-color: var(--color-border); }
+    .docs-endpoint-table { margin-top: var(--spacing-lg); }
+    .docs-endpoint-table td, .docs-endpoint-table th { white-space: nowrap; }
+    .docs-endpoint-table td:last-child, .docs-endpoint-table th:last-child { white-space: normal; }
     .docs-code-panel {
         margin-top: var(--spacing-lg);
         border: 1px solid var(--color-hairline);
@@ -124,5 +187,21 @@
     @@media (max-width: 640px) {
         .docs-hero { padding-top: 28px; }
         .docs-section { padding: 32px 0; }
+        .docs-field { flex-wrap: wrap; }
     }
 </style>
+
+@section Scripts {
+    <script>
+        // Copy a docs value (base URL etc). orrCopyText is defined globally in _Layout.cshtml.
+        function copyDocsValue(event) {
+            var btn = event.currentTarget;
+            var text = btn.getAttribute('data-copy');
+            if (!text) return;
+            orrCopyText(text).then(function () {
+                btn.textContent = 'Copied';
+                setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+            }).catch(function (err) { console.error('Copy failed:', err); });
+        }
+    </script>
+}

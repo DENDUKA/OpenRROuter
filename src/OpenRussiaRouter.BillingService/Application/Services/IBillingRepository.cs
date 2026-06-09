@@ -65,6 +65,9 @@ public interface IBillingRepository
     Task UpsertTagAsync(Tag tag, CancellationToken ct = default);
     Task DeleteTagAsync(string id, CancellationToken ct = default);
 
+    Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default);
+    Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default);
+
     Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default);
     Task<bool> AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default);
     Task<Payment?> GetPaymentAsync(string id, CancellationToken ct = default);

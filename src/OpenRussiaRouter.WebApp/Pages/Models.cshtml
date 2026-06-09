@@ -54,6 +54,7 @@
                     <thead>
                         <tr>
                             <th scope="col">Model</th>
+                            <th scope="col">Author</th>
                             <th scope="col">Tags</th>
                             <th scope="col" class="num">Input / 1M</th>
                             <th scope="col" class="num">Output / 1M</th>
@@ -89,6 +90,7 @@
                                         </div>
                                     </div>
                                 </td>
+                                <td class="model-author">@m.Provider</td>
                                 <td>
                                     @if (m.Tags.Count > 0)
                                     {
@@ -137,6 +139,7 @@
     .model-name { color: var(--color-ink); font-weight: 500; }
     .model-table tbody tr { cursor: pointer; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
+    .model-author { color: var(--color-body); font-size: 14px; white-space: nowrap; }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-width: 120px; }
     .model-tag { border-color: transparent; }
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }

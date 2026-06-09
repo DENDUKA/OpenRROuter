@@ -29,6 +29,27 @@ service BillingService {
   rpc GetPayment (GetPaymentRequest) returns (PaymentRecord);
   rpc ListPayments (ListPaymentsRequest) returns (ListPaymentsResponse);
   rpc AcquireStalePayments (AcquireStalePaymentsRequest) returns (AcquireStalePaymentsResponse);
+  rpc GetPlatformSetting (GetPlatformSettingRequest) returns (GetPlatformSettingResponse);
+  rpc SetPlatformSetting (SetPlatformSettingRequest) returns (SetPlatformSettingResponse);
+}
+
+message GetPlatformSettingRequest {
+  string key = 1;
+}
+
+message GetPlatformSettingResponse {
+  string value = 1;
+  bool found = 2;
+}
+
+message SetPlatformSettingRequest {
+  string key = 1;
+  string value = 2;
+}
+
+message SetPlatformSettingResponse {
+  bool ok = 1;
+  string error_code = 2;
 }
 
 message CheckBalanceAndModelRequest {

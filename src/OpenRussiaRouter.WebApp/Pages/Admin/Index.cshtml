@@ -20,3 +20,30 @@
         </div>
     </div>
 </div>
+
+<div class="adm-card">
+    <div class="adm-card-header">Platform settings</div>
+    <div class="adm-card-body">
+        @if (Model.SaveMessage != null)
+        {
+            <div class="alert alert-success" role="status">@Model.SaveMessage</div>
+        }
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+        }
+        <form method="post" asp-page-handler="SaveSettings">
+            <div class="form-group">
+                <label asp-for="PublicApiBaseUrl" class="form-label">Public API base URL</label>
+                <input asp-for="PublicApiBaseUrl" class="form-control" placeholder="https://api.example.com" autocomplete="off" />
+                <small class="text-muted">
+                    User-facing endpoint of the ApiGateway shown in the Setup guide (the client <code>base_url</code>, without <code>/v1</code>).
+                    Leave blank to fall back to the cabinet's own origin. Example for the VPS: <code>http://31.76.49.2:8080</code>.
+                </small>
+            </div>
+            <div class="adm-btn-row">
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -337,6 +337,25 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         }
     }
 
+    public async Task<string?> GetPlatformSettingAsync(string key, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetPlatformSettingAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetPlatformSettingRequest { Key = key },
+            cancellationToken: cancellationToken);
+        return response.Found ? response.Value : null;
+    }
+
+    public async Task SetPlatformSettingAsync(string key, string value, CancellationToken cancellationToken = default)
+    {
+        var response = await client.SetPlatformSettingAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.SetPlatformSettingRequest { Key = key, Value = value ?? string.Empty },
+            cancellationToken: cancellationToken);
+        if (!response.Ok)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+    }
+
    // ----- TS-004: payment gRPC wrappers -----
    //
    // WebApp never computes credited_usd — Billing does that from its trusted FX quote.

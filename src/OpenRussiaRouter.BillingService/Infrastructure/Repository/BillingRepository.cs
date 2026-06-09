@@ -803,6 +803,30 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
+    public async Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "select value from billing.platform_settings where key = @Key;",
+            new { Key = key },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into billing.platform_settings (key, value, updated_at_utc)
+            values (@Key, @Value, now())
+            on conflict (key) do update set
+                value = excluded.value,
+                updated_at_utc = now();
+            """,
+            new { Key = key, Value = value },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
     public async Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();

@@ -323,6 +323,12 @@ public sealed partial class BillingApplicationService(
     public Task DeleteTagAsync(string id, CancellationToken ct = default)
         => repository.DeleteTagAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
+    public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
+        => repository.GetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), ct);
+
+    public Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default)
+        => repository.SetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), value ?? string.Empty, ct);
+
     public FxQuote GetFxQuote(string providerCurrency, DateTimeOffset nowUtc) =>
         RequireFx().GetQuote(Preconditions.RequireValue(providerCurrency, nameof(providerCurrency)), nowUtc);
 

@@ -23,6 +23,11 @@
 
     var displayName = user?.DisplayName ?? "User";
     var avatarLetter = displayName.Length > 0 ? displayName[0].ToString().ToUpper() : "U";
+
+    // Active display currency for the topbar switcher (mirrors the saved profile choice via cookie).
+    var activeCcy = Context.Request.Cookies.TryGetValue("orr_ccy", out var ccy)
+        && ccy is "RUB" or "USD" or "EUR" ? ccy : "RUB";
+    string CcyBtnClass(string code) => code == activeCcy ? "ccy-btn active" : "ccy-btn";
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -94,6 +99,17 @@
                             </svg>
                             Settings
                         </a>
+                        <div class="dropdown-separator" role="separator"></div>
+                        <div class="dropdown-currency" role="group" aria-label="Display currency">
+                            <span class="dropdown-currency-label">Currency</span>
+                            <form method="post" action="/preferences/currency" class="ccy-switch" data-no-loading>
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="returnUrl" value="@(path + Context.Request.QueryString)" />
+                                <button type="submit" name="currency" value="RUB" class="@CcyBtnClass("RUB")" title="Rubles">₽</button>
+                                <button type="submit" name="currency" value="USD" class="@CcyBtnClass("USD")" title="US dollars">$</button>
+                                <button type="submit" name="currency" value="EUR" class="@CcyBtnClass("EUR")" title="Euro">€</button>
+                            </form>
+                        </div>
                         <div class="dropdown-separator" role="separator"></div>
                         <a class="dropdown-item dropdown-item--danger" href="/logout" role="menuitem">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

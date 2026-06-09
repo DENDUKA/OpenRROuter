@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Controllers;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.State;
 
@@ -52,6 +53,7 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
                 displayCurrency: SelectedCurrency,
                 cancellationToken: HttpContext.RequestAborted);
 
+            PreferencesController.SetCurrencyCookie(Response, SelectedCurrency);
             SaveMessage = "Settings saved.";
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

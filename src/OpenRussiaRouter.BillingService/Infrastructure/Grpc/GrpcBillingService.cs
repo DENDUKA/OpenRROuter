@@ -510,6 +510,32 @@ public sealed class GrpcBillingService(
         }
     }
 
+    public override async Task<GetPlatformSettingResponse> GetPlatformSetting(
+        GetPlatformSettingRequest request,
+        ServerCallContext context)
+    {
+        var value = await billing.GetPlatformSettingAsync(
+            request.Key, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new GetPlatformSettingResponse { Value = value ?? string.Empty, Found = value != null };
+    }
+
+    public override async Task<SetPlatformSettingResponse> SetPlatformSetting(
+        SetPlatformSettingRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await billing.SetPlatformSettingAsync(
+                request.Key, request.Value, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new SetPlatformSettingResponse { Ok = true };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "SetPlatformSetting failed. Key: {Key}", request.Key);
+            return new SetPlatformSettingResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
     public override Task<GetFxQuoteResponse> GetFxQuote(GetFxQuoteRequest request, ServerCallContext context)
     {
         try

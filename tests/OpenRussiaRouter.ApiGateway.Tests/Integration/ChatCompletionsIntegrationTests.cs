@@ -320,6 +320,8 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         json.RootElement.GetProperty("object").GetString().Should().Be("list");
         json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("supported").GetBoolean().Should().BeTrue();
         json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("efforts")[0].GetString().Should().Be("low");
+        // Clients (Kilo Code / Cline / Roo …) detect reasoning via the OpenRouter-style supported_parameters.
+        json.RootElement.GetProperty("data")[0].GetProperty("supported_parameters").ToString().Should().Contain("reasoning");
     }
 
     // --- Helpers ---

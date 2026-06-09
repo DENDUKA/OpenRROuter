@@ -27,25 +27,44 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
         var responseBody = new
         {
             @object = "list",
-            data = models.Select(m => new
+            data = models.Select(m =>
             {
-                id = m.Id,
-                @object = "model",
-                created = 0,
-                owned_by = "openrussiarouter",
-                capabilities = new Dictionary<string, object?>
+                // OpenRouter-style supported_parameters — this is what OpenAI-compatible clients
+                // (Kilo Code / Cline / Roo, etc.) read to decide whether to show a reasoning picker.
+                // The custom `capabilities.reasoning` below is kept for our own UI; clients ignore it.
+                // ORR is a passthrough proxy, so the standard chat params are all forwarded as-is.
+                var supportedParameters = new List<string>
                 {
-                    ["reasoning"] = m.SupportsReasoning
-                        ? new Dictionary<string, object?>
-                        {
-                            ["supported"] = true,
-                            ["efforts"] = m.AllowedReasoningEfforts ?? []
-                        }
-                        : new Dictionary<string, object?>
-                        {
-                            ["supported"] = false
-                        }
+                    "tools", "tool_choice", "max_tokens", "temperature", "top_p",
+                    "stop", "frequency_penalty", "presence_penalty", "seed", "response_format"
+                };
+                if (m.SupportsReasoning)
+                {
+                    supportedParameters.Add("reasoning");
+                    supportedParameters.Add("reasoning_effort");
                 }
+
+                return new
+                {
+                    id = m.Id,
+                    @object = "model",
+                    created = 0,
+                    owned_by = "openrussiarouter",
+                    supported_parameters = supportedParameters,
+                    capabilities = new Dictionary<string, object?>
+                    {
+                        ["reasoning"] = m.SupportsReasoning
+                            ? new Dictionary<string, object?>
+                            {
+                                ["supported"] = true,
+                                ["efforts"] = m.AllowedReasoningEfforts ?? []
+                            }
+                            : new Dictionary<string, object?>
+                            {
+                                ["supported"] = false
+                            }
+                    }
+                };
             })
         };
 

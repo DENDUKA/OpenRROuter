@@ -111,6 +111,32 @@ ORR forward'ит на ноду как есть (`SseRequestPatcher.PatchModel` �
 
 Шлём **только плоское поле**, не оба. Причина — техническая находка по коду 9R: его переводчики в формат провайдера (`openai-to-claude.js:181`, `openai-to-gemini.js:234`) и provider-override (`chatCore.js:55`) читают **плоское** `reasoning_effort`. Вложенный `reasoning.effort` понимают лишь отдельные нативные пути (Codex/Responses: `codex.js:417`, `kiroConstants.js:108`). Если переслать вложенный объект на Claude/Gemini — рассуждение **молча потеряется**, а юзер заплатит за «усиленный» ответ, которого не было. Поэтому нормализация в плоское поле обязательна (это переименование поля, а не знание провайдера).
 
+## Полный пример (запрос → что уходит в 9R → /v1/models)
+
+**Запрос клиента** `POST /v1/chat/completions` (плоский и зонтичный варианты эквивалентны):
+
+```jsonc
+{
+  "model": "ORR/GLM-4.7",
+  "messages": [{ "role": "user", "content": "Реши задачу пошагово" }],
+  "reasoning_effort": "high"
+  // либо: "reasoning": { "effort": "high" }
+}
+```
+
+**Что ORR форвардит в 9R** — `model` заменён на upstream-id, reasoning схлопнут в одно плоское поле (вложенный `reasoning` удалён):
+
+```jsonc
+{
+  "model": "glm-4.7",
+  "messages": [{ "role": "user", "content": "Реши задачу пошагово" }],
+  "reasoning_effort": "high"
+}
+```
+
+- **Выключить** размышление у модели, где оно вкл по дефолту: `"reasoning_effort": "none"`.
+- **Не прислать** reasoning вовсе → ORR тело не трогает, действует дефолт модели.
+
 ## Правила Gateway (порядок проверок — детерминированный)
 
 Проверки идут строго в этом порядке, чтобы на кривой запрос всегда возвращался один и тот же код:
@@ -181,16 +207,24 @@ none | minimal | low | medium | high | xhigh
 
 ## Что в `GET /v1/models`
 
-Отдавать capability, чтобы клиент/UI знал, показывать ли пикер и какие уровни:
+Отдаём capability **двумя** способами, иначе внешние клиенты reasoning не увидят:
+
+1. **`supported_parameters`** (OpenRouter-стиль) — **именно его читают клиенты** (Kilo Code, Cline, Roo и пр.), чтобы показать пикер reasoning. Для reasoning-моделей в массив добавляются `reasoning` и `reasoning_effort`.
+2. **`capabilities.reasoning`** (наш формат) — для витрины ORR; внешние клиенты его игнорируют.
 
 ```jsonc
 {
   "id": "claude-sonnet-4.6",
+  "supported_parameters": ["tools","max_tokens","temperature","reasoning","reasoning_effort"],
   "capabilities": { "reasoning": { "supported": true, "efforts": ["low","medium","high"] } }
 }
-// модель без reasoning:
-{ "id": "gpt-4o", "capabilities": { "reasoning": { "supported": false } } }
+// модель без reasoning (в supported_parameters нет "reasoning"):
+{ "id": "gpt-4o",
+  "supported_parameters": ["tools","max_tokens","temperature"],
+  "capabilities": { "reasoning": { "supported": false } } }
 ```
+
+> Если клиент всё равно не показывает пикер — он, вероятно, опирается на собственный каталог моделей (напр. **opencode** → models.dev), а не на `/v1/models`. Тогда reasoning включается в конфиге клиента per-model, со стороны ORR это не лечится.
 
 ## Скоуп v1 — что НЕ делаем
 

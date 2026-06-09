@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Services;
+namespace OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 
 public sealed class RouterHealthCheckWorker(
     RouterControlPlaneService controlPlane,

@@ -1,6 +1,6 @@
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Services;
+namespace OpenRussiaRouter.ControlPlane.Application.Abstractions;
 
 public interface IControlPlaneRepository
 {

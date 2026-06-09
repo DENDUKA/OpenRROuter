@@ -4,7 +4,7 @@ namespace OpenRussiaRouter.ControlPlane.Application.Services;
 
 /// <summary>
 /// Thread-safe in-memory store that maps each router node to its set of supported model IDs.
-/// Populated by <see cref="RouterModelCapabilityJob"/> on a periodic schedule.
+/// Populated by <see cref="CapabilityReplicaRefresher"/> on a periodic schedule.
 /// </summary>
 public sealed class NodeModelCapabilityStore
 {
@@ -20,9 +20,6 @@ public sealed class NodeModelCapabilityStore
         ArgumentNullException.ThrowIfNull(modelIds);
         _nodeModels[nodeId] = modelIds;
     }
-
-    /// <summary>Removes a node from the store (e.g. when a node is deleted or disabled).</summary>
-    public void ClearNode(string nodeId) => _nodeModels.TryRemove(nodeId, out _);
 
     /// <summary>Returns true if the node has the requested model in its capability list.</summary>
     public bool NodeSupportsModel(string nodeId, string modelId)

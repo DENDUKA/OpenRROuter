@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
@@ -20,6 +22,9 @@ public sealed class GrpcRouterControlPlaneService(
 {
     private static readonly TimeSpan NodeDetailsProviderTimeout = TimeSpan.FromSeconds(3);
 
+    private static CancellationToken Ct(ServerCallContext? context) =>
+        context?.CancellationToken ?? CancellationToken.None;
+
     public override async Task<SelectRouterNodeResponse> SelectRouterNode(
         SelectRouterNodeRequest request,
         ServerCallContext context)
@@ -33,7 +38,7 @@ public sealed class GrpcRouterControlPlaneService(
                 request.PreferredNodeId,
                 request.PreferredNodeControlToken,
                 request.ExcludedNodeIds,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                Ct(context)).ConfigureAwait(false);
             return new SelectRouterNodeResponse
             {
                 LeaseId = lease.LeaseId,
@@ -53,7 +58,7 @@ public sealed class GrpcRouterControlPlaneService(
         ReleaseRouterNodeRequest request,
         ServerCallContext context)
     {
-        await controlPlane.ReleaseRouterNodeAsync(request.LeaseId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        await controlPlane.ReleaseRouterNodeAsync(request.LeaseId, Ct(context)).ConfigureAwait(false);
         return new ReleaseRouterNodeResponse { Accepted = true };
     }
 
@@ -69,7 +74,7 @@ public sealed class GrpcRouterControlPlaneService(
                 request.ControlToken,
                 request.CapacityWeight,
                 DateTimeOffset.UtcNow,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                Ct(context)).ConfigureAwait(false);
 
             return new RegisterRouterNodeResponse
             {
@@ -90,7 +95,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         try
         {
-            await controlPlane.DisableNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            await controlPlane.DisableNodeAsync(request.NodeId, Ct(context)).ConfigureAwait(false);
             return new DisableRouterNodeResponse { Disabled = true };
         }
         catch (KeyNotFoundException ex)
@@ -112,7 +117,7 @@ public sealed class GrpcRouterControlPlaneService(
                 new Uri(request.EndpointUrl),
                 request.ControlToken,
                 request.CapacityWeight,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                Ct(context)).ConfigureAwait(false);
             return new UpdateRouterNodeResponse { Updated = true };
         }
         catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException or UriFormatException)
@@ -131,7 +136,7 @@ public sealed class GrpcRouterControlPlaneService(
             await controlPlane.UpdateNodeControlTokenAsync(
                 request.NodeId,
                 request.ControlToken,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                Ct(context)).ConfigureAwait(false);
             return new UpdateRouterNodeControlTokenResponse { Updated = true };
         }
         catch (Exception ex) when (ex is KeyNotFoundException or ArgumentException)
@@ -147,7 +152,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         try
         {
-            await controlPlane.DeleteNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            await controlPlane.DeleteNodeAsync(request.NodeId, Ct(context)).ConfigureAwait(false);
             return new DeleteRouterNodeResponse { Deleted = true };
         }
         catch (KeyNotFoundException ex)
@@ -163,7 +168,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         try
         {
-            await controlPlane.EnableNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            await controlPlane.EnableNodeAsync(request.NodeId, Ct(context)).ConfigureAwait(false);
             return new EnableRouterNodeResponse { Enabled = true };
         }
         catch (KeyNotFoundException ex)
@@ -179,7 +184,7 @@ public sealed class GrpcRouterControlPlaneService(
     {
         var response = new ListRouterNodesResponse();
         response.Nodes.AddRange(
-            (await controlPlane.ListNodesForHealthChecksAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            (await controlPlane.ListNodesForHealthChecksAsync(Ct(context)).ConfigureAwait(false))
             .Select(MapNodeSummary));
         return response;
     }
@@ -188,7 +193,7 @@ public sealed class GrpcRouterControlPlaneService(
         GetRouterNodeDetailsRequest request,
         ServerCallContext context)
     {
-        var cancellationToken = context?.CancellationToken ?? CancellationToken.None;
+        var cancellationToken = Ct(context);
         var node = await controlPlane.GetRouterNodeAsync(request.NodeId, cancellationToken).ConfigureAwait(false);
         if (node is null)
             return new GetRouterNodeDetailsResponse { ErrorCode = ErrorCodes.ValidationFailed };
@@ -266,7 +271,7 @@ public sealed class GrpcRouterControlPlaneService(
         PushUserIntegrationKeyRequest request,
         ServerCallContext context)
     {
-        var all = await controlPlane.ListNodesForHealthChecksAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var all = await controlPlane.ListNodesForHealthChecksAsync(Ct(context)).ConfigureAwait(false);
 
         IEnumerable<RouterNode> targets = string.IsNullOrWhiteSpace(request.NodeId)
             ? all.Where(n => n.Enabled)
@@ -278,16 +283,16 @@ public sealed class GrpcRouterControlPlaneService(
             try
             {
                 var result = await providerClient.CreateIntegrationKeyAsync(
-                    node, request.Name, request.RawKey, context?.CancellationToken ?? CancellationToken.None)
+                    node, request.Name, request.RawKey, Ct(context))
                     .ConfigureAwait(false);
                 pushedCount++;
 
                 if (!string.IsNullOrWhiteSpace(request.ApiKeyId) && !string.IsNullOrWhiteSpace(result.Id))
-                    await repository.SaveIntegrationKeyMappingAsync(request.ApiKeyId, node.Id, result.Id, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                    await repository.SaveIntegrationKeyMappingAsync(request.ApiKeyId, node.Id, result.Id, Ct(context)).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось запушить integration key на ноду {NodeId}", node.Id);
+                logger.LogWarning(ex, "Failed to push integration key to node {NodeId}", node.Id);
             }
         }
 
@@ -301,24 +306,24 @@ public sealed class GrpcRouterControlPlaneService(
         if (string.IsNullOrWhiteSpace(request.ApiKeyId))
             return new UpdateUserIntegrationKeyStatusResponse { UpdatedCount = 0 };
 
-        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, Ct(context)).ConfigureAwait(false);
         var updatedCount = 0;
 
         foreach (var (nodeId, routerKeyId) in mappings)
         {
-            var node = await repository.GetNodeAsync(nodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var node = await repository.GetNodeAsync(nodeId, Ct(context)).ConfigureAwait(false);
             if (node is null) continue;
 
             try
             {
                 await providerClient.UpdateIntegrationKeyStatusAsync(
-                    node, routerKeyId, request.IsActive, context?.CancellationToken ?? CancellationToken.None)
+                    node, routerKeyId, request.IsActive, Ct(context))
                     .ConfigureAwait(false);
                 updatedCount++;
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось обновить статус integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
+                logger.LogWarning(ex, "Failed to update integration key status on node {NodeId}. RouterKeyId: {RouterKeyId}",
                     nodeId, routerKeyId);
             }
         }
@@ -333,30 +338,30 @@ public sealed class GrpcRouterControlPlaneService(
         if (string.IsNullOrWhiteSpace(request.ApiKeyId))
             return new DeleteUserIntegrationKeyResponse { DeletedCount = 0 };
 
-        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var mappings = await repository.GetIntegrationKeyMappingsAsync(request.ApiKeyId, Ct(context)).ConfigureAwait(false);
         var deletedCount = 0;
 
         foreach (var (nodeId, routerKeyId) in mappings)
         {
-            var node = await repository.GetNodeAsync(nodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var node = await repository.GetNodeAsync(nodeId, Ct(context)).ConfigureAwait(false);
             if (node is null) continue;
 
             try
             {
                 await providerClient.DeleteIntegrationKeyAsync(
-                    node, routerKeyId, context?.CancellationToken ?? CancellationToken.None)
+                    node, routerKeyId, Ct(context))
                     .ConfigureAwait(false);
                 deletedCount++;
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Не удалось удалить integration key на ноде {NodeId}. RouterKeyId: {RouterKeyId}",
+                logger.LogWarning(ex, "Failed to delete integration key on node {NodeId}. RouterKeyId: {RouterKeyId}",
                     nodeId, routerKeyId);
             }
         }
 
-        // Связь зачищаем только после попытки физического удаления на нодах.
-        await repository.RemoveIntegrationKeyMappingsAsync(request.ApiKeyId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        // Clear mappings only after attempting physical deletion on the nodes.
+        await repository.RemoveIntegrationKeyMappingsAsync(request.ApiKeyId, Ct(context)).ConfigureAwait(false);
 
         return new DeleteUserIntegrationKeyResponse { DeletedCount = deletedCount };
     }
@@ -365,13 +370,13 @@ public sealed class GrpcRouterControlPlaneService(
         SyncNodeIntegrationKeysRequest request,
         ServerCallContext context)
     {
-        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, Ct(context)).ConfigureAwait(false);
         if (node is null)
             return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.ValidationFailed };
 
         var dbKeysResponse = await authClient.ListAllNonDeletedApiKeysRawAsync(
             new Contracts.Grpc.Auth.V1.ListAllNonDeletedApiKeysRawRequest(),
-            cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            cancellationToken: Ct(context)).ConfigureAwait(false);
 
         var keysToSync = dbKeysResponse.Keys.Select(k => new RouterIntegrationKeySyncEntry
         {
@@ -382,7 +387,7 @@ public sealed class GrpcRouterControlPlaneService(
 
         try
         {
-            var syncResult = await providerClient.SyncIntegrationKeysAsync(node, keysToSync, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            var syncResult = await providerClient.SyncIntegrationKeysAsync(node, keysToSync, Ct(context)).ConfigureAwait(false);
 
             return new SyncNodeIntegrationKeysResponse
             {
@@ -403,19 +408,19 @@ public sealed class GrpcRouterControlPlaneService(
         CheckNodeIntegrationKeysSyncRequest request,
         ServerCallContext context)
     {
-        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var node = await controlPlane.GetRouterNodeAsync(request.NodeId, Ct(context)).ConfigureAwait(false);
         if (node is null)
             return new CheckNodeIntegrationKeysSyncResponse { ErrorCode = ErrorCodes.ValidationFailed };
 
         var dbKeysResponse = await authClient.ListAllNonDeletedApiKeysRawAsync(
             new Contracts.Grpc.Auth.V1.ListAllNonDeletedApiKeysRawRequest(),
-            cancellationToken: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            cancellationToken: Ct(context)).ConfigureAwait(false);
 
         try
         {
             var nodeKeysResponse = await providerClient.ListIntegrationKeysAsync(
                 node,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+                Ct(context)).ConfigureAwait(false);
 
             var dbKeysDict = dbKeysResponse.Keys.ToDictionary(k => k.RawKey, k => k);
             var nodeKeysDict = nodeKeysResponse.Keys.ToDictionary(k => k.Id, k => k);

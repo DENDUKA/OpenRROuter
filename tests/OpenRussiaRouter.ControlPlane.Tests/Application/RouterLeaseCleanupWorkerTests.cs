@@ -1,8 +1,10 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.Contracts.ControlPlane;
+using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
 

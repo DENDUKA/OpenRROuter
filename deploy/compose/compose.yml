@@ -90,7 +90,6 @@ services:
       GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
       RouterHealthChecks__HealthPath: "/api/health"
-      RouterHealthChecks__NodeTokens: ""
     mem_limit: 512m
     cpus: 0.75
 

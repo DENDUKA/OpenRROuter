@@ -1,4 +1,5 @@
 using OpenRussiaRouter.Contracts.ControlPlane;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;

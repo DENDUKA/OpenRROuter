@@ -129,7 +129,7 @@ public sealed partial class BillingApplicationService(
         return (await repository.ListEnabledModelsAsync(pageSize, null, ct).ConfigureAwait(false))
             .Items
             .Select(model => new PublicModel(
-                model.RouterModelId,
+                model.ModelId,
                 model.DisplayName,
                 model.Enabled,
                 model.SupportsReasoning,

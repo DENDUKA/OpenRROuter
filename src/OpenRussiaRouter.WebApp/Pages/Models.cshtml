@@ -190,6 +190,7 @@
 
     function copyModelId(event) {
         event.stopPropagation();
+        event.preventDefault();
         const btn = event.currentTarget;
         const id = btn.getAttribute('data-model-id');
         if (navigator.clipboard && window.isSecureContext) {

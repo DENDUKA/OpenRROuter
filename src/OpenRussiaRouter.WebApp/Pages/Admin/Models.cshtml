@@ -172,15 +172,17 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="Form.AllowedReasoningEfforts" class="form-label">Allowed efforts</label>
-                        <select asp-for="Form.AllowedReasoningEfforts" class="form-control" multiple size="6" id="allowedReasoningEfforts">
+                        <label class="form-label">Allowed efforts</label>
+                        <div id="allowedReasoningEfforts" style="display:flex; flex-wrap:wrap; gap:0.75rem">
                             @foreach (var effort in Model.ReasoningEfforts)
                             {
                                 var selected = Model.Form.AllowedReasoningEfforts.Contains(effort, StringComparer.Ordinal);
-                                <option value="@effort" selected="@(selected ? "selected" : null)">@effort</option>
+                                <label style="display:flex; align-items:center; gap:0.25rem; font-weight:normal;">
+                                    <input type="checkbox" name="Form.AllowedReasoningEfforts" value="@effort" @(selected ? "checked" : "") />
+                                    @effort
+                                </label>
                             }
-                        </select>
-                        <small class="text-muted">Hold Ctrl/Cmd to select multiple values.</small>
+                        </div>
                         <span asp-validation-for="Form.AllowedReasoningEfforts" class="validation-message"></span>
                     </div>
                     <div class="form-group">
@@ -327,19 +329,21 @@
         const def = document.getElementById('defaultReasoningEffort');
         if (!supports || !allowed || !def) return;
 
+        const effortBoxes = Array.from(allowed.querySelectorAll('input[type="checkbox"]'));
+
         const syncReasoningControls = () => {
             const enabled = supports.checked;
-            allowed.disabled = !enabled;
+            effortBoxes.forEach(box => { box.disabled = !enabled; });
             def.disabled = !enabled;
 
             if (!enabled) {
-                Array.from(allowed.options).forEach(option => option.selected = false);
+                effortBoxes.forEach(box => { box.checked = false; });
                 def.value = '';
                 Array.from(def.options).forEach(option => option.hidden = false);
                 return;
             }
 
-            const selected = new Set(Array.from(allowed.selectedOptions).map(option => option.value));
+            const selected = new Set(effortBoxes.filter(box => box.checked).map(box => box.value));
             Array.from(def.options).forEach(option => {
                 if (option.value === '') {
                     option.hidden = false;
@@ -354,7 +358,7 @@
         };
 
         supports.addEventListener('change', syncReasoningControls);
-        allowed.addEventListener('change', syncReasoningControls);
+        effortBoxes.forEach(box => box.addEventListener('change', syncReasoningControls));
         syncReasoningControls();
     })();
 </script>

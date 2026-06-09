@@ -68,7 +68,7 @@ var grpcCallDeadline = TimeSpan.FromSeconds(
     builder.Configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
 
 // TS-003: s2s credentials for outbound BillingService calls from WebApp.
-var billingS2sCaller = builder.Configuration["ServiceAuth:BillingCaller"] ?? "webapp-admin";
+var billingS2sCaller = builder.Configuration["ServiceAuth:BillingCaller"] ?? "webappadmin";
 var billingS2sToken = builder.Configuration["ServiceAuth:BillingToken"];
 if (string.IsNullOrWhiteSpace(billingS2sToken))
 {

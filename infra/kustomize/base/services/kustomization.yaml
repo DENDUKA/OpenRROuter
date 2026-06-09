@@ -12,3 +12,4 @@ resources:
   - f9router.yaml
   - f9router-2.yaml
   - f9router-2-secret.yaml
+  - s2s-secret.yaml

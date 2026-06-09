@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.BuildingBlocks.Grpc;
 /// Client-side gRPC interceptor that attaches s2s (service-to-service) authentication
 /// metadata to outgoing calls. Configure via constructor:
 /// <list type="bullet">
-///   <item><c>callerId</c> — logical caller identity (e.g. <c>api-gateway</c>, <c>webapp-admin</c>).</item>
+///   <item><c>callerId</c> — logical caller identity (e.g. <c>apigateway</c>, <c>webappadmin</c>).</item>
 ///   <item><c>token</c> — shared secret for that caller, configured server-side.</item>
 /// </list>
 /// Pairs with <c>BillingService.Infrastructure.Auth.ServiceAuthInterceptor</c> on the server.

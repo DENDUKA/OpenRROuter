@@ -32,7 +32,7 @@ public sealed class GrpcBillingServiceIntegrationTests
             OutputPricePer1MUsd = "20",
             CachePricePer1MUsd = "1",
             Enabled = true
-        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
+        }, S2sHeaders("webappadmin", S2sTestTokens.WebappAdmin));
         var topUp = await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest
         {
             AdminId = "admin-1",
@@ -40,7 +40,7 @@ public sealed class GrpcBillingServiceIntegrationTests
             AmountUsd = "100",
             Reason = "test",
             IdempotencyKey = "topup-1"
-        }, S2sHeaders("webapp-admin", S2sTestTokens.WebappAdmin));
+        }, S2sHeaders("webappadmin", S2sTestTokens.WebappAdmin));
         var check = await client.CheckBalanceAndModelAsync(new CheckBalanceAndModelRequest
         {
             UserId = "user-1",
@@ -57,7 +57,7 @@ public sealed class GrpcBillingServiceIntegrationTests
             Status = "succeeded",
             StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
             CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
-        }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway));
+        }, S2sHeaders("apigateway", S2sTestTokens.ApiGateway));
         var records = await client.ListUsageAsync(new ListUsageRequest());
 
         Assert.True(model.Upserted);
@@ -106,7 +106,7 @@ public sealed class GrpcBillingServiceIntegrationTests
                 Status = "succeeded",
                 StartedAtUtc = DateTimeOffset.UtcNow.AddSeconds(-1).ToString("O"),
                 CompletedAtUtc = DateTimeOffset.UtcNow.ToString("O")
-            }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway)));
+            }, S2sHeaders("apigateway", S2sTestTokens.ApiGateway)));
         Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
     }
 
@@ -124,7 +124,7 @@ public sealed class GrpcBillingServiceIntegrationTests
                 AmountUsd = "5",
                 Reason = "test",
                 IdempotencyKey = "topup-wrong"
-            }, S2sHeaders("api-gateway", S2sTestTokens.ApiGateway)));
+            }, S2sHeaders("apigateway", S2sTestTokens.ApiGateway)));
         Assert.Equal(StatusCode.PermissionDenied, ex.StatusCode);
     }
 
@@ -160,7 +160,7 @@ public sealed class GrpcBillingServiceIntegrationTests
                 AmountUsd = "5",
                 Reason = "test",
                 IdempotencyKey = "topup-mismatch"
-            }, S2sHeaders("webapp-admin", "wrong-token")));
+            }, S2sHeaders("webappadmin", "wrong-token")));
         Assert.Equal(StatusCode.Unauthenticated, ex.StatusCode);
     }
 
@@ -190,18 +190,18 @@ public sealed class GrpcBillingServiceIntegrationTests
             {
                 services.PostConfigure<ServiceAuthOptions>(opts =>
                 {
-                    opts.Tokens["api-gateway"] = S2sTestTokens.ApiGateway;
-                    opts.Tokens["webapp-admin"] = S2sTestTokens.WebappAdmin;
-                    opts.MethodPolicies["RecordUsage"] = new[] { "api-gateway" };
-                    opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["UpsertModelPrice"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["UpsertTag"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["DeleteTag"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["CreatePayment"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["AttachProviderRef"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["ConfirmPaymentByProvider"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["ApplyPaymentEvent"] = new[] { "webapp-admin" };
-                    opts.MethodPolicies["AcquireStalePayments"] = new[] { "webapp-admin" };
+                    opts.Tokens["apigateway"] = S2sTestTokens.ApiGateway;
+                    opts.Tokens["webappadmin"] = S2sTestTokens.WebappAdmin;
+                    opts.MethodPolicies["RecordUsage"] = new[] { "apigateway" };
+                    opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["UpsertModelPrice"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["UpsertTag"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["DeleteTag"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["CreatePayment"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["AttachProviderRef"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["ConfirmPaymentByProvider"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["ApplyPaymentEvent"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["AcquireStalePayments"] = new[] { "webappadmin" };
                     configureAuth?.Invoke(opts);
                 });
             });

@@ -39,6 +39,16 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: billing-connection
+            - name: ServiceAuth__Tokens__apigateway
+              valueFrom:
+                secretKeyRef:
+                  name: orr-s2s-secret
+                  key: apigateway-token
+            - name: ServiceAuth__Tokens__webappadmin
+              valueFrom:
+                secretKeyRef:
+                  name: orr-s2s-secret
+                  key: webappadmin-token
           readinessProbe:
             httpGet:
               path: /health

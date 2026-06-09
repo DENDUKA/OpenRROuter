@@ -31,6 +31,11 @@ spec:
               value: "http://billing-service:8080"
             - name: GrpcServices__ControlPlane
               value: "http://control-plane:8080"
+            - name: ServiceAuth__BillingToken
+              valueFrom:
+                secretKeyRef:
+                  name: orr-s2s-secret
+                  key: apigateway-token
           readinessProbe:
             httpGet:
               path: /health

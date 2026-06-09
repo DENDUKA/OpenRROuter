@@ -12,7 +12,7 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Auth;
 /// <list type="number">
 ///   <item>
 ///     <b>Caller identity</b>: the client sends <c>x-orr-caller</c> metadata identifying
-///     which logical caller it is (e.g. <c>api-gateway</c>, <c>webapp-admin</c>).
+///     which logical caller it is (e.g. <c>apigateway</c>, <c>webappadmin</c>).
 ///   </item>
 ///   <item>
 ///     <b>Shared secret</b>: the same client sends <c>x-orr-s2s-token</c> matching the

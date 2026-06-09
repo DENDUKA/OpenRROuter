@@ -33,6 +33,11 @@ spec:
               value: "http://control-plane:8080"
             - name: GrpcServices__Collector
               value: "http://collector:8080"
+            - name: ServiceAuth__BillingToken
+              valueFrom:
+                secretKeyRef:
+                  name: orr-s2s-secret
+                  key: webappadmin-token
           readinessProbe:
             httpGet:
               path: /health

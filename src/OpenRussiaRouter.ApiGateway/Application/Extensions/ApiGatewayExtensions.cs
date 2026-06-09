@@ -40,7 +40,7 @@ public static class ApiGatewayExtensions
         var grpcCallDeadline = TimeSpan.FromSeconds(configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
 
         // TS-003: s2s credentials for outbound BillingService calls.
-        var billingS2sCaller = configuration["ServiceAuth:BillingCaller"] ?? "api-gateway";
+        var billingS2sCaller = configuration["ServiceAuth:BillingCaller"] ?? "apigateway";
         var billingS2sToken = configuration["ServiceAuth:BillingToken"];
         if (string.IsNullOrWhiteSpace(billingS2sToken))
         {

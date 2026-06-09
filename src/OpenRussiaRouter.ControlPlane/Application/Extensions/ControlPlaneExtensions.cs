@@ -1,9 +1,11 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
 using OpenRussiaRouter.ControlPlane.Application.Services;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Extensions;
 

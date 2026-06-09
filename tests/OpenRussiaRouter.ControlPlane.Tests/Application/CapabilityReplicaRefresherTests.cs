@@ -3,7 +3,9 @@ using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;

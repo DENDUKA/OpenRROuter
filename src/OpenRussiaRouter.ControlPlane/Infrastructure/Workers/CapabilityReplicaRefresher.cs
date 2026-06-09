@@ -2,8 +2,10 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
+using OpenRussiaRouter.ControlPlane.Application.Options;
+using OpenRussiaRouter.ControlPlane.Application.Services;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Services;
+namespace OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 
 /// <summary>
 /// Periodically pulls the model-capability snapshot from the CollectorService and updates the

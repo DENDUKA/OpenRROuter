@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Repository;

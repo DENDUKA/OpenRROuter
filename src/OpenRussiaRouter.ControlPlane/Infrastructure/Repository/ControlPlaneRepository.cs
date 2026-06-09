@@ -1,5 +1,5 @@
 using Dapper;
-using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 

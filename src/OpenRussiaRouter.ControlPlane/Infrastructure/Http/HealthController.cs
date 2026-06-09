@@ -5,7 +5,7 @@ namespace OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 
 [ApiController]
 [Route("[controller]")]
-public class HealthController : ControllerBase
+public sealed class HealthController : ControllerBase
 {
     [HttpGet("/healthz")]
     public IActionResult Healthz() => Ok(ServiceHealth.Ok("control-plane"));

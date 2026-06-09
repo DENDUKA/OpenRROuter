@@ -98,7 +98,6 @@ services:
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Collector: "http://collector:8081"
       Seq__Url: "http://seq:80"
-      RouterHealthChecks__NodeTokens: ""
 
   collector:
     build:

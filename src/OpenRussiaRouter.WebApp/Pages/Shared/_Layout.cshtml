@@ -182,23 +182,48 @@
             }
         });
 
-        // Copy a model id to the clipboard from any "Copy Model ID" button.
+        // Copy text to the clipboard. The async Clipboard API only exists in a secure
+        // context (HTTPS or localhost); ORR is served over plain HTTP, so fall back to
+        // the legacy execCommand path there. Returns a Promise so callers can show feedback.
+        function orrCopyText(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(text);
+            }
+            return new Promise(function (resolve, reject) {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                ta.style.top = '0';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                var ok = false;
+                try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+                document.body.removeChild(ta);
+                ok ? resolve() : reject(new Error('execCommand copy failed'));
+            });
+        }
+
+        // Copy a model id from any "Copy Model ID" button (used on /models and /admin/models).
+        // Both buttons carry a clipboard <svg>, so swap it to a checkmark as confirmation.
+        var ORR_COPIED_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         function copyModelId(event) {
             event.preventDefault();
             event.stopPropagation();
             var btn = event.currentTarget;
             var id = btn.getAttribute('data-model-id');
-            var textToCopy = id;
-            if (!textToCopy) return;
-            navigator.clipboard.writeText(textToCopy).then(function () {
+            if (!id) return;
+            orrCopyText(id).then(function () {
+                var original = btn.innerHTML;
                 btn.classList.add('copied');
-                var original = btn.getAttribute('title');
-                btn.setAttribute('title', 'Copied!');
+                btn.innerHTML = ORR_COPIED_SVG;
                 setTimeout(function () {
+                    btn.innerHTML = original;
                     btn.classList.remove('copied');
-                    btn.setAttribute('title', original || 'Copy Model ID');
                 }, 1500);
-            });
+            }).catch(function (err) { console.error('Copy failed:', err); });
         }
 
         // Show a loading state on submit buttons so async POSTs give feedback

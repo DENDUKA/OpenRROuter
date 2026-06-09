@@ -38,12 +38,13 @@
     <script>
         function copyApiKey(btn, elementId) {
             var text = document.getElementById(elementId).textContent.trim();
-            navigator.clipboard.writeText(text).then(function () {
+            // orrCopyText is defined globally in _Layout.cshtml (HTTP-safe fallback).
+            orrCopyText(text).then(function () {
                 var span = btn.querySelector('span');
                 span.textContent = 'Copied!';
                 btn.disabled = true;
                 setTimeout(function () { span.textContent = 'Copy'; btn.disabled = false; }, 2000);
-            });
+            }).catch(function (err) { console.error('Copy failed:', err); });
         }
     </script>
 }

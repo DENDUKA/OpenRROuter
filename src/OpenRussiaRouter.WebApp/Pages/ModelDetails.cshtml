@@ -20,13 +20,12 @@
             <div class="metric"><div class="metric-label">Cache Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : "Route")</div></div>
             <div class="metric"><div class="metric-label">Context</div><div class="metric-value">@Model.ContextDisplay</div></div>
             <div class="metric"><div class="metric-label">Status</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? "Disabled" : "Available")</div></div>
-            <div class="metric"><div class="metric-label">Provider</div><div class="metric-value">@Model.ProviderTitle</div></div>
+            <div class="metric"><div class="metric-label">Author</div><div class="metric-value">@Model.ProviderTitle</div></div>
         </div>
     </section>
 
     <nav class="tabs" aria-label="Model sections">
         <a class="tab active" href="#overview">Overview</a>
-        <a class="tab" href="#providers">Providers</a>
         <a class="tab" href="#pricing">Pricing</a>
         <a class="tab" href="#api">API</a>
     </nav>
@@ -38,23 +37,6 @@
             <p class="model-overview-desc">@Model.Description</p>
         }
         <p>@Model.DisplayName is available via OpenRussiaRouter using the model id <code>@Model.ModelId</code>.</p>
-    </section>
-
-    <section id="providers" class="model-section">
-        <h2>Providers for @Model.DisplayName</h2>
-        <div class="table-wrap table-scroll">
-            <table class="table">
-                <thead><tr><th>Provider</th><th>Status</th><th class="num">Latency</th><th>Policy</th></tr></thead>
-                <tbody>
-                    <tr>
-                        <td>@Model.ProviderTitle</td>
-                        <td><span class="badge badge-success">Available</span></td>
-                        <td class="num">Auto</td>
-                        <td>Routed by OpenRussiaRouter</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
     </section>
 
     <section id="pricing" class="model-section">

@@ -53,7 +53,7 @@ public sealed class GrpcBillingService(
         response.Models.AddRange(
             publicModels.Select(model =>
             {
-                pricesByRouterId.TryGetValue(model.Id, out var price);
+                var price = pricesByRouterId.Values.FirstOrDefault(p => p.ModelId == model.Id);
 
                 var modelResponse = new Contracts.Grpc.Billing.V1.PublicModel
                 {

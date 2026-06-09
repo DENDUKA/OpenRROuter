@@ -21,8 +21,8 @@ public class ModelsModel(
     public string? ErrorMessage { get; private set; }
     public bool CatalogMetadataUnavailable { get; private set; }
 
-    /// <summary>Display currency for catalog prices: profile choice for signed-in users, RUB for anonymous.</summary>
-    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Rub;
+    /// <summary>Display currency for catalog prices: profile choice for signed-in users, USD for anonymous.</summary>
+    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
     public string CurrencySymbol => Currency.Symbol();
 
     public static readonly string[] Categories = ["All", "OpenAI", "Anthropic", "Google", "Meta", "Text", "Vision", "Coding"];
@@ -76,7 +76,7 @@ public class ModelsModel(
     private async Task<DisplayCurrency> ResolveCurrencyAsync()
     {
         var userId = CurrentUser?.UserId;
-        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Rub;
+        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Usd;
         try
         {
             var user = await authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
@@ -85,7 +85,7 @@ public class ModelsModel(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to load currency for catalog. UserId={UserId}", userId);
-            return DisplayCurrency.Rub;
+            return DisplayCurrency.Usd;
         }
     }
 
@@ -116,9 +116,9 @@ public class ModelsModel(
             .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
             .ToList() ?? [];
 
-        var provider = model.Provider ?? (sourceProviders.Count == 0
-            ? "Unknown"
-            : string.Join(", ", sourceProviders));
+            var provider = !string.IsNullOrWhiteSpace(model.Provider)
+                ? model.Provider
+                : (sourceProviders.Count == 0 ? "Unknown" : string.Join(", ", sourceProviders));
 
         var capability = !string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
             ? ToTitle(catalogEntry.ModelType)

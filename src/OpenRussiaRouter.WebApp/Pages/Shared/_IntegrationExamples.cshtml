@@ -1,0 +1,117 @@
+@model OpenRussiaRouter.WebApp.Pages.Shared.IntegrationExamplesModel
+
+@*
+    Copy-paste integration snippets with the base URL and model id already filled in.
+    Used on the Setup guide (placeholder model id) and on each model page (real id).
+*@
+<div class="integ" data-integ>
+    <div class="integ-tabs" role="tablist" aria-label="Integration examples">
+        <button type="button" class="integ-tab active" data-target="py" onclick="switchIntegTab(this)">Python</button>
+        <button type="button" class="integ-tab" data-target="node" onclick="switchIntegTab(this)">Node.js</button>
+        <button type="button" class="integ-tab" data-target="json" onclick="switchIntegTab(this)">Custom provider</button>
+        <button type="button" class="integ-tab" data-target="curl" onclick="switchIntegTab(this)">curl</button>
+    </div>
+
+    <div class="integ-panel active" data-panel="py">
+        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+<pre><code>from openai import OpenAI
+
+client = OpenAI(
+    base_url="@Model.V1BaseUrl",
+    api_key="&lt;YOUR_API_KEY&gt;",
+)
+
+response = client.chat.completions.create(
+    model="@Model.ModelId",
+    messages=[{"role": "user", "content": "Hello"}],
+)
+print(response.choices[0].message.content)</code></pre>
+    </div>
+
+    <div class="integ-panel" data-panel="node">
+        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+<pre><code>import OpenAI from "openai";
+
+const client = new OpenAI({
+  baseURL: "@Model.V1BaseUrl",
+  apiKey: "&lt;YOUR_API_KEY&gt;",
+});
+
+const response = await client.chat.completions.create({
+  model: "@Model.ModelId",
+  messages: [{ role: "user", content: "Hello" }],
+});
+console.log(response.choices[0].message.content);</code></pre>
+    </div>
+
+    <div class="integ-panel" data-panel="json">
+        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+<pre><code>{
+  "providers": {
+    "openrussiarouter": {
+      "baseURL": "@Model.V1BaseUrl",
+      "apiKey": "&lt;YOUR_API_KEY&gt;",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      }
+    }
+  },
+  "models": {
+    "@Model.ModelId": {
+      "provider": "openrussiarouter",
+      "id": "@Model.ModelId",
+      "contextWindow": @Model.ContextWindow
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="integ-panel" data-panel="curl">
+        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+<pre><code>curl @Model.V1BaseUrl/chat/completions \
+  -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "@Model.ModelId",
+    "messages": [{ "role": "user", "content": "Hello" }]
+  }'</code></pre>
+    </div>
+</div>
+
+<style>
+    .integ { border: 1px solid var(--color-hairline); border-radius: var(--radius-lg); background: var(--color-canvas-soft); overflow: hidden; }
+    .integ-tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--color-hairline); }
+    .integ-tab { border: none; background: transparent; color: var(--color-body); font: inherit; font-size: 13px; padding: 8px 12px; border-radius: var(--radius-sm) var(--radius-sm) 0 0; cursor: pointer; }
+    .integ-tab:hover { color: var(--color-ink); }
+    .integ-tab.active { color: var(--color-ink); background: var(--color-canvas-card); }
+    .integ-panel { display: none; position: relative; }
+    .integ-panel.active { display: block; }
+    .integ-panel pre { margin: 0; padding: 18px; overflow-x: auto; color: var(--color-body); font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; }
+    .integ-panel pre code { padding: 0; background: transparent; color: inherit; font-size: inherit; }
+    .integ-copy { position: absolute; top: 10px; right: 10px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); background: var(--color-canvas-card); color: var(--color-body); cursor: pointer; font: inherit; font-size: 12px; padding: 3px 10px; }
+    .integ-copy:hover { color: var(--color-ink); border-color: var(--color-border); }
+</style>
+
+<script>
+    function switchIntegTab(btn) {
+        var root = btn.closest('[data-integ]');
+        if (!root) return;
+        var target = btn.getAttribute('data-target');
+        root.querySelectorAll('.integ-tab').forEach(function (t) { t.classList.toggle('active', t === btn); });
+        root.querySelectorAll('.integ-panel').forEach(function (p) {
+            p.classList.toggle('active', p.getAttribute('data-panel') === target);
+        });
+    }
+
+    // Copy the code in the same panel as the clicked button. orrCopyText is global (_Layout.cshtml).
+    function copyCodeBlock(event) {
+        var btn = event.currentTarget;
+        var pre = btn.closest('.integ-panel')?.querySelector('pre');
+        if (!pre) return;
+        orrCopyText(pre.textContent).then(function () {
+            btn.textContent = 'Copied';
+            setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+        }).catch(function (err) { console.error('Copy failed:', err); });
+    }
+</script>

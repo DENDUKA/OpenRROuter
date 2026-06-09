@@ -64,20 +64,10 @@
         </div>
     </section>
 
-    <section class="docs-section" aria-labelledby="request-title">
-        <h2 id="request-title">Example request</h2>
-        <p>Use the same request shape as OpenAI chat completions.</p>
-        <div class="docs-code-panel" aria-label="Example curl request">
-<pre><code>curl @Model.ChatCompletionsUrl \
-  -H "Authorization: Bearer $ORR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "<paste a model ID from the catalog>",
-    "messages": [
-      { "role": "user", "content": "Hello" }
-    ]
-  }'</code></pre>
-        </div>
+    <section class="docs-section" aria-labelledby="integration-title">
+        <h2 id="integration-title">Use it in your tool</h2>
+        <p>Pick your client below. The base URL and a model id are already filled in — just paste your API key. Grab a model id from the <a href="/models">catalog</a>.</p>
+        <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
 </div>
 

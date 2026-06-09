@@ -1,38 +1,21 @@
-using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Pages.Shared;
+using OpenRussiaRouter.WebApp.Services;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
-public class DocsModel(IConfiguration configuration, BillingProvider billingProvider, ILogger<DocsModel> logger) : PageModelBase
+public class DocsModel(ApiBaseUrlResolver baseUrlResolver) : PageModelBase
 {
-    /// <summary>
-    /// User-facing API base URL clients point their OpenAI-compatible SDK at. Resolution order:
-    /// admin setting (<c>platform_settings</c>) → <c>PublicApiBaseUrl</c> config → current request origin.
-    /// The admin setting wins so prod/VPS (where WebApp and ApiGateway are on different hosts/ports)
-    /// can be configured without a redeploy; the origin fallback keeps single-host/ingress setups working.
-    /// </summary>
+    /// <summary>User-facing API base URL (no trailing slash, without <c>/v1</c>).</summary>
     public string ApiBaseUrl { get; private set; } = "";
 
     public string V1BaseUrl => $"{ApiBaseUrl}/v1";
     public string ChatCompletionsUrl => $"{ApiBaseUrl}/v1/chat/completions";
 
+    /// <summary>On the generic guide we don't know the model, so the snippets use a placeholder id.</summary>
+    public IntegrationExamplesModel Integration => new(V1BaseUrl, "<paste-a-model-id>", 128000);
+
     public async Task OnGetAsync()
     {
-        string? configured = null;
-        try
-        {
-            configured = await billingProvider.GetPlatformSettingAsync(
-                PlatformSettingKeys.PublicApiBaseUrl, HttpContext.RequestAborted);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to load public API base URL setting; falling back to config/origin.");
-        }
-
-        if (string.IsNullOrWhiteSpace(configured))
-            configured = configuration["PublicApiBaseUrl"];
-
-        ApiBaseUrl = !string.IsNullOrWhiteSpace(configured)
-            ? configured.TrimEnd('/')
-            : $"{Request.Scheme}://{Request.Host}";
+        ApiBaseUrl = await baseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
     }
 }

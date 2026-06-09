@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Pages.Shared;
+using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
@@ -10,17 +12,20 @@ public class ModelDetailsModel : PageModelBase
     private readonly BillingProvider _billingClient;
     private readonly CurrencyFormatter _currencyFormatter;
     private readonly AuthProvider _authProvider;
+    private readonly ApiBaseUrlResolver _baseUrlResolver;
     private readonly ILogger<ModelDetailsModel> _logger;
 
     public ModelDetailsModel(
         BillingProvider billingProvider,
         CurrencyFormatter currencyFormatter,
         AuthProvider authProvider,
+        ApiBaseUrlResolver baseUrlResolver,
         ILogger<ModelDetailsModel> logger)
     {
         _billingClient = billingProvider;
         _currencyFormatter = currencyFormatter;
         _authProvider = authProvider;
+        _baseUrlResolver = baseUrlResolver;
         _logger = logger;
     }
 
@@ -56,9 +61,20 @@ public class ModelDetailsModel : PageModelBase
     public decimal CachePrice => ModelData?.CachePrice ?? 0;
     public bool HasPricing => InputPrice > 0 || OutputPrice > 0;
 
+    /// <summary>The public catalog id (preferred) for copy-paste snippets, falling back to the route id.</summary>
+    public string PublicModelId => ModelData?.Id ?? ModelId;
+
+    public string ApiBaseUrl { get; private set; } = "";
+
+    public IntegrationExamplesModel Integration => new(
+        $"{ApiBaseUrl}/v1",
+        PublicModelId,
+        ModelData?.ContextLength is > 0 ? ModelData.ContextLength.Value : 128000);
+
     public async Task OnGetAsync()
     {
         Currency = await ResolveCurrencyAsync();
+        ApiBaseUrl = await _baseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
         try
         {
             var models = await _billingClient.ListModelsAsync();

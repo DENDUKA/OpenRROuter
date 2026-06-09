@@ -110,6 +110,7 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
 .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline))
 .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
 builder.Services.AddScoped<BillingProvider>();
+builder.Services.AddScoped<OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver>();
 
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
 builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>

@@ -46,13 +46,8 @@
 
     <section id="api" class="model-section">
         <h2>API</h2>
-        <pre><code>POST /v1/chat/completions
-Authorization: Bearer &lt;OPENRUSSIAROUTER_API_KEY&gt;
-
-{
-  "model": "@Model.ModelId",
-  "messages": [{ "role": "user", "content": "Hello" }]
-}</code></pre>
+        <p>Copy a ready config for your client — the base URL and this model's id (<code>@Model.PublicModelId</code>) are already filled in. Paste your API key and you're set.</p>
+        <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
 </div>
 

@@ -17,6 +17,11 @@ public sealed class OpenRouterCatalogPoller(
         if (!options.CurrentValue.Enabled)
             return;
 
+        using var scope = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["PollCycleId"] = Guid.NewGuid()
+        });
+
         var entries = await client.LoadAsync(cancellationToken).ConfigureAwait(false);
         if (entries.Count == 0)
         {

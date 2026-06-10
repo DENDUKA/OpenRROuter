@@ -30,9 +30,9 @@ public sealed class NodeCatalogCollector(
         }
         catch (Exception ex) when (IsTransient(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "ListProvidersWithModels failed for node {NodeId}", node.Id);
+            logger.LogWarning(ex, "ListProvidersWithModels failed for node {NodeId}", node.NodeId);
             return new NodeCatalogResult(
-                node.Id, Unreachable: true, [],
+                node.NodeId, Unreachable: true, [],
                 FormatRequest(ex, client.DescribeListProvidersRequest(node.EndpointUrl)),
                 FormatResponse(ex));
         }
@@ -58,7 +58,7 @@ public sealed class NodeCatalogCollector(
             }
         }
 
-        return new NodeCatalogResult(node.Id, Unreachable: false, observations, null, null);
+        return new NodeCatalogResult(node.NodeId, Unreachable: false, observations, null, null);
     }
 
     private async Task<NodeCatalogResult> CollectFallbackModelsAsync(
@@ -76,13 +76,13 @@ public sealed class NodeCatalogCollector(
                     Rank = 1
                 })
                 .ToList();
-            return new NodeCatalogResult(node.Id, Unreachable: false, observations, null, null);
+            return new NodeCatalogResult(node.NodeId, Unreachable: false, observations, null, null);
         }
         catch (Exception ex) when (IsTransient(ex, cancellationToken))
         {
-            logger.LogWarning(ex, "Fallback model listing failed for node {NodeId}", node.Id);
+            logger.LogWarning(ex, "Fallback model listing failed for node {NodeId}", node.NodeId);
             return new NodeCatalogResult(
-                node.Id, Unreachable: true, [],
+                node.NodeId, Unreachable: true, [],
                 FormatRequest(ex, client.DescribeListModelsRequest(node.EndpointUrl)),
                 FormatResponse(ex));
         }

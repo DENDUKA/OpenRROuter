@@ -20,7 +20,7 @@ public sealed class NodeListProvider(RouterControlPlane.RouterControlPlaneClient
             if (!Uri.TryCreate(n.EndpointUrl, UriKind.Absolute, out var endpoint))
                 continue;
             nodes.Add(new CollectorNode(
-                Id: n.NodeId,
+                NodeId: n.NodeId,
                 EndpointUrl: endpoint,
                 ControlToken: n.ControlToken,
                 // ControlPlane maps a disabled node's status to "Disabled"; treat anything not

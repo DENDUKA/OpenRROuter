@@ -1,13 +1,15 @@
 using Grpc.Core;
 using OpenRussiaRouter.CollectorService.Application.Collection;
+using OpenRussiaRouter.CollectorService.Application.OpenRouter;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 
 namespace OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 
 public sealed class GrpcCollectorService(
     CollectorSnapshotStore store,
-    OpenRussiaRouter.CollectorService.Application.Quota.QuotaSnapshotStore quotaStore,
-    OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogStore openRouterStore)
+    QuotaSnapshotStore quotaStore,
+    OpenRouterCatalogStore openRouterStore)
     : Collector.CollectorBase
 {
     public override Task<GetCapabilitiesSnapshotResponse> GetCapabilitiesSnapshot(

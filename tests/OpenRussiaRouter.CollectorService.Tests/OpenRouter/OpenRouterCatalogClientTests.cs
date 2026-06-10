@@ -45,4 +45,11 @@ public class OpenRouterCatalogClientTests
         var entries = await Build(HttpStatusCode.InternalServerError, "boom").LoadAsync(CancellationToken.None);
         entries.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task LoadAsync_ReturnsEmpty_OnMalformedJson()
+    {
+        var entries = await Build(HttpStatusCode.OK, "{ not json").LoadAsync(CancellationToken.None);
+        entries.Should().BeEmpty();
+    }
 }

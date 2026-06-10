@@ -11,6 +11,9 @@ namespace OpenRussiaRouter.BuildingBlocks.Metrics;
 /// </summary>
 public static class OpenTelemetryExtensions
 {
+    /// <summary>Shared meter name used for all custom OpenRussiaRouter instruments.</summary>
+    public const string DefaultMeterName = "OpenRussiaRouter";
+
     public static WebApplicationBuilder AddOpenTelemetryMetrics(this WebApplicationBuilder builder, string serviceName, params string[] additionalMeters)
     {
         builder.Services.AddOpenTelemetry()

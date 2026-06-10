@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 
 namespace OpenRussiaRouter.CollectorService.Application.Quota;
 
@@ -9,7 +10,7 @@ public sealed class ProviderQuotaMeter : IDisposable
 
     public ProviderQuotaMeter(QuotaSnapshotStore store)
     {
-        _meter = new Meter("OpenRussiaRouter");
+        _meter = new Meter(OpenTelemetryExtensions.DefaultMeterName);
         _meter.CreateObservableGauge(
             "orr_provider_quota",
             () => store.Current.Measurements.Select(m => new Measurement<double>(

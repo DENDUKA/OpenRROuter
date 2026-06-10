@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace OpenRussiaRouter.CollectorService.Application.OpenRouter;
@@ -26,7 +27,9 @@ public sealed class OpenRouterCatalogClient(HttpClient httpClient, ILogger<OpenR
                     d.Endpoint?.Pricing?.InputCacheRead ?? string.Empty))
                 .ToList();
         }
-        catch (Exception ex)
+        catch (Exception ex) when (
+            ex is HttpRequestException or JsonException ||
+            (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
         {
             logger.LogWarning(ex, "Failed to load OpenRouter model catalog");
             return [];

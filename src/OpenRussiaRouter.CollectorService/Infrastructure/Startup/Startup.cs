@@ -5,6 +5,8 @@ using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.NodeAdmin;
+using OpenRussiaRouter.CollectorService.Application.OpenRouter;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 
@@ -44,17 +46,17 @@ public static class Startup
 
         services.AddHostedService<NodePollingWorker>();
 
-        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.QuotaSnapshotStore>();
-        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.NodeQuotaCollector>();
-        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.Quota.ProviderQuotaMeter>();
+        services.AddSingleton<QuotaSnapshotStore>();
+        services.AddSingleton<NodeQuotaCollector>();
+        services.AddSingleton<ProviderQuotaMeter>();
 
-        services.AddSingleton<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogStore>();
-        services.AddOptions<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogOptions>()
+        services.AddSingleton<OpenRouterCatalogStore>();
+        services.AddOptions<OpenRouterCatalogOptions>()
             .Bind(configuration.GetSection("OpenRouter"))
             .ValidateDataAnnotations();
-        services.AddHttpClient<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogClient>(c =>
+        services.AddHttpClient<OpenRouterCatalogClient>(c =>
             c.BaseAddress = new Uri(configuration["OpenRouter:BaseUrl"] ?? "https://openrouter.ai/"));
-        services.AddHostedService<OpenRussiaRouter.CollectorService.Application.OpenRouter.OpenRouterCatalogPoller>();
+        services.AddHostedService<OpenRouterCatalogPoller>();
 
         return services;
     }

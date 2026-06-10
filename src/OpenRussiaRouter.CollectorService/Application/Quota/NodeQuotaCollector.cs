@@ -24,7 +24,7 @@ public sealed class NodeQuotaCollector(
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Quota collection failed for node {NodeId}", node.Id);
+            logger.LogWarning(ex, "Quota collection failed for node {NodeId}", node.NodeId);
             return [];
         }
 
@@ -39,7 +39,7 @@ public sealed class NodeQuotaCollector(
                 continue;
 
             measurements.Add(new QuotaMeasurement(
-                node.Id,
+                node.NodeId,
                 string.IsNullOrWhiteSpace(provider.Provider) ? "unknown" : provider.Provider,
                 string.IsNullOrWhiteSpace(provider.ConnectionId) ? "unknown" : provider.ConnectionId,
                 remainingElement.GetDouble()));

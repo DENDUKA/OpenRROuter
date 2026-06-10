@@ -105,7 +105,7 @@ metadata:
 data:
   prometheus.yml: |
     global:
-      scrape_interval: 15s
+      scrape_interval: 30s
 
     scrape_configs:
       # HTTP-front services expose Prometheus metrics on the service port (80).

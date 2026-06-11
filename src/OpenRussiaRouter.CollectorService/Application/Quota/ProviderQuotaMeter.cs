@@ -51,6 +51,7 @@ public sealed class ProviderQuotaMeter : IDisposable
                 .SelectMany(m => m.ModelIds.Select(modelId => new Measurement<double>(
                     m.Percent!.Value,
                     new KeyValuePair<string, object?>("node_id", m.NodeId),
+                    new KeyValuePair<string, object?>("provider", m.Provider),
                     new KeyValuePair<string, object?>("model_id", modelId)))),
             unit: "%",
             description: "Remaining quota percentage per model");

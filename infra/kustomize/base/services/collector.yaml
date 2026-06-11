@@ -16,6 +16,7 @@ spec:
       containers:
         - name: collector
           image: ghcr.io/denduka/collector:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
             - containerPort: 8081

@@ -112,7 +112,7 @@
           "refId": "A"
         }
       ],
-      "title": "Остаток лимитов по моделям (%)",
+      "title": "Model quota remaining (%)",
       "type": "timeseries"
     },
     {
@@ -205,7 +205,7 @@
           "refId": "A"
         }
       ],
-      "title": "Остаток лимитов по провайдерам (%)",
+      "title": "Provider quota remaining (%)",
       "type": "timeseries"
     }
   ],

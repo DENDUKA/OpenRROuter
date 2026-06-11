@@ -13,12 +13,14 @@ metadata:
       auth-service=ghcr.io/denduka/auth-service:dev-latest,
       billing-service=ghcr.io/denduka/billing-service:dev-latest,
       control-plane=ghcr.io/denduka/control-plane:dev-latest,
+      collector=ghcr.io/denduka/collector:dev-latest,
       webapp=ghcr.io/denduka/webapp:dev-latest,
       f9router=ghcr.io/inc64/f9router:dev-latest
     argocd-image-updater.argoproj.io/api-gateway.update-strategy: digest
     argocd-image-updater.argoproj.io/auth-service.update-strategy: digest
     argocd-image-updater.argoproj.io/billing-service.update-strategy: digest
     argocd-image-updater.argoproj.io/control-plane.update-strategy: digest
+    argocd-image-updater.argoproj.io/collector.update-strategy: digest
     argocd-image-updater.argoproj.io/webapp.update-strategy: digest
     argocd-image-updater.argoproj.io/f9router.update-strategy: digest
     argocd-image-updater.argoproj.io/write-back-method: argocd

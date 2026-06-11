@@ -33,39 +33,89 @@ public sealed class NodeQuotaCollector(
         {
             if (provider.Usage is not { } usage || usage.ValueKind == System.Text.Json.JsonValueKind.Null)
                 continue;
-            if (!usage.TryGetProperty("remaining", out var remainingElement))
-                continue;
-            if (remainingElement.ValueKind is not (System.Text.Json.JsonValueKind.Number))
-                continue;
+            var providerName = string.IsNullOrWhiteSpace(provider.Provider) ? "unknown" : provider.Provider;
+            var connectionId = string.IsNullOrWhiteSpace(provider.ConnectionId) ? "unknown" : provider.ConnectionId;
 
-            var remaining = remainingElement.GetDouble();
-            double? percent = null;
+            if (usage.TryGetProperty("quotas", out var quotasElement) &&
+                quotasElement.ValueKind == System.Text.Json.JsonValueKind.Object)
+            {
+                foreach (var quota in quotasElement.EnumerateObject())
+                {
+                    if (TryReadQuota(quota.Value, out var remaining, out var percent))
+                    {
+                        measurements.Add(new QuotaMeasurement(
+                            node.NodeId,
+                            providerName,
+                            connectionId,
+                            remaining,
+                            percent,
+                            [quota.Name]));
+                    }
+                }
 
-            if (usage.TryGetProperty("limit", out var limitElement) && limitElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-            {
-                var limit = limitElement.GetDouble();
-                if (limit > 0)
-                {
-                    percent = remaining / limit * 100.0;
-                }
+                continue;
             }
-            else if (usage.TryGetProperty("total", out var totalElement) && totalElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-            {
-                var total = totalElement.GetDouble();
-                if (total > 0)
-                {
-                    percent = remaining / total * 100.0;
-                }
-            }
+
+            if (!TryReadQuota(usage, out var flatRemaining, out var flatPercent))
+                continue;
 
             measurements.Add(new QuotaMeasurement(
                 node.NodeId,
-                string.IsNullOrWhiteSpace(provider.Provider) ? "unknown" : provider.Provider,
-                string.IsNullOrWhiteSpace(provider.ConnectionId) ? "unknown" : provider.ConnectionId,
-                remaining,
-                percent,
+                providerName,
+                connectionId,
+                flatRemaining,
+                flatPercent,
                 []));
         }
         return measurements;
+    }
+
+    private static bool TryReadQuota(System.Text.Json.JsonElement usage, out double remaining, out double? percent)
+    {
+        remaining = 0;
+        percent = null;
+
+        if (usage.TryGetProperty("remaining", out var remainingElement) &&
+            remainingElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        {
+            remaining = remainingElement.GetDouble();
+        }
+        else if (usage.TryGetProperty("total", out var totalElement) &&
+                 totalElement.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                 usage.TryGetProperty("used", out var usedElement) &&
+                 usedElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        {
+            remaining = Math.Max(0, totalElement.GetDouble() - usedElement.GetDouble());
+        }
+        else
+        {
+            return false;
+        }
+
+        if (usage.TryGetProperty("remainingPercentage", out var remainingPercentageElement) &&
+            remainingPercentageElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        {
+            percent = remainingPercentageElement.GetDouble();
+        }
+        else if (usage.TryGetProperty("limit", out var limitElement) &&
+                 limitElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        {
+            var limit = limitElement.GetDouble();
+            if (limit > 0)
+            {
+                percent = remaining / limit * 100.0;
+            }
+        }
+        else if (usage.TryGetProperty("total", out var totalElement) &&
+                 totalElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        {
+            var total = totalElement.GetDouble();
+            if (total > 0)
+            {
+                percent = remaining / total * 100.0;
+            }
+        }
+
+        return true;
     }
 }

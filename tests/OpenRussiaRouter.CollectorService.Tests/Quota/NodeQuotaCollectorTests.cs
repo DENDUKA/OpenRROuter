@@ -35,7 +35,36 @@ public class NodeQuotaCollectorTests
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
         result.Should().ContainSingle();
-        result[0].Should().Be(new QuotaMeasurement("n1", "openai", "c1", 1234.5, 50d, []));
+        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "openai", "c1", 1234.5, 50d, []));
+    }
+
+    [Fact]
+    public async Task CollectAsync_ExtractsQuotas_FromNestedUsageJson()
+    {
+        using var doc = JsonDocument.Parse("""
+        {
+            "plan": "Free",
+            "quotas": {
+                "model-1": { "used": 100, "total": 1000, "remainingPercentage": 90 },
+                "model-2": { "used": 500, "total": 1000, "remainingPercentage": 50 }
+            }
+        }
+        """);
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProviderQuotaResponse
+            {
+                Providers =
+                [
+                    new NodeProviderQuotaEntry { ConnectionId = "c2", Provider = "gemini", Usage = doc.RootElement.Clone() }
+                ]
+            });
+
+        var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
+
+        result.Should().HaveCount(2);
+        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", 900d, 90d, ["model-1"]));
+        result[1].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", 500d, 50d, ["model-2"]));
     }
 
     [Fact]

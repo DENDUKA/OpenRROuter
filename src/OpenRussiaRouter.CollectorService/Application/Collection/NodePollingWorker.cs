@@ -52,7 +52,11 @@ public sealed class NodePollingWorker(
             var nodeCatalog = catalogResults.FirstOrDefault(c => c.NodeId == measurement.NodeId);
             List<string> modelIds = [];
 
-            if (nodeCatalog != null)
+            if (measurement.ModelIds.Count > 0)
+            {
+                modelIds = measurement.ModelIds.Distinct(StringComparer.Ordinal).ToList();
+            }
+            else if (nodeCatalog != null)
             {
                 modelIds = nodeCatalog.Observations
                     .Where(o => string.Equals(o.ConnectionId, measurement.ConnectionId, StringComparison.OrdinalIgnoreCase))

@@ -25,11 +25,12 @@ public sealed class ProviderQuotaMeter : IDisposable
             "orr_provider_quota_percent",
             () => store.Current.Measurements
                 .Where(m => m.Percent.HasValue)
-                .Select(m => new Measurement<double>(
-                    m.Percent!.Value,
-                    new KeyValuePair<string, object?>("node_id", m.NodeId),
-                    new KeyValuePair<string, object?>("provider", m.Provider),
-                    new KeyValuePair<string, object?>("connection_id", m.ConnectionId))),
+                .GroupBy(m => new { m.NodeId, m.Provider, m.ConnectionId })
+                .Select(g => new Measurement<double>(
+                    g.Average(m => m.Percent!.Value),
+                    new KeyValuePair<string, object?>("node_id", g.Key.NodeId),
+                    new KeyValuePair<string, object?>("provider", g.Key.Provider),
+                    new KeyValuePair<string, object?>("connection_id", g.Key.ConnectionId))),
             unit: "%",
             description: "Remaining quota percentage for providers");
 

@@ -134,7 +134,7 @@ data:
                 - orr-dev
         relabel_configs:
           - source_labels: [__meta_kubernetes_pod_label_app]
-            regex: 'auth-service|billing-service|control-plane'
+            regex: 'auth-service|billing-service|control-plane|collector'
             action: keep
           - source_labels: [__meta_kubernetes_pod_container_port_number]
             regex: '8080'

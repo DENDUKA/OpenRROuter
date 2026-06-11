@@ -10,7 +10,7 @@ public class ProviderQuotaMeterTests
     public void Gauge_PublishesMeasurementsFromStore()
     {
         var store = new QuotaSnapshotStore();
-        store.Set(new QuotaSnapshot([new QuotaMeasurement("n1", "openai", "c1", 42d)], DateTimeOffset.UnixEpoch));
+        store.Set(new QuotaSnapshot([new QuotaMeasurement("n1", "openai", "c1", 42d, 84d, ["model-1"])], DateTimeOffset.UnixEpoch));
 
         using var meter = new ProviderQuotaMeter(store);
         var collected = new List<Measurement<double>>();

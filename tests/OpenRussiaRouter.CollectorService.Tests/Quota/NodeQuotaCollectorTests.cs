@@ -21,7 +21,7 @@ public class NodeQuotaCollectorTests
     [Fact]
     public async Task CollectAsync_ExtractsRemaining_FromUsageJson()
     {
-        using var doc = JsonDocument.Parse("""{"remaining": 1234.5}""");
+        using var doc = JsonDocument.Parse("""{"remaining": 1234.5,"limit": 2469}""");
         var client = new Mock<INodeAdminClient>();
         client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NodeProviderQuotaResponse
@@ -35,7 +35,7 @@ public class NodeQuotaCollectorTests
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
         result.Should().ContainSingle();
-        result[0].Should().Be(new QuotaMeasurement("n1", "openai", "c1", 1234.5));
+        result[0].Should().Be(new QuotaMeasurement("n1", "openai", "c1", 1234.5, 50d, []));
     }
 
     [Fact]

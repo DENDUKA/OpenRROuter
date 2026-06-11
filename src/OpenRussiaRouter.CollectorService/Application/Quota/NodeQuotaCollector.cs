@@ -38,11 +38,33 @@ public sealed class NodeQuotaCollector(
             if (remainingElement.ValueKind is not (System.Text.Json.JsonValueKind.Number))
                 continue;
 
+            var remaining = remainingElement.GetDouble();
+            double? percent = null;
+
+            if (usage.TryGetProperty("limit", out var limitElement) && limitElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+            {
+                var limit = limitElement.GetDouble();
+                if (limit > 0)
+                {
+                    percent = remaining / limit * 100.0;
+                }
+            }
+            else if (usage.TryGetProperty("total", out var totalElement) && totalElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+            {
+                var total = totalElement.GetDouble();
+                if (total > 0)
+                {
+                    percent = remaining / total * 100.0;
+                }
+            }
+
             measurements.Add(new QuotaMeasurement(
                 node.NodeId,
                 string.IsNullOrWhiteSpace(provider.Provider) ? "unknown" : provider.Provider,
                 string.IsNullOrWhiteSpace(provider.ConnectionId) ? "unknown" : provider.ConnectionId,
-                remainingElement.GetDouble()));
+                remaining,
+                percent,
+                []));
         }
         return measurements;
     }

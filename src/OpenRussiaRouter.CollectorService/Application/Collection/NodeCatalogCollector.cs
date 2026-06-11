@@ -53,7 +53,8 @@ public sealed class NodeCatalogCollector(
                     DisplayName = model.Name ?? string.Empty,
                     ModelType = model.Type ?? string.Empty,
                     SourceProviders = model.Sources ?? [],
-                    Rank = 2
+                    Rank = 2,
+                    ConnectionId = connection.Id
                 });
             }
         }

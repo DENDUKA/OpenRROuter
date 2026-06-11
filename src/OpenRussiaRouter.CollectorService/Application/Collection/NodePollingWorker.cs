@@ -44,7 +44,28 @@ public sealed class NodePollingWorker(
 
         var quotaResults = await Task.WhenAll(
             routable.Select(node => quotaCollector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
-        quotaStore.Set(new QuotaSnapshot(quotaResults.SelectMany(m => m).ToList(), now));
+        var flatMeasurements = quotaResults.SelectMany(m => m).ToList();
+        var enrichedMeasurements = new List<QuotaMeasurement>(flatMeasurements.Count);
+
+        foreach (var measurement in flatMeasurements)
+        {
+            var nodeCatalog = catalogResults.FirstOrDefault(c => c.NodeId == measurement.NodeId);
+            List<string> modelIds = [];
+
+            if (nodeCatalog != null)
+            {
+                modelIds = nodeCatalog.Observations
+                    .Where(o => string.Equals(o.ConnectionId, measurement.ConnectionId, StringComparison.OrdinalIgnoreCase))
+                    .Select(o => string.IsNullOrWhiteSpace(o.PublicId) ? o.UpstreamId : o.PublicId)
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+            }
+
+            enrichedMeasurements.Add(measurement with { ModelIds = modelIds });
+        }
+
+        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now));
     }
 
     /// <summary>

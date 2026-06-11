@@ -20,6 +20,29 @@ public sealed class ProviderQuotaMeter : IDisposable
                 new KeyValuePair<string, object?>("connection_id", m.ConnectionId))),
             unit: "tokens",
             description: "Remaining quota for providers");
+
+        _meter.CreateObservableGauge(
+            "orr_provider_quota_percent",
+            () => store.Current.Measurements
+                .Where(m => m.Percent.HasValue)
+                .Select(m => new Measurement<double>(
+                    m.Percent!.Value,
+                    new KeyValuePair<string, object?>("node_id", m.NodeId),
+                    new KeyValuePair<string, object?>("provider", m.Provider),
+                    new KeyValuePair<string, object?>("connection_id", m.ConnectionId))),
+            unit: "%",
+            description: "Remaining quota percentage for providers");
+
+        _meter.CreateObservableGauge(
+            "orr_model_quota_percent",
+            () => store.Current.Measurements
+                .Where(m => m.Percent.HasValue)
+                .SelectMany(m => m.ModelIds.Select(modelId => new Measurement<double>(
+                    m.Percent!.Value,
+                    new KeyValuePair<string, object?>("node_id", m.NodeId),
+                    new KeyValuePair<string, object?>("model_id", modelId)))),
+            unit: "%",
+            description: "Remaining quota percentage per model");
     }
 
     public void Dispose() => _meter.Dispose();

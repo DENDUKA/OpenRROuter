@@ -15,4 +15,5 @@ public sealed class ModelObservation
     public string ModelType { get; init; } = string.Empty;
     public IReadOnlyList<string> SourceProviders { get; init; } = [];
     public int Rank { get; init; }
+    public string ConnectionId { get; init; } = string.Empty;
 }

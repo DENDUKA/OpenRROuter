@@ -94,8 +94,8 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "orr_provider_quota",
-          "legendFormat": "{{provider}} ({{node_id}} - {{connection_id}})",
+          "expr": "sum by (provider) (orr_provider_quota_percent)",
+          "legendFormat": "{{provider}}",
           "range": true,
           "refId": "A"
         }

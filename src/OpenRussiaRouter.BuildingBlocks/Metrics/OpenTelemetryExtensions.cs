@@ -23,6 +23,7 @@ public static class OpenTelemetryExtensions
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddRuntimeInstrumentation()
+                    .AddProcessInstrumentation()
                     .AddPrometheusExporter();
 
                 foreach (var meter in additionalMeters)

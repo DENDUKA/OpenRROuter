@@ -94,7 +94,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "npgsql_connection_pool_active_connections",
+          "expr": "db_client_connections_usage{state=\"used\"}",
           "legendFormat": "{{job}} Active",
           "range": true,
           "refId": "A"
@@ -105,7 +105,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "npgsql_connection_pool_idle_connections",
+          "expr": "db_client_connections_usage{state=\"idle\"}",
           "legendFormat": "{{job}} Idle",
           "range": true,
           "refId": "B"

@@ -107,7 +107,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "sum by (model_id) (orr_model_quota_percent)",
+          "expr": "sum by (model_id) (orr_model_quota_percent{model_id!=\"\"} and on(model_id) orr_model_active == 1)",
           "legendFormat": "{{model_id}}",
           "refId": "A"
         }

@@ -35,6 +35,16 @@ public sealed class ProviderQuotaMeter : IDisposable
             description: "Remaining quota percentage for providers");
 
         _meter.CreateObservableGauge(
+            "orr_model_active",
+            () => store.Current.Measurements
+                .SelectMany(m => m.ModelIds)
+                .Distinct()
+                .Select(modelId => new Measurement<long>(
+                    1,
+                    new KeyValuePair<string, object?>("model_id", modelId))),
+            description: "Indicates if a model is currently active/available");
+
+        _meter.CreateObservableGauge(
             "orr_model_quota_percent",
             () => store.Current.Measurements
                 .Where(m => m.Percent.HasValue)

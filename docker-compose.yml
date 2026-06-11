@@ -116,6 +116,7 @@ services:
       Kestrel__Endpoints__Http__Protocols: "Http1"
       Kestrel__Endpoints__Grpc__Url: "http://+:8081"
       Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       Seq__Url: "http://seq:80"
 

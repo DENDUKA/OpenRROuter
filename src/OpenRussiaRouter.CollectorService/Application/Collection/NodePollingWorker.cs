@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OpenRussiaRouter.CollectorService.Application.Billing;
 using OpenRussiaRouter.CollectorService.Application.Quota;
 
 namespace OpenRussiaRouter.CollectorService.Application.Collection;
@@ -9,6 +10,7 @@ public sealed class NodePollingWorker(
     INodeListProvider nodeListProvider,
     NodeCatalogCollector collector,
     NodeQuotaCollector quotaCollector,
+    IActiveBillingModelProvider activeBillingModelProvider,
     CollectorSnapshotStore store,
     QuotaSnapshotStore quotaStore,
     IOptionsMonitor<CollectorOptions> options,
@@ -38,12 +40,14 @@ public sealed class NodePollingWorker(
 
         var routable = nodes.Where(NodeCatalogCollector.IsRoutableForCatalog).ToList();
 
+        var activeModelsTask = activeBillingModelProvider.ListActiveModelsAsync(cancellationToken);
         var catalogResults = await Task.WhenAll(
             routable.Select(node => collector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
         store.Set(new CollectorSnapshot(catalogResults, now));
 
         var quotaResults = await Task.WhenAll(
             routable.Select(node => quotaCollector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
+        var activeModels = await activeModelsTask.ConfigureAwait(false);
         var flatMeasurements = quotaResults.SelectMany(m => m).ToList();
         var enrichedMeasurements = new List<QuotaMeasurement>(flatMeasurements.Count);
 
@@ -69,7 +73,129 @@ public sealed class NodePollingWorker(
             enrichedMeasurements.Add(measurement with { ModelIds = modelIds });
         }
 
-        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now));
+        var activeModelMeasurements = BuildActiveModelMeasurements(catalogResults, flatMeasurements, activeModels);
+        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now, activeModelMeasurements));
+    }
+
+    private static IReadOnlyList<ActiveModelQuotaMeasurement> BuildActiveModelMeasurements(
+        IReadOnlyList<NodeCatalogResult> catalogResults,
+        IReadOnlyList<QuotaMeasurement> flatMeasurements,
+        IReadOnlyList<ActiveBillingModel> activeModels)
+    {
+        if (activeModels.Count == 0 || flatMeasurements.Count == 0)
+            return [];
+
+        var activeByRouterModelId = activeModels
+            .GroupBy(model => model.RouterModelId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+        var measurements = new List<ActiveModelQuotaMeasurement>();
+        foreach (var nodeCatalog in catalogResults.Where(c => !c.Unreachable))
+        {
+            foreach (var observation in nodeCatalog.Observations)
+            {
+                if (string.IsNullOrWhiteSpace(observation.ConnectionId))
+                    continue;
+
+                var matchedModels = FindActiveModels(activeByRouterModelId, observation);
+                if (matchedModels.Count == 0)
+                    continue;
+
+                var connectionQuotas = flatMeasurements
+                    .Where(measurement =>
+                        string.Equals(measurement.NodeId, nodeCatalog.NodeId, StringComparison.Ordinal) &&
+                        string.Equals(measurement.ConnectionId, observation.ConnectionId, StringComparison.OrdinalIgnoreCase) &&
+                        measurement.Percent.HasValue)
+                    .ToList();
+                if (connectionQuotas.Count == 0)
+                    continue;
+
+                foreach (var activeModel in matchedModels)
+                {
+                    var quota = FindModelSpecificQuota(connectionQuotas, activeModel, observation)
+                        ?? connectionQuotas.FirstOrDefault(measurement => measurement.ModelIds.Count == 0);
+                    if (quota?.Percent is not { } percent)
+                        continue;
+
+                    measurements.Add(new ActiveModelQuotaMeasurement(
+                        nodeCatalog.NodeId,
+                        ResolveProvider(observation.Provider, quota.Provider),
+                        observation.ConnectionId,
+                        activeModel.ModelId,
+                        activeModel.RouterModelId,
+                        percent));
+                }
+            }
+        }
+
+        return measurements
+            .GroupBy(measurement => new
+            {
+                measurement.NodeId,
+                measurement.Provider,
+                measurement.ConnectionId,
+                measurement.ModelId,
+                measurement.RouterModelId
+            })
+            .Select(group => new ActiveModelQuotaMeasurement(
+                group.Key.NodeId,
+                group.Key.Provider,
+                group.Key.ConnectionId,
+                group.Key.ModelId,
+                group.Key.RouterModelId,
+                group.Average(measurement => measurement.Percent)))
+            .ToList();
+    }
+
+    private static IReadOnlyList<ActiveBillingModel> FindActiveModels(
+        IReadOnlyDictionary<string, List<ActiveBillingModel>> activeByRouterModelId,
+        ModelObservation observation)
+    {
+        var result = new List<ActiveBillingModel>();
+        if (!string.IsNullOrWhiteSpace(observation.UpstreamId) &&
+            activeByRouterModelId.TryGetValue(observation.UpstreamId, out var upstreamMatches))
+        {
+            result.AddRange(upstreamMatches);
+        }
+
+        if (!string.IsNullOrWhiteSpace(observation.PublicId) &&
+            activeByRouterModelId.TryGetValue(observation.PublicId, out var publicMatches))
+        {
+            result.AddRange(publicMatches);
+        }
+
+        return result
+            .DistinctBy(model => model.ModelId, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    private static QuotaMeasurement? FindModelSpecificQuota(
+        IReadOnlyList<QuotaMeasurement> connectionQuotas,
+        ActiveBillingModel activeModel,
+        ModelObservation observation)
+    {
+        var candidateIds = new[]
+        {
+            activeModel.RouterModelId,
+            activeModel.ModelId,
+            observation.UpstreamId,
+            observation.PublicId
+        };
+
+        return connectionQuotas.FirstOrDefault(measurement =>
+            measurement.ModelIds.Count > 0 &&
+            measurement.ModelIds.Any(modelId =>
+                candidateIds.Any(candidate =>
+                    string.Equals(modelId, candidate, StringComparison.Ordinal))));
+    }
+
+    private static string ResolveProvider(string observationProvider, string quotaProvider)
+    {
+        if (!string.IsNullOrWhiteSpace(observationProvider))
+            return observationProvider;
+        if (!string.IsNullOrWhiteSpace(quotaProvider))
+            return quotaProvider;
+        return "unknown";
     }
 
     /// <summary>

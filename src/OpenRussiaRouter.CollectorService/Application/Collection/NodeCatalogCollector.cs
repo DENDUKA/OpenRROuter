@@ -54,7 +54,8 @@ public sealed class NodeCatalogCollector(
                     ModelType = model.Type ?? string.Empty,
                     SourceProviders = model.Sources ?? [],
                     Rank = 2,
-                    ConnectionId = connection.Id
+                    ConnectionId = connection.Id,
+                    Provider = string.IsNullOrWhiteSpace(connection.Provider) ? string.Empty : connection.Provider
                 });
             }
         }

@@ -3,11 +3,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
+using OpenRussiaRouter.CollectorService.Application.Billing;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.NodeAdmin;
 using OpenRussiaRouter.CollectorService.Application.OpenRouter;
 using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
+using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 
 namespace OpenRussiaRouter.CollectorService.Infrastructure.Startup;
@@ -43,6 +45,20 @@ public static class Startup
                 };
             })
             .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+
+        var billingUrl = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
+        services.AddGrpcClient<BillingGrpc.BillingServiceClient>(o => o.Address = new Uri(billingUrl))
+            .ConfigureChannel(o =>
+            {
+                o.HttpHandler = new SocketsHttpHandler
+                {
+                    PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                };
+            })
+            .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+        services.AddSingleton<IActiveBillingModelProvider, GrpcActiveBillingModelProvider>();
 
         services.AddHostedService<NodePollingWorker>();
 

@@ -55,6 +55,18 @@ public sealed class ProviderQuotaMeter : IDisposable
                     new KeyValuePair<string, object?>("model_id", modelId)))),
             unit: "%",
             description: "Remaining quota percentage per model");
+
+        _meter.CreateObservableGauge(
+            "orr_active_model_quota_percent",
+            () => store.Current.ActiveModelMeasurements.Select(m => new Measurement<double>(
+                m.Percent,
+                new KeyValuePair<string, object?>("node_id", m.NodeId),
+                new KeyValuePair<string, object?>("provider", m.Provider),
+                new KeyValuePair<string, object?>("connection_id", m.ConnectionId),
+                new KeyValuePair<string, object?>("model_id", m.ModelId),
+                new KeyValuePair<string, object?>("router_model_id", m.RouterModelId))),
+            unit: "%",
+            description: "Remaining quota percentage per active admin model and provider connection");
     }
 
     public void Dispose() => _meter.Dispose();

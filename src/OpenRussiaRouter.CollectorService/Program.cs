@@ -22,4 +22,5 @@ app.MapOpenTelemetryEndpoints();
 
 app.Run();
 
+
 public partial class Program;

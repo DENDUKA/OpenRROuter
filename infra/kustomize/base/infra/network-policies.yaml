@@ -180,7 +180,7 @@ spec:
           protocol: TCP
 
 ---
-# billing-service receives gRPC from api-gateway and webapp.
+# billing-service receives gRPC from api-gateway, webapp, and collector.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -200,6 +200,9 @@ spec:
         - podSelector:
             matchLabels:
               app: webapp
+        - podSelector:
+            matchLabels:
+              app: collector
       ports:
         - port: 8081
           protocol: TCP

@@ -438,7 +438,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [api-gateway, webapp, auth-service, billing-service, control-plane]
+        values: [api-gateway, webapp, auth-service, billing-service, control-plane, collector]
   policyTypes:
     - Ingress
   ingress:

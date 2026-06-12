@@ -1,5 +1,5 @@
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Application.Services;
-using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
 
@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
 public sealed class DapperAuthApiKeyValidator(
     IAuthRepository repository,
-    Sha256SecretHasher secretHasher)
+    ISecretHasher secretHasher)
     : IAuthApiKeyValidator
 {
     public async Task<ValidateApiKeyResult> ValidateAsync(string rawKey, CancellationToken ct = default)

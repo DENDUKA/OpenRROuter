@@ -1,7 +1,8 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Configuration;
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Application.Services;
-using OpenRussiaRouter.AuthService.Infrastructure.Security;
+
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.Contracts.Auth;
 
@@ -13,9 +14,9 @@ public sealed class InMemoryAuthApiKeyValidator : IAuthApiKeyValidator
 
     private readonly ConcurrentDictionary<string, StoredApiKey> _keysByHash = new(StringComparer.Ordinal);
     private readonly IAuthRepository? _repository;
-    private readonly Sha256SecretHasher _secretHasher;
+    private readonly ISecretHasher _secretHasher;
 
-    public InMemoryAuthApiKeyValidator(Sha256SecretHasher secretHasher, IConfiguration configuration, IAuthRepository? repository = null)
+    public InMemoryAuthApiKeyValidator(ISecretHasher secretHasher, IConfiguration configuration, IAuthRepository? repository = null)
     {
         _repository = repository;
         _secretHasher = secretHasher;

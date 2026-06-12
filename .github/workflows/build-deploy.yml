@@ -33,31 +33,44 @@ env:
   OWNER: denduka
 
 jobs:
-  test:
+  build-image:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
+      packages: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: api-gateway
+            output_key: api_gateway
+            dockerfile: ./src/OpenRussiaRouter.ApiGateway/Dockerfile
+          - service: auth-service
+            output_key: auth_service
+            dockerfile: ./src/OpenRussiaRouter.AuthService/Dockerfile
+          - service: billing-service
+            output_key: billing_service
+            dockerfile: ./src/OpenRussiaRouter.BillingService/Dockerfile
+          - service: control-plane
+            output_key: control_plane
+            dockerfile: ./src/OpenRussiaRouter.ControlPlane/Dockerfile
+          - service: collector
+            output_key: collector
+            dockerfile: ./src/OpenRussiaRouter.CollectorService/Dockerfile
+          - service: webapp
+            output_key: webapp
+            dockerfile: ./src/OpenRussiaRouter.WebApp/Dockerfile
 
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore
-        run: dotnet restore OpenRussiaRouter.sln --configfile NuGet.Config
-        shell: bash
-
-      - name: Build
-        run: dotnet build OpenRussiaRouter.sln --no-restore -c Release
-        shell: bash
-
-      - name: Detect changed services
-        id: changes
+      - name: Check if service changed
+        id: check
         shell: bash
         run: |
           set -euo pipefail
@@ -96,67 +109,13 @@ jobs:
             control_plane=true; collector=true; webapp=true
           fi
 
-          { echo "api_gateway=$api_gateway"
-            echo "auth_service=$auth_service"
-            echo "billing_service=$billing_service"
-            echo "control_plane=$control_plane"
-            echo "collector=$collector"
-            echo "webapp=$webapp"; } >> "$GITHUB_OUTPUT"
-
-    outputs:
-      api_gateway: ${{ steps.changes.outputs.api_gateway }}
-      auth_service: ${{ steps.changes.outputs.auth_service }}
-      billing_service: ${{ steps.changes.outputs.billing_service }}
-      control_plane: ${{ steps.changes.outputs.control_plane }}
-      collector: ${{ steps.changes.outputs.collector }}
-      webapp: ${{ steps.changes.outputs.webapp }}
-
-  build-image:
-    needs: test
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      packages: write
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - service: api-gateway
-            output_key: api_gateway
-            dockerfile: ./src/OpenRussiaRouter.ApiGateway/Dockerfile
-          - service: auth-service
-            output_key: auth_service
-            dockerfile: ./src/OpenRussiaRouter.AuthService/Dockerfile
-          - service: billing-service
-            output_key: billing_service
-            dockerfile: ./src/OpenRussiaRouter.BillingService/Dockerfile
-          - service: control-plane
-            output_key: control_plane
-            dockerfile: ./src/OpenRussiaRouter.ControlPlane/Dockerfile
-          - service: collector
-            output_key: collector
-            dockerfile: ./src/OpenRussiaRouter.CollectorService/Dockerfile
-          - service: webapp
-            output_key: webapp
-            dockerfile: ./src/OpenRussiaRouter.WebApp/Dockerfile
-
-    steps:
-      - uses: actions/checkout@v5
-
-      - name: Check if service changed
-        id: check
-        shell: bash
-        run: |
           case "${{ matrix.output_key }}" in
-            api_gateway)     echo "changed=${{ needs.test.outputs.api_gateway }}" >> "$GITHUB_OUTPUT" ;;
-            auth_service)    echo "changed=${{ needs.test.outputs.auth_service }}" >> "$GITHUB_OUTPUT" ;;
-            billing_service) echo "changed=${{ needs.test.outputs.billing_service }}" >> "$GITHUB_OUTPUT" ;;
-            control_plane)   echo "changed=${{ needs.test.outputs.control_plane }}" >> "$GITHUB_OUTPUT" ;;
-            collector)       echo "changed=${{ needs.test.outputs.collector }}" >> "$GITHUB_OUTPUT" ;;
-            webapp)          echo "changed=${{ needs.test.outputs.webapp }}" >> "$GITHUB_OUTPUT" ;;
+            api_gateway)     echo "changed=$api_gateway" >> "$GITHUB_OUTPUT" ;;
+            auth_service)    echo "changed=$auth_service" >> "$GITHUB_OUTPUT" ;;
+            billing_service) echo "changed=$billing_service" >> "$GITHUB_OUTPUT" ;;
+            control_plane)   echo "changed=$control_plane" >> "$GITHUB_OUTPUT" ;;
+            collector)       echo "changed=$collector" >> "$GITHUB_OUTPUT" ;;
+            webapp)          echo "changed=$webapp" >> "$GITHUB_OUTPUT" ;;
           esac
 
       - name: Login to GHCR

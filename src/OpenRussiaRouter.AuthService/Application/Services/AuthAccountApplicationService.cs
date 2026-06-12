@@ -58,7 +58,7 @@ public sealed class AuthAccountApplicationService(
         }
         catch (ArgumentException)
         {
-            return RegisterResult.Failed(AuthErrorCodes.EmailAlreadyRegistered);
+            return RegisterResult.Failed(AuthErrorCodes.InvalidEmail);
         }
 
         if (await repository.GetUserByEmailAsync(normalizedEmail, ct).ConfigureAwait(false) is not null)
@@ -178,12 +178,15 @@ public sealed class AuthAccountApplicationService(
         }
     }
 
-    public async Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
+    public async Task DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default)
     {
         Preconditions.RequireValue(userId, nameof(userId));
         Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
 
-        return await repository.DisableApiKeyAsync(userId, apiKeyId, disabledAtUtc, ct).ConfigureAwait(false);
+        if (!await repository.DisableApiKeyAsync(userId, apiKeyId, disabledAtUtc, ct).ConfigureAwait(false))
+        {
+            throw new KeyNotFoundException("API key was not found or already disabled.");
+        }
     }
 
     public async Task EnableApiKeyAsync(string userId, string apiKeyId, CancellationToken ct = default)

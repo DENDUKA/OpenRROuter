@@ -12,6 +12,7 @@ public sealed class GoogleAuthService(IAuthRepository repository, ISecretGenerat
     public async Task<LoginResult> LoginOrRegisterWithGoogleAsync(
         string googleSub,
         string email,
+        DateTimeOffset nowUtc,
         CancellationToken ct = default)
     {
         var externalLogin = await repository.GetExternalLoginAsync("google", googleSub, ct);
@@ -36,7 +37,7 @@ public sealed class GoogleAuthService(IAuthRepository repository, ISecretGenerat
                     byEmail.Id,
                     "google",
                     googleSub,
-                    DateTimeOffset.UtcNow);
+                    nowUtc);
                 await repository.AddExternalLoginAsync(link, ct);
                 user = byEmail;
             }
@@ -46,19 +47,18 @@ public sealed class GoogleAuthService(IAuthRepository repository, ISecretGenerat
                     Guid.NewGuid().ToString("N"),
                     email,
                     UserRole.User,
-                    DateTimeOffset.UtcNow);
+                    nowUtc);
                 var newLogin = new ExternalLogin(
                     Guid.NewGuid().ToString("N"),
                     newUser.Id,
                     "google",
                     googleSub,
-                    DateTimeOffset.UtcNow);
+                    nowUtc);
                 await repository.AddUserWithExternalLoginAsync(newUser, newLogin, ct);
                 user = newUser;
             }
         }
 
-        var nowUtc = DateTimeOffset.UtcNow;
         var token = secretGenerator.Generate(SessionPrefix, 32);
         var session = new UserSession(token, user.Id, user.Role, nowUtc, nowUtc.Add(SessionLifetime));
         return LoginResult.Success(session);

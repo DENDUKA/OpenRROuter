@@ -30,4 +30,6 @@ public static class AuthErrorCodes
     public const string NoPendingVerification = "no_pending_verification";
 
     public const string ApiKeyLimitReached = "api_key_limit_reached";
+
+    public const string InvalidEmail = "invalid_email";
 }

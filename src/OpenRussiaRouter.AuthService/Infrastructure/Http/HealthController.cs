@@ -17,6 +17,6 @@ public class HealthController : ControllerBase
     public IActionResult Info() => Ok(new
     {
         service = "OpenRussiaRouter Auth Service",
-        contracts = new[] { "ValidateApiKey", "CreateInvite", "CompleteInvite", "CreateApiKey", "RevokeApiKey" }
+        contracts = new[] { "ValidateApiKey", "CreateInvite", "CompleteInvite", "CreateApiKey", "DisableApiKey" }
     });
 }

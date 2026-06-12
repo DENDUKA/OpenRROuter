@@ -127,6 +127,7 @@ public sealed class GrpcAuthService(
         var result = await googleAuthService.LoginOrRegisterWithGoogleAsync(
             request.GoogleSub,
             request.Email,
+            DateTimeOffset.UtcNow,
             context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         if (!result.Succeeded)
@@ -204,35 +205,27 @@ public sealed class GrpcAuthService(
         CreateApiKeyRequest request,
         ServerCallContext context)
     {
-        try
-        {
-            var result = await accounts.CreateApiKeyAsync(
-                request.UserId,
-                request.Name,
-                DateTimeOffset.UtcNow,
-                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var result = await accounts.CreateApiKeyAsync(
+            request.UserId,
+            request.Name,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
-            if (!result.Succeeded)
-            {
-                logger.LogWarning("CreateApiKey failed. UserId: {UserId}; Name: {Name}; Error: {Error}", request.UserId, request.Name, result.ErrorCode);
-                return new CreateApiKeyResponse { ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
-            }
-
-            return new CreateApiKeyResponse
-            {
-                IsCreated = true,
-                ApiKeyId = result.Created!.ApiKey.Id,
-                RawKey = result.Created.RawKey,
-                Prefix = result.Created.ApiKey.Prefix,
-                Name = result.Created.ApiKey.Name,
-                CreatedAtUnixTimeSeconds = result.Created.ApiKey.CreatedAtUtc.ToUnixTimeSeconds()
-            };
-        }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException)
+        if (!result.Succeeded)
         {
-            logger.LogWarning(ex, "CreateApiKey failed. UserId: {UserId}; Name: {Name}", request.UserId, request.Name);
-            return new CreateApiKeyResponse { ErrorCode = ErrorCodes.ValidationFailed };
+            logger.LogWarning("CreateApiKey failed. UserId: {UserId}; Name: {Name}; Error: {Error}", request.UserId, request.Name, result.ErrorCode);
+            return new CreateApiKeyResponse { ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
         }
+
+        return new CreateApiKeyResponse
+        {
+            IsCreated = true,
+            ApiKeyId = result.Created!.ApiKey.Id,
+            RawKey = result.Created.RawKey,
+            Prefix = result.Created.ApiKey.Prefix,
+            Name = result.Created.ApiKey.Name,
+            CreatedAtUnixTimeSeconds = result.Created.ApiKey.CreatedAtUtc.ToUnixTimeSeconds()
+        };
     }
 
     public override async Task<DisableApiKeyResponse> DisableApiKey(

@@ -17,7 +17,7 @@ public sealed class GoogleAuthServiceTests
     {
         var sut = new GoogleAuthService(_repo, _secretGenerator);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-new", "new@example.com");
+        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-new", "new@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         result.Session.Should().NotBeNull();
@@ -46,7 +46,7 @@ public sealed class GoogleAuthServiceTests
 
         var sut = new GoogleAuthService(_repo, _secretGenerator);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-existing", "existing@example.com");
+        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-existing", "existing@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         result.Session!.UserId.Should().Be("user-existing");
@@ -63,7 +63,7 @@ public sealed class GoogleAuthServiceTests
 
         var sut = new GoogleAuthService(_repo, _secretGenerator);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-invited", "invited@example.com");
+        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-invited", "invited@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         result.Session!.UserId.Should().Be("user-invited");
@@ -85,7 +85,7 @@ public sealed class GoogleAuthServiceTests
 
         var sut = new GoogleAuthService(_repo, _secretGenerator);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-disabled", "disabled@example.com");
+        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-disabled", "disabled@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeFalse();
         result.ErrorCode.Should().Be("user_disabled");
@@ -104,7 +104,7 @@ public sealed class GoogleAuthServiceTests
 
         var sut = new GoogleAuthService(_repo, _secretGenerator);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-gdisabled", "gdisabled@example.com");
+        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-gdisabled", "gdisabled@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeFalse();
         result.ErrorCode.Should().Be("user_disabled");

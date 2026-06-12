@@ -126,7 +126,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     {
         lock (_gate)
         {
-            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
+            var key = _apiKeys.SingleOrDefault(k => k.UserId == userId && k.Id == apiKeyId && k.IsActive);
             if (key is null) return Task.FromResult(false);
             key.Rename(name);
             return Task.FromResult(true);

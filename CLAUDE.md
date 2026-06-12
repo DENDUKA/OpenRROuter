@@ -117,6 +117,8 @@ Current migration counts: auth (6), billing (5), control (3).
 ```
 /login, /logout, /invite/{token}
 /signup, /verify-email     — Self-serve email+password signup + 6-digit code confirm
+/forgot-password           — Request a password-reset code (email)
+/reset-password            — Enter 6-digit code + new password
 /                          — Workspace Index (balance overview)
 /workspace/api-keys        — Create / rename / revoke API keys
 /workspace/activity        — Usage records table
@@ -286,7 +288,8 @@ kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
 
 | Area | Gap |
 |---|---|
-| WebApp `/workspace/settings` | Страница — пустая заглушка |
+| ~~WebApp `/workspace/settings`~~ | Реализовано: display currency + смена пароля |
+| ~~Password reset / lockout~~ | Реализовано: `/forgot-password` → 6-значный код на почту → `/reset-password`; смена пароля в Settings; login lockout (5 неудачных попыток → блокировка 15 мин, поля `failed_login_count`/`locked_until_utc` в `auth.users`, таблица `auth.password_resets`, миграция 011) |
 | ~~API key revoke → nodes~~ | Реализовано: маппинг в `control.integration_key_sync`, revoke деактивирует на нодах |
 | gRPC error interceptors | Нет structured gRPC error details (PLATFORM-002) |
 | Metrics / tracing | Нет OpenTelemetry, нет метрик request count/latency (PLATFORM-003) |

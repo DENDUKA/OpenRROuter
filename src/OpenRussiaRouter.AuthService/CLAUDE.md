@@ -26,6 +26,7 @@
 - **VerifyEmailAsync**: проверяет код через `EmailVerificationService.Check`; на `Confirmed` → `ActivateUserAndDeleteVerificationAsync` + `user.Activate()`. Коды ошибок: `CodeExpired`, `TooManyAttempts`, `InvalidCode`, `NoPendingVerification`.
 - **ResendVerificationAsync**: `Reissue` с кулдауном → `ResendCooldown` если рано.
 - **Инвайты** (admin-путь): `CreateInviteAsync` (хеш токена в БД), `CompleteInviteAsync` (резолв по `tokenHash`, создание пользователя + пометка инвайта использованным одной операцией).
+- **Пароли**: `RequestPasswordResetAsync` (6-значный код в `auth.password_resets`, та же механика `EmailVerificationService`; неизвестный email / внешний логин → `PasswordResetNotAvailable`, WebApp не раскрывает существование аккаунта), `ResetPasswordAsync` (код → новый хеш + сброс lockout + удаление reset-строки атомарно), `ChangePasswordAsync` (проверка текущего пароля). **Login lockout**: `LoginService` — 5 неудачных попыток → блокировка на 15 минут (`AccountLocked`); счётчики мутируются на `UserAccount`, персистит вызывающий через `UpdateLoginThrottleAsync` (см. `GrpcAuthService.Login`).
 - **API-ключи**: `CreateApiKeyAsync` требует `UserStatus.Active` и проверяет лимит `currentKeysCount >= user.MaxApiKeys` (бросает `InvalidOperationException`). `Rename`/`Revoke`/`Delete` бросают `KeyNotFoundException`, если не нашли. `Delete` работает только над уже отозванным ключом.
 
 ## Безопасность ([ApiKeyFactory.cs](Application/Services/ApiKeyFactory.cs), [EmailVerificationService.cs](Application/Services/EmailVerificationService.cs))

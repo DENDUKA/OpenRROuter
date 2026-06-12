@@ -11,6 +11,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
     private readonly List<ApiKey> _apiKeys = [];
     private readonly List<ExternalLogin> _externalLogins = [];
     private readonly Dictionary<string, EmailVerification> _emailVerifications = [];
+    private readonly Dictionary<string, EmailVerification> _passwordResets = [];
 
     public Task AddInviteAsync(Invite invite, CancellationToken ct = default)
     {
@@ -301,4 +302,65 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         }
         return Task.CompletedTask;
     }
+
+    public Task UpdateLoginThrottleAsync(string userId, int failedLoginCount, DateTimeOffset? lockedUntilUtc, CancellationToken ct = default)
+    {
+        // The in-memory store keeps live domain objects, so the mutated UserAccount
+        // already carries the new counters; nothing to copy.
+        return Task.CompletedTask;
+    }
+
+    public Task UpdatePasswordHashAsync(string userId, string passwordHash, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (_users.TryGetValue(userId, out var user))
+            {
+                _users[userId] = WithPasswordHash(user, passwordHash);
+            }
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task UpsertPasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+    {
+        lock (_gate) { _passwordResets[reset.UserId] = reset; }
+        return Task.CompletedTask;
+    }
+
+    public Task<EmailVerification?> GetPasswordResetAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_gate) { return Task.FromResult(_passwordResets.GetValueOrDefault(userId)); }
+    }
+
+    public Task UpdatePasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+    {
+        lock (_gate) { _passwordResets[reset.UserId] = reset; }
+        return Task.CompletedTask;
+    }
+
+    public Task UpdatePasswordAndDeleteResetAsync(string userId, string passwordHash, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (_users.TryGetValue(userId, out var user))
+            {
+                _users[userId] = WithPasswordHash(user, passwordHash);
+            }
+            _passwordResets.Remove(userId);
+        }
+        return Task.CompletedTask;
+    }
+
+    private static UserAccount WithPasswordHash(UserAccount user, string passwordHash) =>
+        UserAccount.Restore(
+            user.Id,
+            user.Email,
+            user.Role,
+            passwordHash,
+            user.Status,
+            user.CreatedAtUtc,
+            user.DisplayName,
+            user.MaxApiKeys,
+            user.DisplayCurrency);
 }

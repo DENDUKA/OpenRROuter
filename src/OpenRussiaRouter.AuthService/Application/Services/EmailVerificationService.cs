@@ -5,9 +5,9 @@ using OpenRussiaRouter.AuthService.Domain.Entities;
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
 /// <summary>
-/// Issues and checks the 6-digit codes used to confirm a self-serve signup's
-/// email address. The raw code is returned to the caller (so the WebApp can mail
-/// it) but only its SHA-256 hash is ever persisted.
+/// Issues and checks emailed 6-digit codes — signup email confirmation and
+/// password resets share this mechanic. The raw code is returned to the caller
+/// (so the WebApp can mail it) but only its SHA-256 hash is ever persisted.
 /// </summary>
 public sealed class EmailVerificationService(ISecretHasher secretHasher)
 {

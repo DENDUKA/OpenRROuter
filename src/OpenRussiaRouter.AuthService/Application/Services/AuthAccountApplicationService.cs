@@ -139,6 +139,115 @@ public sealed class AuthAccountApplicationService(
         return ResendVerificationResult.Success(user.Email, code);
     }
 
+    /// <summary>
+    /// Starts (or re-issues, subject to the resend cooldown) a password reset for an
+    /// account. The raw 6-digit code is returned so the caller can email it; only its
+    /// hash is persisted. Unknown emails and accounts without a password (external
+    /// login only) fail with <see cref="AuthErrorCodes.PasswordResetNotAvailable"/> —
+    /// the WebApp shows the same generic message either way, so account existence is
+    /// not disclosed.
+    /// </summary>
+    public async Task<PasswordResetRequestResult> RequestPasswordResetAsync(string email, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        string normalizedEmail;
+        try
+        {
+            normalizedEmail = EmailValidator.Normalize(email);
+        }
+        catch (ArgumentException)
+        {
+            return PasswordResetRequestResult.Failed(AuthErrorCodes.PasswordResetNotAvailable);
+        }
+
+        var user = await repository.GetUserByEmailAsync(normalizedEmail, ct).ConfigureAwait(false);
+        if (user is not { Status: UserStatus.Active } || user.PasswordHash is null)
+        {
+            return PasswordResetRequestResult.Failed(AuthErrorCodes.PasswordResetNotAvailable);
+        }
+
+        var existing = await repository.GetPasswordResetAsync(user.Id, ct).ConfigureAwait(false);
+        if (existing is not null && !existing.IsExpired(nowUtc))
+        {
+            var reissued = emailVerification.Reissue(existing, nowUtc);
+            if (reissued is null)
+            {
+                return PasswordResetRequestResult.Failed(AuthErrorCodes.ResendCooldown);
+            }
+
+            await repository.UpdatePasswordResetAsync(existing, ct).ConfigureAwait(false);
+            return PasswordResetRequestResult.Success(user.Email, reissued);
+        }
+
+        var issued = emailVerification.Create(user.Id, nowUtc);
+        await repository.UpsertPasswordResetAsync(issued.Verification, ct).ConfigureAwait(false);
+        return PasswordResetRequestResult.Success(user.Email, issued.RawCode);
+    }
+
+    /// <summary>
+    /// Completes a password reset: checks the emailed code and, on success, stores the
+    /// new password hash, clears the login lockout and deletes the pending reset.
+    /// </summary>
+    public async Task<PasswordChangeResult> ResetPasswordAsync(string email, string code, string newPassword, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < MinPasswordLength)
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.WeakPassword);
+        }
+
+        var user = await repository.GetUserByEmailAsync(email, ct).ConfigureAwait(false);
+        if (user is null)
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.NoPendingReset);
+        }
+
+        var reset = await repository.GetPasswordResetAsync(user.Id, ct).ConfigureAwait(false);
+        if (reset is null)
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.NoPendingReset);
+        }
+
+        switch (emailVerification.Check(reset, code, nowUtc))
+        {
+            case VerificationCheck.Confirmed:
+                await repository.UpdatePasswordAndDeleteResetAsync(user.Id, passwordHasher.HashPassword(newPassword), ct).ConfigureAwait(false);
+                return PasswordChangeResult.Success();
+
+            case VerificationCheck.Expired:
+                return PasswordChangeResult.Failed(AuthErrorCodes.CodeExpired);
+
+            case VerificationCheck.TooManyAttempts:
+                await repository.UpdatePasswordResetAsync(reset, ct).ConfigureAwait(false);
+                return PasswordChangeResult.Failed(AuthErrorCodes.TooManyAttempts);
+
+            default: // WrongCode
+                await repository.UpdatePasswordResetAsync(reset, ct).ConfigureAwait(false);
+                return PasswordChangeResult.Failed(AuthErrorCodes.InvalidCode);
+        }
+    }
+
+    /// <summary>Changes the password of a logged-in user after verifying the current one.</summary>
+    public async Task<PasswordChangeResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < MinPasswordLength)
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.WeakPassword);
+        }
+
+        var user = await repository.GetUserAsync(Preconditions.RequireValue(userId, nameof(userId)), ct).ConfigureAwait(false);
+        if (user is not { Status: UserStatus.Active })
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.UserDisabled);
+        }
+
+        if (user.PasswordHash is null || !passwordHasher.VerifyPassword(currentPassword, user.PasswordHash))
+        {
+            return PasswordChangeResult.Failed(AuthErrorCodes.InvalidCredentials);
+        }
+
+        await repository.UpdatePasswordHashAsync(user.Id, passwordHasher.HashPassword(newPassword), ct).ConfigureAwait(false);
+        return PasswordChangeResult.Success();
+    }
+
     public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, CancellationToken ct = default)
     {
         var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
@@ -250,6 +359,20 @@ public sealed record ResendVerificationResult(bool Succeeded, string? Email, str
     public static ResendVerificationResult Success(string email, string rawCode) => new(true, email, rawCode, null);
 
     public static ResendVerificationResult Failed(string errorCode) => new(false, null, null, errorCode);
+}
+
+public sealed record PasswordResetRequestResult(bool Succeeded, string? Email, string? RawCode, string? ErrorCode)
+{
+    public static PasswordResetRequestResult Success(string email, string rawCode) => new(true, email, rawCode, null);
+
+    public static PasswordResetRequestResult Failed(string errorCode) => new(false, null, null, errorCode);
+}
+
+public sealed record PasswordChangeResult(bool Succeeded, string? ErrorCode)
+{
+    public static PasswordChangeResult Success() => new(true, null);
+
+    public static PasswordChangeResult Failed(string errorCode) => new(false, errorCode);
 }
 
 

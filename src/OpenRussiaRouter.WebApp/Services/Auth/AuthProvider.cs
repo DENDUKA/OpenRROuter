@@ -47,6 +47,35 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         return response.VerificationCode;
     }
 
+    /// <summary>Starts a password reset; returns the normalized email and the raw 6-digit code to send by mail.</summary>
+    public async Task<(string Email, string Code)> RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
+    {
+        var response = await client.RequestPasswordResetAsync(new RequestPasswordResetRequest { Email = email }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+        return (response.Email, response.ResetCode);
+    }
+
+    public async Task ResetPasswordAsync(string email, string code, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var response = await client.ResetPasswordAsync(new ResetPasswordRequest { Email = email, Code = code, NewPassword = newPassword }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+    }
+
+    public async Task ChangePasswordAsync(string userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var response = await client.ChangePasswordAsync(new ChangePasswordRequest { UserId = userId, CurrentPassword = currentPassword, NewPassword = newPassword }, cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+        {
+            throw new AuthException(response.ErrorCode);
+        }
+    }
+
     public async Task<LoginResponse?> LoginOrRegisterWithGoogleAsync(string googleSub, string email, CancellationToken cancellationToken = default)
     {
         var response = await client.LoginOrRegisterWithGoogleAsync(

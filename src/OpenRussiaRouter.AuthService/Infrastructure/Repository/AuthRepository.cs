@@ -508,6 +508,99 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
+    public async Task UpdateLoginThrottleAsync(string userId, int failedLoginCount, DateTimeOffset? lockedUntilUtc, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.users
+            set failed_login_count = @FailedLoginCount,
+                locked_until_utc = @LockedUntilUtc
+            where id = @UserId;
+            """,
+            new { UserId = userId, FailedLoginCount = failedLoginCount, LockedUntilUtc = lockedUntilUtc },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task UpdatePasswordHashAsync(string userId, string passwordHash, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            PasswordUpdateSql,
+            new { UserId = userId, PasswordHash = passwordHash },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task UpsertPasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(reset);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into auth.password_resets
+                (user_id, code_hash, expires_at_utc, sent_at_utc, attempts)
+            values
+                (@UserId, @CodeHash, @ExpiresAtUtc, @SentAtUtc, @Attempts)
+            on conflict (user_id) do update
+            set code_hash = excluded.code_hash,
+                expires_at_utc = excluded.expires_at_utc,
+                sent_at_utc = excluded.sent_at_utc,
+                attempts = excluded.attempts;
+            """,
+            ToParameters(reset),
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<EmailVerification?> GetPasswordResetAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.QuerySingleOrDefaultAsync<EmailVerificationEntity>(new CommandDefinition(
+            PasswordResetSelectSql + " where user_id = @UserId;",
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false) is { } entity
+                ? AuthPersistenceMapper.ToDomain(entity)
+                : null;
+    }
+
+    public async Task UpdatePasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(reset);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update auth.password_resets
+            set code_hash = @CodeHash,
+                expires_at_utc = @ExpiresAtUtc,
+                sent_at_utc = @SentAtUtc,
+                attempts = @Attempts
+            where user_id = @UserId;
+            """,
+            ToParameters(reset),
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task UpdatePasswordAndDeleteResetAsync(string userId, string passwordHash, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            PasswordUpdateSql,
+            new { UserId = userId, PasswordHash = passwordHash },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "delete from auth.password_resets where user_id = @UserId;",
+            new { UserId = userId },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+    }
+
     private static object ToParameters(EmailVerification verification) => new
     {
         verification.UserId,
@@ -565,8 +658,18 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             created_at_utc as CreatedAtUtc,
             display_name as DisplayName,
             max_api_keys as MaxApiKeys,
-            display_currency as DisplayCurrency
+            display_currency as DisplayCurrency,
+            failed_login_count as FailedLoginCount,
+            locked_until_utc as LockedUntilUtc
         from auth.users
+        """;
+
+    private const string PasswordUpdateSql = """
+        update auth.users
+        set password_hash = @PasswordHash,
+            failed_login_count = 0,
+            locked_until_utc = null
+        where id = @UserId;
         """;
 
     private const string InviteSelectSql = """
@@ -605,6 +708,16 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             sent_at_utc as SentAtUtc,
             attempts as Attempts
         from auth.email_verifications
+        """;
+
+    private const string PasswordResetSelectSql = """
+        select
+            user_id as UserId,
+            code_hash as CodeHash,
+            expires_at_utc as ExpiresAtUtc,
+            sent_at_utc as SentAtUtc,
+            attempts as Attempts
+        from auth.password_resets
         """;
 
     private const string ExternalLoginSelectSql = """

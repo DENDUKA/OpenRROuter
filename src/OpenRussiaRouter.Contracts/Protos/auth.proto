@@ -26,6 +26,9 @@ service AuthService {
   rpc ListAllNonDeletedApiKeysRaw (ListAllNonDeletedApiKeysRawRequest) returns (ListAllNonDeletedApiKeysRawResponse);
   rpc GetUser (GetUserRequest) returns (GetUserResponse);
   rpc UpdateUser (UpdateUserRequest) returns (UpdateUserResponse);
+  rpc ChangePassword (ChangePasswordRequest) returns (ChangePasswordResponse);
+  rpc RequestPasswordReset (RequestPasswordResetRequest) returns (RequestPasswordResetResponse);
+  rpc ResetPassword (ResetPasswordRequest) returns (ResetPasswordResponse);
 }
 
 message ValidateApiKeyRequest {
@@ -274,6 +277,41 @@ message UpdateUserRequest {
 }
 
 message UpdateUserResponse {
+  bool succeeded = 1;
+  string error_code = 2;
+}
+
+message ChangePasswordRequest {
+  string user_id = 1;
+  string current_password = 2;
+  string new_password = 3;
+}
+
+message ChangePasswordResponse {
+  bool succeeded = 1;
+  string error_code = 2;
+}
+
+message RequestPasswordResetRequest {
+  string email = 1;
+}
+
+// reset_code is the raw 6-digit code for the caller (WebApp) to email; it is
+// never persisted in clear text.
+message RequestPasswordResetResponse {
+  bool succeeded = 1;
+  string email = 2;
+  string reset_code = 3;
+  string error_code = 4;
+}
+
+message ResetPasswordRequest {
+  string email = 1;
+  string code = 2;
+  string new_password = 3;
+}
+
+message ResetPasswordResponse {
   bool succeeded = 1;
   string error_code = 2;
 }

@@ -9,6 +9,14 @@ public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerato
 {
     private const string SessionPrefix = "orr_session";
 
+    public const int MaxFailedAttempts = 5;
+    public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// Verifies credentials and applies the brute-force lockout policy. Failed
+    /// password attempts and lockout state are mutated on <paramref name="user"/>;
+    /// the caller persists them (see <c>IAuthRepository.UpdateLoginThrottleAsync</c>).
+    /// </summary>
     public LoginResult Login(
         UserAccount? user,
         string password,
@@ -35,6 +43,11 @@ public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerato
             return LoginResult.Failed(AuthErrorCodes.EmailNotVerified);
         }
 
+        if (user.IsLockedOut(nowUtc))
+        {
+            return LoginResult.Failed(AuthErrorCodes.AccountLocked);
+        }
+
         if (user.PasswordHash is null)
         {
             return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
@@ -42,9 +55,11 @@ public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerato
 
         if (!passwordHasher.VerifyPassword(password, user.PasswordHash))
         {
-            return LoginResult.Failed(AuthErrorCodes.InvalidCredentials);
+            var locked = user.RegisterFailedLogin(nowUtc, MaxFailedAttempts, LockoutDuration);
+            return LoginResult.Failed(locked ? AuthErrorCodes.AccountLocked : AuthErrorCodes.InvalidCredentials);
         }
 
+        user.ResetLoginThrottle();
         return LoginResult.Success(IssueSession(user, nowUtc, sessionLifetime));
     }
 

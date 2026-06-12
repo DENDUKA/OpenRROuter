@@ -37,8 +37,17 @@ public sealed class GrpcAuthService(
         LoginRequest request,
         ServerCallContext context)
     {
-        var user = await repository.GetUserByEmailAsync(request.Email, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var user = await repository.GetUserByEmailAsync(request.Email, ct).ConfigureAwait(false);
+        var throttleBefore = (user?.FailedLoginCount, user?.LockedUntilUtc);
         var result = loginService.Login(user, request.Password, DateTimeOffset.UtcNow, TimeSpan.FromDays(7));
+
+        // LoginService mutates the failed-attempt counter / lockout on the entity;
+        // persist only when this attempt actually changed it.
+        if (user is not null && throttleBefore != (user.FailedLoginCount, user.LockedUntilUtc))
+        {
+            await repository.UpdateLoginThrottleAsync(user.Id, user.FailedLoginCount, user.LockedUntilUtc, ct).ConfigureAwait(false);
+        }
 
         if (!result.Succeeded)
             return new LoginResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.AuthenticationRequired };
@@ -436,6 +445,57 @@ public sealed class GrpcAuthService(
         {
             return new UpdateUserResponse { Succeeded = false, ErrorCode = ErrorCodes.ValidationFailed };
         }
+    }
+
+    public override async Task<ChangePasswordResponse> ChangePassword(
+        ChangePasswordRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.ChangePasswordAsync(
+            request.UserId,
+            request.CurrentPassword,
+            request.NewPassword,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        return result.Succeeded
+            ? new ChangePasswordResponse { Succeeded = true }
+            : new ChangePasswordResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+    }
+
+    public override async Task<RequestPasswordResetResponse> RequestPasswordReset(
+        RequestPasswordResetRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.RequestPasswordResetAsync(
+            request.Email,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        if (!result.Succeeded)
+            return new RequestPasswordResetResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
+
+        return new RequestPasswordResetResponse
+        {
+            Succeeded = true,
+            Email = result.Email,
+            ResetCode = result.RawCode
+        };
+    }
+
+    public override async Task<ResetPasswordResponse> ResetPassword(
+        ResetPasswordRequest request,
+        ServerCallContext context)
+    {
+        var result = await accounts.ResetPasswordAsync(
+            request.Email,
+            request.Code,
+            request.NewPassword,
+            DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+        return result.Succeeded
+            ? new ResetPasswordResponse { Succeeded = true }
+            : new ResetPasswordResponse { Succeeded = false, ErrorCode = result.ErrorCode ?? ErrorCodes.ValidationFailed };
     }
 
     private static UserRole ParseRole(string role)

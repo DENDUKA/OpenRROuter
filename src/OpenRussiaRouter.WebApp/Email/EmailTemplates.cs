@@ -40,4 +40,21 @@ public static class EmailTemplates
             "ignore this message.\n";
         return new EmailMessage(recipient, subject, body);
     }
+
+    /// <summary>
+    /// Password-reset code. <paramref name="code"/> is the 6-digit one-time code the
+    /// user types on the reset page.
+    /// </summary>
+    public static EmailMessage PasswordResetEmail(string recipient, string code)
+    {
+        const string subject = "Reset your OpenRussiaRouter password";
+        var body =
+            "Hello,\n\n" +
+            "We received a request to reset the password of your OpenRussiaRouter " +
+            "account. Use the code below to set a new password:\n\n" +
+            $"    {code}\n\n" +
+            "The code expires in 15 minutes. If you didn't request a password reset, " +
+            "you can ignore this message — your password will stay unchanged.\n";
+        return new EmailMessage(recipient, subject, body);
+    }
 }

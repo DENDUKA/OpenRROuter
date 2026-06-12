@@ -279,5 +279,48 @@ public sealed class AuthAccountApplicationServiceTests
             EmailVerifications.Remove(userId);
             return Task.CompletedTask;
         }
+
+        public Dictionary<string, EmailVerification> PasswordResets { get; } = new(StringComparer.Ordinal);
+
+        public Task UpdateLoginThrottleAsync(string userId, int failedLoginCount, DateTimeOffset? lockedUntilUtc, CancellationToken ct = default)
+            => Task.CompletedTask;
+
+        public Task UpdatePasswordHashAsync(string userId, string passwordHash, CancellationToken ct = default)
+        {
+            ReplacePasswordHash(userId, passwordHash);
+            return Task.CompletedTask;
+        }
+
+        public Task UpsertPasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+        {
+            PasswordResets[reset.UserId] = reset;
+            return Task.CompletedTask;
+        }
+
+        public Task<EmailVerification?> GetPasswordResetAsync(string userId, CancellationToken ct = default) =>
+            Task.FromResult(PasswordResets.GetValueOrDefault(userId));
+
+        public Task UpdatePasswordResetAsync(EmailVerification reset, CancellationToken ct = default)
+        {
+            PasswordResets[reset.UserId] = reset;
+            return Task.CompletedTask;
+        }
+
+        public Task UpdatePasswordAndDeleteResetAsync(string userId, string passwordHash, CancellationToken ct = default)
+        {
+            ReplacePasswordHash(userId, passwordHash);
+            PasswordResets.Remove(userId);
+            return Task.CompletedTask;
+        }
+
+        private void ReplacePasswordHash(string userId, string passwordHash)
+        {
+            if (Users.TryGetValue(userId, out var user))
+            {
+                Users[userId] = UserAccount.Restore(
+                    user.Id, user.Email, user.Role, passwordHash, user.Status, user.CreatedAtUtc,
+                    user.DisplayName, user.MaxApiKeys, user.DisplayCurrency);
+            }
+        }
     }
 }

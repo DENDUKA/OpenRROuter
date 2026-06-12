@@ -82,6 +82,76 @@ public sealed class LoginServiceTests
         result.ErrorCode.Should().Be("email_not_verified");
     }
 
+    [Fact]
+    public void Login_MaxFailedAttempts_LocksAccount()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = CreateUser("StrongPassword123!", now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+
+        string? lastError = null;
+        for (var i = 0; i < LoginService.MaxFailedAttempts; i++)
+        {
+            lastError = service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8)).ErrorCode;
+        }
+
+        lastError.Should().Be("account_locked");
+        user.IsLockedOut(now).Should().BeTrue();
+        user.LockedUntilUtc.Should().Be(now.Add(LoginService.LockoutDuration));
+    }
+
+    [Fact]
+    public void Login_LockedAccount_RejectsEvenCorrectPassword()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = CreateUser("StrongPassword123!", now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+        for (var i = 0; i < LoginService.MaxFailedAttempts; i++)
+        {
+            service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+        }
+
+        var result = service.Login(user, "StrongPassword123!", now.AddMinutes(1), TimeSpan.FromHours(8));
+
+        result.Succeeded.Should().BeFalse();
+        result.ErrorCode.Should().Be("account_locked");
+    }
+
+    [Fact]
+    public void Login_AfterLockoutExpires_SucceedsAndResetsThrottle()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = CreateUser("StrongPassword123!", now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+        for (var i = 0; i < LoginService.MaxFailedAttempts; i++)
+        {
+            service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+        }
+
+        var afterExpiry = now.Add(LoginService.LockoutDuration).AddSeconds(1);
+        var result = service.Login(user, "StrongPassword123!", afterExpiry, TimeSpan.FromHours(8));
+
+        result.Succeeded.Should().BeTrue();
+        user.FailedLoginCount.Should().Be(0);
+        user.LockedUntilUtc.Should().BeNull();
+    }
+
+    [Fact]
+    public void Login_SuccessAfterSomeFailures_ResetsCounter()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = CreateUser("StrongPassword123!", now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+        service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+        service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+
+        var result = service.Login(user, "StrongPassword123!", now, TimeSpan.FromHours(8));
+
+        result.Succeeded.Should().BeTrue();
+        user.FailedLoginCount.Should().Be(0);
+        user.LockedUntilUtc.Should().BeNull();
+    }
+
     private UserAccount CreateUser(string password, DateTimeOffset createdAtUtc)
     {
         return new UserAccount(

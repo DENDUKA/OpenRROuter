@@ -3,10 +3,11 @@ using OpenRussiaRouter.BuildingBlocks.Common;
 namespace OpenRussiaRouter.AuthService.Domain.Entities;
 
 /// <summary>
-/// A pending email-confirmation challenge for a self-serve signup. One row per
-/// not-yet-verified user; holds the SHA-256 hash of the 6-digit code (never the
-/// code itself), its expiry, when it was last sent (for resend cooldown), and the
-/// number of failed confirmation attempts.
+/// A pending emailed 6-digit-code challenge: signup email confirmation
+/// (auth.email_verifications) or a password reset (auth.password_resets) — same
+/// shape, different table. One row per user; holds the SHA-256 hash of the code
+/// (never the code itself), its expiry, when it was last sent (for resend
+/// cooldown), and the number of failed confirmation attempts.
 /// </summary>
 public sealed class EmailVerification
 {

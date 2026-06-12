@@ -51,3 +51,36 @@
         </form>
     </div>
 </div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">Change Password</div>
+    <div class="ws-panel-body">
+        @if (Model.PasswordMessage != null)
+        {
+            <div class="alert alert-success">@Model.PasswordMessage</div>
+        }
+        @if (Model.PasswordErrorMessage != null)
+        {
+            <div class="alert alert-danger">@Model.PasswordErrorMessage</div>
+        }
+        <form method="post" asp-page-handler="ChangePassword" style="max-width: 420px;">
+            <div class="mb-3">
+                <label class="form-label" asp-for="PasswordInput.CurrentPassword">Current password</label>
+                <input asp-for="PasswordInput.CurrentPassword" class="form-control" type="password" autocomplete="current-password" />
+                <span asp-validation-for="PasswordInput.CurrentPassword" class="validation-message"></span>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" asp-for="PasswordInput.NewPassword">New password</label>
+                <input asp-for="PasswordInput.NewPassword" class="form-control" type="password" autocomplete="new-password" />
+                <span asp-validation-for="PasswordInput.NewPassword" class="validation-message"></span>
+                <div class="text-muted mt-1" style="font-size: 13px;">At least 12 characters.</div>
+            </div>
+            <div class="mb-3">
+                <label class="form-label" asp-for="PasswordInput.ConfirmNewPassword">Confirm new password</label>
+                <input asp-for="PasswordInput.ConfirmNewPassword" class="form-control" type="password" autocomplete="new-password" />
+                <span asp-validation-for="PasswordInput.ConfirmNewPassword" class="validation-message"></span>
+            </div>
+            <button type="submit" class="btn btn-primary">Change password</button>
+        </form>
+    </div>
+</div>

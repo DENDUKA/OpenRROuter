@@ -21,4 +21,8 @@ public sealed class UserAccountEntity
     public string? PasswordHash { get; set; }
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public int FailedLoginCount { get; set; }
+
+    public DateTimeOffset? LockedUntilUtc { get; set; }
 }

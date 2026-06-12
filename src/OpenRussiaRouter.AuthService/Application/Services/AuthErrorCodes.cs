@@ -32,4 +32,10 @@ public static class AuthErrorCodes
     public const string ApiKeyLimitReached = "api_key_limit_reached";
 
     public const string InvalidEmail = "invalid_email";
+
+    public const string AccountLocked = "account_locked";
+
+    public const string PasswordResetNotAvailable = "password_reset_not_available";
+
+    public const string NoPendingReset = "no_pending_reset";
 }

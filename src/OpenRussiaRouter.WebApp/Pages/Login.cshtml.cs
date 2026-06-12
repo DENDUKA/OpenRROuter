@@ -79,6 +79,7 @@ public class LoginModel : PageModelBase
             {
                 "invalid_credentials" => "Invalid email or password.",
                 "user_disabled" => "Your account has been disabled.",
+                "account_locked" => "Too many failed attempts. The account is temporarily locked — try again in 15 minutes or reset your password.",
                 _ => "Login failed. Please try again."
             };
         }

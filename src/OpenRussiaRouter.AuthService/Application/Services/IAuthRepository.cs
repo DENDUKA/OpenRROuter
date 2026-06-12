@@ -59,4 +59,18 @@ public interface IAuthRepository
     Task UpdateEmailVerificationAsync(EmailVerification verification, CancellationToken ct = default);
 
     Task ActivateUserAndDeleteVerificationAsync(string userId, CancellationToken ct = default);
+
+    Task UpdateLoginThrottleAsync(string userId, int failedLoginCount, DateTimeOffset? lockedUntilUtc, CancellationToken ct = default);
+
+    /// <summary>Sets a new password hash and clears the login throttle.</summary>
+    Task UpdatePasswordHashAsync(string userId, string passwordHash, CancellationToken ct = default);
+
+    Task UpsertPasswordResetAsync(EmailVerification reset, CancellationToken ct = default);
+
+    Task<EmailVerification?> GetPasswordResetAsync(string userId, CancellationToken ct = default);
+
+    Task UpdatePasswordResetAsync(EmailVerification reset, CancellationToken ct = default);
+
+    /// <summary>Sets the new password hash, clears the login throttle and removes the pending reset, atomically.</summary>
+    Task UpdatePasswordAndDeleteResetAsync(string userId, string passwordHash, CancellationToken ct = default);
 }

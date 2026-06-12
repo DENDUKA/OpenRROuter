@@ -23,6 +23,7 @@
             <label asp-for="Input.Password" class="form-label">Password</label>
             <input asp-for="Input.Password" class="form-control" type="password" autocomplete="current-password" />
             <span asp-validation-for="Input.Password" class="validation-message"></span>
+            <div class="forgot-link"><a href="/forgot-password">Forgot password?</a></div>
         </div>
         <button type="submit" class="btn btn-primary w-100">Login</button>
     </form>
@@ -40,5 +41,6 @@
     .auth-title { font-size: 38px; font-weight: 400; color: var(--color-ink); }
     .form-group { margin-bottom: var(--spacing-lg); }
     .auth-divider { text-align: center; margin: var(--spacing-lg) 0; color: var(--color-body-mid); font-size: 13px; }
+    .forgot-link { text-align: right; margin-top: var(--spacing-xs); font-size: 13px; }
     .auth-alt { text-align: center; margin-top: var(--spacing-lg); color: var(--color-body-mid); font-size: 13px; }
 </style>

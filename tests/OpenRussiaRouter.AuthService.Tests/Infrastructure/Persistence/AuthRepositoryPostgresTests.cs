@@ -40,9 +40,11 @@ public sealed class AuthRepositoryPostgresTests
             DateTimeOffset.UtcNow.AddDays(1),
             "admin-1",
             DateTimeOffset.UtcNow);
-        invite.MarkUsed(DateTimeOffset.UtcNow);
 
+        // The invite row must be stored unused: AddUserAndMarkInviteUsedAsync only
+        // updates rows where used_at_utc is still null.
         await repository.AddInviteAsync(invite);
+        invite.MarkUsed(DateTimeOffset.UtcNow);
         await repository.AddUserAndMarkInviteUsedAsync(user, invite);
 
         var created = await repository.GetUserAsync(user.Id);
@@ -143,5 +145,58 @@ public sealed class AuthRepositoryPostgresTests
         Assert.NotNull(connection.ExecuteScalar<DateTime?>("select deleted_at_utc from auth.api_keys limit 1;"));
         var listed = await service.ListApiKeysAsync(user.Id);
         listed.Should().BeEmpty();
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task PasswordResetAndLoginThrottle_RoundTripThroughPostgres()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        var connectionString = database.ConnectionString;
+        database.ApplyAuthMigration();
+        database.TruncateAuth();
+        var repository = new AuthRepository(new AuthDbConnectionFactory(connectionString));
+        var passwordHasher = new Pbkdf2PasswordHasher();
+        var now = DateTimeOffset.UtcNow;
+        var user = new UserAccount(
+            "reset-user",
+            "reset@example.com",
+            UserRole.User,
+            passwordHasher.HashPassword("StrongPassword123!"),
+            now);
+        var invite = new Invite("reset-invite", user.Email, UserRole.User, "token-hash", now.AddDays(1), "admin-1", now);
+        await repository.AddInviteAsync(invite);
+        invite.MarkUsed(now);
+        await repository.AddUserAndMarkInviteUsedAsync(user, invite);
+
+        // Login throttle fields persist and read back.
+        var lockedUntil = now.AddMinutes(15);
+        await repository.UpdateLoginThrottleAsync(user.Id, 3, lockedUntil);
+        var throttled = await repository.GetUserAsync(user.Id);
+        throttled!.FailedLoginCount.Should().Be(3);
+        throttled.LockedUntilUtc.Should().BeCloseTo(lockedUntil, TimeSpan.FromSeconds(1));
+
+        // Password reset row upserts (create + replace) and reads back.
+        var reset = new EmailVerification(user.Id, "hash-1", now.AddMinutes(15), now);
+        await repository.UpsertPasswordResetAsync(reset);
+        var reissued = new EmailVerification(user.Id, "hash-2", now.AddMinutes(30), now.AddMinutes(1), attempts: 2);
+        await repository.UpsertPasswordResetAsync(reissued);
+        var stored = await repository.GetPasswordResetAsync(user.Id);
+        stored!.CodeHash.Should().Be("hash-2");
+        stored.Attempts.Should().Be(2);
+
+        // Completing the reset swaps the hash, clears the throttle and removes the row atomically.
+        var newHash = passwordHasher.HashPassword("EvenStrongerPassword456!");
+        await repository.UpdatePasswordAndDeleteResetAsync(user.Id, newHash);
+        var updated = await repository.GetUserAsync(user.Id);
+        updated!.PasswordHash.Should().Be(newHash);
+        updated.FailedLoginCount.Should().Be(0);
+        updated.LockedUntilUtc.Should().BeNull();
+        (await repository.GetPasswordResetAsync(user.Id)).Should().BeNull();
     }
 }

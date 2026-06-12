@@ -23,7 +23,8 @@ public static class Startup
 
         services.AddOptions<CollectorOptions>()
             .Bind(configuration.GetSection("Collector"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddSingleton(TimeProvider.System);
         services.AddSingleton<CollectorSnapshotStore>();
@@ -69,7 +70,8 @@ public static class Startup
         services.AddSingleton<OpenRouterCatalogStore>();
         services.AddOptions<OpenRouterCatalogOptions>()
             .Bind(configuration.GetSection("OpenRouter"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddHttpClient<OpenRouterCatalogClient>(c =>
             c.BaseAddress = new Uri(configuration["OpenRouter:BaseUrl"] ?? "https://openrouter.ai/"));
         services.AddHostedService<OpenRouterCatalogPoller>();

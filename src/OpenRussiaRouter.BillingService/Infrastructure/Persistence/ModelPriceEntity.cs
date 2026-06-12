@@ -17,6 +17,8 @@ public sealed class ModelPriceEntity
     public string? Description { get; set; }
     public int? ContextLength { get; set; }
     public string? Modalities { get; set; }
+    public string? InputModalities { get; set; }
+    public string? OutputModalities { get; set; }
     public string? DescriptionSource { get; set; }
     public string[]? TagIds { get; set; }
     public string? Provider { get; set; }

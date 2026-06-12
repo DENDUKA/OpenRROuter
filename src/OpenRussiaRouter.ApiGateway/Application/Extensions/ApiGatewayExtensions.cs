@@ -23,12 +23,15 @@ public static class ApiGatewayExtensions
 
     public static IServiceCollection AddGatewayGrpcClients(this IServiceCollection services, IConfiguration configuration)
     {
-        services.Configure<GatewayGrpcOptions>(options =>
-        {
-            options.Auth = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
-            options.Billing = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
-            options.ControlPlane = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
-        });
+        services.AddOptions<GatewayGrpcOptions>()
+            .Configure(options =>
+            {
+                options.Auth = configuration["GrpcServices:Auth"] ?? "http://localhost:5001";
+                options.Billing = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
+                options.ControlPlane = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
+            })
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.Configure<GatewayHttpClientOptions>(options =>
         {
             options.PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan;

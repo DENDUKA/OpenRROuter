@@ -20,17 +20,21 @@ public static class Startup
 
         services.AddOptions<RouterHealthCheckOptions>()
             .Bind(configuration.GetSection("RouterHealthChecks"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<RouterNodeProviderCacheOptions>()
             .Bind(configuration.GetSection("RouterNodeProviderCache"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddOptions<RouterLeaseCleanupOptions>()
             .Bind(configuration.GetSection("RouterLeaseCleanup"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         services.AddOptions<CapabilityReplicaOptions>()
             .Bind(configuration.GetSection("CapabilityReplica"))
-            .ValidateDataAnnotations();
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
 
         var grpcCallDeadline = TimeSpan.FromSeconds(
             configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));

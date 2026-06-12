@@ -115,12 +115,42 @@
                         <input asp-for="Form.ContextLength" class="form-control" type="number" min="0" placeholder="e.g. 131072" />
                     </div>
                     <div class="form-group">
-                        <label asp-for="Form.Modalities" class="form-label">Modalities</label>
+                        <label asp-for="Form.Modalities" class="form-label">Modalities <small class="text-muted">(legacy)</small></label>
                         <input asp-for="Form.Modalities" class="form-control" placeholder="e.g. text, image" />
                     </div>
                     <div class="form-group">
                         <label asp-for="Form.Provider" class="form-label">Provider</label>
                         <input asp-for="Form.Provider" class="form-control" placeholder="e.g. OpenAI" />
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Input Modalities</label>
+                        <div class="modality-checks" id="inputModalitiesChecks">
+                            @foreach (var mod in Model.ModalityTypes)
+                            {
+                                var isChecked = (Model.Form.InputModalities ?? "").Contains(mod, StringComparison.OrdinalIgnoreCase);
+                                <label class="modality-check">
+                                    <input type="checkbox" data-modality="@mod" data-target="InputModalities" @(isChecked ? "checked" : "") onchange="syncModalityChecks(this)" />
+                                    <span class="modality-icon">@Html.Raw(Admin.ModelsModel.ModalityIcon(mod))</span> @mod
+                                </label>
+                            }
+                        </div>
+                        <input type="hidden" asp-for="Form.InputModalities" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Output Modalities</label>
+                        <div class="modality-checks" id="outputModalitiesChecks">
+                            @foreach (var mod in Model.ModalityTypes)
+                            {
+                                var isChecked = (Model.Form.OutputModalities ?? "").Contains(mod, StringComparison.OrdinalIgnoreCase);
+                                <label class="modality-check">
+                                    <input type="checkbox" data-modality="@mod" data-target="OutputModalities" @(isChecked ? "checked" : "") onchange="syncModalityChecks(this)" />
+                                    <span class="modality-icon">@Html.Raw(Admin.ModelsModel.ModalityIcon(mod))</span> @mod
+                                </label>
+                            }
+                        </div>
+                        <input type="hidden" asp-for="Form.OutputModalities" />
                     </div>
                 </div>
                 <div class="adm-form-row adm-enrich-row">
@@ -320,9 +350,23 @@
 <style>
     .copy-btn:hover { color: var(--color-primary); }
     .adm-enrich-row { display: flex; gap: 1rem; align-items: flex-end; }
+    .modality-checks { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .modality-check { display: inline-flex; align-items: center; gap: 0.3rem; padding: 4px 10px; border: 1px solid var(--color-hairline); border-radius: var(--radius-pill); cursor: pointer; font-size: 13px; user-select: none; transition: background .15s, border-color .15s; }
+    .modality-check:has(input:checked) { background: var(--color-canvas-card); border-color: var(--color-ink); }
+    .modality-check input { display: none; }
+    .modality-icon { display: inline-flex; align-items: center; }
 </style>
 
 <script>
+    function syncModalityChecks(checkbox) {
+        const target = checkbox.dataset.target;
+        const group = checkbox.closest('.modality-checks');
+        const hidden = group.parentElement.querySelector('input[type="hidden"]');
+        const checked = Array.from(group.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => cb.dataset.modality);
+        hidden.value = checked.join(', ');
+    }
+
     (() => {
         const supports = document.getElementById('supportsReasoning');
         const allowed = document.getElementById('allowedReasoningEfforts');
@@ -361,4 +405,8 @@
         effortBoxes.forEach(box => box.addEventListener('change', syncReasoningControls));
         syncReasoningControls();
     })();
+
+    document.querySelectorAll('.modality-checks').forEach(group => {
+        group.querySelectorAll('input[type="checkbox"]').forEach(cb => syncModalityChecks(cb));
+    });
 </script>

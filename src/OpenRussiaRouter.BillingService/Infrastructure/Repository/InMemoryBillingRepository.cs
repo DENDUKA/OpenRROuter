@@ -54,6 +54,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository
                 Description = model.Description ?? existing.Description,
                 ContextLength = model.ContextLength ?? existing.ContextLength,
                 Modalities = model.Modalities ?? existing.Modalities,
+                InputModalities = model.InputModalities ?? existing.InputModalities,
+                OutputModalities = model.OutputModalities ?? existing.OutputModalities,
                 DescriptionSource = existing.DescriptionSource
             };
         }

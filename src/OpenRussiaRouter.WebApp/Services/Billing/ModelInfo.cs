@@ -12,6 +12,8 @@ public sealed record ModelInfo(
     string? Description = null,
     int? ContextLength = null,
     string? Modalities = null,
+    string? InputModalities = null,
+    string? OutputModalities = null,
     string? DescriptionSource = null,
     string? Provider = null,
     IReadOnlyList<string>? TagIds = null,

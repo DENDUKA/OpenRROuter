@@ -29,11 +29,14 @@ public static class BillingServiceExtensions
     public static IServiceCollection AddBillingApplicationServices(this IServiceCollection services)
     {
         services.AddSingleton<IUsageCostCalculator, UsageCostCalculator>();
-        services.Configure<BillingPaginationOptions>(options =>
-        {
-            options.DefaultPageSize = 1000;
-            options.MaxPageSize = 5000;
-        });
+        services.AddOptions<BillingPaginationOptions>()
+            .Configure(options =>
+            {
+                options.DefaultPageSize = 1000;
+                options.MaxPageSize = 5000;
+            })
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
         services.AddSingleton<BillingApplicationService>();
 
         return services;

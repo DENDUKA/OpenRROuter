@@ -30,6 +30,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
     public IReadOnlyList<string> ReasoningEfforts { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
+    public IReadOnlyList<string> ModalityTypes { get; } = ["text", "image", "audio", "video"];
 
     /// <summary>Set when per-model enrich could not auto-match — UI prompts for an explicit OpenRouter id.</summary>
     public bool EnrichNotFound { get; set; }
@@ -76,6 +77,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         Description = m.Description,
                         ContextLength = m.ContextLength,
                         Modalities = m.Modalities,
+                        InputModalities = m.InputModalities,
+                        OutputModalities = m.OutputModalities,
                         Provider = m.Provider,
                         TagIds = m.TagIds?.ToList() ?? [],
                         SupportsReasoning = m.SupportsReasoning,
@@ -147,6 +150,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
                 ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
                 Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
+                InputModalities: string.IsNullOrWhiteSpace(Form.InputModalities) ? null : Form.InputModalities.Trim(),
+                OutputModalities: string.IsNullOrWhiteSpace(Form.OutputModalities) ? null : Form.OutputModalities.Trim(),
                 DescriptionSource: DetermineSource(orig, Form),
                 Provider: string.IsNullOrWhiteSpace(Form.Provider) ? null : Form.Provider.Trim(),
                 TagIds: Form.TagIds,
@@ -227,6 +232,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     Description = match.Description,
                     ContextLength = match.ContextLength,
                     Modalities = match.Modalities,
+                    InputModalities = match.InputModalities,
+                    OutputModalities = match.OutputModalities,
                     Provider = string.IsNullOrWhiteSpace(model.Provider) ? match.Provider : model.Provider,
                     DescriptionSource = "openrouter"
                 };
@@ -294,6 +301,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             Form.Description = match.Description;
             Form.ContextLength = match.ContextLength;
             Form.Modalities = match.Modalities;
+            Form.InputModalities = match.InputModalities;
+            Form.OutputModalities = match.OutputModalities;
             if (!string.IsNullOrWhiteSpace(match.Provider))
                 Form.Provider = match.Provider;
 
@@ -377,8 +386,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         var descChanged = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
         var contextChanged = (form.ContextLength ?? 0) != (orig?.ContextLength ?? 0);
         var modalChanged = (form.Modalities?.Trim() ?? string.Empty) != (orig?.Modalities ?? string.Empty);
+        var inputModalChanged = (form.InputModalities?.Trim() ?? string.Empty) != (orig?.InputModalities ?? string.Empty);
+        var outputModalChanged = (form.OutputModalities?.Trim() ?? string.Empty) != (orig?.OutputModalities ?? string.Empty);
 
-        return descChanged || contextChanged || modalChanged
+        return descChanged || contextChanged || modalChanged || inputModalChanged || outputModalChanged
             ? "manual"
             : orig?.DescriptionSource;
     }
@@ -443,10 +454,21 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? Description { get; set; }
         public int? ContextLength { get; set; }
         public string? Modalities { get; set; }
+        public string? InputModalities { get; set; }
+        public string? OutputModalities { get; set; }
         public string? Provider { get; set; }
         public List<string> TagIds { get; set; } = [];
         public bool SupportsReasoning { get; set; }
         public List<string> AllowedReasoningEfforts { get; set; } = [];
         public string? DefaultReasoningEffort { get; set; }
     }
+
+    public static string ModalityIcon(string modality) => modality.ToLowerInvariant() switch
+    {
+        "text" => "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z\"/><polyline points=\"14 2 14 8 20 8\"/><line x1=\"16\" y1=\"13\" x2=\"8\" y2=\"13\"/><line x1=\"16\" y1=\"17\" x2=\"8\" y2=\"17\"/></svg>",
+        "image" => "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\" ry=\"2\"/><circle cx=\"8.5\" cy=\"8.5\" r=\"1.5\"/><polyline points=\"21 15 16 10 5 21\"/></svg>",
+        "audio" => "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 18V5l12-2v13\"/><circle cx=\"6\" cy=\"18\" r=\"3\"/><circle cx=\"18\" cy=\"16\" r=\"3\"/></svg>",
+        "video" => "<svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polygon points=\"23 7 16 12 23 17 23 7\"/><rect x=\"1\" y=\"5\" width=\"15\" height=\"14\" rx=\"2\" ry=\"2\"/></svg>",
+        _ => $"<span style=\"font-size:12px\">{modality}</span>"
+    };
 }

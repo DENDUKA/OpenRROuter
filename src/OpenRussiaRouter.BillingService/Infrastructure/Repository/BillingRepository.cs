@@ -89,7 +89,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model_id, display_name, router_model_id, price_version,
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
-                description, context_length, modalities, description_source,
+                description, context_length, modalities, input_modalities, output_modalities, description_source,
                 tag_ids, provider,
                 supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort
             )
@@ -97,7 +97,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
-                @Description, @ContextLength, @Modalities, @DescriptionSource,
+                @Description, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider,
                 @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort
             )
@@ -130,6 +130,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                     THEN excluded.modalities
                     ELSE COALESCE(excluded.modalities, billing.model_prices.modalities)
                 END,
+                input_modalities = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.input_modalities
+                    ELSE COALESCE(excluded.input_modalities, billing.model_prices.input_modalities)
+                END,
+                output_modalities = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.output_modalities
+                    ELSE COALESCE(excluded.output_modalities, billing.model_prices.output_modalities)
+                END,
                 description_source = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description_source
@@ -150,6 +160,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model.Description,
                 model.ContextLength,
                 model.Modalities,
+                model.InputModalities,
+                model.OutputModalities,
                 model.DescriptionSource,
                 model.Provider,
                 TagIds = model.TagIds?.ToArray() ?? [],
@@ -1189,6 +1201,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             description as Description,
             context_length as ContextLength,
             modalities as Modalities,
+            input_modalities as InputModalities,
+            output_modalities as OutputModalities,
             description_source as DescriptionSource,
             tag_ids as TagIds,
             provider as Provider,

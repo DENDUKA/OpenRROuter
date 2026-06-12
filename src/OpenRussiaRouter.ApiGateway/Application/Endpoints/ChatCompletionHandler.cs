@@ -267,13 +267,20 @@ public sealed class ChatCompletionHandler(
         DateTimeOffset startedAt,
         DateTimeOffset completedAt)
     {
-        _ = billingProvider.RecordUsageAsync(
-            new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
-                modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
-                providerName, providerAccount),
-            CancellationToken.None)
-            .ContinueWith(
-                t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
-                TaskContinuationOptions.OnlyOnFaulted);
+        try
+        {
+            _ = billingProvider.RecordUsageAsync(
+                new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
+                    modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
+                    providerName, providerAccount),
+                CancellationToken.None)
+                .ContinueWith(
+                    t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
+                    TaskContinuationOptions.OnlyOnFaulted);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to submit usage recording. RequestId: {RequestId}", requestId);
+        }
     }
 }

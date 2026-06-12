@@ -35,6 +35,8 @@ public sealed record OpenRouterMatchResult(
     string? Description,
     int? ContextLength,
     string? Modalities,
+    string? InputModalities,
+    string? OutputModalities,
     string? Provider,
     decimal? InputPrice,
     decimal? OutputPrice,

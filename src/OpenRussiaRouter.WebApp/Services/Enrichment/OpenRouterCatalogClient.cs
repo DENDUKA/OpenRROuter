@@ -109,6 +109,8 @@ public sealed class OpenRouterCatalogClient(
             string.IsNullOrWhiteSpace(match.Description) ? null : match.Description.Trim(),
             match.ContextLength is > 0 ? match.ContextLength : null,
             FormatModalities(match.InputModalities),
+            FormatModalities(match.InputModalities),
+            "text",
             ParseProvider(match),
             PerMillion(pricing?.Prompt),
             PerMillion(pricing?.Completion),

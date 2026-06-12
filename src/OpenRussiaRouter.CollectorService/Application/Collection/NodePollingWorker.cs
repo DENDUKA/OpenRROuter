@@ -114,12 +114,12 @@ public sealed class NodePollingWorker(
                 {
                     var quota = FindModelSpecificQuota(connectionQuotas, activeModel, observation)
                         ?? connectionQuotas.FirstOrDefault(measurement => measurement.ModelIds.Count == 0);
-                    if (quota?.Percent is not { } percent)
-                        continue;
+                    var percent = quota?.Percent ?? connectionQuotas.Average(measurement => measurement.Percent!.Value);
+                    var provider = ResolveProvider(observation.Provider, quota?.Provider ?? connectionQuotas[0].Provider);
 
                     measurements.Add(new ActiveModelQuotaMeasurement(
                         nodeCatalog.NodeId,
-                        ResolveProvider(observation.Provider, quota.Provider),
+                        provider,
                         observation.ConnectionId,
                         activeModel.ModelId,
                         activeModel.RouterModelId,

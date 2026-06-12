@@ -241,6 +241,54 @@ public class NodePollingWorkerTests
     }
 
     [Fact]
+    public async Task RunOnceAsync_AppliesProviderSummary_WhenNestedQuotasAreNotModelIds()
+    {
+        var nodes = SuccessfulNodeList();
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProvidersWithModelsResponse
+            {
+                Connections =
+                [
+                    new NodeProviderWithModels
+                    {
+                        Id = "c1",
+                        Provider = "codex",
+                        IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "gpt", PublicId = "router/gpt", Enabled = true }]
+                    }
+                ]
+            });
+
+        using var usage = System.Text.Json.JsonDocument.Parse("""
+        {
+            "quotas": {
+                "session": { "remaining": 40, "total": 100, "remainingPercentage": 40 },
+                "weekly": { "remaining": 60, "total": 100, "remainingPercentage": 60 }
+            }
+        }
+        """);
+        client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProviderQuotaResponse
+            {
+                Providers = [new NodeProviderQuotaEntry { ConnectionId = "c1", Provider = "codex", Usage = usage.RootElement.Clone() }]
+            });
+
+        var quotaStore = new QuotaSnapshotStore();
+        var worker = new NodePollingWorker(
+            nodes.Object, Collector(client.Object), QuotaCollector(client.Object),
+            ActiveModels([new ActiveBillingModel("ORR/GPT", "router/gpt")]),
+            new CollectorSnapshotStore(), quotaStore, Options.Create(new CollectorOptions()).ToMonitor(),
+            NullLogger<NodePollingWorker>.Instance, TimeProvider.System);
+
+        await worker.RunOnceAsync(CancellationToken.None);
+
+        quotaStore.Current.ActiveModelMeasurements.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new ActiveModelQuotaMeasurement(
+                "n1", "codex", "c1", "ORR/GPT", "router/gpt", 50d));
+    }
+
+    [Fact]
     public async Task RunOnceAsync_PublishesSeparateSeries_ForSameActiveModelOnTwoNodes()
     {
         var nodes = new Mock<INodeListProvider>();

@@ -1,9 +1,10 @@
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-public sealed class ApiKeyFactory(Sha256SecretHasher secretHasher, ISecretGenerator secretGenerator)
+public sealed class ApiKeyFactory(ISecretHasher secretHasher, ISecretGenerator secretGenerator)
 {
     private const string ApiKeyPrefix = "sk-or";
     private const int VisiblePrefixLength = 12;

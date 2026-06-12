@@ -477,7 +477,6 @@ public sealed class GrpcRouterControlPlaneService(
             Status = (node.Enabled ? node.Status : RouterNodeStatus.Disabled).ToString(),
             InFlightRequests = node.InFlightRequests,
             LastCheckedAtUtc = node.LastCheckedAtUtc?.ToString("O") ?? string.Empty,
-            ControlToken = node.ControlToken,
             CapacityWeight = node.CapacityWeight,
             LastHealthErrorCode = node.LastHealthErrorCode ?? string.Empty
         };

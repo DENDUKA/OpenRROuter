@@ -230,62 +230,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
-    public async Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default)
-    {
-        ArgumentNullException.ThrowIfNull(record);
-        using var connection = connectionFactory.CreateConnection();
-        return BillingPersistenceMapper.ToDomain(await connection.QueryFirstAsync<UsageRecordEntity>(new CommandDefinition(
-            """
-            with ins as (
-                insert into billing.usage_records
-                    (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
-                     input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc,
-                     provider_name, provider_account)
-                values
-                    (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
-                     @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
-                     @ProviderName, @ProviderAccount)
-                on conflict (request_id) do nothing
-                returning *
-            )
-            select request_id as RequestId, user_id as UserId, api_key_id as ApiKeyId, model_id as ModelId,
-                   price_version as PriceVersion, router_node_id as RouterNodeId,
-                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
-                   cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
-                   created_at_utc as CreatedAtUtc, provider_name as ProviderName, provider_account as ProviderAccount
-            from ins
-            union all
-            select request_id as RequestId, user_id as UserId, api_key_id as ApiKeyId, model_id as ModelId,
-                   price_version as PriceVersion, router_node_id as RouterNodeId,
-                   input_tokens as InputTokens, output_tokens as OutputTokens, cache_tokens as CacheTokens,
-                   cost_amount as CostAmount, cost_currency as CostCurrency, status as Status,
-                   created_at_utc as CreatedAtUtc, provider_name as ProviderName, provider_account as ProviderAccount
-            from billing.usage_records
-            where request_id = @RequestId
-              and not exists (select 1 from ins)
-            limit 1;
-            """,
-            new
-            {
-                record.RequestId,
-                record.UserId,
-                record.ApiKeyId,
-                record.ModelId,
-                record.PriceVersion,
-                record.RouterNodeId,
-                record.Usage.InputTokens,
-                record.Usage.OutputTokens,
-                record.Usage.CacheTokens,
-                CostAmount = record.Cost.Amount,
-                CostCurrency = record.Cost.Currency.ToString(),
-                record.Status,
-                record.CreatedAtUtc,
-                ProviderName = record.ProviderName ?? (object)DBNull.Value,
-                ProviderAccount = record.ProviderAccount ?? (object)DBNull.Value
-            },
-            cancellationToken: ct)).ConfigureAwait(false));
-    }
-
     public async Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -874,21 +818,6 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return entity is null ? null : BillingPersistenceMapper.ToDomain(entity);
     }
 
-    public async Task<Payment?> FindPaymentAsync(string provider, string? providerPaymentId, string? orderId, CancellationToken ct = default)
-    {
-        using var connection = connectionFactory.CreateConnection();
-        var entity = await connection.QuerySingleOrDefaultAsync<PaymentEntity>(new CommandDefinition(
-            PaymentSelectSql + """
-            where provider=@Provider and
-                ((@ProviderPaymentId is not null and provider_payment_id=@ProviderPaymentId)
-                 or (@OrderId is not null and order_id=@OrderId))
-            limit 1;
-            """,
-            new { Provider = provider, ProviderPaymentId = providerPaymentId, OrderId = orderId },
-            cancellationToken: ct)).ConfigureAwait(false);
-        return entity is null ? null : BillingPersistenceMapper.ToDomain(entity);
-    }
-
     public async Task<(IReadOnlyCollection<Payment> Items, bool HasMore)> ListPaymentsAsync(string userId, int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -1133,7 +1062,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var updated = await connection.QuerySingleAsync<PaymentEntity>(new CommandDefinition(
             PaymentSelectSql + "where id=@Id;", new { Id = eventRow.PaymentId }, transaction, cancellationToken: ct)).ConfigureAwait(false);
         string? ledgerId = null;
-        if (target == PaymentStatus.Refunded || target == PaymentStatus.ChargedBack && autoReverseChargeback)
+        if (target == PaymentStatus.Refunded || (target == PaymentStatus.ChargedBack && autoReverseChargeback))
         {
             var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
             ledgerId = await InsertLedgerAsync(connection, transaction, updated, prefix, LedgerEntryType.Correction,

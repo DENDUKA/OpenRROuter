@@ -98,9 +98,6 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         return Task.FromResult<(IReadOnlyCollection<ModelPrice>, bool)>((items, hasMore));
     }
 
-    public Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default) =>
-        Task.FromResult(_usageByRequestId.GetOrAdd(record.RequestId, record));
-
     public Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default) =>
         Task.FromResult(_usageByRequestId.GetValueOrDefault(requestId));
 
@@ -410,15 +407,6 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             return Task.FromResult(_payments.GetValueOrDefault(id));
     }
 
-    public Task<Payment?> FindPaymentAsync(string provider, string? providerPaymentId, string? orderId, CancellationToken ct = default)
-    {
-        lock (_paymentSync)
-            return Task.FromResult(_payments.Values.FirstOrDefault(p =>
-                p.Provider == provider &&
-                ((!string.IsNullOrEmpty(providerPaymentId) && p.ProviderPaymentId == providerPaymentId) ||
-                 (!string.IsNullOrEmpty(orderId) && p.OrderId == orderId))));
-    }
-
     public Task<(IReadOnlyCollection<Payment> Items, bool HasMore)> ListPaymentsAsync(string userId, int limit, CancellationToken ct = default)
     {
         lock (_paymentSync)
@@ -502,7 +490,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             };
             _payments[payment.Id] = payment;
             LedgerEntry? ledger = null;
-            if (target == PaymentStatus.Refunded || target == PaymentStatus.ChargedBack && autoReverseChargeback)
+            if (target == PaymentStatus.Refunded || (target == PaymentStatus.ChargedBack && autoReverseChargeback))
             {
                 var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
                 ledger = _ledgerByIdempotencyKey.GetOrAdd($"{prefix}:{payment.Id}", _ => new LedgerEntry(

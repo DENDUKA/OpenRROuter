@@ -85,15 +85,22 @@ public class UsersModel(AuthProvider authProvider, BillingProvider billingProvid
         try
         {
             Users = await _authClient.ListUsersAsync();
-            foreach (var user in Users)
+            var balanceTasks = Users.Select(async user =>
             {
-                try { var b = await _billingClient.GetBalanceAsync(user.Id); UserBalances[user.Id] = b.Amount; }
+                try
+                {
+                    var b = await _billingClient.GetBalanceAsync(user.Id);
+                    return (user.Id, Amount: b.Amount);
+                }
                 catch (Exception ex)
                 {
                     _logger.LogWarning(ex, "Failed to load balance for user. UserId={UserId}", user.Id);
-                    UserBalances[user.Id] = 0;
+                    return (user.Id, Amount: 0m);
                 }
-            }
+            });
+            var balances = await Task.WhenAll(balanceTasks);
+            foreach (var (userId, amount) in balances)
+                UserBalances[userId] = amount;
         }
         catch (Exception ex)
         {

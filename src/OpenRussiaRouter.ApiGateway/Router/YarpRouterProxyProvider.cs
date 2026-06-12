@@ -33,7 +33,10 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         UseCookies = false,
         EnableMultipleHttp2Connections = true,
         ConnectTimeout = TimeSpan.FromSeconds(15)
-    });
+    })
+    {
+        Timeout = TimeSpan.FromMinutes(30)
+    };
 
     private static readonly ForwarderRequestConfig RequestConfig = new()
     {

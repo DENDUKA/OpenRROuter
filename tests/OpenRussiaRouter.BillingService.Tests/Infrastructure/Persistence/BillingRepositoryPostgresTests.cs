@@ -119,7 +119,7 @@ public sealed class BillingRepositoryPostgresTests
             "v1",
             new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
             Enabled: true));
-        await repository.AddUsageAsync(new UsageRecord(
+        var usage = new UsageRecord(
             "req-1",
             "user-1",
             "key-1",
@@ -129,7 +129,19 @@ public sealed class BillingRepositoryPostgresTests
             new TokenUsage(10, 20, 0),
             MoneyAmount.Usd(0.001m),
             "succeeded",
-            now));
+            now);
+        var activity = new ActivityByTokenRecord(
+            "req-1",
+            "key-1",
+            "sk-or-xxx",
+            "gpt-test",
+            "node-1",
+            new TokenUsage(10, 20, 0),
+            MoneyAmount.Usd(0.001m),
+            "completed",
+            now,
+            now);
+        await repository.RecordUsageWithTransactionAsync(activity, usage, null);
         await repository.AddAnomalyAsync(new BillingAnomaly("anomaly-1", "req-2", "missing_usage", "safe message", now));
 
         (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(100);

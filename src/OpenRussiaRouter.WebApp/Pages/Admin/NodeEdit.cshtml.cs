@@ -107,8 +107,15 @@ public class NodeEditModel(
 
     private async Task LoadNodeAsync(string nodeId, bool populateForm)
     {
-        Node = (await ControlPlaneProvider.ListRouterNodesAsync(HttpContext.RequestAborted))
-            .FirstOrDefault(node => node.NodeId == nodeId);
+        try
+        {
+            var details = await ControlPlaneProvider.GetRouterNodeDetailsAsync(nodeId, cancellationToken: HttpContext.RequestAborted);
+            Node = details.Node;
+        }
+        catch
+        {
+            Node = null;
+        }
 
         if (Node is null)
         {

@@ -39,6 +39,8 @@ public static class GatewayErrors
             _ => StatusCodes.Status500InternalServerError
         };
         context.Response.ContentType = "application/json";
+        context.Response.Headers[CorrelationIds.HeaderName] = requestId;
+        context.Response.Headers["X-Request-Id"] = requestId;
 
         await JsonSerializer.SerializeAsync(context.Response.Body, new
         {

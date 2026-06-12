@@ -1,6 +1,6 @@
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
-using OpenRussiaRouter.AuthService.Infrastructure.Security;
 using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
@@ -9,9 +9,9 @@ public sealed class AuthAccountApplicationService(
     IAuthRepository repository,
     InviteRegistrationService inviteRegistration,
     EmailVerificationService emailVerification,
-    Pbkdf2PasswordHasher passwordHasher,
+    IPasswordHasher passwordHasher,
     ApiKeyFactory apiKeyFactory,
-    Sha256SecretHasher secretHasher)
+    ISecretHasher secretHasher)
 {
     private const int DefaultPageSize = 1000;
     private const int MinPasswordLength = 12;

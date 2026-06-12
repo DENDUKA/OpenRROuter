@@ -1,10 +1,11 @@
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-public sealed class InviteRegistrationService(Sha256SecretHasher secretHasher, Pbkdf2PasswordHasher passwordHasher, ISecretGenerator secretGenerator)
+public sealed class InviteRegistrationService(ISecretHasher secretHasher, IPasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
     private const string InvitePrefix = "orr_invite";
 

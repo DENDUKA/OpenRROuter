@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 
-public sealed class Sha256SecretHasher
+public sealed class Sha256SecretHasher : ISecretHasher
 {
 
     public string Hash(string rawSecret)

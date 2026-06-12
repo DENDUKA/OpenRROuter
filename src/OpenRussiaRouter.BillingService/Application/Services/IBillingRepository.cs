@@ -21,8 +21,6 @@ public interface IBillingRepository
 
     Task<(IReadOnlyCollection<ModelPrice> Items, bool HasMore)> ListAllModelsAsync(int limit, string? afterModelId = null, CancellationToken ct = default);
 
-    Task<UsageRecord> AddUsageAsync(UsageRecord record, CancellationToken ct = default);
-
     Task<UsageRecord?> GetUsageAsync(string requestId, CancellationToken ct = default);
 
     Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterRequestId = null, string? userId = null, CancellationToken ct = default);
@@ -71,7 +69,6 @@ public interface IBillingRepository
     Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default);
     Task<bool> AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default);
     Task<Payment?> GetPaymentAsync(string id, CancellationToken ct = default);
-    Task<Payment?> FindPaymentAsync(string provider, string? providerPaymentId, string? orderId, CancellationToken ct = default);
     Task<(IReadOnlyCollection<Payment> Items, bool HasMore)> ListPaymentsAsync(string userId, int limit, CancellationToken ct = default);
     Task<ConfirmOutcome> ConfirmPaymentAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default);
     Task<ApplyOutcome> ApplyPaymentEventAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);

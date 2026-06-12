@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Security;
 
-public sealed class Pbkdf2PasswordHasher
+public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
     private const int SaltBytes = 16;
     private const int HashBytes = 32;

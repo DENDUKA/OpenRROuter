@@ -1,10 +1,11 @@
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
-public sealed class LoginService(Pbkdf2PasswordHasher passwordHasher, ISecretGenerator secretGenerator)
+public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
     private const string SessionPrefix = "orr_session";
 

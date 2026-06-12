@@ -26,6 +26,18 @@ public sealed class GrpcDeadlineInterceptor(TimeSpan defaultDeadline) : Intercep
         => continuation(request, ApplyDeadline(context));
 
     /// <inheritdoc />
+    public override AsyncClientStreamingCall<TRequest, TResponse> AsyncClientStreamingCall<TRequest, TResponse>(
+        ClientInterceptorContext<TRequest, TResponse> context,
+        AsyncClientStreamingCallContinuation<TRequest, TResponse> continuation)
+        => continuation(ApplyDeadline(context));
+
+    /// <inheritdoc />
+    public override AsyncDuplexStreamingCall<TRequest, TResponse> AsyncDuplexStreamingCall<TRequest, TResponse>(
+        ClientInterceptorContext<TRequest, TResponse> context,
+        AsyncDuplexStreamingCallContinuation<TRequest, TResponse> continuation)
+        => continuation(ApplyDeadline(context));
+
+    /// <inheritdoc />
     public override TResponse BlockingUnaryCall<TRequest, TResponse>(
         TRequest request,
         ClientInterceptorContext<TRequest, TResponse> context,

@@ -11,4 +11,10 @@ public static class Preconditions
 
         return value.Trim();
     }
+
+    public static T RequireNotNull<T>(T? value, string name) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(value, name);
+        return value;
+    }
 }

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Infrastructure.Persistence;
 using OpenRussiaRouter.AuthService.Infrastructure.Repository;
@@ -30,8 +31,8 @@ public static class AuthServiceExtensions
 
     public static IServiceCollection AddAuthApplicationServices(this IServiceCollection services)
     {
-        services.AddSingleton<Sha256SecretHasher>();
-        services.AddSingleton<Pbkdf2PasswordHasher>();
+        services.AddSingleton<ISecretHasher, Sha256SecretHasher>();
+        services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<ISecretGenerator, SecretGenerator>();
         services.AddSingleton<InviteRegistrationService>();
         services.AddSingleton<EmailVerificationService>();

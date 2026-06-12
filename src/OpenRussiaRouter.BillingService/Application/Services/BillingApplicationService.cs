@@ -78,18 +78,18 @@ public sealed partial class BillingApplicationService(
         await repository.UpsertModelAsync(model, ct).ConfigureAwait(false);
     }
 
-    public async Task<BalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassDisabled = false, CancellationToken ct = default)
+    public async Task<BalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassEnabled = false, CancellationToken ct = default)
     {
         var balance = await repository.GetBalanceAsync(Preconditions.RequireValue(userId, nameof(userId)), ct).ConfigureAwait(false);
         var resolvedModelId = Preconditions.RequireValue(modelId, nameof(modelId));
-        var model = adminBypassDisabled
+        var model = adminBypassEnabled
             ? await repository.GetModelAsync(resolvedModelId, ct).ConfigureAwait(false)
             : await repository.GetEnabledModelAsync(resolvedModelId, ct).ConfigureAwait(false);
             
         if (model is null)
             return new BalanceCheckResult(false, modelId, modelId, null, balance, ErrorCodes.ModelUnavailable);
 
-        if (adminBypassDisabled && !model.Enabled)
+        if (adminBypassEnabled && !model.Enabled)
         {
             logger.LogInformation(
                 "admin disabled-model bypass: user={UserId} model={ModelId}",

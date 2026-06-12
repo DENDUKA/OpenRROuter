@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
+using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
-using OpenRussiaRouter.AuthService.Infrastructure.Security;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
 
@@ -9,7 +9,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// email address. The raw code is returned to the caller (so the WebApp can mail
 /// it) but only its SHA-256 hash is ever persisted.
 /// </summary>
-public sealed class EmailVerificationService(Sha256SecretHasher secretHasher)
+public sealed class EmailVerificationService(ISecretHasher secretHasher)
 {
     public static readonly TimeSpan CodeTtl = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);

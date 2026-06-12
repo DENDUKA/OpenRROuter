@@ -47,21 +47,24 @@ public sealed class InMemoryAuthRepository : IAuthRepository
 
     public Task<(IReadOnlyCollection<UserAccount> Items, bool HasMore)> ListUsersAsync(int limit, string? afterUserId = null, CancellationToken ct = default)
     {
-        var query = _users.Values.OrderByDescending(u => u.CreatedAtUtc).AsEnumerable();
-        
-        if (afterUserId != null)
+        lock (_gate)
         {
-            var user = _users.GetValueOrDefault(afterUserId);
-            if (user != null)
+            var query = _users.Values.OrderByDescending(u => u.CreatedAtUtc).AsEnumerable();
+            
+            if (afterUserId != null)
             {
-                query = query.Where(u => u.CreatedAtUtc < user.CreatedAtUtc || (u.CreatedAtUtc == user.CreatedAtUtc && string.Compare(u.Id, user.Id, StringComparison.Ordinal) < 0));
+                var user = _users.GetValueOrDefault(afterUserId);
+                if (user != null)
+                {
+                    query = query.Where(u => u.CreatedAtUtc < user.CreatedAtUtc || (u.CreatedAtUtc == user.CreatedAtUtc && string.Compare(u.Id, user.Id, StringComparison.Ordinal) < 0));
+                }
             }
-        }
 
-        var items = query.Take(limit + 1).ToList();
-        var hasMore = items.Count > limit;
-        if (hasMore) items = items.Take(limit).ToList();
-        return Task.FromResult(((IReadOnlyCollection<UserAccount>)items, hasMore));
+            var items = query.Take(limit + 1).ToList();
+            var hasMore = items.Count > limit;
+            if (hasMore) items = items.Take(limit).ToList();
+            return Task.FromResult(((IReadOnlyCollection<UserAccount>)items, hasMore));
+        }
     }
 
     public Task UpdateUserAsync(UserAccount user, CancellationToken ct = default)
@@ -138,7 +141,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             var key = _apiKeys.FirstOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
-            if (key is null)
+            if (key is null || key.DisabledAtUtc.HasValue)
             {
                 return Task.FromResult(false);
             }
@@ -153,7 +156,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             var key = _apiKeys.FirstOrDefault(k => k.UserId == userId && k.Id == apiKeyId);
-            if (key is null)
+            if (key is null || !key.DisabledAtUtc.HasValue)
             {
                 return Task.FromResult(false);
             }

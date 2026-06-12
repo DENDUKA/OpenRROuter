@@ -30,7 +30,10 @@ public class LoginModel : PageModelBase
     public IActionResult OnGet(string? returnUrl = null)
     {
         if (User.Identity?.IsAuthenticated == true)
-            return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
+        {
+            var role = User.FindFirstValue(ClaimTypes.Role);
+            return RedirectTo(string.IsNullOrEmpty(role) ? "/Workspace" : $"/{role}");
+        }
 
         ReturnUrl = returnUrl;
         return Page();

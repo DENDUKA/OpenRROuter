@@ -11,8 +11,8 @@ public class ProviderQuotaMeterTests
     {
         var store = new QuotaSnapshotStore();
         store.Set(new QuotaSnapshot([
-            new QuotaMeasurement("n1", "openai", "c1", 42d, 84d, ["model-1"]),
-            new QuotaMeasurement("n1", "openai", "c1", 58d, 90d, ["model-2"])
+            new QuotaMeasurement("n1", "openai", "c1", "OpenAI Main", "session", 42d, 84d, ["model-1"]),
+            new QuotaMeasurement("n1", "openai", "c1", "OpenAI Main", "session", 58d, 90d, ["model-2"])
         ], DateTimeOffset.UnixEpoch));
 
         using var meter = new ProviderQuotaMeter(store);
@@ -31,7 +31,11 @@ public class ProviderQuotaMeterTests
 
         collected.Should().ContainSingle();
         collected[0].Value.Should().Be(87d); // (84 + 90) / 2
+        collected[0].Tags.ToArray().Should().Contain(t => t.Key == "node_id" && (string)t.Value! == "n1");
         collected[0].Tags.ToArray().Should().Contain(t => t.Key == "provider" && (string)t.Value! == "openai");
+        collected[0].Tags.ToArray().Should().Contain(t => t.Key == "connection_id" && (string)t.Value! == "c1");
+        collected[0].Tags.ToArray().Should().Contain(t => t.Key == "account_name" && (string)t.Value! == "OpenAI Main");
+        collected[0].Tags.ToArray().Should().Contain(t => t.Key == "quota_name" && (string)t.Value! == "session");
     }
 
     [Fact]

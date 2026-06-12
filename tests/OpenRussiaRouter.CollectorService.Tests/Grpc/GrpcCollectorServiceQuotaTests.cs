@@ -23,7 +23,7 @@ public class GrpcCollectorServiceQuotaTests
     public async Task GetProviderQuota_ProjectsMeasurements()
     {
         var service = Build(
-            new QuotaSnapshot([new QuotaMeasurement("n1", "openai", "c1", 99d, null, [])], DateTimeOffset.UnixEpoch),
+            new QuotaSnapshot([new QuotaMeasurement("n1", "openai", "c1", "OpenAI Main", "total", 99d, null, [])], DateTimeOffset.UnixEpoch),
             OpenRouterCatalogSnapshot.Empty);
 
         var response = await service.GetProviderQuota(new GetProviderQuotaRequest(), context: null!);

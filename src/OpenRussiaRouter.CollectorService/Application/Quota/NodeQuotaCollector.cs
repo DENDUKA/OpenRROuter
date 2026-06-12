@@ -35,6 +35,7 @@ public sealed class NodeQuotaCollector(
                 continue;
             var providerName = string.IsNullOrWhiteSpace(provider.Provider) ? "unknown" : provider.Provider;
             var connectionId = string.IsNullOrWhiteSpace(provider.ConnectionId) ? "unknown" : provider.ConnectionId;
+            var accountName = string.IsNullOrWhiteSpace(provider.Name) ? connectionId : provider.Name;
 
             if (usage.TryGetProperty("quotas", out var quotasElement) &&
                 quotasElement.ValueKind == System.Text.Json.JsonValueKind.Object)
@@ -47,6 +48,8 @@ public sealed class NodeQuotaCollector(
                             node.NodeId,
                             providerName,
                             connectionId,
+                            accountName,
+                            quota.Name,
                             remaining,
                             percent,
                             [quota.Name]));
@@ -63,6 +66,8 @@ public sealed class NodeQuotaCollector(
                 node.NodeId,
                 providerName,
                 connectionId,
+                accountName,
+                "total",
                 flatRemaining,
                 flatPercent,
                 []));

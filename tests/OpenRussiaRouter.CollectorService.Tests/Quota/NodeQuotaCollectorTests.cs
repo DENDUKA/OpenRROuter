@@ -28,14 +28,14 @@ public class NodeQuotaCollectorTests
             {
                 Providers =
                 [
-                    new NodeProviderQuotaEntry { ConnectionId = "c1", Provider = "openai", Usage = doc.RootElement.Clone() }
+                    new NodeProviderQuotaEntry { ConnectionId = "c1", Provider = "openai", Name = "OpenAI Main", Usage = doc.RootElement.Clone() }
                 ]
             });
 
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
         result.Should().ContainSingle();
-        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "openai", "c1", 1234.5, 50d, []));
+        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "openai", "c1", "OpenAI Main", "total", 1234.5, 50d, []));
     }
 
     [Fact]
@@ -63,8 +63,8 @@ public class NodeQuotaCollectorTests
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
         result.Should().HaveCount(2);
-        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", 900d, 90d, ["model-1"]));
-        result[1].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", 500d, 50d, ["model-2"]));
+        result[0].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", "c2", "model-1", 900d, 90d, ["model-1"]));
+        result[1].Should().BeEquivalentTo(new QuotaMeasurement("n1", "gemini", "c2", "c2", "model-2", 500d, 50d, ["model-2"]));
     }
 
     [Fact]

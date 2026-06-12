@@ -17,7 +17,9 @@ public sealed class ProviderQuotaMeter : IDisposable
                 m.Remaining,
                 new KeyValuePair<string, object?>("node_id", m.NodeId),
                 new KeyValuePair<string, object?>("provider", m.Provider),
-                new KeyValuePair<string, object?>("connection_id", m.ConnectionId))),
+                new KeyValuePair<string, object?>("connection_id", m.ConnectionId),
+                new KeyValuePair<string, object?>("account_name", m.AccountName),
+                new KeyValuePair<string, object?>("quota_name", m.QuotaName))),
             unit: "tokens",
             description: "Remaining quota for providers");
 
@@ -25,12 +27,14 @@ public sealed class ProviderQuotaMeter : IDisposable
             "orr_provider_quota_percent",
             () => store.Current.Measurements
                 .Where(m => m.Percent.HasValue)
-                .GroupBy(m => new { m.NodeId, m.Provider, m.ConnectionId })
+                .GroupBy(m => new { m.NodeId, m.Provider, m.ConnectionId, m.AccountName, m.QuotaName })
                 .Select(g => new Measurement<double>(
                     g.Average(m => m.Percent!.Value),
                     new KeyValuePair<string, object?>("node_id", g.Key.NodeId),
                     new KeyValuePair<string, object?>("provider", g.Key.Provider),
-                    new KeyValuePair<string, object?>("connection_id", g.Key.ConnectionId))),
+                    new KeyValuePair<string, object?>("connection_id", g.Key.ConnectionId),
+                    new KeyValuePair<string, object?>("account_name", g.Key.AccountName),
+                    new KeyValuePair<string, object?>("quota_name", g.Key.QuotaName))),
             unit: "%",
             description: "Remaining quota percentage for providers");
 

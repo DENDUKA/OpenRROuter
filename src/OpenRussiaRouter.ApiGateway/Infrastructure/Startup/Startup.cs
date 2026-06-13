@@ -19,6 +19,7 @@ public static class Startup
         services.AddGatewayGrpcClients(configuration);
         services.AddGatewayRouter();
         services.AddGatewayHandlers();
+        services.AddGatewayRateLimiting(configuration);
 
         return services;
     }
@@ -40,6 +41,8 @@ public static class Startup
             context.Response.Headers["X-Request-Id"] = correlationId;
             await next(context);
         });
+
+        app.UseRateLimiter();
 
         app.MapGatewayEndpoints();
 

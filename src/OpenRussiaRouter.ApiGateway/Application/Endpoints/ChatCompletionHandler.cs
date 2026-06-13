@@ -23,6 +23,11 @@ public sealed class ChatCompletionHandler(
     IRouterProxyProvider routerProxy,
     ILogger<ChatCompletionHandler> logger)
 {
+    // Safety net for the retry/failover loops: bounds the number of node attempts so a
+    // ControlPlane that keeps handing back failing nodes (single node, race, or one that
+    // ignores the exclusion set) cannot spin the gateway forever / peg CPU on a request.
+    private const int MaxRouterAttempts = 5;
+
     public async Task HandleAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
@@ -39,6 +44,7 @@ public sealed class ChatCompletionHandler(
 
             HashSet<string>? excludedNodes = null;
             RouterProxyResponse? lastResponse = null;
+            var attempts = 0;
 
             while (true)
             {
@@ -99,7 +105,17 @@ public sealed class ChatCompletionHandler(
                     excludedNodes ??= new HashSet<string>();
                     excludedNodes.Add(auth.Lease.NodeId);
                     lastResponse = response;
-                    
+
+                    // Stop after a bounded number of attempts instead of relying solely on the
+                    // ControlPlane eventually returning null (see MaxRouterAttempts).
+                    if (++attempts >= MaxRouterAttempts)
+                    {
+                        context.Response.StatusCode = lastResponse.StatusCode;
+                        context.Response.ContentType = lastResponse.ContentType;
+                        await context.Response.WriteAsync(lastResponse.Body);
+                        return;
+                    }
+
                     // Loop again
                     continue;
                 }
@@ -140,6 +156,7 @@ public sealed class ChatCompletionHandler(
         {
             HashSet<string>? excludedNodes = null;
             RouterStreamSession? lastFailedSession = null;
+            var attempts = 0;
 
             while (true)
             {
@@ -195,7 +212,15 @@ public sealed class ChatCompletionHandler(
                         await lastFailedSession.DisposeAsync();
                     }
                     lastFailedSession = session;
-                    
+
+                    // Bounded retries (see MaxRouterAttempts) — don't spin forever if the
+                    // ControlPlane keeps handing back failing nodes.
+                    if (++attempts >= MaxRouterAttempts)
+                    {
+                        await PassThroughErrorAsync(context, lastFailedSession, context.RequestAborted);
+                        return;
+                    }
+
                     continue; // Try next node
                 }
 

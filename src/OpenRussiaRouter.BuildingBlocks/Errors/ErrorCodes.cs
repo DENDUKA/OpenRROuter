@@ -9,6 +9,7 @@ public static class ErrorCodes
     public const string ModelUnavailable = "model_unavailable";
     public const string RouterUnavailable = "router_unavailable";
     public const string ValidationFailed = "validation_failed";
+    public const string RateLimited = "rate_limited";
     public const string UnsupportedReasoning = "unsupported_parameter";
     public const string UnsupportedReasoningEffort = "unsupported_reasoning_effort";
     public const string ConflictingParameters = "conflicting_parameters";

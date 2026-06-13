@@ -36,6 +36,7 @@ public static class GatewayErrors
             "billing_error" => StatusCodes.Status402PaymentRequired,
             "invalid_request_error" => StatusCodes.Status400BadRequest,
             "service_unavailable" => StatusCodes.Status503ServiceUnavailable,
+            "rate_limit_error" => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status500InternalServerError
         };
         context.Response.ContentType = "application/json";

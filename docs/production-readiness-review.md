@@ -1,32 +1,32 @@
 # Production readiness review
 
-_Дата: 2026-06-12_
-_Модель: Claude Fable 5_
-_Источники: README.md, CLAUDE.md, TODO.md, docs/todo.md, docs/tasks/orr-userfriendly-plan.md, docs/billing-payments-implementation-plan.md, docs/email-integration-plan.md + точечные проверки по коду (rate limiting, восстановление пароля, метрики)._
+_Дата: 2026-06-13 (актуализация ревью от 2026-06-12)_
+_Модель: Claude Opus 4.8_
+_Источники: README.md, CLAUDE.md, TODO.md, docs/todo.md, docs/tasks/orr-userfriendly-plan.md, docs/billing-payments-implementation-plan.md, docs/email-integration-plan.md + сверка по коду (платежи, rate limiting, восстановление пароля, lockout, метрики, TLS, секреты)._
 
 ## Вердикт
 
-Ядро MVP в хорошем состоянии: весь пайплайн gateway → auth → billing → control plane → 9Router работает, включая streaming, retry, идемпотентный ledger, синк ключей на ноды, signup с email-подтверждением, OpenTelemetry-метрики. Но до «продакшена с реальными пользователями и реальными деньгами» есть несколько блокеров, и почти все они одновременно бьют по юзабилити.
+Ядро MVP в хорошем состоянии: весь пайплайн gateway → auth → billing → control plane → 9Router работает, включая streaming, retry, идемпотентный ledger, синк ключей на ноды, signup с email-подтверждением, OpenTelemetry-метрики. С прошлого ревью закрыты два блокера — восстановление/смена пароля и lockout логина (см. ниже). Но до «продакшена с реальными пользователями и реальными деньгами» остаётся несколько блокеров, и почти все они одновременно бьют по юзабилити.
+
+## Закрыто с 2026-06-12
+
+- **Восстановление и смена пароля** (коммит `dcb31d8`). `ChangePassword` в `auth.proto`, флоу `/forgot-password` → 6-значный код на почту → `/reset-password`, смена пароля в `/workspace/settings`. Таблица `auth.password_resets`, миграция 011. Бывший блокер №3.
+- **Lockout логина** (тот же коммит). 5 неудачных попыток → блокировка на 15 мин; поля `failed_login_count`/`locked_until_utc` в `auth.users`. Закрывает половину бывшего блокера №4 (вторая половина — rate limiting на Gateway — ещё открыта).
+- **Платёжный каркас**. Реализованы `IPaymentProvider`, `PaymentCheckoutService`, webhook-endpoint с verify + per-IP rate limiting, `PaymentReconciliationWorker`, `PaymentStartupGuard`, страница `/workspace/payment-success`. Осталось написать один конкретный адаптер (см. блокер №1) — каркас полностью готов его принять.
+- **Rate limiting на Gateway** (2026-06-13). Per-API-key (фолбэк per-IP) fixed-window лимитер на `POST /v1/chat/completions[/stream]` — встроенный `Microsoft.AspNetCore.RateLimiting`, конфиг `RateLimiting` (`Enabled`/`PermitLimit`/`WindowSeconds`, дефолт 60/мин), отказ в OpenAI-формате (`429` + `Retry-After`, `code=rate_limited`). Покрыт интеграционными тестами. Бывший блокер №3.
+- **Предохранитель retry-цикла Gateway** (2026-06-13, попутно). Найден и закрыт предсуществующий баг: `ChatCompletionHandler` на 5xx ретраил ноды в `while(true)` без потолка — при ControlPlane, вернувшем ноду из excluded-набора, это бесконечный цикл с пегом CPU (он же давал зависающий тест и красный CI). Добавлен cap `MaxRouterAttempts=5` в оба цикла (non-stream + stream). Весь набор тестов Gateway (71) зелёный.
 
 ## Блокеры для продакшена
 
-### 1. Нет реальных платежей
+### 1. Нет реального платёжного провайдера
 
-Сейчас только мок-провайдер (`Pages/Pay/Mock`) и виртуальный топ-ап через админа. План в `docs/billing-payments-implementation-plan.md` готов, Rollypay (СБП) разобран в `docs/rollypay-dotnet.md` — осталось написать адаптер `IPaymentProvider`. Без этого пользователь не может сам пополнить баланс, то есть сервис не самообслуживаемый.
+Каркас платежей построен (см. «Закрыто»), но единственный реализованный `IPaymentProvider` — `MockPaymentProvider` (`Pages/Pay/Mock`). Реального адаптера в коде нет (`grep Rollypay src/` пусто). Помимо мока — виртуальный топ-ап через админа. План в `docs/billing-payments-implementation-plan.md` готов, Rollypay (СБП) разобран в `docs/rollypay-dotnet.md`. Осталось написать **один класс** `RollypayPaymentProvider : IPaymentProvider` и подключить его в `Payments:ActiveProvider`. Без этого пользователь не может сам пополнить баланс — сервис не самообслуживаемый. Объём резко сократился, но для продакшена это всё ещё блокер.
 
 ### 2. Нет HTTPS
 
-Оба деплоя — голый HTTP по IP. Это уже ломало clipboard API (пришлось делать фолбэк в `_Layout.cshtml`), но главное — API-ключи `sk-or-*` и пароли ходят открытым текстом. Нужен домен + TLS (Caddy/Traefik на VPS, cert-manager на kind). Для LLM-гейтвея это не опция, а требование.
+Оба деплоя — голый HTTP по IP/`.local`. В kind ingress слушает `host: localhost`/`*.local` без `tls:`-секции и cert-manager; на VPS — HTTP по IP. Это уже ломало clipboard API (пришлось делать фолбэк в `_Layout.cshtml`), но главное — API-ключи `sk-or-*` и пароли ходят открытым текстом. Нужен домен + TLS (Caddy/Traefik на VPS, cert-manager на kind). Для LLM-гейтвея это не опция, а требование.
 
-### 3. Нет восстановления и смены пароля — вообще
-
-Проверено: ни `ChangePassword` в `auth.proto`, ни forgot-password флоу в WebApp нет. Пользователь, забывший пароль, теряет аккаунт навсегда (только ручное вмешательство админа). SMTP уже подключён для verify-кодов — флоу «забыли пароль → код на почту» ляжет на готовую инфраструктуру дёшево. Блокер и по безопасности, и по юзабилити.
-
-### 4. Нет защиты от перебора
-
-В `AuthAccountApplicationService` нет lockout/троттлинга логина, на Gateway нет rate limiting. Публичный API с балансами — обязательно до открытия наружу.
-
-### 5. Надёжность денег
+### 3. Надёжность денег
 
 Из CLAUDE.md «Не готово»:
 
@@ -36,10 +36,10 @@ _Источники: README.md, CLAUDE.md, TODO.md, docs/todo.md, docs/tasks/orr
 
 Outbox — самое важное из трёх: потерянный usage = потерянные деньги.
 
-### 6. Ops-хвосты
+### 4. Ops-хвосты
 
-- plain-text секреты в git (INFRA-003, SOPS+Age не сделан);
-- SMTP-секрет на проде не запровижен — без него коды регистрации не уходят;
+- plain-text секреты в git (INFRA-003, SOPS+Age не сделан) — проверено: `postgres-secret.yaml`, `s2s-secret.yaml`, `f9router-2-secret.yaml` лежат в открытом виде в `infra/kustomize/base/`;
+- SMTP-секрет на проде не запровижен — без него коды регистрации/восстановления пароля не уходят (а флоу восстановления теперь критически от них зависит);
 - проверить, что CI зелёный: в конце мая он две недели был красным при «Synced» в ArgoCD (live-кластер крутил устаревшие образы).
 
 ## Юзабилити — «просто и наглядно»
@@ -72,11 +72,10 @@ UI весь на английском, при этом продукт целит
 
 ```
 HTTPS
-  → восстановление пароля + lockout
-  → реальные платежи (Rollypay)
+  → реальные платежи (адаптер Rollypay поверх готового каркаса)
   → onboarding-чеклист + playground
   → billing outbox
   → графики расходов
 ```
 
-Первые три открывают двери реальным пользователям, следующие два делают первый опыт понятным, остальное — надёжность и полировка.
+~~восстановление пароля + lockout~~, ~~rate limiting на Gateway~~ — сделано (2026-06-12 → -13). Осталось два «двери наружу» — HTTPS и реальный платёжный адаптер; следующие два делают первый опыт понятным, остальное — надёжность и полировка.

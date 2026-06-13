@@ -126,9 +126,11 @@ public static class ApiGatewayExtensions
     public static WebApplication MapGatewayEndpoints(this WebApplication app)
     {
         app.MapPost("/v1/chat/completions",
-            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));
+            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleAsync(ctx))
+            .RequireRateLimiting(GatewayRateLimiting.PolicyName);
         app.MapPost("/v1/chat/completions/stream",
-            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleStreamAsync(ctx));
+            (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleStreamAsync(ctx))
+            .RequireRateLimiting(GatewayRateLimiting.PolicyName);
         app.MapGet("/v1/models",
             (ModelsHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));
         app.MapGet("/health",

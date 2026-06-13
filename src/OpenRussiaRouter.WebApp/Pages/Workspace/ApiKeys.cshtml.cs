@@ -197,11 +197,21 @@ public class ApiKeysModel(
 
     public string FormatWeeklyLimit(ApiKeySummary key) => FormatLimit(key.Id, daily: false);
 
+    public bool HasDailyLimit(ApiKeySummary key) =>
+        LimitSummaries.TryGetValue(key.Id, out var summary) && summary.DailyLimitUsd.HasValue;
+
+    public bool HasWeeklyLimit(ApiKeySummary key) =>
+        LimitSummaries.TryGetValue(key.Id, out var summary) && summary.WeeklyLimitUsd.HasValue;
+
     public bool IsDailyLimitReached(ApiKeySummary key) =>
         LimitSummaries.TryGetValue(key.Id, out var summary) && summary.DailyExceeded;
 
     public bool IsWeeklyLimitReached(ApiKeySummary key) =>
         LimitSummaries.TryGetValue(key.Id, out var summary) && summary.WeeklyExceeded;
+
+    public int DailyRemainingPercent(ApiKeySummary key) => RemainingPercent(key.Id, daily: true);
+
+    public int WeeklyRemainingPercent(ApiKeySummary key) => RemainingPercent(key.Id, daily: false);
 
     private string FormatLimit(string apiKeyId, bool daily)
     {
@@ -217,5 +227,19 @@ public class ApiKeysModel(
         return $"Spent {FormatUsd(spent)} / {FormatUsd(limit.Value)}; Left {FormatUsd(remaining)}";
     }
 
-    private static string FormatUsd(decimal amount) => "$" + amount.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
+    private int RemainingPercent(string apiKeyId, bool daily)
+    {
+        if (!LimitSummaries.TryGetValue(apiKeyId, out var summary))
+            return 0;
+
+        var limit = daily ? summary.DailyLimitUsd : summary.WeeklyLimitUsd;
+        if (!limit.HasValue || limit.Value <= 0)
+            return 0;
+
+        var remaining = daily ? summary.DailyRemainingUsd : summary.WeeklyRemainingUsd;
+        var percent = decimal.Round(Math.Clamp(remaining / limit.Value * 100m, 0m, 100m), 0, MidpointRounding.AwayFromZero);
+        return (int)percent;
+    }
+
+    private static string FormatUsd(decimal amount) => "$" + amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
 }

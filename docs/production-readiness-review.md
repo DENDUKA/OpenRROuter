@@ -15,12 +15,18 @@ _Источники: README.md, CLAUDE.md, TODO.md, docs/todo.md, docs/tasks/orr
 - **Платёжный каркас**. Реализованы `IPaymentProvider`, `PaymentCheckoutService`, webhook-endpoint с verify + per-IP rate limiting, `PaymentReconciliationWorker`, `PaymentStartupGuard`, страница `/workspace/payment-success`. Осталось написать один конкретный адаптер (см. блокер №1) — каркас полностью готов его принять.
 - **Rate limiting на Gateway** (2026-06-13). Per-API-key (фолбэк per-IP) fixed-window лимитер на `POST /v1/chat/completions[/stream]` — встроенный `Microsoft.AspNetCore.RateLimiting`, конфиг `RateLimiting` (`Enabled`/`PermitLimit`/`WindowSeconds`, дефолт 60/мин), отказ в OpenAI-формате (`429` + `Retry-After`, `code=rate_limited`). Покрыт интеграционными тестами. Бывший блокер №3.
 - **Предохранитель retry-цикла Gateway** (2026-06-13, попутно). Найден и закрыт предсуществующий баг: `ChatCompletionHandler` на 5xx ретраил ноды в `while(true)` без потолка — при ControlPlane, вернувшем ноду из excluded-набора, это бесконечный цикл с пегом CPU (он же давал зависающий тест и красный CI). Добавлен cap `MaxRouterAttempts=5` в оба цикла (non-stream + stream). Весь набор тестов Gateway (71) зелёный.
+- **Rollypay-адаптер написан** (2026-06-13). Реализован `RollypayPaymentProvider : IPaymentProvider` поверх готового каркаса: тонкий `RollypayClient` (X-API-Key + per-request `X-Nonce`, маппинг 4xx→`RollypayApiException` / 5xx·429·таймаут→`RollypayUnavailableException`), HMAC-SHA256-верификатор вебхука (`{X-Timestamp}.{body}`, скос 5 мин), маппинг event/status, провайдер шлёт в Rollypay **ровно** записанные Billing-ом amount/currency (никакого override валюты — иначе зачислили бы одно, списали другое). DI: named `HttpClient` "Rollypay" + регистрация безусловная (активен только при `ActiveProvider=rollypay`, иначе fail-safe). Тесты: golden-HMAC + адаптер (CreateAsync/Parse/Verify/GetPayment через стаб) — весь WebApp.Tests (97) зелёный. Закрывает кодовую часть бывшего блокера №1; до боевого включения осталось не-кодовое (см. ниже).
 
 ## Блокеры для продакшена
 
-### 1. Нет реального платёжного провайдера
+### 1. Реальные платежи: код есть, не-кодовое включение остаётся
 
-Каркас платежей построен (см. «Закрыто»), но единственный реализованный `IPaymentProvider` — `MockPaymentProvider` (`Pages/Pay/Mock`). Реального адаптера в коде нет (`grep Rollypay src/` пусто). Помимо мока — виртуальный топ-ап через админа. План в `docs/billing-payments-implementation-plan.md` готов, Rollypay (СБП) разобран в `docs/rollypay-dotnet.md`. Осталось написать **один класс** `RollypayPaymentProvider : IPaymentProvider` и подключить его в `Payments:ActiveProvider`. Без этого пользователь не может сам пополнить баланс — сервис не самообслуживаемый. Объём резко сократился, но для продакшена это всё ещё блокер.
+Код закрыт (см. «Закрыто», 2026-06-13): `RollypayPaymentProvider` написан и покрыт тестами. До того, как пользователь сможет реально пополнить баланс, осталось **не-кодовое**:
+
+- завести кассу в Rollypay, получить `ApiKey` + `SigningSecret`, положить их в прод-секрет (НЕ в git) и выставить `Payments:ActiveProvider=rollypay`;
+- прописать webhook-URL `https://<домен>/webhook/rollypay` в UI кассы — **зависит от блокера №2 (HTTPS)**: без домена/TLS вебхук некуда направить;
+- **checkout должен форсить RUB** для rollypay-провайдера. Сейчас `PaymentCheckoutService` передаёт в провайдера display-валюту пользователя; провайдер шлёт её как есть. Для RUB-дефолта (основной путь) всё консистентно, но при display=USD/EUR Rollypay отклонит платёж (СБП — только рубли). Пока display по умолчанию RUB — это не блокер запуска, но до включения мультивалютного топ-апа надо форсить RUB на стороне checkout;
+- боевой smoke-тест минимальной суммой (у Rollypay нет sandbox).
 
 ### 2. Нет HTTPS
 
@@ -71,11 +77,11 @@ UI весь на английском, при этом продукт целит
 ## Приоритет
 
 ```
-HTTPS
-  → реальные платежи (адаптер Rollypay поверх готового каркаса)
+HTTPS (домен + TLS)
+  → включить Rollypay (касса/секреты + webhook-URL + ActiveProvider; код уже написан)
   → onboarding-чеклист + playground
   → billing outbox
   → графики расходов
 ```
 
-~~восстановление пароля + lockout~~, ~~rate limiting на Gateway~~ — сделано (2026-06-12 → -13). Осталось два «двери наружу» — HTTPS и реальный платёжный адаптер; следующие два делают первый опыт понятным, остальное — надёжность и полировка.
+~~восстановление пароля + lockout~~, ~~rate limiting на Gateway~~, ~~адаптер Rollypay (код)~~ — сделано (2026-06-12 → -13). Главная оставшаяся «дверь наружу» — **HTTPS**: он же разблокирует включение Rollypay (webhook-URL требует домена). После него — включение кассы и не-кодовые шаги из блокера №1. Следующие два пункта делают первый опыт понятным, остальное — надёжность и полировка.

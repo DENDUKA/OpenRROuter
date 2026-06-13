@@ -16,10 +16,12 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
 using OpenRussiaRouter.WebApp.Api;
 using OpenRussiaRouter.WebApp.Services.Payments;
+using OpenRussiaRouter.WebApp.Services.Payments.Rollypay;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -199,11 +201,22 @@ builder.Services.AddHostedService<CbrRateRefresher>();
 builder.Services.Configure<PaymentSettings>(builder.Configuration.GetSection(PaymentSettings.SectionName));
 
 // Mock provider is registered only in Development — PaymentStartupGuard fails fast if it ends up
-// as the active provider in Production. Real providers will register unconditionally when added.
+// as the active provider in Production.
 if (builder.Environment.IsDevelopment())
 {
     builder.Services.AddSingleton<IPaymentProvider, MockPaymentProvider>();
 }
+
+// Rollypay (СБП) — registered unconditionally; only active when Payments:ActiveProvider="rollypay".
+// It fails safe when unconfigured (no SigningSecret → webhooks 401; no ApiKey → outbound calls throw).
+builder.Services.AddHttpClient(RollypayPaymentProvider.HttpClientName, (sp, client) =>
+{
+    var settings = sp.GetRequiredService<IOptions<PaymentSettings>>().Value.Rollypay;
+    var baseUrl = string.IsNullOrWhiteSpace(settings.BaseUrl) ? "https://rollypay.io" : settings.BaseUrl;
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(10);
+});
+builder.Services.AddSingleton<IPaymentProvider, RollypayPaymentProvider>();
 
 builder.Services.AddSingleton<PaymentProviderRegistry>();
 builder.Services.AddScoped<PaymentCheckoutService>();

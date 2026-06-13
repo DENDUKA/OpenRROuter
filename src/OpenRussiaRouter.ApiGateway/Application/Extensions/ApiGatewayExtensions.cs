@@ -1,8 +1,12 @@
+using Grpc.Core;
 using Grpc.Net.ClientFactory;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
+using Microsoft.Extensions.Logging;
+using Polly;
 using OpenRussiaRouter.ApiGateway.Application.Endpoints;
 using OpenRussiaRouter.ApiGateway.Application.Services;
 using OpenRussiaRouter.ApiGateway.Auth;
@@ -83,7 +87,38 @@ public static class ApiGatewayExtensions
             };
         })
         .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline))
-        .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
+        .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken))
+        .AddResilienceHandler("billing-usage", pipeline =>
+        {
+            var sp = services.BuildServiceProvider();
+            var retryLogger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("BillingUsageRetry");
+
+            pipeline
+                .AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = 6,
+                    Delay = TimeSpan.FromSeconds(4),
+                    BackoffType = DelayBackoffType.Exponential,
+                    ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                        .Handle<RpcException>()
+                        .Handle<HttpRequestException>(),
+                    Name = "billing-retry",
+                    OnRetry = args =>
+                    {
+                        retryLogger.LogWarning(args.Outcome.Exception,
+                            "Billing usage retry — transisent failure.");
+                        return ValueTask.CompletedTask;
+                    }
+                })
+                .AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+                {
+                    SamplingDuration = TimeSpan.FromSeconds(30),
+                    FailureRatio = 0.5,
+                    MinimumThroughput = 10,
+                    BreakDuration = TimeSpan.FromSeconds(15),
+                    Name = "billing-circuit-breaker"
+                });
+        });
         services.AddScoped<IBillingProvider, GrpcBillingProvider>();
 
         var controlPlaneGrpcUrl = configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";

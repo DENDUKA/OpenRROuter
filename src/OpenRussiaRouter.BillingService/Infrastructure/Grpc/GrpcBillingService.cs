@@ -279,6 +279,50 @@ public sealed class GrpcBillingService(
         return response;
     }
 
+    public override async Task<GetModelResponse> GetModel(
+        GetModelRequest request,
+        ServerCallContext context)
+    {
+        var model = await billing.GetModelAsync(request.ModelId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        if (model is null)
+            return new GetModelResponse { Found = false };
+
+        return new GetModelResponse
+        {
+            Found = true,
+            Model = MapModelDetail(model)
+        };
+    }
+
+    private static Contracts.Grpc.Billing.V1.ModelDetail MapModelDetail(ModelPrice model)
+    {
+        var m = new Contracts.Grpc.Billing.V1.ModelDetail
+        {
+            Id = model.ModelId,
+            DisplayName = model.DisplayName,
+            UpstreamModelId = model.RouterModelId,
+            PriceVersion = model.PriceVersion,
+            InputPricePer1MUsd = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            OutputPricePer1MUsd = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            CachePricePer1MUsd = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+            Enabled = model.Enabled,
+            Description = model.Description ?? string.Empty,
+            ContextLength = model.ContextLength ?? 0,
+            Modalities = model.Modalities ?? string.Empty,
+            InputModalities = model.InputModalities ?? string.Empty,
+            OutputModalities = model.OutputModalities ?? string.Empty,
+            DescriptionSource = model.DescriptionSource ?? string.Empty,
+            Provider = model.Provider ?? string.Empty,
+            SupportsReasoning = model.SupportsReasoning,
+            DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+        };
+        if (model.AllowedReasoningEfforts is not null)
+            m.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
+        if (model.TagIds != null)
+            m.TagIds.AddRange(model.TagIds);
+        return m;
+    }
+
     public override async Task<ListUsageResponse> ListUsage(
         ListUsageRequest request,
         ServerCallContext context)

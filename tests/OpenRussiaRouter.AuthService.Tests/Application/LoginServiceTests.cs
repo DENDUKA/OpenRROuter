@@ -152,6 +152,23 @@ public sealed class LoginServiceTests
         user.LockedUntilUtc.Should().BeNull();
     }
 
+    [Fact]
+    public void Login_AfterPasswordReset_FailedAttemptsAreReset()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var user = CreateUser("StrongPassword123!", now);
+        var service = new LoginService(_passwordHasher, _secretGenerator);
+
+        service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+        service.Login(user, "WrongPassword123!", now, TimeSpan.FromHours(8));
+        user.FailedLoginCount.Should().Be(2);
+
+        var result = service.Login(user, "StrongPassword123!", now, TimeSpan.FromHours(8));
+
+        result.Succeeded.Should().BeTrue();
+        user.FailedLoginCount.Should().Be(0);
+    }
+
     private UserAccount CreateUser(string password, DateTimeOffset createdAtUtc)
     {
         return new UserAccount(

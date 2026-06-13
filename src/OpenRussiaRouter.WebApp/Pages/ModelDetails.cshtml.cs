@@ -80,11 +80,8 @@ public class ModelDetailsModel : PageModelBase
         ApiBaseUrl = await _baseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
         try
         {
-            var models = await _billingClient.ListModelsAsync();
-
-            ModelData = models.FirstOrDefault(m =>
-                string.Equals(m.Id, ModelId, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(m.UpstreamModelId, ModelId, StringComparison.OrdinalIgnoreCase));
+            ModelData = await _billingClient.GetModelAsync(ModelId)
+                      ?? await _billingClient.GetModelAsync(Slug);
         }
         catch
         {

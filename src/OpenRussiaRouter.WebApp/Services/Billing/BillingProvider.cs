@@ -222,6 +222,35 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort)).ToList();
     }
 
+    public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetModelAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetModelRequest { ModelId = modelId }, cancellationToken: cancellationToken);
+        if (!response.Found || response.Model is null)
+            return null;
+
+        var m = response.Model;
+        return new ModelInfo(
+            m.Id,
+            m.DisplayName,
+            m.UpstreamModelId,
+            m.PriceVersion,
+            decimal.Parse(m.InputPricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.OutputPricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
+            decimal.Parse(m.CachePricePer1MUsd, System.Globalization.CultureInfo.InvariantCulture),
+            m.Enabled,
+            Description: string.IsNullOrEmpty(m.Description) ? null : m.Description,
+            ContextLength: m.ContextLength == 0 ? null : (int?)m.ContextLength,
+            Modalities: string.IsNullOrEmpty(m.Modalities) ? null : m.Modalities,
+            InputModalities: string.IsNullOrEmpty(m.InputModalities) ? null : m.InputModalities,
+            OutputModalities: string.IsNullOrEmpty(m.OutputModalities) ? null : m.OutputModalities,
+            DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
+            Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
+            TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            SupportsReasoning: m.SupportsReasoning,
+            AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
+            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort);
+    }
+
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
     {
         var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertModelPriceRequest

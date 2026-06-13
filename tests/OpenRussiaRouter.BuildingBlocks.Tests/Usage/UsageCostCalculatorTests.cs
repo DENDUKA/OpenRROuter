@@ -65,4 +65,46 @@ public sealed class UsageCostCalculatorTests
 
         ((Action)(() => _calculator.Calculate(usage, price))).Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    [Fact]
+    public void Calculate_AllZeroTokens_ReturnsZero()
+    {
+        var usage = new TokenUsage(0, 0, 0);
+        var price = new ModelTokenPrice(
+            MoneyAmount.Usd(10),
+            MoneyAmount.Usd(20),
+            MoneyAmount.Usd(1));
+
+        var result = _calculator.Calculate(usage, price);
+
+        result.Should().Be(MoneyAmount.Usd(0m));
+    }
+
+    [Fact]
+    public void Calculate_OnlyCacheTokens_CacheRateApplied()
+    {
+        var usage = new TokenUsage(0, 0, 1_000_000);
+        var price = new ModelTokenPrice(
+            MoneyAmount.Usd(10),
+            MoneyAmount.Usd(20),
+            MoneyAmount.Usd(5));
+
+        var result = _calculator.Calculate(usage, price);
+
+        result.Should().Be(MoneyAmount.Usd(5m));
+    }
+
+    [Fact]
+    public void Calculate_RoundingPrecision_MatchesSixDecimalPlaces()
+    {
+        var usage = new TokenUsage(333_333, 0, 0);
+        var price = new ModelTokenPrice(
+            MoneyAmount.Usd(3m),
+            MoneyAmount.Usd(0),
+            MoneyAmount.Usd(0));
+
+        var result = _calculator.Calculate(usage, price);
+
+        result.Amount.Should().Be(0.999999m);
+    }
 }

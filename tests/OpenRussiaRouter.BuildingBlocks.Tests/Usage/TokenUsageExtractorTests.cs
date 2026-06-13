@@ -131,4 +131,61 @@ public sealed class TokenUsageExtractorTests
         result.Should().BeFalse();
         usage.Should().Be(default(TokenUsage));
     }
+
+    [Fact]
+    public void TryExtractJson_EmptyString_ReturnsFalse()
+    {
+        var result = TokenUsageExtractor.TryExtractJson("", out var usage);
+
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
+    }
+
+    [Fact]
+    public void TryExtractJson_Null_ReturnsFalse()
+    {
+        var result = TokenUsageExtractor.TryExtractJson(null!, out var usage);
+
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
+    }
+
+    [Fact]
+    public void TryExtractJson_NoUsageField_ReturnsFalse()
+    {
+        var json = """{"id":"chatcmpl-1","choices":[]}""";
+
+        var result = TokenUsageExtractor.TryExtractJson(json, out var usage);
+
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
+    }
+
+    [Fact]
+    public void TryExtractJson_MalformedJson_ReturnsFalse()
+    {
+        var result = TokenUsageExtractor.TryExtractJson("not valid json {{{", out var usage);
+
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
+    }
+
+    [Fact]
+    public void TryExtractStreamingSse_UsageInMiddleChunk_PicksLastWithTokens()
+    {
+        var body = """
+            data: {"choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}
+
+            data: {"choices":[{"delta":{"content":"hi"}}]}
+
+            data: [DONE]
+
+            """;
+
+        var result = TokenUsageExtractor.TryExtractStreamingSse(body, out var usage);
+
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(10);
+        usage.OutputTokens.Should().Be(5);
+    }
 }

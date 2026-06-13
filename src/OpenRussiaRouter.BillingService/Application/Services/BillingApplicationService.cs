@@ -78,6 +78,9 @@ public sealed partial class BillingApplicationService(
         await repository.UpsertModelAsync(model, ct).ConfigureAwait(false);
     }
 
+    public Task<ModelPrice?> GetModelAsync(string modelId, CancellationToken ct = default) =>
+        repository.GetModelAsync(Preconditions.RequireValue(modelId, nameof(modelId)), ct);
+
     public async Task<BalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassEnabled = false, CancellationToken ct = default)
     {
         var balance = await repository.GetBalanceAsync(Preconditions.RequireValue(userId, nameof(userId)), ct).ConfigureAwait(false);

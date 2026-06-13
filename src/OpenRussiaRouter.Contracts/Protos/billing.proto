@@ -18,6 +18,7 @@ service BillingService {
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
   rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
+  rpc GetModel (GetModelRequest) returns (GetModelResponse);
   rpc ListTags (ListTagsRequest) returns (ListTagsResponse);
   rpc UpsertTag (UpsertTagRequest) returns (UpsertTagResponse);
   rpc DeleteTag (DeleteTagRequest) returns (DeleteTagResponse);
@@ -207,6 +208,15 @@ message ModelDetail {
 
 message ListModelsResponse {
   repeated ModelDetail models = 1;
+}
+
+message GetModelRequest {
+  string model_id = 1;
+}
+
+message GetModelResponse {
+  ModelDetail model = 1;
+  bool found = 2;
 }
 
 message BillingAnomaly {

@@ -73,4 +73,14 @@ public sealed class InviteRegistrationServiceTests
         ((Action)(() =>
             _service.CompleteInvite(created.Invite, "wrong-token", "StrongPassword123!", now.AddMinutes(1)))).Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void CompleteInvite_WeakPassword_Throws()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var created = _service.CreateInvite("user@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
+
+        ((Action)(() =>
+            _service.CompleteInvite(created.Invite, created.RawToken, "short", now.AddMinutes(1)))).Should().Throw<ArgumentException>();
+    }
 }

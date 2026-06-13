@@ -187,7 +187,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         using var connection = connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
-            ModelPriceSelectSql + "where model_id = @ModelId;",
+            ModelPriceSelectSql + "where model_id = @ModelId or router_model_id = @ModelId limit 1;",
             new { ModelId = modelId },
             cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)

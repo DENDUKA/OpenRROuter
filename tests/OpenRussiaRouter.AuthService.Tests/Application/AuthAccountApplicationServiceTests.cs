@@ -122,6 +122,48 @@ public sealed class AuthAccountApplicationServiceTests
         repository.ApiKeys.Single().IsDeleted.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task EnableApiKey_AlreadyActiveKey_ThrowsKeyNotFoundException()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
+        var apiKeyId = created.Created!.ApiKey.Id;
+
+        await ((Func<Task>)(() =>
+            service.EnableApiKeyAsync("user-1", apiKeyId))).Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
+    public async Task DisableApiKey_NonExistentKey_ThrowsKeyNotFoundException()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+
+        await ((Func<Task>)(() =>
+            service.DisableApiKeyAsync("user-1", "non-existent", DateTimeOffset.UtcNow))).Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
+    public async Task EnableApiKey_DisabledKey_SucceedsAndReactivates()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+        var created = await service.CreateApiKeyAsync("user-1", "default", DateTimeOffset.UtcNow);
+        var apiKeyId = created.Created!.ApiKey.Id;
+        await service.DisableApiKeyAsync("user-1", apiKeyId, DateTimeOffset.UtcNow);
+
+        await service.EnableApiKeyAsync("user-1", apiKeyId);
+
+        repository.ApiKeys.Single().IsActive.Should().BeTrue();
+    }
+
     private static AuthAccountApplicationService CreateService(TestAuthRepository repository)
     {
         var secretHasher = new Sha256SecretHasher();

@@ -119,6 +119,36 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         billing.LastUsageEvent.ApiKeyPrefix.Should().Be("sk-or-test");
     }
 
+    [Fact]
+    public async Task Streaming_NullModel_Returns400()
+    {
+        var client = CreateStreamingClient();
+        var response = await client.PostAsync(
+            "/v1/chat/completions/stream",
+            new StringContent("""{"messages":[]}""", Encoding.UTF8, "application/json"));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Streaming_AdminBypassDisabledModel_UsesAdminFlag()
+    {
+        var billing = new StubBillingProvider();
+        var auth = new AdminStubAuthenticator();
+        var router = new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n"));
+        var client = CreateStreamingClient(auth: auth, billing: billing, router: router);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions/stream")
+        {
+            Content = new StringContent("""{"model":"gpt-4","stream":true}""", Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-ok_key");
+        request.Headers.TryAddWithoutValidation("X-ORR-Admin-Test", "1");
+        await client.SendAsync(request);
+
+        await Task.Delay(50);
+        billing.LastUsageEvent.Should().NotBeNull();
+    }
+
     // --- Helpers ---
 
     private HttpClient CreateStreamingClient(
@@ -173,6 +203,12 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     {
         public Task<ApiKeyAuthenticationResult> AuthenticateAsync(string rawApiKey, CancellationToken ct)
             => Task.FromResult(ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test"));
+    }
+
+    private sealed class AdminStubAuthenticator : IApiKeyProvider
+    {
+        public Task<ApiKeyAuthenticationResult> AuthenticateAsync(string rawApiKey, CancellationToken ct)
+            => Task.FromResult(ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test", isAdmin: true));
     }
 
     private sealed class StubBillingProvider : IBillingProvider

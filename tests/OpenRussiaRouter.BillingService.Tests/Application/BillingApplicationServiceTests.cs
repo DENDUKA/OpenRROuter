@@ -82,7 +82,7 @@ public sealed class BillingApplicationServiceTests
         var models = await service.ListPublicModelsAsync();
 
         var model = models.Should().ContainSingle().Which;
-        model.Id.Should().Be("router/enabled");
+        model.Id.Should().Be("enabled");
     }
 
     [Fact]
@@ -269,6 +269,108 @@ public sealed class BillingApplicationServiceTests
         });
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_NegativeAmount_Throws()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(-100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateVirtualTopUp_ZeroAmount_Throws()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(0), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CheckBalanceAndModel_DisabledModel_ReturnsUnavailable()
+    {
+        var service = CreateService();
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: false));
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        var result = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test");
+
+        result.Allowed.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ModelUnavailable);
+    }
+
+    [Fact]
+    public async Task RecordUsage_LargeTokenCount_PreciseRounding()
+    {
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(1000), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        var result = await service.RecordUsageAsync(
+            CreateUsageEvent("req-large", new TokenUsage(999_999, 999_999, 0)),
+            DateTimeOffset.UtcNow);
+
+        result.Accepted.Should().BeTrue();
+        result.Cost.Amount.Should().Be(29.99997m);
+    }
+
+    [Fact]
+    public async Task UpsertModel_UpdateExistingPrice_ChangesPrices()
+    {
+        var service = CreateService();
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: true));
+
+        var updatedModel = CreateModel("gpt-test", enabled: true) with
+        {
+            Price = new ModelTokenPrice(MoneyAmount.Usd(20), MoneyAmount.Usd(40), MoneyAmount.Usd(2))
+        };
+        await service.UpsertModelAsync(updatedModel);
+
+        var models = await service.ListAllModelsAsync();
+        var model = models.Should().ContainSingle().Which;
+        model.Price.InputPerMillion.Amount.Should().Be(20m);
+        model.Price.OutputPerMillion.Amount.Should().Be(40m);
+    }
+
+    [Fact]
+    public async Task RecordUsage_CacheTokens_CalculatedCorrectly()
+    {
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        var result = await service.RecordUsageAsync(
+            CreateUsageEvent("req-cache", new TokenUsage(1_000_000, 0, 500_000)),
+            DateTimeOffset.UtcNow);
+
+        result.Accepted.Should().BeTrue();
+        result.Cost.Amount.Should().Be(5.5m);
+    }
+
+    [Fact]
+    public async Task DeleteTag_NonExistentTag_NoException()
+    {
+        var service = CreateService();
+
+        var act = async () => await service.DeleteTagAsync("non-existent");
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task UpsertModel_WithTags_ModelHasTagIds()
+    {
+        var service = CreateService();
+        await service.UpsertTagAsync(new Tag("fast", "Fast", "#0d6efd"));
+        await service.UpsertTagAsync(new Tag("cheap", "Cheap", "#198754"));
+
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: true) with { TagIds = ["fast", "cheap"] });
+
+        var model = (await service.ListAllModelsAsync()).Should().ContainSingle().Which;
+        model.TagIds.Should().Equal("fast", "cheap");
     }
 
     [Fact]

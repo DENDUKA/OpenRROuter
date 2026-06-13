@@ -44,6 +44,60 @@ public sealed class GatewayErrorsTests
         error.GetProperty("message").GetString().Should().NotContainEquivalentOf("Exception");
     }
 
+    [Fact]
+    public async Task Authentication_Returns401WithCorrectType()
+    {
+        var context = CreateContext("corr-3");
+
+        await GatewayErrors.Authentication(context.Request, ErrorCodes.AuthenticationRequired, "Bearer token required")
+            .ExecuteAsync(context);
+
+        var error = (await ReadBodyAsync(context)).RootElement.GetProperty("error");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status401Unauthorized);
+        error.GetProperty("type").GetString().Should().Be("authentication_error");
+        error.GetProperty("code").GetString().Should().Be(ErrorCodes.AuthenticationRequired);
+    }
+
+    [Fact]
+    public async Task ServiceUnavailable_Returns503WithCorrectType()
+    {
+        var context = CreateContext("corr-4");
+
+        await GatewayErrors.ServiceUnavailable(context.Request, ErrorCodes.RouterUnavailable, "No router available")
+            .ExecuteAsync(context);
+
+        var error = (await ReadBodyAsync(context)).RootElement.GetProperty("error");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status503ServiceUnavailable);
+        error.GetProperty("type").GetString().Should().Be("service_unavailable");
+        error.GetProperty("code").GetString().Should().Be(ErrorCodes.RouterUnavailable);
+    }
+
+    [Fact]
+    public async Task Validation_Returns400WithCorrectType()
+    {
+        var context = CreateContext("corr-5");
+
+        await GatewayErrors.Validation(context.Request, ErrorCodes.ValidationFailed, "model is required")
+            .ExecuteAsync(context);
+
+        var error = (await ReadBodyAsync(context)).RootElement.GetProperty("error");
+        context.Response.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        error.GetProperty("type").GetString().Should().Be("invalid_request_error");
+        error.GetProperty("code").GetString().Should().Be(ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task WriteAsync_UnknownType_Returns500()
+    {
+        var context = CreateContext("corr-7");
+
+        await GatewayErrors.WriteAsync(context, "unknown_type", "unknown_code", "test", "corr-7");
+
+        context.Response.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        var error = (await ReadBodyAsync(context)).RootElement.GetProperty("error");
+        error.GetProperty("type").GetString().Should().Be("unknown_type");
+    }
+
     private static DefaultHttpContext CreateContext(string correlationId)
     {
         var context = new DefaultHttpContext();

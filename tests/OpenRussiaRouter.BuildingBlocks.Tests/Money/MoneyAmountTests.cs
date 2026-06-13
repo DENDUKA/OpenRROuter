@@ -26,4 +26,45 @@ public sealed class MoneyAmountTests
 
         result.Should().Be(MoneyAmount.Usd(5.25m));
     }
+
+    [Fact]
+    public void Addition_ZeroAmounts_ReturnsZero()
+    {
+        var left = MoneyAmount.Usd(0m);
+        var right = MoneyAmount.Usd(0m);
+
+        var result = left + right;
+
+        result.Should().Be(MoneyAmount.Usd(0m));
+    }
+
+    [Fact]
+    public void Subtraction_EqualAmounts_ReturnsZero()
+    {
+        var left = MoneyAmount.Usd(42m);
+        var right = MoneyAmount.Usd(42m);
+
+        var result = left - right;
+
+        result.Should().Be(MoneyAmount.Usd(0m));
+    }
+
+    [Fact]
+    public void Equality_SameValues_ReturnsTrue()
+    {
+        var a = MoneyAmount.Usd(10m);
+        var b = MoneyAmount.Usd(10m);
+
+        a.Should().Be(b);
+        (a == b).Should().BeTrue();
+    }
+
+    [Fact]
+    public void ToString_ReturnsRecordRepresentation()
+    {
+        var amount = MoneyAmount.Usd(42m);
+
+        amount.ToString().Should().Contain("42");
+        amount.ToString().Should().Contain("Usd");
+    }
 }

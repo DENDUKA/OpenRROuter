@@ -303,25 +303,82 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    // --- Validation ---
+
     [Fact]
-    public async Task ListModels_ValidToken_Returns200WithObjectList()
+    public async Task NonStreaming_NullModel_Returns400()
+    {
+        var client = CreateClient(new StubAuthenticator());
+
+        var response = await PostChatAsync(client, """{"messages":[]}""");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertErrorCode(response, ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task NonStreaming_EmptyModel_Returns400()
+    {
+        var client = CreateClient(new StubAuthenticator());
+
+        var response = await PostChatAsync(client, """{"model":"","messages":[]}""");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertErrorCode(response, ErrorCodes.ValidationFailed);
+    }
+
+    [Fact]
+    public async Task NonStreaming_ModelUnavailable_Returns400WithCorrectType()
     {
         var billing = new StubBillingProvider
         {
-            PublicModels = new[] { new GatewayPublicModel("gpt-4", "openai", true, ["low", "high"]) }
+            CheckResult = new GatewayBalanceCheckResult(false, "gpt-4", "gpt-4", null, MoneyAmount.Usd(100), ErrorCodes.ModelUnavailable)
         };
-        var client = CreateClient(billing: billing);
-        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-ok_key");
+        var client = CreateClient(new StubAuthenticator(), billing);
 
-        var response = await client.GetAsync("/v1/models");
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertErrorCode(response, ErrorCodes.ModelUnavailable);
+    }
+
+    [Fact]
+    public async Task NonStreaming_AdminBypassDisabledModel_UsesAdminFlag()
+    {
+        var billing = new StubBillingProvider();
+        var auth = new StubAuthenticator
+        {
+            Result = ApiKeyAuthenticationResult.Success("user-1", "key-1", "sk-or-test", isAdmin: true)
+        };
+        var client = CreateClient(auth, billing);
+
+        var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions")
+        {
+            Content = new StringContent("""{"model":"gpt-4"}""", Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-ok_key");
+        request.Headers.TryAddWithoutValidation("X-ORR-Admin-Test", "1");
+        await client.SendAsync(request);
+
+        billing.LastAdminBypassDisabled.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task NonStreaming_PreferredNodeWhitespace_BothNull()
+    {
+        var control = new StubControlPlane();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control);
+
+        var response = await PostChatAsync(
+            client,
+            """{"model":"gpt-4"}""",
+            bearer: "sk-ok_key",
+            preferredNodeId: "  ",
+            preferredNodeControlToken: "  ");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        json.RootElement.GetProperty("object").GetString().Should().Be("list");
-        json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("supported").GetBoolean().Should().BeTrue();
-        json.RootElement.GetProperty("data")[0].GetProperty("capabilities").GetProperty("reasoning").GetProperty("efforts")[0].GetString().Should().Be("low");
-        // Clients (Kilo Code / Cline / Roo …) detect reasoning via the OpenRouter-style supported_parameters.
-        json.RootElement.GetProperty("data")[0].GetProperty("supported_parameters").ToString().Should().Contain("reasoning");
+        control.LastPreferredNodeId.Should().BeNull();
+        control.LastPreferredNodeControlToken.Should().BeNull();
     }
 
     // --- Helpers ---

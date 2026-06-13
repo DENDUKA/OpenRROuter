@@ -24,6 +24,9 @@ public class CreditsModel(
     [BindProperty]
     public string SelectedCurrency { get; set; } = "RUB";
 
+    [BindProperty]
+    public bool AcceptLegal { get; set; }
+
     public BalanceInfo? Balance { get; set; }
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
@@ -71,6 +74,13 @@ public class CreditsModel(
         {
             await LoadDataAsync(userId);
             ErrorMessage = "Amount must be greater than 0.";
+            return Page();
+        }
+
+        if (!AcceptLegal)
+        {
+            await LoadDataAsync(userId);
+            ModelState.AddModelError(nameof(AcceptLegal), "You must accept the Public Offer and Privacy Policy.");
             return Page();
         }
 

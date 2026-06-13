@@ -12,6 +12,7 @@
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\collector.proto" GrpcServices="Client" Link="Protos\collector.proto" />
     <PackageReference Include="Google.Protobuf"  />
     <PackageReference Include="MailKit"  />
+    <PackageReference Include="Markdig"  />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google"  />
     <PackageReference Include="Grpc.Net.Client"  />
     <PackageReference Include="Grpc.Net.ClientFactory"  />
@@ -19,6 +20,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\..\docs\mandatory\*.md"
+             Link="docs\mandatory\%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <PropertyGroup>

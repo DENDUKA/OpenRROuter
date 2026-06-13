@@ -35,6 +35,12 @@ public class SignupModel : PageModelBase
     {
         if (!ModelState.IsValid) return Page();
 
+        if (!Input.AcceptLegal)
+        {
+            ModelState.AddModelError("Input.AcceptLegal", "You must accept the Public Offer and Privacy Policy.");
+            return Page();
+        }
+
         try
         {
             var result = await _authClient.RegisterAsync(Input.Email, Input.Password);
@@ -81,5 +87,8 @@ public class SignupModel : PageModelBase
 
         [Required, Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Required(ErrorMessage = "You must accept the Public Offer and Privacy Policy.")]
+        public bool AcceptLegal { get; set; }
     }
 }

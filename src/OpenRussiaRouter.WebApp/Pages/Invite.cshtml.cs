@@ -30,6 +30,12 @@ public class InviteModel : PageModelBase
     {
         if (!ModelState.IsValid) return Page();
 
+        if (!Input.AcceptLegal)
+        {
+            ModelState.AddModelError("Input.AcceptLegal", "You must accept the Public Offer and Privacy Policy.");
+            return Page();
+        }
+
         try
         {
             await _authClient.CompleteInviteAsync(Token, Input.Password);
@@ -61,5 +67,8 @@ public class InviteModel : PageModelBase
 
         [Required, Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = "";
+
+        [Required(ErrorMessage = "You must accept the Public Offer and Privacy Policy.")]
+        public bool AcceptLegal { get; set; }
     }
 }

@@ -1,0 +1,10 @@
+@page
+@model OpenRussiaRouter.WebApp.Pages.Legal.PrivacyModel
+@{
+    ViewData["Title"] = "Privacy Policy";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="legal-document">
+    @Html.Raw(Model.DocumentHtml)
+</div>

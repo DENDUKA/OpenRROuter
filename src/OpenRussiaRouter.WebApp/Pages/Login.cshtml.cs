@@ -97,6 +97,12 @@ public class LoginModel : PageModelBase
         if (User.Identity?.IsAuthenticated == true)
             return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
 
+        if (!Input.AcceptLegal)
+        {
+            ModelState.AddModelError("Input.AcceptLegal", "You must accept the Public Offer and Privacy Policy.");
+            return Page();
+        }
+
         var props = new AuthenticationProperties { RedirectUri = "/Login/ExternalCallback" };
         return Challenge(props, GoogleDefaults.AuthenticationScheme);
     }
@@ -111,5 +117,7 @@ public class LoginModel : PageModelBase
 
         [Required]
         public string Password { get; set; } = "";
+
+        public bool AcceptLegal { get; set; }
     }
 }

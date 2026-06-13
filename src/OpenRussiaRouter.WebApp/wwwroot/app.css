@@ -1101,3 +1101,56 @@ code.d-block {
         transition-duration: .01ms !important;
     }
 }
+
+/* ── Footer ── */
+.app-footer {
+    border-top: 1px solid var(--color-hairline);
+    padding: var(--spacing-lg) var(--spacing-xl);
+    background: var(--color-canvas);
+}
+
+.app-footer-content {
+    display: flex;
+    gap: var(--spacing-xl);
+    justify-content: center;
+    font-size: 13px;
+    color: var(--color-body-mid);
+}
+
+.app-footer-content a {
+    color: var(--color-body-mid);
+    text-decoration: none;
+}
+
+.app-footer-content a:hover {
+    color: var(--color-ink);
+    text-decoration: underline;
+}
+
+/* ── Legal pages ── */
+.legal-document {
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+.legal-document h1 { margin-bottom: var(--spacing-xl); }
+.legal-document h2 {
+    margin-top: var(--spacing-2xl);
+    margin-bottom: var(--spacing-lg);
+}
+.legal-document p {
+    margin-bottom: var(--spacing-md);
+    color: var(--color-body);
+}
+.legal-document ul,
+.legal-document ol {
+    margin-bottom: var(--spacing-md);
+    padding-left: var(--spacing-xl);
+    color: var(--color-body);
+}
+.legal-document li { margin-bottom: var(--spacing-xs); }
+
+.legal-consent {
+    margin: var(--spacing-lg) 0;
+}

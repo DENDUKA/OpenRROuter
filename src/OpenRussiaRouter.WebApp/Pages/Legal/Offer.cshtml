@@ -1,0 +1,10 @@
+@page
+@model OpenRussiaRouter.WebApp.Pages.Legal.OfferModel
+@{
+    ViewData["Title"] = "Public Offer";
+    Layout = "~/Pages/Shared/_Layout.cshtml";
+}
+
+<div class="legal-document">
+    @Html.Raw(Model.DocumentHtml)
+</div>

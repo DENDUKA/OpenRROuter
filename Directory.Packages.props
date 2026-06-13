@@ -18,6 +18,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.15.1-beta.1" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+    <!-- Markdown -->
+    <PackageVersion Include="Markdig" Version="0.37.0" />
     <!-- Email -->
     <PackageVersion Include="MailKit" Version="4.17.0" />
     <!-- Quartz -->

@@ -29,6 +29,15 @@
     </form>
     <div class="auth-divider">or</div>
     <form method="post" asp-page-handler="Google">
+        <div class="form-group legal-consent">
+            <div class="form-check">
+                <input asp-for="Input.AcceptLegal" class="form-check-input" type="checkbox" required />
+                <label asp-for="Input.AcceptLegal" class="form-check-label">
+                    Я принимаю <a href="/legal/offer" target="_blank" rel="noopener noreferrer">Публичную оферту</a> и <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a>.
+                </label>
+            </div>
+            <span asp-validation-for="Input.AcceptLegal" class="validation-message"></span>
+        </div>
         <button type="submit" class="btn btn-secondary w-100">Sign in with Google</button>
     </form>
     <div class="auth-alt">Don't have an account? <a href="/signup">Sign up</a></div>

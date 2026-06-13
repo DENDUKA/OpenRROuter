@@ -186,6 +186,8 @@ builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
 
 builder.Services.AddEmailInfrastructure(builder.Configuration);
 
+builder.Services.AddSingleton<OpenRussiaRouter.WebApp.Services.Legal.LegalDocumentService>();
+
 // TS-005: display-only currency layer (CBR rates, RUB/USD/EUR)
 builder.Services.Configure<ExchangeRateSettings>(
     builder.Configuration.GetSection(ExchangeRateSettings.SectionName));

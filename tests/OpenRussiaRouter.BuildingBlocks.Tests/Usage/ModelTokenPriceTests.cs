@@ -20,6 +20,20 @@ public sealed class ModelTokenPriceTests
     }
 
     [Fact]
+    public void EnsureValid_MixedCurrencies_ThrowsInvalidOperationException()
+    {
+        var price = new ModelTokenPrice(
+            MoneyAmount.Usd(10),
+            new MoneyAmount(20, (Currency)1),
+            MoneyAmount.Usd(5));
+
+        var act = () => price.EnsureValid();
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*same currency*");
+    }
+
+    [Fact]
     public void EnsureValid_PositivePrices_DoesNotThrow()
     {
         var price = new ModelTokenPrice(

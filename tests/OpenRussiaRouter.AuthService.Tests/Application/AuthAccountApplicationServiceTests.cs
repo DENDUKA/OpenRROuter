@@ -164,6 +164,35 @@ public sealed class AuthAccountApplicationServiceTests
         repository.ApiKeys.Single().IsActive.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task ListApiKeys_MultipleKeys_ReturnsAllKeys()
+    {
+        var repository = new TestAuthRepository();
+        var user = new UserAccount("user-1", "user@example.com", UserRole.User, "hash", DateTimeOffset.UtcNow);
+        repository.Users[user.Id] = user;
+        var service = CreateService(repository);
+        var first = await service.CreateApiKeyAsync("user-1", "key-1", DateTimeOffset.UtcNow);
+        var second = await service.CreateApiKeyAsync("user-1", "key-2", DateTimeOffset.UtcNow);
+        var third = await service.CreateApiKeyAsync("user-1", "key-3", DateTimeOffset.UtcNow);
+
+        var keys = await service.ListApiKeysAsync("user-1");
+
+        keys.Should().HaveCount(3);
+        keys.Select(k => k.Id).Should().Contain(new[] { first.Created!.ApiKey.Id, second.Created!.ApiKey.Id, third.Created!.ApiKey.Id });
+    }
+
+    [Fact]
+    public async Task ResendVerification_UnknownEmail_ReturnsFailed()
+    {
+        var repository = new TestAuthRepository();
+        var service = CreateService(repository);
+
+        var result = await service.ResendVerificationAsync("unknown@example.com", DateTimeOffset.UtcNow);
+
+        result.Succeeded.Should().BeFalse();
+        result.ErrorCode.Should().Be(AuthErrorCodes.NoPendingVerification);
+    }
+
     private static AuthAccountApplicationService CreateService(TestAuthRepository repository)
     {
         var secretHasher = new Sha256SecretHasher();

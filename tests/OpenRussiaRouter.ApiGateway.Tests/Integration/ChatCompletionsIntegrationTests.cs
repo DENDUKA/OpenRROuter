@@ -248,6 +248,31 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_UnsupportedReasoningEffort_Returns400()
+    {
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: true,
+                AllowedReasoningEfforts: ["low", "medium"])
+        };
+        var router = new StubRouterProxy();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AssertErrorCode(response, ErrorCodes.UnsupportedReasoningEffort);
+        router.LastRequestJson.Should().BeNull();
+    }
+
+    [Fact]
     public async Task NonStreaming_HappyPath_RecordsUsageAfterSuccessfulResponse()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";

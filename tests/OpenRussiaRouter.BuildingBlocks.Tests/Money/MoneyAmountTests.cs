@@ -60,6 +60,28 @@ public sealed class MoneyAmountTests
     }
 
     [Fact]
+    public void Addition_DifferentCurrencies_ThrowsInvalidOperationException()
+    {
+        var left = MoneyAmount.Usd(10m);
+        var right = new MoneyAmount(5m, (Currency)1);
+
+        var act = () => { var _ = left + right; };
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
+    public void Subtraction_DifferentCurrencies_ThrowsInvalidOperationException()
+    {
+        var left = MoneyAmount.Usd(10m);
+        var right = new MoneyAmount(5m, (Currency)1);
+
+        var act = () => { var _ = left - right; };
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Fact]
     public void ToString_ReturnsRecordRepresentation()
     {
         var amount = MoneyAmount.Usd(42m);

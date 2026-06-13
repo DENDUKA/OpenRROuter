@@ -61,6 +61,71 @@ public sealed class BillingApplicationServiceTests
     }
 
     [Fact]
+    public async Task CheckBalanceAndModel_DailyLimitReached_ReturnsApiKeyLimitExceeded()
+    {
+        var now = new DateTimeOffset(2026, 6, 10, 12, 0, 0, TimeSpan.Zero);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", now);
+        await service.UpsertApiKeySpendLimitAsync("user-1", "key-1", MoneyAmount.Usd(10), null, now);
+        await service.RecordUsageAsync(CreateUsageEvent("req-daily-limit", new TokenUsage(1_000_000, 0, 0)), now);
+
+        var result = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test", apiKeyId: "key-1", nowUtc: now);
+
+        result.Allowed.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ApiKeyLimitExceeded);
+    }
+
+    [Fact]
+    public async Task CheckBalanceAndModel_WeeklyLimitReached_ReturnsApiKeyLimitExceeded()
+    {
+        var now = new DateTimeOffset(2026, 6, 10, 12, 0, 0, TimeSpan.Zero);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", now);
+        await service.UpsertApiKeySpendLimitAsync("user-1", "key-1", null, MoneyAmount.Usd(10), now);
+        await service.RecordUsageAsync(CreateUsageEvent("req-weekly-limit", new TokenUsage(1_000_000, 0, 0)), now);
+
+        var result = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test", apiKeyId: "key-1", nowUtc: now);
+
+        result.Allowed.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.ApiKeyLimitExceeded);
+    }
+
+    [Fact]
+    public async Task ListApiKeyLimitSummaries_UsesUtcDayAndWeekWindows()
+    {
+        var now = new DateTimeOffset(2026, 6, 10, 12, 0, 0, TimeSpan.Zero);
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(100), "test", "topup-1", now);
+        await service.UpsertApiKeySpendLimitAsync("user-1", "key-1", MoneyAmount.Usd(25), MoneyAmount.Usd(40), now);
+        await service.RecordUsageAsync(CreateUsageEvent("req-yesterday", new TokenUsage(1_000_000, 0, 0)), now.AddDays(-1));
+        await service.RecordUsageAsync(CreateUsageEvent("req-today", new TokenUsage(1_000_000, 0, 0)), now);
+
+        var summary = (await service.ListApiKeyLimitSummariesAsync("user-1", ["key-1"], now)).Should().ContainSingle().Which;
+
+        summary.DailySpent.Amount.Should().Be(10);
+        summary.WeeklySpent.Amount.Should().Be(20);
+        summary.DailyRemaining.Amount.Should().Be(15);
+        summary.WeeklyRemaining.Amount.Should().Be(20);
+        summary.DailyExceeded.Should().BeFalse();
+        summary.WeeklyExceeded.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpsertApiKeySpendLimit_BothLimitsNull_ClearsSettings()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var service = CreateService();
+        await service.UpsertApiKeySpendLimitAsync("user-1", "key-1", MoneyAmount.Usd(5), MoneyAmount.Usd(10), now);
+
+        await service.UpsertApiKeySpendLimitAsync("user-1", "key-1", null, null, now.AddMinutes(1));
+
+        (await service.GetApiKeySpendLimitAsync("user-1", "key-1")).Should().BeNull();
+        var summary = (await service.ListApiKeyLimitSummariesAsync("user-1", ["key-1"], now)).Should().ContainSingle().Which;
+        summary.DailyLimit.Should().BeNull();
+        summary.WeeklyLimit.Should().BeNull();
+    }
+
+    [Fact]
     public async Task CheckBalanceAndModel_UnknownModel_ReturnsModelUnavailable()
     {
         var service = CreateService();

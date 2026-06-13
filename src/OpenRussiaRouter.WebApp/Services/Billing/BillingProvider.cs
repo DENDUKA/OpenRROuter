@@ -115,6 +115,87 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         return (items, response.HasMore, string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
     }
 
+    public async Task<ApiKeyLimitSettingsInfo> GetApiKeyLimitSettingsAsync(
+        string userId,
+        string apiKeyId,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetApiKeyLimitSettingsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetApiKeyLimitSettingsRequest
+            {
+                UserId = userId,
+                ApiKeyId = apiKeyId
+            },
+            cancellationToken: cancellationToken);
+
+        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+
+        return new ApiKeyLimitSettingsInfo(
+            apiKeyId,
+            ParseOptionalDecimal(response.DailyLimitUsd),
+            ParseOptionalDecimal(response.WeeklyLimitUsd));
+    }
+
+    public async Task UpsertApiKeyLimitSettingsAsync(
+        string userId,
+        string apiKeyId,
+        decimal? dailyLimitUsd,
+        decimal? weeklyLimitUsd,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.UpsertApiKeyLimitSettingsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertApiKeyLimitSettingsRequest
+            {
+                UserId = userId,
+                ApiKeyId = apiKeyId,
+                DailyLimitUsd = dailyLimitUsd?.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                WeeklyLimitUsd = weeklyLimitUsd?.ToString(CultureInfo.InvariantCulture) ?? string.Empty
+            },
+            cancellationToken: cancellationToken);
+
+        if (!response.Saved)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+    }
+
+    public async Task<IReadOnlyDictionary<string, ApiKeyLimitSummaryInfo>> ListApiKeyLimitSummariesAsync(
+        string userId,
+        IReadOnlyCollection<string> apiKeyIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (apiKeyIds.Count == 0)
+            return new Dictionary<string, ApiKeyLimitSummaryInfo>(StringComparer.Ordinal);
+
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListApiKeyLimitSummariesRequest
+        {
+            UserId = userId
+        };
+        request.ApiKeyIds.AddRange(apiKeyIds);
+
+        var response = await client.ListApiKeyLimitSummariesAsync(request, cancellationToken: cancellationToken);
+        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+
+        return response.Summaries
+            .Select(summary => new ApiKeyLimitSummaryInfo(
+                summary.ApiKeyId,
+                ParseOptionalDecimal(summary.DailyLimitUsd),
+                ParseOptionalDecimal(summary.WeeklyLimitUsd),
+                ParseDecimal(summary.DailySpentUsd),
+                ParseDecimal(summary.WeeklySpentUsd),
+                ParseDecimal(summary.DailyRemainingUsd),
+                ParseDecimal(summary.WeeklyRemainingUsd),
+                summary.DailyExceeded,
+                summary.WeeklyExceeded))
+            .ToDictionary(summary => summary.ApiKeyId, StringComparer.Ordinal);
+    }
+
     public async Task<ActivitySummaryInfo> GetActivitySummaryAsync(
         IReadOnlyCollection<string> apiKeyIds,
         DateTimeOffset? fromUtc = null,
@@ -609,4 +690,10 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
 
        return response.Records.Select(PaymentRecordMapper.ToInfo).ToList();
    }
+
+   private static decimal? ParseOptionalDecimal(string value) =>
+       string.IsNullOrWhiteSpace(value) ? null : decimal.Parse(value, CultureInfo.InvariantCulture);
+
+   private static decimal ParseDecimal(string value) =>
+       string.IsNullOrWhiteSpace(value) ? 0m : decimal.Parse(value, CultureInfo.InvariantCulture);
 }

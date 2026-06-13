@@ -7,6 +7,9 @@ option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Billing.V1";
 service BillingService {
   rpc CheckBalanceAndModel (CheckBalanceAndModelRequest) returns (CheckBalanceAndModelResponse);
   rpc RecordUsage (RecordUsageRequest) returns (RecordUsageResponse);
+  rpc GetApiKeyLimitSettings (GetApiKeyLimitSettingsRequest) returns (GetApiKeyLimitSettingsResponse);
+  rpc UpsertApiKeyLimitSettings (UpsertApiKeyLimitSettingsRequest) returns (UpsertApiKeyLimitSettingsResponse);
+  rpc ListApiKeyLimitSummaries (ListApiKeyLimitSummariesRequest) returns (ListApiKeyLimitSummariesResponse);
   rpc ListPublicModels (ListPublicModelsRequest) returns (ListPublicModelsResponse);
   rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
   rpc CreateVirtualTopUp (CreateVirtualTopUpRequest) returns (CreateVirtualTopUpResponse);
@@ -57,6 +60,7 @@ message CheckBalanceAndModelRequest {
   string user_id = 1;
   string model_id = 2;
   bool admin_bypass_disabled = 3;
+  string api_key_id = 4;
 }
 
 message CheckBalanceAndModelResponse {
@@ -95,6 +99,54 @@ message RecordUsageResponse {
   bool accepted = 1;
   string request_id = 2;
   string error_code = 3;
+}
+
+message GetApiKeyLimitSettingsRequest {
+  string user_id = 1;
+  string api_key_id = 2;
+}
+
+message GetApiKeyLimitSettingsResponse {
+  string user_id = 1;
+  string api_key_id = 2;
+  string daily_limit_usd = 3;
+  string weekly_limit_usd = 4;
+  bool found = 5;
+  string error_code = 6;
+}
+
+message UpsertApiKeyLimitSettingsRequest {
+  string user_id = 1;
+  string api_key_id = 2;
+  string daily_limit_usd = 3;
+  string weekly_limit_usd = 4;
+}
+
+message UpsertApiKeyLimitSettingsResponse {
+  bool saved = 1;
+  string error_code = 2;
+}
+
+message ListApiKeyLimitSummariesRequest {
+  string user_id = 1;
+  repeated string api_key_ids = 2;
+}
+
+message ApiKeyLimitSummary {
+  string api_key_id = 1;
+  string daily_limit_usd = 2;
+  string weekly_limit_usd = 3;
+  string daily_spent_usd = 4;
+  string weekly_spent_usd = 5;
+  string daily_remaining_usd = 6;
+  string weekly_remaining_usd = 7;
+  bool daily_exceeded = 8;
+  bool weekly_exceeded = 9;
+}
+
+message ListApiKeyLimitSummariesResponse {
+  repeated ApiKeyLimitSummary summaries = 1;
+  string error_code = 2;
 }
 
 message ListPublicModelsRequest {

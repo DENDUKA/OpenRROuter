@@ -31,6 +31,7 @@ public sealed class GrpcBillingProvider(
 
     public async Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(
         string userId,
+        string apiKeyId,
         string modelId,
         bool adminBypassDisabled,
         CancellationToken cancellationToken)
@@ -41,6 +42,7 @@ public sealed class GrpcBillingProvider(
                 new CheckBalanceAndModelRequest
                 {
                     UserId = userId,
+                    ApiKeyId = apiKeyId,
                     ModelId = modelId,
                     AdminBypassDisabled = adminBypassDisabled
                 },
@@ -62,7 +64,7 @@ public sealed class GrpcBillingProvider(
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Billing service balance check failed. UserId: {UserId}; ModelId: {ModelId}; RpcStatus: {RpcStatus}", userId, modelId, ex.StatusCode);
+            logger.LogWarning(ex, "Billing service balance check failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}; ModelId: {ModelId}; RpcStatus: {RpcStatus}", userId, apiKeyId, modelId, ex.StatusCode);
             return new GatewayBalanceCheckResult(false, modelId, modelId, null, MoneyAmount.Usd(0), ErrorCodes.InternalError);
         }
     }

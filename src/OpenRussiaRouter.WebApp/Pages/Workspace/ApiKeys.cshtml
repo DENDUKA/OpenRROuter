@@ -106,7 +106,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th>Status</th><th></th>
+                        <th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th>Status</th><th>Daily Limit</th><th>Weekly Limit</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -122,8 +122,24 @@
                                     @(k.DisabledAtUtc == null ? "Active" : "Disabled")
                                 </span>
                             </td>
+                            <td>
+                                <div class="ws-limit-cell">@Model.FormatDailyLimit(k)</div>
+                                @if (Model.IsDailyLimitReached(k))
+                                {
+                                    <span class="badge badge-warning">Limit reached</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="ws-limit-cell">@Model.FormatWeeklyLimit(k)</div>
+                                @if (Model.IsWeeklyLimitReached(k))
+                                {
+                                    <span class="badge badge-warning">Limit reached</span>
+                                }
+                            </td>
                                 <td>
                                   <div class="d-flex gap-2">
+                                      <a class="btn btn-sm btn-outline-primary ws-toggle-btn" href="/workspace/apikeys/limits?keyId=@Uri.EscapeDataString(k.Id)">Limits</a>
+
                                       @if (k.DisabledAtUtc == null)
                                       {
                                           <form method="post" asp-page-handler="DisableKey" onsubmit="orrToggleSubmitting(this)">
@@ -167,6 +183,10 @@
     .ws-toggle-btn[disabled] {
         opacity: 0.65;
         cursor: progress;
+    }
+    .ws-limit-cell {
+        min-width: 160px;
+        white-space: nowrap;
     }
 </style>
 

@@ -81,7 +81,13 @@ public sealed partial class BillingApplicationService(
     public Task<ModelPrice?> GetModelAsync(string modelId, CancellationToken ct = default) =>
         repository.GetModelAsync(Preconditions.RequireValue(modelId, nameof(modelId)), ct);
 
-    public async Task<BalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassEnabled = false, CancellationToken ct = default)
+    public async Task<BalanceCheckResult> CheckBalanceAndModelAsync(
+        string userId,
+        string modelId,
+        bool adminBypassEnabled = false,
+        string? apiKeyId = null,
+        DateTimeOffset? nowUtc = null,
+        CancellationToken ct = default)
     {
         var balance = await repository.GetBalanceAsync(Preconditions.RequireValue(userId, nameof(userId)), ct).ConfigureAwait(false);
         var resolvedModelId = Preconditions.RequireValue(modelId, nameof(modelId));
@@ -114,6 +120,29 @@ public sealed partial class BillingApplicationService(
                 ErrorCodes.InsufficientBalance,
                 model.SupportsReasoning,
                 model.AllowedReasoningEfforts);
+
+        if (!isFreeModel && !string.IsNullOrWhiteSpace(apiKeyId))
+        {
+            var summaries = await ListApiKeyLimitSummariesAsync(
+                userId,
+                [apiKeyId],
+                nowUtc ?? DateTimeOffset.UtcNow,
+                ct).ConfigureAwait(false);
+
+            var limitSummary = summaries.FirstOrDefault();
+            if (limitSummary is { DailyExceeded: true } or { WeeklyExceeded: true })
+            {
+                return new BalanceCheckResult(
+                    false,
+                    modelId,
+                    model.RouterModelId,
+                    model.PriceVersion,
+                    balance,
+                    ErrorCodes.ApiKeyLimitExceeded,
+                    model.SupportsReasoning,
+                    model.AllowedReasoningEfforts);
+            }
+        }
 
         return new BalanceCheckResult(
             true,
@@ -234,6 +263,61 @@ public sealed partial class BillingApplicationService(
 
     public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default) =>
         await repository.GetBalanceAsync(Preconditions.RequireValue(userId, nameof(userId)), ct).ConfigureAwait(false);
+
+    public Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default) =>
+        repository.GetApiKeySpendLimitAsync(
+            Preconditions.RequireValue(userId, nameof(userId)),
+            Preconditions.RequireValue(apiKeyId, nameof(apiKeyId)),
+            ct);
+
+    public async Task UpsertApiKeySpendLimitAsync(
+        string userId,
+        string apiKeyId,
+        MoneyAmount? dailyLimit,
+        MoneyAmount? weeklyLimit,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
+    {
+        userId = Preconditions.RequireValue(userId, nameof(userId));
+        apiKeyId = Preconditions.RequireValue(apiKeyId, nameof(apiKeyId));
+        ValidateOptionalPositiveUsd(dailyLimit, nameof(dailyLimit));
+        ValidateOptionalPositiveUsd(weeklyLimit, nameof(weeklyLimit));
+
+        if (!dailyLimit.HasValue && !weeklyLimit.HasValue)
+        {
+            await repository.ClearApiKeySpendLimitAsync(userId, apiKeyId, ct).ConfigureAwait(false);
+            return;
+        }
+
+        var existing = await repository.GetApiKeySpendLimitAsync(userId, apiKeyId, ct).ConfigureAwait(false);
+        var createdAtUtc = existing?.CreatedAtUtc ?? nowUtc;
+        await repository.UpsertApiKeySpendLimitAsync(
+            new ApiKeySpendLimit(userId, apiKeyId, dailyLimit, weeklyLimit, createdAtUtc, nowUtc),
+            ct).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyCollection<ApiKeyLimitSummary>> ListApiKeyLimitSummariesAsync(
+        string userId,
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
+    {
+        userId = Preconditions.RequireValue(userId, nameof(userId));
+        var ids = apiKeyIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (ids.Length == 0)
+            return Array.Empty<ApiKeyLimitSummary>();
+
+        return await repository.ListApiKeyLimitSummariesAsync(
+            userId,
+            ids,
+            GetUtcDayStart(nowUtc),
+            GetUtcWeekStart(nowUtc),
+            ct).ConfigureAwait(false);
+    }
 
     public async Task<IReadOnlyCollection<LedgerEntry>> ListTopUpsAsync(string userId, CancellationToken ct = default)
     {
@@ -417,6 +501,24 @@ public sealed partial class BillingApplicationService(
 
         if (amount.Amount <= 0)
             throw new ArgumentOutOfRangeException(name, "Amount must be positive.");
+    }
+
+    private static void ValidateOptionalPositiveUsd(MoneyAmount? amount, string name)
+    {
+        if (!amount.HasValue)
+            return;
+
+        ValidatePositiveUsd(amount.Value, name);
+    }
+
+    private static DateTimeOffset GetUtcDayStart(DateTimeOffset nowUtc) =>
+        new(nowUtc.ToUniversalTime().Date, TimeSpan.Zero);
+
+    private static DateTimeOffset GetUtcWeekStart(DateTimeOffset nowUtc)
+    {
+        var dayStart = GetUtcDayStart(nowUtc);
+        var daysSinceMonday = ((int)dayStart.DayOfWeek + 6) % 7;
+        return dayStart.AddDays(-daysSinceMonday);
     }
 
     private FxQuoteService RequireFx() =>

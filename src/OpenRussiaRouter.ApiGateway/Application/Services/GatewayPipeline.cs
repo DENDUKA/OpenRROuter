@@ -54,12 +54,13 @@ public sealed class GatewayPipeline(
         }
 
         var adminBypassDisabled = authResult.IsAdmin && IsAdminTestHeaderPresent(context);
-        var balanceResult = await billingProvider.CheckBalanceAndModelAsync(authResult.UserId!, model, adminBypassDisabled, cancellationToken);
+        var balanceResult = await billingProvider.CheckBalanceAndModelAsync(authResult.UserId!, authResult.ApiKeyId!, model, adminBypassDisabled, cancellationToken);
         if (!balanceResult.Allowed || !string.IsNullOrWhiteSpace(balanceResult.ErrorCode))
         {
             var (errorType, errorMessage) = balanceResult.ErrorCode switch
             {
                 ErrorCodes.InsufficientBalance => ("billing_error", "Insufficient balance to process this request."),
+                ErrorCodes.ApiKeyLimitExceeded => ("billing_error", "API key spend limit reached."),
                 ErrorCodes.ModelUnavailable => ("invalid_request_error", $"Model '{model}' is not available."),
                 ErrorCodes.InternalError => ("internal_error", "An internal error occurred while checking balance."),
                 _ => ("invalid_request_error", "Balance check failed.")

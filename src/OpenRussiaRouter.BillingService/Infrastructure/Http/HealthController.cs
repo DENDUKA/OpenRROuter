@@ -17,6 +17,6 @@ public class HealthController : ControllerBase
     public IActionResult Info() => Ok(new
     {
         service = "OpenRussiaRouter Billing / Usage Service",
-        contracts = new[] { "CheckBalanceAndModel", "RecordUsage", "ListPublicModels", "GetBalance", "CreateVirtualTopUp", "UpsertModelPrice", "ListUsage", "ListBillingAnomalies" }
+        contracts = new[] { "CheckBalanceAndModel", "RecordUsage", "GetApiKeyLimitSettings", "UpsertApiKeyLimitSettings", "ListApiKeyLimitSummaries", "ListPublicModels", "GetBalance", "CreateVirtualTopUp", "UpsertModelPrice", "ListUsage", "ListBillingAnomalies" }
     });
 }

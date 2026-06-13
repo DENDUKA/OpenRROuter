@@ -7,6 +7,7 @@ public interface IBillingProvider
 
     Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(
         string userId,
+        string apiKeyId,
         string modelId,
         bool adminBypassDisabled,
         CancellationToken cancellationToken);

@@ -11,6 +11,19 @@ public interface IBillingRepository
 
     Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default);
 
+    Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default);
+
+    Task UpsertApiKeySpendLimitAsync(ApiKeySpendLimit limit, CancellationToken ct = default);
+
+    Task ClearApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default);
+
+    Task<IReadOnlyCollection<ApiKeyLimitSummary>> ListApiKeyLimitSummariesAsync(
+        string userId,
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset dayStartUtc,
+        DateTimeOffset weekStartUtc,
+        CancellationToken ct = default);
+
     Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default);
 
     Task<ModelPrice?> GetEnabledModelAsync(string modelId, CancellationToken ct = default);

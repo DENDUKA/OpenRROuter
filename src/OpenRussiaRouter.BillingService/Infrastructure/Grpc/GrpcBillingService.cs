@@ -20,7 +20,13 @@ public sealed class GrpcBillingService(
         CheckBalanceAndModelRequest request,
         ServerCallContext context)
     {
-        var result = await billing.CheckBalanceAndModelAsync(request.UserId, request.ModelId, request.AdminBypassDisabled, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        var result = await billing.CheckBalanceAndModelAsync(
+            request.UserId,
+            request.ModelId,
+            request.AdminBypassDisabled,
+            string.IsNullOrWhiteSpace(request.ApiKeyId) ? null : request.ApiKeyId,
+            null,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
         var response = new CheckBalanceAndModelResponse
         {
@@ -113,6 +119,90 @@ public sealed class GrpcBillingService(
             RequestId = result.RequestId ?? string.Empty,
             ErrorCode = result.ErrorCode ?? string.Empty
         };
+    }
+
+    public override async Task<GetApiKeyLimitSettingsResponse> GetApiKeyLimitSettings(
+        GetApiKeyLimitSettingsRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var limit = await billing.GetApiKeySpendLimitAsync(
+                request.UserId,
+                request.ApiKeyId,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new GetApiKeyLimitSettingsResponse
+            {
+                UserId = request.UserId,
+                ApiKeyId = request.ApiKeyId,
+                DailyLimitUsd = limit?.DailyLimit?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                WeeklyLimitUsd = limit?.WeeklyLimit?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                Found = limit is not null
+            };
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "GetApiKeyLimitSettings failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new GetApiKeyLimitSettingsResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<UpsertApiKeyLimitSettingsResponse> UpsertApiKeyLimitSettings(
+        UpsertApiKeyLimitSettingsRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await billing.UpsertApiKeySpendLimitAsync(
+                request.UserId,
+                request.ApiKeyId,
+                ParseOptionalUsd(request.DailyLimitUsd),
+                ParseOptionalUsd(request.WeeklyLimitUsd),
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new UpsertApiKeyLimitSettingsResponse { Saved = true };
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
+        {
+            logger.LogWarning(ex, "UpsertApiKeyLimitSettings failed. UserId: {UserId}; ApiKeyId: {ApiKeyId}", request.UserId, request.ApiKeyId);
+            return new UpsertApiKeyLimitSettingsResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
+
+    public override async Task<ListApiKeyLimitSummariesResponse> ListApiKeyLimitSummaries(
+        ListApiKeyLimitSummariesRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var summaries = await billing.ListApiKeyLimitSummariesAsync(
+                request.UserId,
+                request.ApiKeyIds.ToArray(),
+                DateTimeOffset.UtcNow,
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            var response = new ListApiKeyLimitSummariesResponse();
+            response.Summaries.AddRange(summaries.Select(summary => new Contracts.Grpc.Billing.V1.ApiKeyLimitSummary
+            {
+                ApiKeyId = summary.ApiKeyId,
+                DailyLimitUsd = summary.DailyLimit?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                WeeklyLimitUsd = summary.WeeklyLimit?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
+                DailySpentUsd = summary.DailySpent.Amount.ToString(CultureInfo.InvariantCulture),
+                WeeklySpentUsd = summary.WeeklySpent.Amount.ToString(CultureInfo.InvariantCulture),
+                DailyRemainingUsd = summary.DailyRemaining.Amount.ToString(CultureInfo.InvariantCulture),
+                WeeklyRemainingUsd = summary.WeeklyRemaining.Amount.ToString(CultureInfo.InvariantCulture),
+                DailyExceeded = summary.DailyExceeded,
+                WeeklyExceeded = summary.WeeklyExceeded
+            }));
+            return response;
+        }
+        catch (ArgumentException ex)
+        {
+            logger.LogWarning(ex, "ListApiKeyLimitSummaries failed. UserId: {UserId}", request.UserId);
+            return new ListApiKeyLimitSummariesResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
     }
 
     public override async Task<GetBalanceResponse> GetBalance(
@@ -770,5 +860,13 @@ public sealed class GrpcBillingService(
         return DateTimeOffset.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var parsed)
             ? parsed.ToUniversalTime()
             : null;
+    }
+
+    private static MoneyAmount? ParseOptionalUsd(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        return MoneyAmount.Usd(decimal.Parse(value, CultureInfo.InvariantCulture));
     }
 }

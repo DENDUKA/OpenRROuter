@@ -70,6 +70,7 @@ public sealed class GrpcBillingServiceIntegrationTests
     [Theory]
     [InlineData("RecordUsage")]
     [InlineData("CreateVirtualTopUp")]
+    [InlineData("UpsertApiKeyLimitSettings")]
     [InlineData("UpsertModelPrice")]
     [InlineData("UpsertTag")]
     [InlineData("DeleteTag")]
@@ -194,6 +195,7 @@ public sealed class GrpcBillingServiceIntegrationTests
                     opts.Tokens["webappadmin"] = S2sTestTokens.WebappAdmin;
                     opts.MethodPolicies["RecordUsage"] = new[] { "apigateway" };
                     opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["UpsertApiKeyLimitSettings"] = new[] { "webappadmin" };
                     opts.MethodPolicies["UpsertModelPrice"] = new[] { "webappadmin" };
                     opts.MethodPolicies["UpsertTag"] = new[] { "webappadmin" };
                     opts.MethodPolicies["DeleteTag"] = new[] { "webappadmin" };
@@ -237,6 +239,9 @@ public sealed class GrpcBillingServiceIntegrationTests
                 break;
             case "CreateVirtualTopUp":
                 await client.CreateVirtualTopUpAsync(new CreateVirtualTopUpRequest());
+                break;
+            case "UpsertApiKeyLimitSettings":
+                await client.UpsertApiKeyLimitSettingsAsync(new UpsertApiKeyLimitSettingsRequest());
                 break;
             case "UpsertModelPrice":
                 await client.UpsertModelPriceAsync(new UpsertModelPriceRequest());

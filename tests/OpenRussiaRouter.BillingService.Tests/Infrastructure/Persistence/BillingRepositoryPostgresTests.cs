@@ -310,9 +310,56 @@ public sealed class BillingRepositoryPostgresTests
         balance.Amount.Should().Be(-0.001m);
     }
 
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task ApiKeySpendLimits_RoundTripAndSummariesUseUsageWindows()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = new DateTimeOffset(2026, 6, 10, 12, 0, 0, TimeSpan.Zero);
+
+        await repository.UpsertApiKeySpendLimitAsync(new ApiKeySpendLimit(
+            "user-1", "key-1", MoneyAmount.Usd(25), MoneyAmount.Usd(40), now, now));
+        await repository.RecordUsageWithTransactionAsync(
+            CreateActivity("req-yesterday", now.AddDays(-1)),
+            CreateUsage("req-yesterday", now.AddDays(-1), MoneyAmount.Usd(10)),
+            null);
+        await repository.RecordUsageWithTransactionAsync(
+            CreateActivity("req-today", now),
+            CreateUsage("req-today", now, MoneyAmount.Usd(10)),
+            null);
+
+        var settings = await repository.GetApiKeySpendLimitAsync("user-1", "key-1");
+        var summary = (await repository.ListApiKeyLimitSummariesAsync(
+            "user-1",
+            ["key-1"],
+            new DateTimeOffset(2026, 6, 10, 0, 0, 0, TimeSpan.Zero),
+            new DateTimeOffset(2026, 6, 8, 0, 0, 0, TimeSpan.Zero))).Should().ContainSingle().Which;
+
+        settings.Should().NotBeNull();
+        settings!.DailyLimit.Should().Be(MoneyAmount.Usd(25));
+        settings.WeeklyLimit.Should().Be(MoneyAmount.Usd(40));
+        summary.DailySpent.Amount.Should().Be(10);
+        summary.WeeklySpent.Amount.Should().Be(20);
+        summary.DailyRemaining.Amount.Should().Be(15);
+        summary.WeeklyRemaining.Amount.Should().Be(20);
+    }
+
     private static Payment CreatePayment(string id, DateTimeOffset createdAt) =>
         new(id, "user-1", "mock", null, id, $"client-{id}",
             10, "USD", 10, "USD", MoneyAmount.Usd(10), 1, "fallback", createdAt,
             PaymentStatus.Created, null, null, null, createdAt, createdAt, null, null, null);
+
+    private static ActivityByTokenRecord CreateActivity(string requestId, DateTimeOffset createdAt) =>
+        new(requestId, "key-1", "sk-or-test", "gpt-test", "node-1",
+            new TokenUsage(1, 0, 0), MoneyAmount.Usd(10), "succeeded", createdAt, createdAt);
+
+    private static UsageRecord CreateUsage(string requestId, DateTimeOffset createdAt, MoneyAmount cost) =>
+        new(requestId, "user-1", "key-1", "gpt-test", "v1", "node-1",
+            new TokenUsage(1, 0, 0), cost, "succeeded", createdAt);
 
 }

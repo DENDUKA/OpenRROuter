@@ -19,6 +19,7 @@ public sealed class ServiceAuthInterceptor(
     {
         "RecordUsage",
         "CreateVirtualTopUp",
+        "UpsertApiKeyLimitSettings",
         "UpsertModelPrice",
         "UpsertTag",
         "DeleteTag",

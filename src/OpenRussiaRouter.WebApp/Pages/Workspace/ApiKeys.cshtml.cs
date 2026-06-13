@@ -3,19 +3,27 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 
 [Authorize]
-public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider controlPlaneProvider, ILogger<ApiKeysModel> logger) : PageModelBase
+public class ApiKeysModel(
+    AuthProvider authProvider,
+    BillingProvider billingProvider,
+    ControlPlaneProvider controlPlaneProvider,
+    ILogger<ApiKeysModel> logger) : PageModelBase
 {
     private readonly AuthProvider _authClient = authProvider;
+    private readonly BillingProvider _billingClient = billingProvider;
     private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
     private readonly ILogger<ApiKeysModel> _logger = logger;
 
     public IReadOnlyList<ApiKeySummary> Keys { get; set; } = [];
+    public IReadOnlyDictionary<string, ApiKeyLimitSummaryInfo> LimitSummaries { get; set; } =
+        new Dictionary<string, ApiKeyLimitSummaryInfo>(StringComparer.Ordinal);
     public string? ErrorMessage { get; set; }
     public string? Action => Request.Query["action"];
     public string? ActionKeyId => Request.Query["keyId"];
@@ -27,11 +35,33 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
 
     public async Task OnGetAsync()
     {
-        try { Keys = await _authClient.ListApiKeysAsync(User.GetUserId()); }
+        try
+        {
+            Keys = await _authClient.ListApiKeysAsync(User.GetUserId(), cancellationToken: HttpContext.RequestAborted);
+        }
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load API keys. UserId={UserId}", User.GetUserId());
             ErrorMessage = "Failed to load API keys.";
+            return;
+        }
+
+        if (Keys.Count == 0)
+            return;
+
+        try
+        {
+            LimitSummaries = await _billingClient.ListApiKeyLimitSummariesAsync(
+                User.GetUserId(),
+                Keys.Select(key => key.Id).ToArray(),
+                HttpContext.RequestAborted);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load API key limits. UserId={UserId}", User.GetUserId());
+            ErrorMessage = ErrorMessage is null
+                ? "Failed to load API key limits."
+                : ErrorMessage + " Failed to load API key limits.";
         }
     }
 
@@ -162,4 +192,30 @@ public class ApiKeysModel(AuthProvider authProvider, ControlPlaneProvider contro
     {
         public string Name { get; set; } = "";
     }
+
+    public string FormatDailyLimit(ApiKeySummary key) => FormatLimit(key.Id, daily: true);
+
+    public string FormatWeeklyLimit(ApiKeySummary key) => FormatLimit(key.Id, daily: false);
+
+    public bool IsDailyLimitReached(ApiKeySummary key) =>
+        LimitSummaries.TryGetValue(key.Id, out var summary) && summary.DailyExceeded;
+
+    public bool IsWeeklyLimitReached(ApiKeySummary key) =>
+        LimitSummaries.TryGetValue(key.Id, out var summary) && summary.WeeklyExceeded;
+
+    private string FormatLimit(string apiKeyId, bool daily)
+    {
+        if (!LimitSummaries.TryGetValue(apiKeyId, out var summary))
+            return "No limit";
+
+        var limit = daily ? summary.DailyLimitUsd : summary.WeeklyLimitUsd;
+        if (!limit.HasValue)
+            return "No limit";
+
+        var spent = daily ? summary.DailySpentUsd : summary.WeeklySpentUsd;
+        var remaining = daily ? summary.DailyRemainingUsd : summary.WeeklyRemainingUsd;
+        return $"Spent {FormatUsd(spent)} / {FormatUsd(limit.Value)}; Left {FormatUsd(remaining)}";
+    }
+
+    private static string FormatUsd(decimal amount) => "$" + amount.ToString("0.######", System.Globalization.CultureInfo.InvariantCulture);
 }

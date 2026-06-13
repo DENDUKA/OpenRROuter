@@ -81,6 +81,7 @@ public sealed class GrpcBillingServicePostgresIntegrationTests
                     opts.Tokens["webappadmin"] = S2sTestTokens.WebappAdmin;
                     opts.MethodPolicies["RecordUsage"] = new[] { "apigateway" };
                     opts.MethodPolicies["CreateVirtualTopUp"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["UpsertApiKeyLimitSettings"] = new[] { "webappadmin" };
                     opts.MethodPolicies["UpsertModelPrice"] = new[] { "webappadmin" };
                     opts.MethodPolicies["UpsertTag"] = new[] { "webappadmin" };
                     opts.MethodPolicies["DeleteTag"] = new[] { "webappadmin" };

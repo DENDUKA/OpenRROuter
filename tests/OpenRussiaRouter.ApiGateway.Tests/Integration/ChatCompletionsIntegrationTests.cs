@@ -67,6 +67,23 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_ApiKeyLimitExceeded_Returns402AndDoesNotCallRouter()
+    {
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(false, "gpt-4", "gpt-4", null, MoneyAmount.Usd(100), ErrorCodes.ApiKeyLimitExceeded)
+        };
+        var router = new StubRouterProxy();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
+        await AssertErrorCode(response, ErrorCodes.ApiKeyLimitExceeded);
+        router.LastRequestJson.Should().BeNull();
+    }
+
+    [Fact]
     public async Task NonStreaming_UnknownModel_ReturnsBillingError()
     {
         var billing = new StubBillingProvider
@@ -364,6 +381,21 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_BillingPrecheck_ReceivesApiKeyId()
+    {
+        var billing = new StubBillingProvider();
+        var auth = new StubAuthenticator
+        {
+            Result = ApiKeyAuthenticationResult.Success("user-1", "key-from-auth", "sk-or-test")
+        };
+        var client = CreateClient(auth, billing);
+
+        await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        billing.LastApiKeyId.Should().Be("key-from-auth");
+    }
+
+    [Fact]
     public async Task NonStreaming_PreferredNodeWhitespace_BothNull()
     {
         var control = new StubControlPlane();
@@ -448,9 +480,11 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             => Task.FromResult(PublicModels ?? (IReadOnlyCollection<GatewayPublicModel>)Array.Empty<GatewayPublicModel>());
 
         public bool LastAdminBypassDisabled { get; private set; }
+        public string? LastApiKeyId { get; private set; }
 
-        public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string modelId, bool adminBypassDisabled, CancellationToken ct)
+        public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string apiKeyId, string modelId, bool adminBypassDisabled, CancellationToken ct)
         {
+            LastApiKeyId = apiKeyId;
             LastAdminBypassDisabled = adminBypassDisabled;
             return Task.FromResult(CheckResult);
         }

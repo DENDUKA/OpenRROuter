@@ -40,7 +40,7 @@ public sealed class GrpcBillingServiceTests
         var response = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
 
         var model = response.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("router/gpt-test");
+        model.Id.Should().Be("gpt-test");
         model.DisplayName.Should().Be("GPT Test");
         model.UpstreamModelId.Should().Be("router/gpt-test");
         model.InputPricePer1MUsd.Should().Be("10");
@@ -77,6 +77,75 @@ public sealed class GrpcBillingServiceTests
         response.RequestId.Should().Be("req-1");
         response.ErrorCode.Should().Be(string.Empty);
         (await billing.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Usd(90));
+    }
+
+    [Fact]
+    public async Task ApiKeyLimitSettings_RoundTripsThroughGrpc()
+    {
+        var billing = await CreateBillingWithModelAndBalanceAsync();
+        var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
+
+        var save = await service.UpsertApiKeyLimitSettings(new UpsertApiKeyLimitSettingsRequest
+        {
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            DailyLimitUsd = "5.5",
+            WeeklyLimitUsd = "20"
+        }, context: null!);
+        var settings = await service.GetApiKeyLimitSettings(new GetApiKeyLimitSettingsRequest
+        {
+            UserId = "user-1",
+            ApiKeyId = "key-1"
+        }, context: null!);
+        var summaries = await service.ListApiKeyLimitSummaries(new ListApiKeyLimitSummariesRequest
+        {
+            UserId = "user-1",
+            ApiKeyIds = { "key-1" }
+        }, context: null!);
+
+        save.Saved.Should().BeTrue();
+        settings.Found.Should().BeTrue();
+        settings.DailyLimitUsd.Should().Be("5.5");
+        settings.WeeklyLimitUsd.Should().Be("20");
+        var summary = summaries.Summaries.Should().ContainSingle().Which;
+        summary.ApiKeyId.Should().Be("key-1");
+        summary.DailyLimitUsd.Should().Be("5.5");
+        summary.WeeklyLimitUsd.Should().Be("20");
+    }
+
+    [Fact]
+    public async Task CheckBalanceAndModel_ApiKeyLimitExceeded_ReturnsGrpcErrorCode()
+    {
+        var billing = await CreateBillingWithModelAndBalanceAsync();
+        var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
+        var now = DateTimeOffset.UtcNow;
+
+        _ = await service.UpsertApiKeyLimitSettings(new UpsertApiKeyLimitSettingsRequest
+        {
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            DailyLimitUsd = "10"
+        }, context: null!);
+        _ = await service.RecordUsage(new RecordUsageRequest
+        {
+            RequestId = "req-limit",
+            UserId = "user-1",
+            ApiKeyId = "key-1",
+            ApiKeyPrefix = "sk-or-key-1",
+            ModelId = "router/gpt-test",
+            RouterNodeId = "router-1",
+            Usage = new Contracts.Grpc.Billing.V1.TokenUsage { InputTokens = 1_000_000 },
+            Status = "succeeded",
+            StartedAtUtc = now.AddSeconds(-1).ToString("O"),
+            CompletedAtUtc = now.ToString("O")
+        }, context: null!);
+
+        var response = await service.CheckBalanceAndModel(
+            new CheckBalanceAndModelRequest { UserId = "user-1", ApiKeyId = "key-1", ModelId = "router/gpt-test" },
+            context: null!);
+
+        response.Allowed.Should().BeFalse();
+        response.ErrorCode.Should().Be("api_key_limit_exceeded");
     }
 
     [Fact]
@@ -168,7 +237,7 @@ public sealed class GrpcBillingServiceTests
         response.Upserted.Should().BeTrue();
         response.ModelId.Should().Be("gpt-admin");
         var model = models.Models.Should().ContainSingle().Which;
-        model.Id.Should().Be("router/gpt-admin");
+        model.Id.Should().Be("gpt-admin");
         model.UpstreamModelId.Should().Be("router/gpt-admin");
         model.InputPricePer1MUsd.Should().Be("10");
         model.OutputPricePer1MUsd.Should().Be("20");

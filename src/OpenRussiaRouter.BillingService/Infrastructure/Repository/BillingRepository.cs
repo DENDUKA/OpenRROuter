@@ -79,6 +79,112 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return MoneyAmount.Usd(amount);
     }
 
+    public async Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<ApiKeySpendLimitRow>(new CommandDefinition(
+            """
+            select user_id as UserId,
+                   api_key_id as ApiKeyId,
+                   daily_limit_amount as DailyLimitAmount,
+                   weekly_limit_amount as WeeklyLimitAmount,
+                   created_at_utc as CreatedAtUtc,
+                   updated_at_utc as UpdatedAtUtc
+            from billing.api_key_spend_limits
+            where user_id = @UserId and api_key_id = @ApiKeyId;
+            """,
+            new { UserId = userId, ApiKeyId = apiKeyId },
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        return row is null ? null : ToApiKeySpendLimit(row);
+    }
+
+    public async Task UpsertApiKeySpendLimitAsync(ApiKeySpendLimit limit, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(limit);
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into billing.api_key_spend_limits
+                (api_key_id, user_id, daily_limit_amount, weekly_limit_amount, currency, created_at_utc, updated_at_utc)
+            values
+                (@ApiKeyId, @UserId, @DailyLimitAmount, @WeeklyLimitAmount, 'Usd', @CreatedAtUtc, @UpdatedAtUtc)
+            on conflict (api_key_id) do update set
+                user_id = excluded.user_id,
+                daily_limit_amount = excluded.daily_limit_amount,
+                weekly_limit_amount = excluded.weekly_limit_amount,
+                updated_at_utc = excluded.updated_at_utc;
+            """,
+            new
+            {
+                limit.ApiKeyId,
+                limit.UserId,
+                DailyLimitAmount = limit.DailyLimit?.Amount,
+                WeeklyLimitAmount = limit.WeeklyLimit?.Amount,
+                limit.CreatedAtUtc,
+                limit.UpdatedAtUtc
+            },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task ClearApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "delete from billing.api_key_spend_limits where user_id = @UserId and api_key_id = @ApiKeyId;",
+            new { UserId = userId, ApiKeyId = apiKeyId },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyCollection<ApiKeyLimitSummary>> ListApiKeyLimitSummariesAsync(
+        string userId,
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset dayStartUtc,
+        DateTimeOffset weekStartUtc,
+        CancellationToken ct = default)
+    {
+        if (apiKeyIds.Count == 0)
+            return Array.Empty<ApiKeyLimitSummary>();
+
+        using var connection = connectionFactory.CreateConnection();
+        var rows = await connection.QueryAsync<ApiKeyLimitSummaryRow>(new CommandDefinition(
+            """
+            with requested as (
+                select unnest(cast(@ApiKeyIds as varchar[])) as api_key_id
+            ),
+            usage_totals as (
+                select api_key_id,
+                       coalesce(sum(cost_amount) filter (where created_at_utc >= @DayStartUtc), 0) as daily_spent,
+                       coalesce(sum(cost_amount), 0) as weekly_spent
+                from billing.usage_records
+                where user_id = @UserId
+                  and api_key_id = any(@ApiKeyIds)
+                  and created_at_utc >= @WeekStartUtc
+                group by api_key_id
+            )
+            select r.api_key_id as ApiKeyId,
+                   l.daily_limit_amount as DailyLimitAmount,
+                   l.weekly_limit_amount as WeeklyLimitAmount,
+                   coalesce(u.daily_spent, 0) as DailySpent,
+                   coalesce(u.weekly_spent, 0) as WeeklySpent
+            from requested r
+            left join billing.api_key_spend_limits l
+                on l.api_key_id = r.api_key_id and l.user_id = @UserId
+            left join usage_totals u
+                on u.api_key_id = r.api_key_id;
+            """,
+            new
+            {
+                UserId = userId,
+                ApiKeyIds = apiKeyIds.Distinct(StringComparer.Ordinal).ToArray(),
+                DayStartUtc = dayStartUtc,
+                WeekStartUtc = weekStartUtc
+            },
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        return rows.Select(ToApiKeyLimitSummary).ToArray();
+    }
+
     public async Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(model);
@@ -1157,6 +1263,33 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             }, transaction, cancellationToken: ct)).ConfigureAwait(false);
     }
 
+    private static ApiKeySpendLimit ToApiKeySpendLimit(ApiKeySpendLimitRow row) => new(
+        row.UserId,
+        row.ApiKeyId,
+        row.DailyLimitAmount.HasValue ? MoneyAmount.Usd(row.DailyLimitAmount.Value) : null,
+        row.WeeklyLimitAmount.HasValue ? MoneyAmount.Usd(row.WeeklyLimitAmount.Value) : null,
+        row.CreatedAtUtc,
+        row.UpdatedAtUtc);
+
+    private static ApiKeyLimitSummary ToApiKeyLimitSummary(ApiKeyLimitSummaryRow row)
+    {
+        var dailyLimit = row.DailyLimitAmount.HasValue ? MoneyAmount.Usd(row.DailyLimitAmount.Value) : (MoneyAmount?)null;
+        var weeklyLimit = row.WeeklyLimitAmount.HasValue ? MoneyAmount.Usd(row.WeeklyLimitAmount.Value) : (MoneyAmount?)null;
+        var dailyRemaining = MoneyAmount.Usd(dailyLimit.HasValue ? Math.Max(dailyLimit.Value.Amount - row.DailySpent, 0m) : 0m);
+        var weeklyRemaining = MoneyAmount.Usd(weeklyLimit.HasValue ? Math.Max(weeklyLimit.Value.Amount - row.WeeklySpent, 0m) : 0m);
+
+        return new ApiKeyLimitSummary(
+            row.ApiKeyId,
+            dailyLimit,
+            weeklyLimit,
+            MoneyAmount.Usd(row.DailySpent),
+            MoneyAmount.Usd(row.WeeklySpent),
+            dailyRemaining,
+            weeklyRemaining,
+            dailyLimit.HasValue && row.DailySpent >= dailyLimit.Value.Amount,
+            weeklyLimit.HasValue && row.WeeklySpent >= weeklyLimit.Value.Amount);
+    }
+
     private static Task<int> MarkEventProcessedAsync(System.Data.IDbConnection connection, System.Data.IDbTransaction transaction,
         string eventId, DateTimeOffset nowUtc, CancellationToken ct) =>
         connection.ExecuteAsync(new CommandDefinition(
@@ -1280,4 +1413,23 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         from billing.payment_events
 
         """;
+
+    private sealed class ApiKeySpendLimitRow
+    {
+        public string UserId { get; set; } = "";
+        public string ApiKeyId { get; set; } = "";
+        public decimal? DailyLimitAmount { get; set; }
+        public decimal? WeeklyLimitAmount { get; set; }
+        public DateTimeOffset CreatedAtUtc { get; set; }
+        public DateTimeOffset UpdatedAtUtc { get; set; }
+    }
+
+    private sealed class ApiKeyLimitSummaryRow
+    {
+        public string ApiKeyId { get; set; } = "";
+        public decimal? DailyLimitAmount { get; set; }
+        public decimal? WeeklyLimitAmount { get; set; }
+        public decimal DailySpent { get; set; }
+        public decimal WeeklySpent { get; set; }
+    }
 }

@@ -10,6 +10,7 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 public sealed class InMemoryBillingRepository : IBillingRepository
 {
     private readonly ConcurrentDictionary<string, LedgerEntry> _ledgerByIdempotencyKey = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, ApiKeySpendLimit> _apiKeySpendLimits = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ModelPrice> _models = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, UsageRecord> _usageByRequestId = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ActivityByTokenRecord> _activityByRequestId = new(StringComparer.Ordinal);
@@ -43,6 +44,55 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             .DefaultIfEmpty(0m)
             .Sum();
         return Task.FromResult(MoneyAmount.Usd(amount));
+    }
+
+    public Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        if (_apiKeySpendLimits.TryGetValue(apiKeyId, out var limit) && limit.UserId == userId)
+            return Task.FromResult<ApiKeySpendLimit?>(limit);
+
+        return Task.FromResult<ApiKeySpendLimit?>(null);
+    }
+
+    public Task UpsertApiKeySpendLimitAsync(ApiKeySpendLimit limit, CancellationToken ct = default)
+    {
+        _apiKeySpendLimits[limit.ApiKeyId] = limit;
+        return Task.CompletedTask;
+    }
+
+    public Task ClearApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default)
+    {
+        if (_apiKeySpendLimits.TryGetValue(apiKeyId, out var limit) && limit.UserId == userId)
+            _apiKeySpendLimits.TryRemove(apiKeyId, out _);
+
+        return Task.CompletedTask;
+    }
+
+    public Task<IReadOnlyCollection<ApiKeyLimitSummary>> ListApiKeyLimitSummariesAsync(
+        string userId,
+        IReadOnlyCollection<string> apiKeyIds,
+        DateTimeOffset dayStartUtc,
+        DateTimeOffset weekStartUtc,
+        CancellationToken ct = default)
+    {
+        var ids = apiKeyIds.Distinct(StringComparer.Ordinal).ToArray();
+        var summaries = ids.Select(apiKeyId =>
+        {
+            _apiKeySpendLimits.TryGetValue(apiKeyId, out var limit);
+            if (limit?.UserId != userId)
+                limit = null;
+
+            var dailySpent = _usageByRequestId.Values
+                .Where(usage => usage.UserId == userId && usage.ApiKeyId == apiKeyId && usage.CreatedAtUtc >= dayStartUtc)
+                .Sum(usage => usage.Cost.Amount);
+            var weeklySpent = _usageByRequestId.Values
+                .Where(usage => usage.UserId == userId && usage.ApiKeyId == apiKeyId && usage.CreatedAtUtc >= weekStartUtc)
+                .Sum(usage => usage.Cost.Amount);
+
+            return CreateLimitSummary(apiKeyId, limit?.DailyLimit, limit?.WeeklyLimit, dailySpent, weeklySpent);
+        }).ToArray();
+
+        return Task.FromResult<IReadOnlyCollection<ApiKeyLimitSummary>>(summaries);
     }
 
     public Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
@@ -585,4 +635,28 @@ public sealed class InMemoryBillingRepository : IBillingRepository
 
     private decimal BalanceUnsafe(string userId) =>
         _ledgerByIdempotencyKey.Values.Where(e => e.UserId == userId).Sum(e => e.Amount.Amount);
+
+    private static ApiKeyLimitSummary CreateLimitSummary(
+        string apiKeyId,
+        MoneyAmount? dailyLimit,
+        MoneyAmount? weeklyLimit,
+        decimal dailySpent,
+        decimal weeklySpent)
+    {
+        var dailySpentMoney = MoneyAmount.Usd(dailySpent);
+        var weeklySpentMoney = MoneyAmount.Usd(weeklySpent);
+        var dailyRemaining = MoneyAmount.Usd(dailyLimit.HasValue ? Math.Max(dailyLimit.Value.Amount - dailySpent, 0m) : 0m);
+        var weeklyRemaining = MoneyAmount.Usd(weeklyLimit.HasValue ? Math.Max(weeklyLimit.Value.Amount - weeklySpent, 0m) : 0m);
+
+        return new ApiKeyLimitSummary(
+            apiKeyId,
+            dailyLimit,
+            weeklyLimit,
+            dailySpentMoney,
+            weeklySpentMoney,
+            dailyRemaining,
+            weeklyRemaining,
+            dailyLimit.HasValue && dailySpent >= dailyLimit.Value.Amount,
+            weeklyLimit.HasValue && weeklySpent >= weeklyLimit.Value.Amount);
+    }
 }

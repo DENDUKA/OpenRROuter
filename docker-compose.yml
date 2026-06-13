@@ -27,35 +27,14 @@ services:
     volumes:
       - seq_data:/data
 
-  migrate:
-    image: postgres:16-alpine
-    depends_on:
-      postgres:
-        condition: service_healthy
-    environment:
-      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    volumes:
-      - ./db/migrations:/migrations:ro
-    command: >
-      sh -c "
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/auth/001_initial.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/auth/002_seed_default_admin.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/001_initial.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/002_model_prices_model_id_compat.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/003_model_prices_model_id_repair.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/billing/004_activity_by_token.sql &&
-        psql -h postgres -U postgres -d openrussiarouter -f /migrations/control/001_initial.sql &&
-        echo 'Migrations complete.'
-      "
-
   auth-service:
     build:
       context: .
       dockerfile: src/OpenRussiaRouter.AuthService/Dockerfile
     restart: unless-stopped
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     ports:
       - "5001:8080"
     environment:
@@ -71,8 +50,8 @@ services:
       dockerfile: src/OpenRussiaRouter.BillingService/Dockerfile
     restart: unless-stopped
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     ports:
       - "5002:8080"
     environment:
@@ -88,8 +67,8 @@ services:
       dockerfile: src/OpenRussiaRouter.ControlPlane/Dockerfile
     restart: unless-stopped
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     ports:
       - "5003:8080"
     environment:

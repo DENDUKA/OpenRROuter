@@ -1,52 +1,61 @@
 # Production readiness review
 
-_Дата: 2026-06-13 (актуализация ревью от 2026-06-12)_
+_Дата: 2026-06-14 (актуализация ревью от 2026-06-13)_
 _Модель: Claude Opus 4.8_
-_Источники: README.md, CLAUDE.md, TODO.md, docs/todo.md, docs/tasks/orr-userfriendly-plan.md, docs/billing-payments-implementation-plan.md, docs/email-integration-plan.md + сверка по коду (платежи, rate limiting, восстановление пароля, lockout, метрики, TLS, секреты)._
+_Источники: CLAUDE.md, docs/todo.md, docs/tasks/orr-userfriendly-plan.md, docs/billing-payments-implementation-plan.md, docs/email-integration-plan.md, docs/mandatory/{public-offer,privacy-policy}.md + сверка по коду и git-истории (платежи, rate limiting, retry/circuit breaker биллинга, lease leak, локализация, юридические страницы, восстановление пароля, lockout, метрики, TLS, секреты)._
 
 ## Вердикт
 
-Ядро MVP в хорошем состоянии: весь пайплайн gateway → auth → billing → control plane → 9Router работает, включая streaming, retry, идемпотентный ledger, синк ключей на ноды, signup с email-подтверждением, OpenTelemetry-метрики. С прошлого ревью закрыты два блокера — восстановление/смена пароля и lockout логина (см. ниже). Но до «продакшена с реальными пользователями и реальными деньгами» остаётся несколько блокеров, и почти все они одновременно бьют по юзабилити.
+Ядро MVP в хорошем состоянии: весь пайплайн gateway → auth → billing → control plane → 9Router работает, включая streaming, retry с потолком, идемпотентный ledger, синк ключей на ноды, signup с email-подтверждением, OpenTelemetry-метрики. С прошлой итерации добавлены: устойчивая доставка usage-событий (retry + circuit breaker), фикс утечки lease при обрыве клиента, локализация интерфейса (EN/RU) и юридические страницы (оферта + политика конфиденциальности) с согласием перед оплатой. До «продакшена с реальными пользователями и реальными деньгами» остаётся несколько блокеров — и главный из них по-прежнему **HTTPS**: он же разблокирует включение реальных платежей.
 
-## Закрыто с 2026-06-12
+## Закрыто с 2026-06-13
 
-- **Восстановление и смена пароля** (коммит `dcb31d8`). `ChangePassword` в `auth.proto`, флоу `/forgot-password` → 6-значный код на почту → `/reset-password`, смена пароля в `/workspace/settings`. Таблица `auth.password_resets`, миграция 011. Бывший блокер №3.
-- **Lockout логина** (тот же коммит). 5 неудачных попыток → блокировка на 15 мин; поля `failed_login_count`/`locked_until_utc` в `auth.users`. Закрывает половину бывшего блокера №4 (вторая половина — rate limiting на Gateway — ещё открыта).
-- **Платёжный каркас**. Реализованы `IPaymentProvider`, `PaymentCheckoutService`, webhook-endpoint с verify + per-IP rate limiting, `PaymentReconciliationWorker`, `PaymentStartupGuard`, страница `/workspace/payment-success`. Осталось написать один конкретный адаптер (см. блокер №1) — каркас полностью готов его принять.
-- **Rate limiting на Gateway** (2026-06-13). Per-API-key (фолбэк per-IP) fixed-window лимитер на `POST /v1/chat/completions[/stream]` — встроенный `Microsoft.AspNetCore.RateLimiting`, конфиг `RateLimiting` (`Enabled`/`PermitLimit`/`WindowSeconds`, дефолт 60/мин), отказ в OpenAI-формате (`429` + `Retry-After`, `code=rate_limited`). Покрыт интеграционными тестами. Бывший блокер №3.
-- **Предохранитель retry-цикла Gateway** (2026-06-13, попутно). Найден и закрыт предсуществующий баг: `ChatCompletionHandler` на 5xx ретраил ноды в `while(true)` без потолка — при ControlPlane, вернувшем ноду из excluded-набора, это бесконечный цикл с пегом CPU (он же давал зависающий тест и красный CI). Добавлен cap `MaxRouterAttempts=5` в оба цикла (non-stream + stream). Весь набор тестов Gateway (71) зелёный.
-- **Rollypay-адаптер написан** (2026-06-13). Реализован `RollypayPaymentProvider : IPaymentProvider` поверх готового каркаса: тонкий `RollypayClient` (X-API-Key + per-request `X-Nonce`, маппинг 4xx→`RollypayApiException` / 5xx·429·таймаут→`RollypayUnavailableException`), HMAC-SHA256-верификатор вебхука (`{X-Timestamp}.{body}`, скос 5 мин), маппинг event/status, провайдер шлёт в Rollypay **ровно** записанные Billing-ом amount/currency (никакого override валюты — иначе зачислили бы одно, списали другое). DI: named `HttpClient` "Rollypay" + регистрация безусловная (активен только при `ActiveProvider=rollypay`, иначе fail-safe). Тесты: golden-HMAC + адаптер (CreateAsync/Parse/Verify/GetPayment через стаб) — весь WebApp.Tests (97) зелёный. Закрывает кодовую часть бывшего блокера №1; до боевого включения осталось не-кодовое (см. ниже).
+- **Локализация интерфейса (EN/RU) + переключатель языка** (коммит `22065a1`). `.resx` для страниц + `SharedResource`, регистрация поддерживаемых культур, `RequestLocalization`-кука, эндпоинт `SetLanguage` (`PreferencesController`) с безопасными редиректами; кабинетные страницы и валидационные сообщения переведены через `IStringLocalizer<SharedResource>`. Закрывает бывший пункт юзабилити №6 («язык интерфейса»). Переключатель валюты (₽/$/€) уже был.
+- **Юридические страницы + согласие** (коммиты `cfba276`, `4def631`). Публичная оферта и политика конфиденциальности (152-ФЗ) в `docs/mandatory/*.md`, шаблонизированы плейсхолдерами `{{ORR_*}}` и рендерятся через `LegalDocumentService` (Markdig) на `/legal/offer` и `/legal/privacy`. Чекбокс согласия гейтит signup, invite, Google-login **и** создание платёжного checkout-а (`TopUp_WithoutConsent_DoesNotCreateCheckout`). Покрыто тестами (`LegalConsentTests`, `LegalDocumentServiceTests`, `LegalPagesTests`). Код готов; до боевого запуска остаётся **не-кодовое** — подставить реальные данные оператора в плейсхолдеры (`ORR_SERVICE_NAME`, `ORR_PUBLIC_DOMAIN`, реквизиты, дата) и домен (зависит от блокера №1 — HTTPS).
+- **Устойчивая доставка usage-событий** (коммит `9df68d0`, BILLING-004). На gRPC-канал биллинга в Gateway навешан Polly-resilience: retry (6 попыток, экспоненциальный backoff от 4 с, на `RpcException`/`HttpRequestException`) + circuit breaker (окно 30 с, порог 50%, break 15 с). Смягчает потерю списаний при **транзиентных** сбоях биллинга. **Это не durable outbox**: при падении самого Gateway в окне ретраев или недоступности биллинга дольше бюджета событие всё ещё теряется (см. блокер №4).
+- **Фикс утечки lease при обрыве клиента** (коммит `ff91870`). `ChatCompletionHandler` теперь освобождает lease через `ReleaseRouterNodeAsync(..., CancellationToken.None)` во всех ветках (в т.ч. при `RequestAborted` посреди стрима) — раньше lease «протекал» при дисконнекте клиента, накручивая in-flight счётчик ноды. Плюс структурное логирование downstream-ошибок. Это **leak на дисконнект**, не путать с lease recovery после рестарта ControlPlane (CONTROL-004 — всё ещё открыт, см. блокер №4).
+
+## Закрыто ранее (2026-06-12 → -13)
+
+- **Восстановление и смена пароля** (`dcb31d8`): `/forgot-password` → 6-значный код на почту → `/reset-password`; смена пароля в `/workspace/settings`. Таблица `auth.password_resets`, миграция 011.
+- **Lockout логина** (тот же коммит): 5 неудачных попыток → блокировка на 15 мин; поля `failed_login_count`/`locked_until_utc` в `auth.users`.
+- **Платёжный каркас**: `IPaymentProvider`, `PaymentCheckoutService`, webhook-endpoint с verify + per-IP rate limiting, `PaymentReconciliationWorker`, `PaymentStartupGuard`, `/workspace/payment-success`.
+- **Rate limiting на Gateway** (`4c94ded`): per-API-key (фолбэк per-IP) fixed-window на `POST /v1/chat/completions[/stream]`, конфиг `RateLimiting` (дефолт 60/мин), отказ в OpenAI-формате (`429` + `Retry-After`, `code=rate_limited`).
+- **Предохранитель retry-цикла Gateway** (`4c94ded`): cap `MaxRouterAttempts=5` в обоих циклах (non-stream + stream) — закрыт предсуществующий баг с бесконечным ретраем на 5xx.
+- **Rollypay-адаптер написан** (`f09dc8c`): `RollypayPaymentProvider : IPaymentProvider` поверх каркаса — `RollypayClient` (X-API-Key + per-request `X-Nonce`, маппинг 4xx→`RollypayApiException` / 5xx·429·таймаут→`RollypayUnavailableException`), HMAC-SHA256-верификатор вебхука (`{X-Timestamp}.{body}`, скос 5 мин), провайдер шлёт в Rollypay **ровно** записанные Billing-ом amount/currency. Закрывает кодовую часть бывшего блокера №1.
 
 ## Блокеры для продакшена
 
-### 1. Реальные платежи: код есть, не-кодовое включение остаётся
+### 1. Нет HTTPS — главный гейт
 
-Код закрыт (см. «Закрыто», 2026-06-13): `RollypayPaymentProvider` написан и покрыт тестами. До того, как пользователь сможет реально пополнить баланс, осталось **не-кодовое**:
+Оба деплоя — голый HTTP по IP/`.local`. В kind ingress слушает `host: localhost`/`*.local` без `tls:`-секции и cert-manager; на VPS — HTTP по IP. Это уже ломало clipboard API (пришлось делать фолбэк в `_Layout.cshtml`), но главное — API-ключи `sk-or-*` и пароли ходят открытым текстом. Без домена/TLS **нельзя**: (а) направить вебхук Rollypay, (б) корректно опубликовать оферту с реальным `ORR_PUBLIC_DOMAIN`, (в) безопасно принимать пароли/ключи. Нужен домен + TLS (Caddy/Traefik на VPS, cert-manager на kind). Для LLM-гейтвея это требование, а не опция — и он разблокирует блокеры №2 и №3.
+
+### 2. Реальные платежи: код есть, не-кодовое включение остаётся
+
+Код закрыт (`RollypayPaymentProvider` написан и покрыт тестами). До того, как пользователь сможет реально пополнить баланс, осталось **не-кодовое**:
 
 - завести кассу в Rollypay, получить `ApiKey` + `SigningSecret`, положить их в прод-секрет (НЕ в git) и выставить `Payments:ActiveProvider=rollypay`;
-- прописать webhook-URL `https://<домен>/webhook/rollypay` в UI кассы — **зависит от блокера №2 (HTTPS)**: без домена/TLS вебхук некуда направить;
+- прописать webhook-URL `https://<домен>/webhook/rollypay` в UI кассы — **зависит от блокера №1 (HTTPS)**: без домена/TLS вебхук некуда направить;
 - **checkout должен форсить RUB** для rollypay-провайдера. Сейчас `PaymentCheckoutService` передаёт в провайдера display-валюту пользователя; провайдер шлёт её как есть. Для RUB-дефолта (основной путь) всё консистентно, но при display=USD/EUR Rollypay отклонит платёж (СБП — только рубли). Пока display по умолчанию RUB — это не блокер запуска, но до включения мультивалютного топ-апа надо форсить RUB на стороне checkout;
 - боевой smoke-тест минимальной суммой (у Rollypay нет sandbox).
 
-### 2. Нет HTTPS
+### 3. Реквизиты оператора для юридических страниц
 
-Оба деплоя — голый HTTP по IP/`.local`. В kind ingress слушает `host: localhost`/`*.local` без `tls:`-секции и cert-manager; на VPS — HTTP по IP. Это уже ломало clipboard API (пришлось делать фолбэк в `_Layout.cshtml`), но главное — API-ключи `sk-or-*` и пароли ходят открытым текстом. Нужен домен + TLS (Caddy/Traefik на VPS, cert-manager на kind). Для LLM-гейтвея это не опция, а требование.
+Оферта и политика конфиденциальности шаблонизированы (`{{ORR_SERVICE_NAME}}`, `{{ORR_PUBLIC_DOMAIN}}`, реквизиты, `{{ORR_DOCUMENT_DATE}}`) и рендерятся в кабинете. Принимать реальные деньги без заполненных реквизитов оператора и публичного домена — нельзя. Это **не-кодовое**: подставить значения плейсхолдеров (юрлицо/ИП, домен, дата) и убедиться, что согласие фиксируется до оплаты (уже гейтит checkout). Тесно связано с блокерами №1 (домен) и №2 (запуск платежей).
 
-### 3. Надёжность денег
+### 4. Надёжность денег
 
-Из CLAUDE.md «Не готово»:
+Из CLAUDE.md «Не готово» (с поправкой на сделанное):
 
-- usage events — fire-and-forget gRPC без outbox (упал Billing — потеряли списание);
-- нет immutable price history (`billing.model_prices` — один active row);
-- нет lease recovery после рестарта ControlPlane.
+- usage events — теперь с retry + circuit breaker (`9df68d0`), но **без durable outbox**: падение Gateway в окне ретраев или недоступность Billing дольше бюджета → списание всё ещё теряется. Полноценный PostgreSQL-backed outbox (BILLING-004) остаётся главным пунктом надёжности;
+- нет immutable price history (`billing.model_prices` — один active row, BILLING-003);
+- нет lease recovery после рестарта ControlPlane (CONTROL-004; leak на дисконнект закрыт в `ff91870`, но in-flight счётчики сбрасываются при рестарте).
 
-Outbox — самое важное из трёх: потерянный usage = потерянные деньги.
+### 5. Ops-хвосты
 
-### 4. Ops-хвосты
-
-- plain-text секреты в git (INFRA-003, SOPS+Age не сделан) — проверено: `postgres-secret.yaml`, `s2s-secret.yaml`, `f9router-2-secret.yaml` лежат в открытом виде в `infra/kustomize/base/`;
-- SMTP-секрет на проде не запровижен — без него коды регистрации/восстановления пароля не уходят (а флоу восстановления теперь критически от них зависит);
-- проверить, что CI зелёный: в конце мая он две недели был красным при «Synced» в ArgoCD (live-кластер крутил устаревшие образы).
+- plain-text секреты в git (INFRA-003, SOPS+Age не сделан) — `postgres-secret.yaml`, `s2s-secret.yaml`, `f9router-2-secret.yaml` лежат в открытом виде в `infra/kustomize/base/`;
+- SMTP-секрет на проде не запровижен — без него коды регистрации/восстановления пароля не уходят (а флоу восстановления критически от них зависит). Каркас и инструкция — в `docs/email-integration-plan.md`;
+- проверить, что CI зелёный: в конце мая он две недели был красным при «Synced» в ArgoCD (live-кластер крутил устаревшие образы). На 2026-06-14 локальная сборка решения зелёная (0 warnings/0 errors), `WebApp.Tests` — 146/146; серия коммитов-`bugfix` после локализации (`288af43`, `3e2f97e`, `f22dadb`) — стабилизация, стоит подтвердить зелёный GitHub Actions, а не только ArgoCD.
 
 ## Юзабилити — «просто и наглядно»
 
@@ -68,20 +77,20 @@ Outbox — самое важное из трёх: потерянный usage = �
 
 ### 5. Санитайзер описаний моделей
 
-Доделать задачу D из `docs/tasks/orr-userfriendly-plan.md`: сейчас в каталог течёт сырой markdown с маркетингом из OpenRouter. План есть, нужны 2–3 реальных примера с прода для правил очистки.
+Доделать задачу D из `docs/tasks/orr-userfriendly-plan.md`: сейчас в каталог течёт сырой markdown с маркетингом из OpenRouter. План есть, нужны 2–3 реальных примера с прода для правил очистки. Это единственный оставшийся открытый пункт того плана (A–C, E и переключатель валюты сделаны).
 
-### 6. Язык интерфейса
+### ~~6. Язык интерфейса~~ — сделано
 
-UI весь на английском, при этом продукт целится в русскоязычную аудиторию (RUB по умолчанию, СБП). Решить осознанно: либо русифицировать кабинет (не админку), либо оставить английский как «привычный для разработчиков» — сейчас это выглядит ненамеренным.
+Локализация EN/RU + переключатель языка добавлены (`22065a1`). Кабинет переведён, культура хранится в куке. Админку не локализовали — осознанно (для оператора).
 
 ## Приоритет
 
 ```
-HTTPS (домен + TLS)
-  → включить Rollypay (касса/секреты + webhook-URL + ActiveProvider; код уже написан)
+HTTPS (домен + TLS)                         ← главный гейт, разблокирует платежи и юр-страницы
+  → реквизиты оператора в оферте/политике + webhook-URL + касса/секреты + ActiveProvider=rollypay
   → onboarding-чеклист + playground
-  → billing outbox
+  → billing outbox (durable, не только retry)
   → графики расходов
 ```
 
-~~восстановление пароля + lockout~~, ~~rate limiting на Gateway~~, ~~адаптер Rollypay (код)~~ — сделано (2026-06-12 → -13). Главная оставшаяся «дверь наружу» — **HTTPS**: он же разблокирует включение Rollypay (webhook-URL требует домена). После него — включение кассы и не-кодовые шаги из блокера №1. Следующие два пункта делают первый опыт понятным, остальное — надёжность и полировка.
+~~восстановление пароля + lockout~~, ~~rate limiting на Gateway~~, ~~адаптер Rollypay (код)~~, ~~устойчивая доставка usage (retry/CB)~~, ~~lease leak на дисконнект~~, ~~локализация (EN/RU)~~, ~~юр-страницы (код)~~ — сделано (2026-06-12 → -14). Главная оставшаяся «дверь наружу» — **HTTPS**: он разблокирует включение Rollypay (webhook-URL требует домена) и корректную публикацию оферты. После него — заполнение реквизитов/секретов и боевой smoke. Следующие два пункта делают первый опыт понятным, остальное (durable outbox, графики) — надёжность и наглядность.

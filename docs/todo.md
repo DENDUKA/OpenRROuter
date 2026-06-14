@@ -1,6 +1,12 @@
 # OpenRussiaRouter — TODO / Статус задач
 
-> Обновлено: 2026-05-15
+> Обновлено: 2026-06-14 (исходный MVP-трекер от 2026-05-15 + дельта после MVP)
+>
+> ⚠️ **Это исходный трекер фазы MVP.** Актуальный статус готовности к проду — в
+> `docs/production-readiness-review.md`. Историю строк ниже не переписываем (они отражают MVP);
+> две поправки терминологии: UI — **Razor Pages**, а не Blazor; пути кабинета — **`/workspace/*`**,
+> а не `/cabinet/*` (см. CLAUDE.md → WebApp Pages). Что изменилось после MVP — в разделе
+> «Дельта после MVP» в конце файла.
 
 ---
 
@@ -155,3 +161,40 @@ INFRA-003        (SOPS + Age шифрование secrets)
 TEST-003 E2E-001 (полный stack E2E с Testcontainers)
 TEST-004+        (RouterKeySyncService unit tests)
 ```
+
+---
+
+## Дельта после MVP (2026-06)
+
+Что появилось/закрылось поверх MVP-трекера выше. Полный контекст и приоритеты — в
+`docs/production-readiness-review.md`.
+
+### Сделано после MVP
+
+| Область | Статус | Что |
+|---|---|---|
+| Email + signup | ✅ Готово | Brevo SMTP (`IEmailSender`/worker), invite-email + broadcast; self-serve signup → 6-значный код → `/verify-email`. См. `docs/email-integration-plan.md`. Требует SMTP-секрета на проде |
+| Password reset / lockout | ✅ Готово | `/forgot-password` → код → `/reset-password`; смена пароля в `/workspace/settings`; lockout 5 попыток / 15 мин. Миграция auth 011 |
+| Метрики / трейсинг | ✅ Готово | OpenTelemetry-метрики (был PLATFORM-003-пробел) |
+| Платёжный каркас | ✅ Готово | `IPaymentProvider`, `PaymentCheckoutService`, webhook + verify + per-IP rate limit, reconciliation/recovery воркеры, FX (ЦБ РФ), валюта отображения. См. `docs/billing-payments-implementation-plan.md` |
+| Реальная касса (код) | ✅ Готово | `RollypayPaymentProvider` (X-API-Key + nonce, HMAC-вебхук). Включение — не-кодовое (касса/секреты/webhook-URL) |
+| Gateway rate limiting | ✅ Готово | Per-API-key fixed-window на `/v1/chat/completions[/stream]`, `429` в OpenAI-формате |
+| Gateway retry cap | ✅ Готово | `MaxRouterAttempts=5` — закрыт баг бесконечного ретрая на 5xx |
+| Usage delivery resilience | 🟡 Частично | Polly retry + circuit breaker на gRPC-канал биллинга (BILLING-004). **Durable outbox всё ещё нет** — при падении Gateway/долгом ауте списание теряется |
+| Lease leak | ✅ Готово | Release lease при обрыве клиента (`CancellationToken.None` во всех ветках `ChatCompletionHandler`) |
+| Локализация | ✅ Готово | EN/RU `.resx` + переключатель языка (`SetLanguage`/кука) + переключатель валюты ₽/$/€ |
+| Юр-страницы | 🟡 Код готов | Оферта + политика (152-ФЗ), `LegalDocumentService`, согласие гейтит signup/invite/Google/checkout. Не-кодовое — заполнить реквизиты оператора + домен |
+
+### Остаётся открытым (приоритет — в ревью)
+
+| Задача | Статус | Что |
+|---|---|---|
+| HTTPS / TLS | ❌ Блокер | Оба деплоя — голый HTTP. Главный гейт: разблокирует платежи (webhook-URL) и публикацию оферты |
+| BILLING-004 outbox | ❌ Не сделано | Durable PostgreSQL-backed outbox для usage (retry/CB — лишь смягчение) |
+| BILLING-003 price history | ❌ Не сделано | Immutable versioned прайс вместо одного active row |
+| BILLING-006 | ❌ Не сделано | UsageAggregates + графики расходов на Credits/Activity |
+| CONTROL-004 lease recovery | ❌ Не сделано | После рестарта ControlPlane in-flight счётчики сбрасываются (leak на дисконнект — закрыт) |
+| INFRA-003 | ❌ Не сделано | SOPS+Age: plain-text секреты в `infra/kustomize/base/` |
+| Onboarding / playground | ❌ Не сделано | Чеклист «3 шага» на `/` + пользовательский playground |
+| Low-balance warning | ❌ Не сделано | Баннер + письмо при пересечении порога |
+| Описания моделей (task D) | ❌ Не сделано | Санитайзер markdown из OpenRouter (`docs/tasks/orr-userfriendly-plan.md`) |

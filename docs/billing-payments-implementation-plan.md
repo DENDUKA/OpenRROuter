@@ -1,6 +1,6 @@
 # Billing — Real-Money Payments: Implementation Plan
 
-_Status: ready for implementation_
+_Status: ✅ **implemented** (Phases 1–8 + Rollypay-адаптер написаны и покрыты тестами, 2026-06-13). Каркас провайдер-агностичный; реальная касса `RollypayPaymentProvider` лежит ровно в `IPaymentProvider`. Остаётся **не-кодовое** включение — касса/секреты, webhook-URL (требует HTTPS-домена), `ActiveProvider=rollypay`, форс RUB в checkout для мультивалюты, боевой smoke. Актуальный статус readiness — `docs/production-readiness-review.md`._
 _Created: 2026-06-06_
 _Scope: OpenRussiaRouter (.NET 8 microservices)_
 

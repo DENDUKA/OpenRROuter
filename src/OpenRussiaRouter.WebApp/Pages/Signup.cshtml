@@ -39,7 +39,7 @@
             </div>
             <span asp-validation-for="Input.AcceptLegal" class="validation-message"></span>
         </div>
-        <button type="submit" class="btn btn-primary w-100">@Localizer["Signup_Submit"]</button>
+        <button type="submit" id="signup-submit" class="btn btn-primary w-100">@Localizer["Signup_Submit"]</button>
     </form>
     <div class="auth-alt">@Localizer["Signup_AltLogin"] <a href="/login">@Localizer["Signup_LoginLink"]</a></div>
 </div>
@@ -51,4 +51,20 @@
     .auth-title { font-size: 38px; font-weight: 400; color: var(--color-ink); }
     .form-group { margin-bottom: var(--spacing-lg); }
     .auth-alt { text-align: center; margin-top: var(--spacing-lg); color: var(--color-body-mid); font-size: 13px; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
 </style>
+
+@section Scripts {
+<script>
+    // Keep the Sign up button disabled until the legal consent box is ticked. The checkbox also
+    // carries `required` and the server re-checks AcceptLegal, so no-JS users stay protected too.
+    (function () {
+        var consent = document.getElementById('Input_AcceptLegal');
+        var submit = document.getElementById('signup-submit');
+        if (!consent || !submit) return;
+        function sync() { submit.disabled = !consent.checked; }
+        consent.addEventListener('change', sync);
+        sync();
+    })();
+</script>
+}

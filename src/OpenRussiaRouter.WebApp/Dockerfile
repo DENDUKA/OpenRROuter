@@ -12,6 +12,9 @@ COPY src/OpenRussiaRouter.WebApp/OpenRussiaRouter.WebApp.csproj src/OpenRussiaRo
 RUN dotnet restore src/OpenRussiaRouter.WebApp/OpenRussiaRouter.WebApp.csproj --configfile NuGet.Config
 
 COPY src/ src/
+# Legal markdown lives outside src/ and is referenced by the WebApp .csproj via ..\..\docs;
+# it must be present in the build context for `dotnet publish` to bundle it into the image.
+COPY docs/mandatory/ docs/mandatory/
 RUN dotnet publish src/OpenRussiaRouter.WebApp/OpenRussiaRouter.WebApp.csproj \
     -c Release -o /app/publish --no-restore
 

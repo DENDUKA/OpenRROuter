@@ -101,12 +101,6 @@ public class LoginModel : PageModelBase
         if (User.Identity?.IsAuthenticated == true)
             return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
 
-        if (!Input.AcceptLegal)
-        {
-            ModelState.AddModelError("Input.AcceptLegal", _localizer["Validation_AcceptLegal"]);
-            return Page();
-        }
-
         var props = new AuthenticationProperties { RedirectUri = "/Login/ExternalCallback" };
         return Challenge(props, GoogleDefaults.AuthenticationScheme);
     }
@@ -122,7 +116,5 @@ public class LoginModel : PageModelBase
 
         [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
         public string Password { get; set; } = "";
-
-        public bool AcceptLegal { get; set; }
     }
 }

@@ -23,8 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\docs\mandatory\*.md"
-             Link="docs\mandatory\%(Filename)%(Extension)"
+    <Content Include="../../docs/mandatory/*.md"
+             Link="docs/mandatory/%(Filename)%(Extension)"
              CopyToOutputDirectory="PreserveNewest"
              CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>

@@ -100,7 +100,6 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Theory]
     [InlineData("/signup")]
     [InlineData("/invite/test-token")]
-    [InlineData("/login")]
     public async Task AccountCreationForms_RenderRequiredLegalConsent(string path)
     {
         var response = await _client.GetAsync(path);

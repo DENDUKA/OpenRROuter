@@ -67,23 +67,6 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task LoginGoogle_WithoutConsent_ShowsServerError()
-    {
-        var formData = new Dictionary<string, string>
-        {
-            { "Input.Email", "test@example.com" },
-            { "Input.Password", "password" },
-            { "Input.AcceptLegal", "false" }
-        };
-
-        var content = new FormUrlEncodedContent(formData);
-        var response = await _client.PostAsync("/login?handler=Google", content);
-        var responseBody = await response.Content.ReadAsStringAsync();
-
-        Assert.Contains("validation-message", responseBody);
-    }
-
-    [Fact]
     public async Task LoginPassword_DoesNotRequireConsent()
     {
         var formData = new Dictionary<string, string>

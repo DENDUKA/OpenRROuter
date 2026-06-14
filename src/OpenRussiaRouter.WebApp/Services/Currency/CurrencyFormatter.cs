@@ -11,12 +11,16 @@ public class CurrencyFormatter
     public string Format(decimal usdAmount, DisplayCurrency currency)
     {
         var amount = usdAmount * _rates.UsdTo(currency);
-        return currency switch
+        var symbol = currency switch
         {
-            DisplayCurrency.Usd => $"${amount.ToString("F2", CultureInfo.InvariantCulture)}",
-            DisplayCurrency.Rub => $"₽{amount.ToString("F2", CultureInfo.InvariantCulture)}",
-            DisplayCurrency.Eur => $"€{amount.ToString("F2", CultureInfo.InvariantCulture)}",
+            DisplayCurrency.Usd => "$",
+            DisplayCurrency.Rub => "₽",
+            DisplayCurrency.Eur => "€",
             _ => throw new ArgumentOutOfRangeException(nameof(currency))
         };
+        var text = amount.ToString("F2", CultureInfo.InvariantCulture);
+        if (amount != 0 && text.TrimStart(symbol[0]) == "0.00")
+            text = amount.ToString("G", CultureInfo.InvariantCulture);
+        return $"{symbol}{text}";
     }
 }

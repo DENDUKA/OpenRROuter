@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Model_ApiLead" xml:space="preserve">
+    <value>Copy a ready config for your client — the base URL and this model's id ({0}) are already filled in. Paste your API key and you're set.</value>
+  </data>
+  <data name="Model_ApiTitle" xml:space="preserve">
+    <value>API</value>
+  </data>
+  <data name="Model_Desc" xml:space="preserve">
+    <value>Use this model through the OpenRussiaRouter OpenAI-compatible API. Requests are routed through available nodes with account-level usage tracking.</value>
+  </data>
+  <data name="Model_GetApiKey" xml:space="preserve">
+    <value>Get API Key</value>
+  </data>
+  <data name="Model_Metric_Author" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="Model_Metric_Cache" xml:space="preserve">
+    <value>Cache Price / 1M</value>
+  </data>
+  <data name="Model_Metric_Context" xml:space="preserve">
+    <value>Context</value>
+  </data>
+  <data name="Model_Metric_Input" xml:space="preserve">
+    <value>Input Price / 1M</value>
+  </data>
+  <data name="Model_Metric_Modalities" xml:space="preserve">
+    <value>Modalities</value>
+  </data>
+  <data name="Model_Metric_Output" xml:space="preserve">
+    <value>Output Price / 1M</value>
+  </data>
+  <data name="Model_Metric_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Model_OverviewText" xml:space="preserve">
+    <value>{0} is available via OpenRussiaRouter using the model id {1}.</value>
+  </data>
+  <data name="Model_OverviewTitle" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Model_PricingLead" xml:space="preserve">
+    <value>Final pricing is resolved by the active route and account billing rules.</value>
+  </data>
+  <data name="Model_PricingTitle" xml:space="preserve">
+    <value>Pricing</value>
+  </data>
+  <data name="Model_Tab_Api" xml:space="preserve">
+    <value>API</value>
+  </data>
+  <data name="Model_Tab_Overview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Model_Tab_Pricing" xml:space="preserve">
+    <value>Pricing</value>
+  </data>
+  <data name="Nav_Models" xml:space="preserve">
+    <value>Models</value>
+  </data>
+  <data name="Model_MetricsAria" xml:space="preserve">
+    <value>Model metrics</value>
+  </data>
+  <data name="Model_SectionsAria" xml:space="preserve">
+    <value>Model sections</value>
+  </data>
+</root>

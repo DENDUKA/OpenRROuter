@@ -6,16 +6,16 @@
     <section class="model-hero">
         <div class="model-provider-icon" aria-hidden="true">@Model.Initials</div>
         <h1 class="model-title">@Model.ProviderTitle: @Model.DisplayName</h1>
-        <div class="model-slug-line"><a href="/models">Models</a> / <code>@Model.ModelId</code></div>
-        <p class="model-desc">Use this model through the OpenRussiaRouter OpenAI-compatible API. Requests are routed through available nodes with account-level usage tracking.</p>
+        <div class="model-slug-line"><a href="/models">@Localizer["Nav_Models"]</a> / <code>@Model.ModelId</code></div>
+        <p class="model-desc">@Localizer["Model_Desc"]</p>
 
         <div class="hero-actions">
-            <a class="btn btn-primary" href="/workspace/apikeys">Get API Key</a>
+            <a class="btn btn-primary" href="/workspace/apikeys">@Localizer["Model_GetApiKey"]</a>
         </div>
 
-        <div class="metrics-grid" aria-label="Model metrics">
+        <div class="metrics-grid" aria-label="@Localizer["Model_MetricsAria"]">
             <div class="metric metric-modalities">
-                <div class="metric-label">Modalities</div>
+                <div class="metric-label">@Localizer["Model_Metric_Modalities"]</div>
                 <div class="modality-icons">
                     <div class="modality-row">
                         <div class="modality-icons-set">
@@ -34,38 +34,38 @@
                     </div>
                 </div>
             </div>
-            <div class="metric"><div class="metric-label">Input Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : "Route")</div></div>
-            <div class="metric"><div class="metric-label">Output Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.OutputPrice) : "Route")</div></div>
-            <div class="metric"><div class="metric-label">Cache Price / 1M</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : "Route")</div></div>
-            <div class="metric"><div class="metric-label">Context</div><div class="metric-value">@Model.ContextDisplay</div></div>
-            <div class="metric"><div class="metric-label">Status</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? "Disabled" : "Available")</div></div>
-            <div class="metric"><div class="metric-label">Author</div><div class="metric-value">@Model.ProviderTitle</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Input"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : Localizer["Model_PriceRoute"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Output"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.OutputPrice) : Localizer["Model_PriceRoute"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Cache"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : Localizer["Model_PriceRoute"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Context"]</div><div class="metric-value">@Model.ContextDisplay</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Status"]</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? Localizer["Model_Status_Disabled"] : Localizer["Model_Status_Available"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Author"]</div><div class="metric-value">@Model.ProviderTitle</div></div>
         </div>
     </section>
 
-    <nav class="tabs" aria-label="Model sections">
-        <a class="tab active" href="#overview">Overview</a>
-        <a class="tab" href="#pricing">Pricing</a>
-        <a class="tab" href="#api">API</a>
+    <nav class="tabs" aria-label="@Localizer["Model_SectionsAria"]">
+        <a class="tab active" href="#overview">@Localizer["Model_Tab_Overview"]</a>
+        <a class="tab" href="#pricing">@Localizer["Model_Tab_Pricing"]</a>
+        <a class="tab" href="#api">@Localizer["Model_Tab_Api"]</a>
     </nav>
 
     <section id="overview" class="model-section">
-        <h2>Overview</h2>
+        <h2>@Localizer["Model_OverviewTitle"]</h2>
         @if (!string.IsNullOrWhiteSpace(Model.Description))
         {
             <p class="model-overview-desc">@Model.Description</p>
         }
-        <p>@Model.DisplayName is available via OpenRussiaRouter using the model id <code>@Model.ModelId</code>.</p>
+        <p>@Localizer["Model_OverviewText", Model.DisplayName, Model.ModelId]</p>
     </section>
 
     <section id="pricing" class="model-section">
-        <h2>Pricing</h2>
-        <p>Final pricing is resolved by the active route and account billing rules.</p>
+        <h2>@Localizer["Model_PricingTitle"]</h2>
+        <p>@Localizer["Model_PricingLead"]</p>
     </section>
 
     <section id="api" class="model-section">
-        <h2>API</h2>
-        <p>Copy a ready config for your client — the base URL and this model's id (<code>@Model.PublicModelId</code>) are already filled in. Paste your API key and you're set.</p>
+        <h2>@Localizer["Model_ApiTitle"]</h2>
+        <p>@Localizer["Model_ApiLead", Model.PublicModelId]</p>
         <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
 </div>

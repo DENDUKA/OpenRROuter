@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="ApiKeys_Save" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Настройки</value>
+  </data>
+  <data name="Settings_AccountHeader" xml:space="preserve">
+    <value>Аккаунт</value>
+  </data>
+  <data name="Settings_ChangePasswordHeader" xml:space="preserve">
+    <value>Смена пароля</value>
+  </data>
+  <data name="Settings_ChangePasswordSubmit" xml:space="preserve">
+    <value>Сменить пароль</value>
+  </data>
+  <data name="Settings_ConfirmNewPassword" xml:space="preserve">
+    <value>Повторите новый пароль</value>
+  </data>
+  <data name="Settings_CurrencyHelp" xml:space="preserve">
+    <value>Баланс, цены и история будут показаны в этой валюте.</value>
+  </data>
+  <data name="Settings_CurrencyLabel" xml:space="preserve">
+    <value>Валюта отображения</value>
+  </data>
+  <data name="Settings_CurrentPassword" xml:space="preserve">
+    <value>Текущий пароль</value>
+  </data>
+  <data name="Settings_Desc" xml:space="preserve">
+    <value>Информация об аккаунте и предпочтения.</value>
+  </data>
+  <data name="Settings_DisplayName" xml:space="preserve">
+    <value>Отображаемое имя</value>
+  </data>
+  <data name="Settings_DisplayPrefHeader" xml:space="preserve">
+    <value>Предпочтения отображения</value>
+  </data>
+  <data name="Settings_NewPassword" xml:space="preserve">
+    <value>Новый пароль</value>
+  </data>
+  <data name="Settings_PasswordHelp" xml:space="preserve">
+    <value>Не менее 12 символов.</value>
+  </data>
+  <data name="Settings_Role" xml:space="preserve">
+    <value>Роль</value>
+  </data>
+  <data name="Settings_UserId" xml:space="preserve">
+    <value>ID пользователя</value>
+  </data>
+  <data name="Currency_RUB" xml:space="preserve">
+    <value>RUB — Российский рубль</value>
+  </data>
+  <data name="Currency_USD" xml:space="preserve">
+    <value>USD — Доллар США</value>
+  </data>
+  <data name="Currency_EUR" xml:space="preserve">
+    <value>EUR — Евро</value>
+  </data>
+</root>

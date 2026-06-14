@@ -1,8 +1,10 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.State;
 
@@ -12,10 +14,12 @@ namespace OpenRussiaRouter.WebApp.Pages.Workspace.ApiKeys;
 public class LimitsModel(
     AuthProvider authProvider,
     BillingProvider billingProvider,
+    IStringLocalizer<SharedResource> localizer,
     ILogger<LimitsModel> logger) : PageModelBase
 {
     private readonly AuthProvider _authClient = authProvider;
     private readonly BillingProvider _billingClient = billingProvider;
+    private readonly IStringLocalizer<SharedResource> _localizer = localizer;
     private readonly ILogger<LimitsModel> _logger = logger;
 
     public ApiKeySummary? Key { get; set; }
@@ -47,7 +51,7 @@ public class LimitsModel(
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load API key limit settings. UserId={UserId}; KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to load API key limits.";
+            ErrorMessage = _localizer["ApiKey_LimitLoadFailed"];
             Form.ApiKeyId = keyId;
         }
     }
@@ -57,12 +61,12 @@ public class LimitsModel(
         await LoadKeyAsync(Form.ApiKeyId, HttpContext.RequestAborted);
         if (Key is null)
         {
-            ErrorMessage = "API key was not found.";
+            ErrorMessage = _localizer["ApiKey_NotFound"];
             return Page();
         }
 
-        var daily = ParseLimit(Form.DailyLimitUsd, "Form.DailyLimitUsd", "Daily limit");
-        var weekly = ParseLimit(Form.WeeklyLimitUsd, "Form.WeeklyLimitUsd", "Weekly limit");
+        var daily = ParseLimit(Form.DailyLimitUsd, "Form.DailyLimitUsd", _localizer["Limits_DailyLabel"]);
+        var weekly = ParseLimit(Form.WeeklyLimitUsd, "Form.WeeklyLimitUsd", _localizer["Limits_WeeklyLabel"]);
         if (!ModelState.IsValid)
             return Page();
 
@@ -80,7 +84,7 @@ public class LimitsModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to save API key limits. UserId={UserId}; KeyId={KeyId}", User.GetUserId(), Form.ApiKeyId);
-            ErrorMessage = "Failed to save API key limits.";
+            ErrorMessage = _localizer["ApiKey_LimitSaveFailed"];
             return Page();
         }
     }
@@ -89,7 +93,7 @@ public class LimitsModel(
     {
         if (string.IsNullOrWhiteSpace(keyId))
         {
-            ErrorMessage = "API key was not found.";
+            ErrorMessage = _localizer["ApiKey_NotFound"];
             return;
         }
 
@@ -99,7 +103,7 @@ public class LimitsModel(
             Key = keys.FirstOrDefault(key => string.Equals(key.Id, keyId, StringComparison.Ordinal));
             if (Key is null)
             {
-                ErrorMessage = "API key was not found.";
+                ErrorMessage = _localizer["ApiKey_NotFound"];
                 return;
             }
 
@@ -108,7 +112,7 @@ public class LimitsModel(
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load API key. UserId={UserId}; KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to load API key.";
+            ErrorMessage = _localizer["ApiKey_LoadFailed"];
         }
     }
 
@@ -119,7 +123,7 @@ public class LimitsModel(
 
         if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed) || parsed <= 0)
         {
-            ModelState.AddModelError(modelStateKey, displayName + " must be a positive USD amount.");
+            ModelState.AddModelError(modelStateKey, _localizer["ApiKey_LimitPositive", displayName]);
             return null;
         }
 
@@ -136,4 +140,3 @@ public class LimitsModel(
         public string? WeeklyLimitUsd { get; set; }
     }
 }
-

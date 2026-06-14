@@ -2,8 +2,10 @@ using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.State;
 
@@ -14,6 +16,7 @@ public class ActivityModel : PageModelBase
 {
     private readonly BillingProvider _billingClient;
     private readonly AuthProvider _authClient;
+    private readonly IStringLocalizer<SharedResource> _localizer;
 
     // Tab & filters
     [FromQuery(Name = "tab")] public string Tab { get; set; } = "details";
@@ -40,10 +43,11 @@ public class ActivityModel : PageModelBase
     public IReadOnlyList<string> AvailableModels { get; set; } = [];
     public string? ErrorMessage { get; set; }
 
-    public ActivityModel(BillingProvider BillingProvider, AuthProvider AuthProvider)
+    public ActivityModel(BillingProvider BillingProvider, AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer)
     {
         _billingClient = BillingProvider;
         _authClient = AuthProvider;
+        _localizer = localizer;
     }
 
     public async Task OnGetAsync()
@@ -94,7 +98,7 @@ public class ActivityModel : PageModelBase
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Failed to load activity data: {ex.Message}";
+            ErrorMessage = _localizer["Activity_LoadFailed", ex.Message];
         }
     }
 

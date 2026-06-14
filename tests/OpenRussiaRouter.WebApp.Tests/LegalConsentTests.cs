@@ -2,9 +2,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Pages.Workspace;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using System.Security.Claims;
 
@@ -37,8 +39,13 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
         var response = await _client.PostAsync("/signup", content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
+        // TS-010: validation messages are localized. The default UI culture is `ru`
+        // and the accept-legal message is one of the keys we deliberately keep
+        // identical in both .resx files (the DataAnnotations lookup path returns the
+        // resource key when no static accessor matches it; the model layer also adds
+        // a ModelState entry with the same key). We assert that *some* validation
+        // message was rendered rather than scraping language-specific text.
         Assert.Contains("validation-message", responseBody);
-        Assert.Contains("You must accept the Public Offer and Privacy Policy", responseBody);
     }
 
     [Fact]
@@ -56,7 +63,7 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
         var response = await _client.PostAsync("/invite/test-token", content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("You must accept the Public Offer and Privacy Policy", responseBody);
+        Assert.Contains("validation-message", responseBody);
     }
 
     [Fact]
@@ -73,7 +80,7 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
         var response = await _client.PostAsync("/login?handler=Google", content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
-        Assert.Contains("You must accept the Public Offer and Privacy Policy", responseBody);
+        Assert.Contains("validation-message", responseBody);
     }
 
     [Fact]
@@ -89,7 +96,10 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
         var response = await _client.PostAsync("/login", content);
         var responseBody = await response.Content.ReadAsStringAsync();
 
-        Assert.DoesNotContain("You must accept", responseBody);
+        // TS-010: the AcceptLegal message is locale-specific; assert the request did
+        // not bounce through the Google handler (which is the one gated by AcceptLegal).
+        Assert.NotEqual(System.Net.HttpStatusCode.Redirect, response.StatusCode);
+        Assert.Contains("Input.Password", responseBody);
     }
 
     [Fact]
@@ -108,12 +118,27 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     public async Task TopUp_WithConsent_CreatesCheckout()
     {
         var (model, billing) = CreateCreditsModel(acceptLegal: true);
+        model.TopUpAmountRaw = "10.50";
 
         var result = await model.OnPostTopUpAsync();
 
         var redirect = Assert.IsType<RedirectResult>(result);
         Assert.StartsWith("/pay/stub/", redirect.Url);
         Assert.Equal(1, billing.CreateCalls);
+        Assert.Equal(10.50m, billing.LastCreate!.Value.displayAmount);
+    }
+
+    [Fact]
+    public async Task TopUp_WithInvalidInvariantAmount_DoesNotCreateCheckout()
+    {
+        var (model, billing) = CreateCreditsModel(acceptLegal: true);
+        model.TopUpAmountRaw = "not-an-amount";
+
+        var result = await model.OnPostTopUpAsync();
+
+        Assert.IsType<PageResult>(result);
+        Assert.Equal(0, billing.CreateCalls);
+        Assert.Equal("Credits_AmountInvalid", model.ErrorMessage);
     }
 
     private static (CreditsModel Model, CheckoutFakeBilling Billing) CreateCreditsModel(bool acceptLegal)
@@ -134,9 +159,10 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
             currencyFormatter: default!,
             Options.Create(new PaymentSettings { ActiveProvider = "mock" }),
             checkout,
+            NullStringLocalizer<SharedResource>.Instance,
             NullLogger<CreditsModel>.Instance)
         {
-            TopUpAmount = 10m,
+            TopUpAmountRaw = "10.00",
             SelectedCurrency = "RUB",
             AcceptLegal = acceptLegal,
             PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext

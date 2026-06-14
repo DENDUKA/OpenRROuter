@@ -5,15 +5,15 @@
     Used on the Setup guide (placeholder model id) and on each model page (real id).
 *@
 <div class="integ" data-integ>
-    <div class="integ-tabs" role="tablist" aria-label="Integration examples">
-        <button type="button" class="integ-tab active" data-target="py" onclick="switchIntegTab(this)">Python</button>
-        <button type="button" class="integ-tab" data-target="node" onclick="switchIntegTab(this)">Node.js</button>
-        <button type="button" class="integ-tab" data-target="json" onclick="switchIntegTab(this)">Custom provider</button>
-        <button type="button" class="integ-tab" data-target="curl" onclick="switchIntegTab(this)">curl</button>
+    <div class="integ-tabs" role="tablist" aria-label="@Localizer["Integ_TabsAria"]">
+        <button type="button" class="integ-tab active" data-target="py" onclick="switchIntegTab(this)">@Localizer["Integ_Tab_Python"]</button>
+        <button type="button" class="integ-tab" data-target="node" onclick="switchIntegTab(this)">@Localizer["Integ_Tab_Node"]</button>
+        <button type="button" class="integ-tab" data-target="json" onclick="switchIntegTab(this)">@Localizer["Integ_Tab_Json"]</button>
+        <button type="button" class="integ-tab" data-target="curl" onclick="switchIntegTab(this)">@Localizer["Integ_Tab_Curl"]</button>
     </div>
 
     <div class="integ-panel active" data-panel="py">
-        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>from openai import OpenAI
 
 client = OpenAI(
@@ -29,7 +29,7 @@ print(response.choices[0].message.content)</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="node">
-        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>import OpenAI from "openai";
 
 const client = new OpenAI({
@@ -45,7 +45,7 @@ console.log(response.choices[0].message.content);</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="json">
-        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>{
   "providers": {
     "openrussiarouter": {
@@ -68,7 +68,7 @@ console.log(response.choices[0].message.content);</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="curl">
-        <button type="button" class="integ-copy" onclick="copyCodeBlock(event)">Copy</button>
+        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>curl @Model.V1BaseUrl/chat/completions \
   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;" \
   -H "Content-Type: application/json" \
@@ -109,9 +109,11 @@ console.log(response.choices[0].message.content);</code></pre>
         var btn = event.currentTarget;
         var pre = btn.closest('.integ-panel')?.querySelector('pre');
         if (!pre) return;
+        var original = btn.getAttribute('data-original') || btn.textContent;
+        btn.setAttribute('data-original', original);
         orrCopyText(pre.textContent).then(function () {
-            btn.textContent = 'Copied';
-            setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+            btn.textContent = btn.getAttribute('data-copied') || 'Copied';
+            setTimeout(function () { btn.textContent = original; }, 1500);
         }).catch(function (err) { console.error('Copy failed:', err); });
     }
 </script>

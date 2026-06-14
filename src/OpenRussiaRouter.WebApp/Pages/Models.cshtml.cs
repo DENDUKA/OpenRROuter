@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane; // NodeModelCatalogResult, NodeModelCatalogEntry
@@ -13,9 +15,13 @@ public class ModelsModel(
     CurrencyFormatter currencyFormatter,
     AuthProvider authProvider,
     IMemoryCache memoryCache,
+    IStringLocalizer<SharedResource> localizer,
     ILogger<ModelsModel> logger) : PageModelBase
 {
     private const string CatalogCacheKey = "public-models-node-catalog";
+    // NOTE: do not store `localizer` in a field — the primary-constructor parameter is
+    // captured by the lambda below, and capturing it in a field as well trips CS9124
+    // (TreatWarningsAsErrors=true). Pass it explicitly where needed instead.
 
     public IReadOnlyList<PublicModelRow> Models { get; private set; } = [];
     public string? ErrorMessage { get; private set; }
@@ -52,14 +58,14 @@ public class ModelsModel(
                 .Select(model =>
                 {
                     catalogByUpstream.TryGetValue(model.UpstreamModelId, out var catalogEntry);
-                    return MapModel(model, catalogEntry, tagsById);
+                    return MapModel(model, catalogEntry, tagsById, localizer);
                 })
                 .ToList();
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Failed to load public model catalog.");
-            ErrorMessage = "Failed to load models.";
+            ErrorMessage = localizer["Models_LoadFailed"];
         }
     }
 
@@ -108,7 +114,8 @@ public class ModelsModel(
     private static PublicModelRow MapModel(
         ModelInfo model,
         NodeModelCatalogEntry? catalogEntry,
-        IReadOnlyDictionary<string, TagInfo> tagsById)
+        IReadOnlyDictionary<string, TagInfo> tagsById,
+        IStringLocalizer<SharedResource> localizer)
     {
         var sourceProviders = catalogEntry?.SourceProviders
             .Where(p => !string.IsNullOrWhiteSpace(p))
@@ -118,13 +125,13 @@ public class ModelsModel(
 
             var provider = !string.IsNullOrWhiteSpace(model.Provider)
                 ? model.Provider
-                : (sourceProviders.Count == 0 ? "Unknown" : string.Join(", ", sourceProviders));
+                : (sourceProviders.Count == 0 ? localizer["Model_ContextUnknown"] : string.Join(", ", sourceProviders));
 
         var capability = !string.IsNullOrWhiteSpace(catalogEntry?.ModelType)
             ? ToTitle(catalogEntry.ModelType)
             : !string.IsNullOrWhiteSpace(model.Modalities)
                 ? ToTitle(model.Modalities)
-                : "Unknown";
+                : localizer["Model_ContextUnknown"];
 
         var tags = (model.TagIds ?? [])
             .Select(tagId => tagsById.TryGetValue(tagId, out var tag)
@@ -150,9 +157,7 @@ public class ModelsModel(
         var parts = value.Replace('-', ' ').Replace('_', ' ')
             .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        return parts.Length == 0
-            ? "Unknown"
-            : string.Join(' ', parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
+        return string.Join(' ', parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..]));
     }
 
     public sealed record PublicModelRow(

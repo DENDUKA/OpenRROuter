@@ -1,12 +1,12 @@
 @page "/pay/mock/{paymentId}"
 @model Pay.MockModel
-@{ Layout = "~/Pages/Shared/_Layout.cshtml"; ViewData["Title"] = "Complete Payment"; }
+@{ Layout = "~/Pages/Shared/_Layout.cshtml"; ViewData["Title"] = Localizer["Mock_Header"]; }
 
 <div class="container" style="max-width: 480px; margin: 60px auto;">
     <div class="ws-panel">
         <div class="ws-panel-header">
-            <span>Mock Checkout</span>
-            <span class="badge bg-warning text-dark ms-2" style="font-size: 11px;">DEV ONLY</span>
+            <span>@Localizer["Mock_Header"]</span>
+            <span class="badge bg-warning text-dark ms-2" style="font-size: 11px;">@Localizer["Mock_DevBadge"]</span>
         </div>
         <div class="ws-panel-body">
             @if (Model.ErrorMessage != null)
@@ -16,11 +16,11 @@
 
             @if (Model.Payment == null && Model.ErrorMessage != null)
             {
-                <a class="btn btn-secondary" href="/workspace/credits">Back to Credits</a>
+                <a class="btn btn-secondary" href="/workspace/credits">@Localizer["Mock_Back"]</a>
             }
             else
             {
-                <p class="text-muted mb-1" style="font-size: 13px;">Payment ID: <code>@Model.PaymentId</code></p>
+                <p class="text-muted mb-1" style="font-size: 13px;">@Localizer["Mock_PaymentId"] <code>@Model.PaymentId</code></p>
 
                 @if (Model.Payment != null)
                 {
@@ -31,10 +31,10 @@
 
                 <div class="d-flex gap-2 mt-3">
                     <form method="post" asp-page-handler="Pay" asp-route-paymentId="@Model.PaymentId">
-                        <button type="submit" class="btn btn-primary">Pay</button>
+                        <button type="submit" class="btn btn-primary">@Localizer["Mock_Pay"]</button>
                     </form>
                     <form method="post" asp-page-handler="Cancel" asp-route-paymentId="@Model.PaymentId">
-                        <button type="submit" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-secondary">@Localizer["Mock_Cancel"]</button>
                     </form>
                 </div>
             }

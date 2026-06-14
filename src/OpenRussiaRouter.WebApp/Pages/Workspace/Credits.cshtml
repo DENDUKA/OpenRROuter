@@ -1,10 +1,10 @@
 @page
 @model Workspace.CreditsModel
-@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Credits"; }
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = Localizer["WsNav_Credits"]; }
 
 <div class="ws-section-header">
-    <h2>Credits</h2>
-    <p class="ws-section-desc">Your current balance used for API request billing.</p>
+    <h2>@Localizer["WsNav_Credits"]</h2>
+    <p class="ws-section-desc">@Localizer["Credits_Desc"]</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -13,11 +13,11 @@
 }
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Current Balance</div>
+    <div class="ws-panel-header">@Localizer["Credits_BalanceHeader"]</div>
     <div class="ws-panel-body">
         @if (Model.Balance == null)
         {
-            <p class="text-muted">Unable to load balance.</p>
+            <p class="text-muted">@Localizer["Credits_BalanceUnavailable"]</p>
         }
         else
         {
@@ -29,17 +29,20 @@
 </div>
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Top Up</div>
+    <div class="ws-panel-header">@Localizer["Credits_TopUpHeader"]</div>
     <div class="ws-panel-body">
         <form method="post" asp-page-handler="TopUp">
             <div class="mb-3 d-flex gap-2 align-items-end">
                 <div>
-                    <label class="form-label" asp-for="TopUpAmount">Amount</label>
-                    <input type="number" asp-for="TopUpAmount" class="form-control"
-                           min="0.01" step="0.01" placeholder="0.00" required style="width: 160px;" />
+                    <label class="form-label" asp-for="TopUpAmountRaw">@Localizer["Credits_AmountLabel"]</label>
+                    @* TS-010: bind the raw form string so we can parse under InvariantCulture.
+                       The default decimal binder would honor the request culture and mis-parse
+                       "10.50" as 1050 under "ru". *@
+                    <input type="text" name="TopUpAmount" id="TopUpAmountRaw" class="form-control"
+                           inputmode="decimal" autocomplete="off" placeholder="0.00" required style="width: 160px;" />
                 </div>
                 <div>
-                    <label class="form-label" asp-for="SelectedCurrency">Currency</label>
+                    <label class="form-label" asp-for="SelectedCurrency">@Localizer["Credits_CurrencyLabel"]</label>
                     <select asp-for="SelectedCurrency" class="form-select" style="width: 100px;">
                         <option value="RUB">RUB</option>
                         <option value="USD">USD</option>
@@ -47,38 +50,38 @@
                     </select>
                 </div>
                 <div>
-                    <button type="submit" class="btn btn-primary">Top Up</button>
+                    <button type="submit" class="btn btn-primary">@Localizer["Credits_TopUpSubmit"]</button>
                 </div>
             </div>
             <div class="form-group legal-consent">
                 <div class="form-check">
                     <input asp-for="AcceptLegal" class="form-check-input" type="checkbox" required />
                     <label asp-for="AcceptLegal" class="form-check-label">
-                        Я принимаю <a href="/legal/offer" target="_blank" rel="noopener noreferrer">Публичную оферту</a> и <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">Политику конфиденциальности</a>.
+                        @Localizer["Consent_Prefix"] <a href="/legal/offer" target="_blank" rel="noopener noreferrer">@Localizer["Consent_OfferLink"]</a> @Localizer["Consent_And"] <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">@Localizer["Consent_PrivacyLink"]</a>.
                     </label>
                 </div>
                 <span asp-validation-for="AcceptLegal" class="validation-message"></span>
             </div>
-            <p class="text-muted" style="font-size: 13px;">Minimum: $@Model.MinTopUpUsd USD. Authoritative limit enforced server-side.</p>
+            <p class="text-muted" style="font-size: 13px;">@Localizer["Credits_MinTopUp", Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
         </form>
     </div>
 </div>
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Top-Up History</div>
+    <div class="ws-panel-header">@Localizer["Credits_HistoryHeader"]</div>
     <div class="ws-panel-body">
         @if (Model.TopUps.Count == 0)
         {
-            <p class="text-muted">No top-ups yet.</p>
+            <p class="text-muted">@Localizer["Credits_NoTopUps"]</p>
         }
         else
         {
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>Amount</th>
-                        <th>Reason</th>
+                        <th>@Localizer["Credits_Th_Date"]</th>
+                        <th>@Localizer["Credits_Th_Amount"]</th>
+                        <th>@Localizer["Credits_Th_Reason"]</th>
                     </tr>
                 </thead>
                 <tbody>

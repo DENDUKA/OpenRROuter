@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Model_ApiLead" xml:space="preserve">
+    <value>Скопируйте готовый конфиг для вашего клиента — base URL и идентификатор модели ({0}) уже подставлены. Вставьте свой API-ключ и готово.</value>
+  </data>
+  <data name="Model_ApiTitle" xml:space="preserve">
+    <value>API</value>
+  </data>
+  <data name="Model_Desc" xml:space="preserve">
+    <value>Используйте эту модель через OpenAI-совместимый API OpenRussiaRouter. Запросы маршрутизируются по доступным нодам с учётом биллинга аккаунта.</value>
+  </data>
+  <data name="Model_GetApiKey" xml:space="preserve">
+    <value>Получить API-ключ</value>
+  </data>
+  <data name="Model_Metric_Author" xml:space="preserve">
+    <value>Автор</value>
+  </data>
+  <data name="Model_Metric_Cache" xml:space="preserve">
+    <value>Цена кэша / 1M</value>
+  </data>
+  <data name="Model_Metric_Context" xml:space="preserve">
+    <value>Контекст</value>
+  </data>
+  <data name="Model_Metric_Input" xml:space="preserve">
+    <value>Цена входа / 1M</value>
+  </data>
+  <data name="Model_Metric_Modalities" xml:space="preserve">
+    <value>Модальности</value>
+  </data>
+  <data name="Model_Metric_Output" xml:space="preserve">
+    <value>Цена выхода / 1M</value>
+  </data>
+  <data name="Model_Metric_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Model_OverviewText" xml:space="preserve">
+    <value>{0} доступна через OpenRussiaRouter с идентификатором модели {1}.</value>
+  </data>
+  <data name="Model_OverviewTitle" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="Model_PricingLead" xml:space="preserve">
+    <value>Финальная стоимость рассчитывается активным маршрутом и правилами биллинга аккаунта.</value>
+  </data>
+  <data name="Model_PricingTitle" xml:space="preserve">
+    <value>Цены</value>
+  </data>
+  <data name="Model_Tab_Api" xml:space="preserve">
+    <value>API</value>
+  </data>
+  <data name="Model_Tab_Overview" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="Model_Tab_Pricing" xml:space="preserve">
+    <value>Цены</value>
+  </data>
+  <data name="Nav_Models" xml:space="preserve">
+    <value>Модели</value>
+  </data>
+  <data name="Model_MetricsAria" xml:space="preserve">
+    <value>Характеристики модели</value>
+  </data>
+  <data name="Model_SectionsAria" xml:space="preserve">
+    <value>Разделы модели</value>
+  </data>
+</root>

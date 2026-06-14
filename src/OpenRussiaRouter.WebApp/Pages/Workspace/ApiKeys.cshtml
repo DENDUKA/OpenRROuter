@@ -1,10 +1,10 @@
 @page
 @model Workspace.ApiKeysModel
-@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "API Keys"; }
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = Localizer["ApiKeys_Th_Name"]; }
 
 <div class="ws-section-header">
-    <h2>API Keys</h2>
-    <p class="ws-section-desc">Manage API keys for programmatic access. Keys are shown only once at creation.</p>
+    <h2>@Localizer["Nav_ApiKeys"]</h2>
+    <p class="ws-section-desc">@Localizer["ApiKeys_Desc"]</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -15,35 +15,36 @@
 @if (Model.NewKeyValue != null)
 {
     <div class="ws-panel">
-        <div class="ws-panel-header">New API Key Created</div>
+        <div class="ws-panel-header">@Localizer["ApiKeys_NewKeyTitle"]</div>
         <div class="ws-panel-body">
             <div class="alert alert-success">
-                <strong>Save your key — it won't be shown again!</strong>
+                <strong>@Localizer["ApiKeys_SaveKey"]</strong>
                 <div class="ws-key-copy-row">
                     <div class="ws-key-preview" id="newKeyValue" data-testid="new-key-value">@Model.NewKeyValue</div>
                     <button type="button" class="btn btn-sm btn-secondary ws-key-copy-btn" data-testid="btn-copy-key"
-                            onclick="copyApiKey(this, 'newKeyValue')" title="Copy to clipboard">
+                            onclick="copyApiKey(this, 'newKeyValue')" data-copied="@Localizer["Btn_Copied"]" title="@Localizer["Btn_Copy"]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                         </svg>
-                        <span>Copy</span>
+                        <span>@Localizer["Btn_Copy"]</span>
                     </button>
                 </div>
             </div>
-            <a class="btn btn-primary" href="/workspace/apikeys" data-testid="btn-done-create">Done</a>
+            <a class="btn btn-primary" href="/workspace/apikeys" data-testid="btn-done-create">@Localizer["ApiKeys_Done"]</a>
         </div>
     </div>
 
     <script>
         function copyApiKey(btn, elementId) {
             var text = document.getElementById(elementId).textContent.trim();
+            var span = btn.querySelector('span');
+            var original = span.textContent;
             // orrCopyText is defined globally in _Layout.cshtml (HTTP-safe fallback).
             orrCopyText(text).then(function () {
-                var span = btn.querySelector('span');
-                span.textContent = 'Copied!';
+                span.textContent = btn.getAttribute('data-copied') || 'Copied!';
                 btn.disabled = true;
-                setTimeout(function () { span.textContent = 'Copy'; btn.disabled = false; }, 2000);
+                setTimeout(function () { span.textContent = original; btn.disabled = false; }, 2000);
             }).catch(function (err) { console.error('Copy failed:', err); });
         }
     </script>
@@ -52,17 +53,17 @@
 @if (Model.Action == "create" && Model.NewKeyValue == null)
 {
     <div class="ws-panel">
-        <div class="ws-panel-header">New API Key</div>
+        <div class="ws-panel-header">@Localizer["ApiKeys_NewKeyHeader"]</div>
         <div class="ws-panel-body">
             <form method="post" asp-page-handler="Create">
                 <div class="mb-3">
-                    <label asp-for="Create.Name" class="form-label" for="kn">Key Name</label>
+                    <label asp-for="Create.Name" class="form-label" for="kn">@Localizer["ApiKeys_KeyName"]</label>
                     <input asp-for="Create.Name" id="kn" class="form-control" data-testid="input-key-name" />
                     <span asp-validation-for="Create.Name" class="validation-message"></span>
                 </div>
                 <div class="ws-btn-row">
-                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-create">Create</button>
-                    <a class="btn btn-secondary" href="/workspace/apikeys">Cancel</a>
+                    <button type="submit" class="btn btn-primary" data-testid="btn-submit-create">@Localizer["ApiKeys_Create"]</button>
+                    <a class="btn btn-secondary" href="/workspace/apikeys">@Localizer["ApiKeys_Cancel"]</a>
                 </div>
             </form>
         </div>
@@ -72,18 +73,18 @@
 @if (Model.Action == "rename" && Model.ActionKeyId != null)
 {
     <div class="ws-panel">
-        <div class="ws-panel-header">Rename API Key</div>
+        <div class="ws-panel-header">@Localizer["ApiKeys_RenameHeader"]</div>
         <div class="ws-panel-body">
             <form method="post" asp-page-handler="Rename">
                 <input type="hidden" name="keyId" value="@Model.ActionKeyId" />
                 <div class="mb-3">
-                    <label asp-for="Rename.Name" class="form-label">New Name</label>
+                    <label asp-for="Rename.Name" class="form-label">@Localizer["ApiKeys_NewName"]</label>
                     <input asp-for="Rename.Name" class="form-control" data-testid="input-rename" />
                     <span asp-validation-for="Rename.Name" class="validation-message"></span>
                 </div>
                 <div class="ws-btn-row">
-                    <button type="submit" class="btn btn-primary" data-testid="btn-save-rename">Save</button>
-                    <a class="btn btn-secondary" href="/workspace/apikeys">Cancel</a>
+                    <button type="submit" class="btn btn-primary" data-testid="btn-save-rename">@Localizer["ApiKeys_Save"]</button>
+                    <a class="btn btn-secondary" href="/workspace/apikeys">@Localizer["ApiKeys_Cancel"]</a>
                 </div>
             </form>
         </div>
@@ -92,13 +93,13 @@
 
 <div class="ws-panel">
     <div class="ws-panel-header ws-panel-header--split">
-        <span>Your API Keys</span>
-        <a class="btn btn-sm btn-primary" href="?action=create" data-testid="btn-create-key">Create Key</a>
+        <span>@Localizer["ApiKeys_YourKeys"]</span>
+        <a class="btn btn-sm btn-primary" href="?action=create" data-testid="btn-create-key">@Localizer["ApiKeys_CreateKey"]</a>
     </div>
     <div class="ws-panel-body">
         @if (Model.Keys.Count == 0)
         {
-            <p class="text-muted">No API keys yet. Create one to get started.</p>
+            <p class="text-muted">@Localizer["ApiKeys_NoKeys"]</p>
         }
         else
         {
@@ -106,7 +107,7 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Name</th><th>Prefix</th><th>Created</th><th>Last Used</th><th>Status</th><th>Daily Limit</th><th>Weekly Limit</th><th></th>
+                        <th>@Localizer["ApiKeys_Th_Name"]</th><th>@Localizer["ApiKeys_Th_Prefix"]</th><th>@Localizer["ApiKeys_Th_Created"]</th><th>@Localizer["ApiKeys_Th_LastUsed"]</th><th>@Localizer["ApiKeys_Th_Status"]</th><th>@Localizer["ApiKeys_Th_DailyLimit"]</th><th>@Localizer["ApiKeys_Th_WeeklyLimit"]</th><th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -116,10 +117,10 @@
                             <td data-testid="key-name">@k.Name</td>
                             <td><code>@k.Prefix***</code></td>
                             <td>@k.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                            <td>@(k.LastUsedAtUtc?.ToLocalTime().ToString("g") ?? "Never")</td>
+                            <td>@(k.LastUsedAtUtc?.ToLocalTime().ToString("g") ?? Localizer["ApiKeys_LastUsed_Never"].Value)</td>
                             <td>
                                 <span class="badge @(k.DisabledAtUtc == null ? "badge-success" : "badge-secondary")" data-testid="key-status">
-                                    @(k.DisabledAtUtc == null ? "Active" : "Disabled")
+                                    @(k.DisabledAtUtc == null ? Localizer["ApiKeys_Status_Active"].Value : Localizer["ApiKeys_Status_Disabled"].Value)
                                 </span>
                             </td>
                             <td>
@@ -127,14 +128,14 @@
                                 @if (Model.HasDailyLimit(k))
                                 {
                                     var dailyPercent = Model.DailyRemainingPercent(k);
-                                    <div class="ws-limit-progress" role="progressbar" aria-label="Daily limit remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@dailyPercent">
+                                    <div class="ws-limit-progress" role="progressbar" aria-label="@Localizer["ApiKeys_DailyAria"]" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@dailyPercent">
                                         <div class="ws-limit-progress-bar @(dailyPercent == 0 ? "is-empty" : "")" style="width: @dailyPercent%"></div>
                                     </div>
-                                    <div class="ws-limit-percent">@dailyPercent% left</div>
+                                    <div class="ws-limit-percent">@Localizer["ApiKeys_Limit_PercentLeft", dailyPercent]</div>
                                 }
                                 @if (Model.IsDailyLimitReached(k))
                                 {
-                                    <span class="badge badge-warning">Limit reached</span>
+                                    <span class="badge badge-warning">@Localizer["ApiKeys_LimitReached"]</span>
                                 }
                             </td>
                             <td>
@@ -142,40 +143,40 @@
                                 @if (Model.HasWeeklyLimit(k))
                                 {
                                     var weeklyPercent = Model.WeeklyRemainingPercent(k);
-                                    <div class="ws-limit-progress" role="progressbar" aria-label="Weekly limit remaining" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@weeklyPercent">
+                                    <div class="ws-limit-progress" role="progressbar" aria-label="@Localizer["ApiKeys_WeeklyAria"]" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@weeklyPercent">
                                         <div class="ws-limit-progress-bar @(weeklyPercent == 0 ? "is-empty" : "")" style="width: @weeklyPercent%"></div>
                                     </div>
-                                    <div class="ws-limit-percent">@weeklyPercent% left</div>
+                                    <div class="ws-limit-percent">@Localizer["ApiKeys_Limit_PercentLeft", weeklyPercent]</div>
                                 }
                                 @if (Model.IsWeeklyLimitReached(k))
                                 {
-                                    <span class="badge badge-warning">Limit reached</span>
+                                    <span class="badge badge-warning">@Localizer["ApiKeys_LimitReached"]</span>
                                 }
                             </td>
                                 <td>
                                   <div class="d-flex gap-2">
-                                      <a class="btn btn-sm btn-outline-primary ws-toggle-btn" href="/workspace/apikeys/limits?keyId=@Uri.EscapeDataString(k.Id)">Limits</a>
+                                      <a class="btn btn-sm btn-outline-primary ws-toggle-btn" href="/workspace/apikeys/limits?keyId=@Uri.EscapeDataString(k.Id)">@Localizer["ApiKeys_LimitsLink"]</a>
 
                                       @if (k.DisabledAtUtc == null)
                                       {
                                           <form method="post" asp-page-handler="DisableKey" onsubmit="orrToggleSubmitting(this)">
                                               <input type="hidden" name="keyId" value="@k.Id" />
-                                              <button type="submit" class="btn btn-sm btn-outline-warning ws-toggle-btn">Disable</button>
+                                              <button type="submit" class="btn btn-sm btn-outline-warning ws-toggle-btn">@Localizer["ApiKeys_Disable"]</button>
                                           </form>
                                       }
                                       else
                                       {
                                           <form method="post" asp-page-handler="EnableKey" onsubmit="orrToggleSubmitting(this)">
                                               <input type="hidden" name="keyId" value="@k.Id" />
-                                              <button type="submit" class="btn btn-sm btn-outline-success ws-toggle-btn">Enable</button>
+                                              <button type="submit" class="btn btn-sm btn-outline-success ws-toggle-btn">@Localizer["ApiKeys_Enable"]</button>
                                           </form>
 
                                           <form method="post" asp-page-handler="Delete" style="display:inline">
                                               <input type="hidden" name="keyId" value="@k.Id" />
-                                              <button type="submit" class="btn btn-sm btn-outline-danger ws-toggle-btn" title="Delete" aria-label="Delete"
+                                              <button type="submit" class="btn btn-sm btn-outline-danger ws-toggle-btn" title="@Localizer["ApiKeys_DeleteTitle"]" aria-label="@Localizer["ApiKeys_DeleteTitle"]"
                                                       data-testid="btn-delete"
-                                                      onclick="return confirm('Remove key &quot;@k.Name&quot; from the list? This cannot be undone.')">
-                                                  Delete
+                                                      data-confirm="@Localizer["ApiKeys_DeleteConfirm", k.Name]">
+                                                  @Localizer["ApiKeys_Delete"]
                                               </button>
                                           </form>
                                       }
@@ -232,6 +233,13 @@
 </style>
 
 <script>
+    // Wire up the confirm() prompt for delete buttons (translated via data-confirm).
+    document.querySelectorAll('button[data-confirm]').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            if (!confirm(btn.getAttribute('data-confirm'))) e.preventDefault();
+        });
+    });
+
     function orrToggleSubmitting(form) {
         var btn = form.querySelector('button[type="submit"]');
         if (!btn) return;

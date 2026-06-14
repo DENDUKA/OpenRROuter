@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -9,6 +11,7 @@ public class ForgotPasswordModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly IEmailDispatchQueue _emailQueue;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<ForgotPasswordModel> _logger;
 
     [BindProperty]
@@ -16,10 +19,11 @@ public class ForgotPasswordModel : PageModelBase
 
     public string? ErrorMessage { get; set; }
 
-    public ForgotPasswordModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, ILogger<ForgotPasswordModel> logger)
+    public ForgotPasswordModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<ForgotPasswordModel> logger)
     {
         _authClient = authProvider;
         _emailQueue = emailQueue;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -49,7 +53,7 @@ public class ForgotPasswordModel : PageModelBase
         }
         catch (AuthException ex) when (ex.ErrorCode == "resend_cooldown")
         {
-            ErrorMessage = "Please wait a minute before requesting another code.";
+            ErrorMessage = _localizer["Auth_ResendCooldown"];
             return Page();
         }
         catch (AuthException)
@@ -61,17 +65,18 @@ public class ForgotPasswordModel : PageModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error requesting password reset. Email={Email}", Input.Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_LoginError"];
             return Page();
         }
 
-        TempData["StatusMessage"] = $"If an account exists for {Input.Email}, we sent a 6-digit code. Enter it below to set a new password.";
+        TempData["StatusMessage"] = _localizer["Auth_PasswordResetSent", Input.Email];
         return RedirectToPage("/ResetPassword", new { email = Input.Email });
     }
 
     public class InputModel
     {
-        [Required, EmailAddress]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [EmailAddress(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Email")]
         public string Email { get; set; } = "";
     }
 }

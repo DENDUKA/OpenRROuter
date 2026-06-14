@@ -1,7 +1,11 @@
+using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Services.Payments;
@@ -16,10 +20,20 @@ public class CreditsModel(
     CurrencyFormatter currencyFormatter,
     IOptions<PaymentSettings> paymentSettings,
     PaymentCheckoutService checkoutService,
+    IStringLocalizer<SharedResource> localizer,
     ILogger<CreditsModel> logger) : PageModelBase
 {
-    [BindProperty]
-    public decimal TopUpAmount { get; set; }
+    private readonly IStringLocalizer<SharedResource> _localizer = localizer;
+    private readonly ILogger<CreditsModel> _logger = logger;
+
+    /// <summary>
+    /// Raw form value for the top-up amount. Bound as a string so we can parse it under
+    /// <see cref="CultureInfo.InvariantCulture"/> — the regular decimal model binder
+    /// would otherwise honor the request culture, which is fatal under <c>ru</c>:
+    /// <c>"10.50"</c> would be parsed as <c>1050</c>.
+    /// </summary>
+    [BindProperty(Name = "TopUpAmount")]
+    public string? TopUpAmountRaw { get; set; }
 
     [BindProperty]
     public string SelectedCurrency { get; set; } = "RUB";
@@ -53,7 +67,7 @@ public class CreditsModel(
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to load user profile for currency. UserId={UserId}", userId);
+            _logger.LogWarning(ex, "Failed to load user profile for currency. UserId={UserId}", userId);
         }
 
         await LoadDataAsync(userId);
@@ -66,21 +80,24 @@ public class CreditsModel(
         if (SelectedCurrency is not ("RUB" or "USD" or "EUR"))
         {
             await LoadDataAsync(userId);
-            ErrorMessage = "Invalid currency selection.";
-            return Page();
-        }
-
-        if (TopUpAmount <= 0)
-        {
-            await LoadDataAsync(userId);
-            ErrorMessage = "Amount must be greater than 0.";
+            ErrorMessage = _localizer["Credits_InvalidCurrency"];
             return Page();
         }
 
         if (!AcceptLegal)
         {
             await LoadDataAsync(userId);
-            ModelState.AddModelError(nameof(AcceptLegal), "You must accept the Public Offer and Privacy Policy.");
+            ModelState.AddModelError(nameof(AcceptLegal), _localizer["Validation_AcceptLegal"]);
+            return Page();
+        }
+
+        // Parse under InvariantCulture so the user can type "10.50" regardless of the
+        // current UI culture (where ',' is the decimal separator under "ru").
+        if (!decimal.TryParse(TopUpAmountRaw, NumberStyles.Number, CultureInfo.InvariantCulture, out var topUpAmount)
+            || topUpAmount <= 0)
+        {
+            await LoadDataAsync(userId);
+            ErrorMessage = _localizer["Credits_AmountInvalid"];
             return Page();
         }
 
@@ -89,7 +106,7 @@ public class CreditsModel(
         try
         {
             var result = await checkoutService.CreateAsync(
-                userId, TopUpAmount, SelectedCurrency,
+                userId, topUpAmount, SelectedCurrency,
                 providerName: null, clientToken,
                 HttpContext.RequestAborted);
 
@@ -97,9 +114,9 @@ public class CreditsModel(
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            logger.LogWarning(ex, "Checkout failed. UserId={UserId}", userId);
+            _logger.LogWarning(ex, "Checkout failed. UserId={UserId}", userId);
             await LoadDataAsync(userId);
-            ErrorMessage = "Failed to initiate checkout. Please try again.";
+            ErrorMessage = _localizer["Credits_CheckoutFailed"];
             return Page();
         }
     }
@@ -109,14 +126,14 @@ public class CreditsModel(
         try { Balance = await billingProvider.GetBalanceAsync(userId); }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to load balance. UserId={UserId}", userId);
-            ErrorMessage = "Failed to load balance.";
+            _logger.LogWarning(ex, "Failed to load balance. UserId={UserId}", userId);
+            ErrorMessage = _localizer["Credits_BalanceLoadFailed"];
         }
 
         try { TopUps = await billingProvider.ListTopUpsAsync(userId); }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to load top-ups. UserId={UserId}", userId);
+            _logger.LogWarning(ex, "Failed to load top-ups. UserId={UserId}", userId);
         }
     }
 }

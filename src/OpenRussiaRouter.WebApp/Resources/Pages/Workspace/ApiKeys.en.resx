@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="ApiKeys_Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="ApiKeys_Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="ApiKeys_CreateKey" xml:space="preserve">
+    <value>Create Key</value>
+  </data>
+  <data name="ApiKeys_DailyAria" xml:space="preserve">
+    <value>Daily limit remaining</value>
+  </data>
+  <data name="ApiKeys_Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ApiKeys_DeleteConfirm" xml:space="preserve">
+    <value>Remove key "{0}" from the list? This cannot be undone.</value>
+  </data>
+  <data name="ApiKeys_DeleteTitle" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="ApiKeys_Desc" xml:space="preserve">
+    <value>Manage API keys for programmatic access. Keys are shown only once at creation.</value>
+  </data>
+  <data name="ApiKeys_Disable" xml:space="preserve">
+    <value>Disable</value>
+  </data>
+  <data name="ApiKeys_Done" xml:space="preserve">
+    <value>Done</value>
+  </data>
+  <data name="ApiKeys_Enable" xml:space="preserve">
+    <value>Enable</value>
+  </data>
+  <data name="ApiKeys_KeyName" xml:space="preserve">
+    <value>Key Name</value>
+  </data>
+  <data name="ApiKeys_LimitReached" xml:space="preserve">
+    <value>Limit reached</value>
+  </data>
+  <data name="ApiKeys_Limit_PercentLeft" xml:space="preserve">
+    <value>{0}% left</value>
+  </data>
+  <data name="ApiKeys_LimitsLink" xml:space="preserve">
+    <value>Limits</value>
+  </data>
+  <data name="ApiKeys_NewKeyHeader" xml:space="preserve">
+    <value>New API Key</value>
+  </data>
+  <data name="ApiKeys_NewKeyTitle" xml:space="preserve">
+    <value>New API Key Created</value>
+  </data>
+  <data name="ApiKeys_NewName" xml:space="preserve">
+    <value>New Name</value>
+  </data>
+  <data name="ApiKeys_NoKeys" xml:space="preserve">
+    <value>No API keys yet. Create one to get started.</value>
+  </data>
+  <data name="ApiKeys_RenameHeader" xml:space="preserve">
+    <value>Rename API Key</value>
+  </data>
+  <data name="ApiKeys_Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="ApiKeys_SaveKey" xml:space="preserve">
+    <value>Save your key — it won't be shown again!</value>
+  </data>
+  <data name="ApiKeys_Th_Created" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="ApiKeys_Th_DailyLimit" xml:space="preserve">
+    <value>Daily Limit</value>
+  </data>
+  <data name="ApiKeys_Th_LastUsed" xml:space="preserve">
+    <value>Last Used</value>
+  </data>
+  <data name="ApiKeys_Th_Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="ApiKeys_Th_Prefix" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="ApiKeys_Th_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="ApiKeys_Th_WeeklyLimit" xml:space="preserve">
+    <value>Weekly Limit</value>
+  </data>
+  <data name="ApiKeys_WeeklyAria" xml:space="preserve">
+    <value>Weekly limit remaining</value>
+  </data>
+  <data name="ApiKeys_YourKeys" xml:space="preserve">
+    <value>Your API Keys</value>
+  </data>
+  <data name="Btn_Copied" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="Btn_Copy" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="Nav_ApiKeys" xml:space="preserve">
+    <value>API Keys</value>
+  </data>
+</root>

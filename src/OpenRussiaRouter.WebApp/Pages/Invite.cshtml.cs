@@ -1,12 +1,15 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class InviteModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<InviteModel> _logger;
 
     [BindProperty(SupportsGet = true)]
@@ -18,9 +21,10 @@ public class InviteModel : PageModelBase
     public bool IsSuccess { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public InviteModel(AuthProvider AuthProvider, ILogger<InviteModel> logger)
+    public InviteModel(AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer, ILogger<InviteModel> logger)
     {
         _authClient = AuthProvider;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -32,7 +36,7 @@ public class InviteModel : PageModelBase
 
         if (!Input.AcceptLegal)
         {
-            ModelState.AddModelError("Input.AcceptLegal", "You must accept the Public Offer and Privacy Policy.");
+            ModelState.AddModelError("Input.AcceptLegal", _localizer["Validation_AcceptLegal"]);
             return Page();
         }
 
@@ -46,15 +50,15 @@ public class InviteModel : PageModelBase
         {
             ErrorMessage = ex.ErrorCode switch
             {
-                "validation_failed" => "Invalid or expired invite token.",
-                _ => "Registration failed. Please try again."
+                "validation_failed" => _localizer["Auth_InvalidInvite"],
+                _ => _localizer["Auth_InviteFailed"]
             };
         }
         catch (Exception ex)
         {
             // Do not log the raw invite token — it is a secret credential.
             _logger.LogError(ex, "Unexpected error completing invite.");
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_InviteError"];
         }
 
         return Page();
@@ -62,13 +66,15 @@ public class InviteModel : PageModelBase
 
     public class InputModel
     {
-        [Required, MinLength(8)]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [MinLength(8, ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordMin8")]
         public string Password { get; set; } = "";
 
-        [Required, Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [Compare(nameof(Password), ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordsMismatch")]
         public string ConfirmPassword { get; set; } = "";
 
-        [Required(ErrorMessage = "You must accept the Public Offer and Privacy Policy.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_AcceptLegal")]
         public bool AcceptLegal { get; set; }
     }
 }

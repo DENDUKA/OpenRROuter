@@ -1,72 +1,72 @@
 @page "/docs"
 @model DocsModel
-@{ ViewData["Title"] = "Setup guide"; }
+@{ ViewData["Title"] = Localizer["Docs_Title"]; }
 
 <div class="docs-page">
     <section class="docs-hero" aria-labelledby="docs-title">
-        <div class="section-label">Connection guide</div>
-        <h1 id="docs-title">Setup guide</h1>
-        <p>Connect to OpenRussiaRouter with an OpenAI-compatible request flow. Point any OpenAI client at the endpoint below and authenticate with your API key.</p>
+        <div class="section-label">@Localizer["Docs_Eyebrow"]</div>
+        <h1 id="docs-title">@Localizer["Docs_Title"]</h1>
+        <p>@Localizer["Docs_Lead"]</p>
     </section>
 
     <section class="docs-section" aria-labelledby="endpoint-title">
-        <h2 id="endpoint-title">Endpoint</h2>
-        <p>Use this as the <code>base_url</code> (OpenAI SDK) or the request prefix. The API is OpenAI-compatible, so existing clients work unchanged.</p>
-        <div class="docs-field" aria-label="API base URL">
-            <span class="docs-field-label">Base URL</span>
+        <h2 id="endpoint-title">@Localizer["Docs_Endpoint"]</h2>
+        <p>@Localizer["Docs_EndpointLead"]</p>
+        <div class="docs-field" aria-label="@Localizer["Docs_BaseUrlAria"]">
+            <span class="docs-field-label">@Localizer["Docs_BaseUrlLabel"]</span>
             <code class="docs-field-value" id="docs-base-url">@Model.V1BaseUrl</code>
-            <button type="button" class="docs-copy-btn" data-copy="@Model.V1BaseUrl" onclick="copyDocsValue(event)">Copy</button>
+            <button type="button" class="docs-copy-btn" data-copy="@Model.V1BaseUrl" data-copied="@Localizer["Btn_Copied"]" onclick="copyDocsValue(event)">@Localizer["Btn_Copy"]</button>
         </div>
-        <div class="docs-field" aria-label="Authentication header">
-            <span class="docs-field-label">Auth header</span>
+        <div class="docs-field" aria-label="@Localizer["Docs_AuthHeaderAria"]">
+            <span class="docs-field-label">@Localizer["Docs_AuthHeader"]</span>
             <code class="docs-field-value">Authorization: Bearer &lt;YOUR_API_KEY&gt;</code>
         </div>
         <table class="table docs-endpoint-table">
-            <thead><tr><th scope="col">Method</th><th scope="col">Path</th><th scope="col">Purpose</th></tr></thead>
+            <thead><tr><th scope="col">@Localizer["Docs_Th_Method"]</th><th scope="col">@Localizer["Docs_Th_Path"]</th><th scope="col">@Localizer["Docs_Th_Purpose"]</th></tr></thead>
             <tbody>
-                <tr><td><code>POST</code></td><td><code>/v1/chat/completions</code></td><td>Chat completions (streaming &amp; non-streaming)</td></tr>
-                <tr><td><code>GET</code></td><td><code>/v1/models</code></td><td>List models available to your account</td></tr>
+                <tr><td><code>POST</code></td><td><code>/v1/chat/completions</code></td><td>@Localizer["Docs_ChatCompletions"]</td></tr>
+                <tr><td><code>GET</code></td><td><code>/v1/models</code></td><td>@Localizer["Docs_ListModels"]</td></tr>
             </tbody>
         </table>
     </section>
 
     <section class="docs-section" aria-labelledby="steps-title">
-        <h2 id="steps-title">Start in 4 steps</h2>
+        <h2 id="steps-title">@Localizer["Docs_Steps"]</h2>
         <div class="docs-step-list">
             <div class="docs-step">
                 <span>01</span>
                 <div>
-                    <h3>Signup</h3>
-                    <p>Create your account and open the workspace.</p>
+                    <h3>@Localizer["Docs_StepSignupTitle"]</h3>
+                    <p>@Localizer["Docs_StepSignupDesc"]</p>
                 </div>
             </div>
             <div class="docs-step">
                 <span>02</span>
                 <div>
-                    <h3>Buy credits</h3>
-                    <p>Add USD balance once and use it across available models.</p>
+                    <h3>@Localizer["Docs_StepBuyTitle"]</h3>
+                    <p>@Localizer["Docs_StepBuyDesc"]</p>
                 </div>
             </div>
             <div class="docs-step">
                 <span>03</span>
                 <div>
-                    <h3>Choose a model</h3>
-                    <p>Open the model catalog and copy the public model ID you want to use.</p>
+                    <h3>@Localizer["Docs_StepModelTitle"]</h3>
+                    <p>@Localizer["Docs_StepModelDesc"]</p>
                 </div>
             </div>
             <div class="docs-step">
                 <span>04</span>
                 <div>
-                    <h3>Get your API key</h3>
-                    <p>Create an API key in the workspace and use it as a bearer token.</p>
+                    <h3>@Localizer["Docs_StepKeyTitle"]</h3>
+                    <p>@Localizer["Docs_StepKeyDesc"]</p>
                 </div>
             </div>
         </div>
     </section>
 
     <section class="docs-section" aria-labelledby="integration-title">
-        <h2 id="integration-title">Use it in your tool</h2>
-        <p>Pick your client below. The base URL and a model id are already filled in — just paste your API key. Grab a model id from the <a href="/models">catalog</a>.</p>
+        <h2 id="integration-title">@Localizer["Docs_IntegrationTitle"]</h2>
+        <p>@Localizer["Docs_IntegrationLead"]</p>
         <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
 </div>
@@ -188,9 +188,11 @@
             var btn = event.currentTarget;
             var text = btn.getAttribute('data-copy');
             if (!text) return;
+            var originalText = btn.getAttribute('data-original') || btn.textContent;
+            btn.setAttribute('data-original', originalText);
             orrCopyText(text).then(function () {
-                btn.textContent = 'Copied';
-                setTimeout(function () { btn.textContent = 'Copy'; }, 1500);
+                btn.textContent = btn.getAttribute('data-copied') || 'Copied';
+                setTimeout(function () { btn.textContent = originalText; }, 1500);
             }).catch(function (err) { console.error('Copy failed:', err); });
         }
     </script>

@@ -3,7 +3,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -12,22 +14,25 @@ public class VerifyEmailModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly IEmailDispatchQueue _emailQueue;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<VerifyEmailModel> _logger;
 
     [BindProperty(SupportsGet = true)]
     public string Email { get; set; } = "";
 
     [BindProperty]
-    [Required, RegularExpression(@"^\d{6}$", ErrorMessage = "Enter the 6-digit code.")]
+    [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+    [RegularExpression(@"^\d{6}$", ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Code6Digits")]
     public string Code { get; set; } = "";
 
     public string? ErrorMessage { get; set; }
     public string? StatusMessage { get; set; }
 
-    public VerifyEmailModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, ILogger<VerifyEmailModel> logger)
+    public VerifyEmailModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<VerifyEmailModel> logger)
     {
         _authClient = authProvider;
         _emailQueue = emailQueue;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -44,7 +49,7 @@ public class VerifyEmailModel : PageModelBase
     {
         if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Missing email. Please sign up again.";
+            ErrorMessage = _localizer["Auth_MissingEmail"];
             return Page();
         }
         if (!ModelState.IsValid) return Page();
@@ -72,17 +77,17 @@ public class VerifyEmailModel : PageModelBase
         {
             ErrorMessage = ex.ErrorCode switch
             {
-                "invalid_code" => "Incorrect code. Please check and try again.",
-                "code_expired" => "That code has expired. Request a new one below.",
-                "too_many_attempts" => "Too many attempts. Request a new code below.",
-                "no_pending_verification" => "Nothing to verify for this email. Try logging in or signing up.",
-                _ => "Verification failed. Please try again."
+                "invalid_code" => _localizer["Auth_InvalidCode"],
+                "code_expired" => _localizer["Auth_CodeExpired"],
+                "too_many_attempts" => _localizer["Auth_TooManyAttempts"],
+                "no_pending_verification" => _localizer["Auth_NoPendingVerification"],
+                _ => _localizer["Auth_VerificationFailed"]
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error verifying email. Email={Email}", Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_LoginError"];
         }
 
         return Page();
@@ -92,7 +97,7 @@ public class VerifyEmailModel : PageModelBase
     {
         if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Missing email. Please sign up again.";
+            ErrorMessage = _localizer["Auth_MissingEmail"];
             return Page();
         }
 
@@ -107,21 +112,21 @@ public class VerifyEmailModel : PageModelBase
             {
                 _logger.LogWarning(ex, "Failed to enqueue resend verification email. Email={Email}", Email);
             }
-            StatusMessage = $"A new code was sent to {Email}.";
+            StatusMessage = _localizer["Auth_VerificationResent", Email];
         }
         catch (AuthException ex)
         {
             ErrorMessage = ex.ErrorCode switch
             {
-                "resend_cooldown" => "Please wait a minute before requesting another code.",
-                "no_pending_verification" => "Nothing to verify for this email. Try logging in or signing up.",
-                _ => "Could not resend the code. Please try again."
+                "resend_cooldown" => _localizer["Auth_ResendCooldown"],
+                "no_pending_verification" => _localizer["Auth_NoPendingVerification"],
+                _ => _localizer["Auth_ResendFailed"]
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error resending verification. Email={Email}", Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_LoginError"];
         }
 
         return Page();

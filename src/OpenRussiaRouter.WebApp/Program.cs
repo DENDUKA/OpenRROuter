@@ -9,6 +9,7 @@ using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
@@ -21,17 +22,35 @@ using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
+using OpenRussiaRouter.WebApp.Services.Localization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("webapp");
 builder.AddOpenTelemetryMetrics("OpenRussiaRouter.WebApp");
 
-builder.Services.AddRazorPages();
+builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
+builder.Services.AddRazorPages()
+    .AddViewLocalization()
+    .AddDataAnnotationsLocalization(o =>
+        o.DataAnnotationLocalizerProvider = (_, factory) => factory.Create(typeof(SharedResource)));
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
+builder.Services.Configure<RequestLocalizationOptions>(o =>
+{
+    var cultures = SupportedCultures.All;
+    o.DefaultRequestCulture = new RequestCulture(SupportedCultures.DefaultCulture);
+    o.SupportedCultures = cultures;
+    o.SupportedUICultures = cultures;
+    o.RequestCultureProviders =
+    [
+        new CookieRequestCultureProvider(),
+        new AcceptLanguageHeaderRequestCultureProvider()
+    ];
+});
 
 var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -257,6 +276,10 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+
+// TS-010: must run after UseStaticFiles and before UseAuthentication so that
+// cookie/Accept-Language are honored for the auth pipeline and Razor views.
+app.UseRequestLocalization();
 
 app.UseAuthentication();
 app.UseAuthorization();

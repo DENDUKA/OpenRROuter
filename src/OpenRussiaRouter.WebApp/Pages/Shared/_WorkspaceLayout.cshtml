@@ -1,25 +1,14 @@
-@{
-    Layout = "~/Pages/Shared/_Layout.cshtml";
-    var path = Context.Request.Path.Value ?? "";
-
-    string WsNavClass(string href)
-    {
-        return path.Equals(href, StringComparison.OrdinalIgnoreCase)
-            ? "ws-nav-item active"
-            : "ws-nav-item";
-    }
-}
-
+@{ Layout = "~/Pages/Shared/_Layout.cshtml"; var path = Context.Request.Path.Value ?? ""; string WsNavClass(string href) { return path.Equals(href, StringComparison.OrdinalIgnoreCase) ? "ws-nav-item active" : "ws-nav-item"; } }
 <div class="ws-shell">
-    <nav class="ws-sidebar" aria-label="Workspace navigation">
-        <div class="ws-sidebar-header">Account</div>
+    <nav class="ws-sidebar" aria-label="@Localizer["Sidebar_Account"]">
+        <div class="ws-sidebar-header">@Localizer["Sidebar_Account"]</div>
 
         <a class="@WsNavClass("/workspace/apikeys")" href="/workspace/apikeys">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="7.5" cy="15.5" r="3.5"/>
                 <path d="m10 13 9-9"/><path d="m15 4 5 5"/><path d="m14 9 2 2"/>
             </svg>
-            API Keys
+            @Localizer["Nav_ApiKeys"]
         </a>
 
         <a class="@WsNavClass("/workspace/credits")" href="/workspace/credits">
@@ -27,7 +16,7 @@
                 <rect x="2" y="5" width="20" height="14" rx="2"/>
                 <path d="M2 10h20"/>
             </svg>
-            Credits
+            @Localizer["WsNav_Credits"]
         </a>
 
         <a class="@WsNavClass("/workspace/settings")" href="/workspace/settings">
@@ -35,7 +24,7 @@
                 <circle cx="12" cy="12" r="3"/>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>
-            Settings
+            @Localizer["Nav_Settings"]
         </a>
 
         <a class="@WsNavClass("/workspace/activity")" href="/workspace/activity">
@@ -43,12 +32,12 @@
                 <path d="M3 3v18h18"/>
                 <path d="m7 15 4-4 3 3 5-7"/>
             </svg>
-            Activity
+            @Localizer["Nav_Activity"]
         </a>
     </nav>
 
     <div class="ws-content">
-        <h1 class="sr-only">@(ViewData["Title"] ?? "Workspace")</h1>
+        <h1 class="sr-only">@(ViewData["Title"] ?? Localizer["Nav_Workspace"])</h1>
         @RenderBody()
     </div>
 </div>

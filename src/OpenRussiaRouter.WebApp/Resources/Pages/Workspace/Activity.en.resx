@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Activity_AllKeys" xml:space="preserve">
+    <value>All keys</value>
+  </data>
+  <data name="Activity_AllModels" xml:space="preserve">
+    <value>All models</value>
+  </data>
+  <data name="Activity_Apply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
+  <data name="Activity_ByKey" xml:space="preserve">
+    <value>By API key</value>
+  </data>
+  <data name="Activity_ByModel" xml:space="preserve">
+    <value>By model</value>
+  </data>
+  <data name="Activity_Desc" xml:space="preserve">
+    <value>API usage history and token consumption statistics.</value>
+  </data>
+  <data name="Activity_Filters" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Activity_From" xml:space="preserve">
+    <value>From</value>
+  </data>
+  <data name="Activity_KeyFilter" xml:space="preserve">
+    <value>API key</value>
+  </data>
+  <data name="Activity_ModelFilter" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Activity_NextPage" xml:space="preserve">
+    <value>Next page →</value>
+  </data>
+  <data name="Activity_NoData" xml:space="preserve">
+    <value>No data for this period.</value>
+  </data>
+  <data name="Activity_NoRecords" xml:space="preserve">
+    <value>No activity records found.</value>
+  </data>
+  <data name="Activity_OptGroupActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="Activity_OptGroupDeleted" xml:space="preserve">
+    <value>Deleted</value>
+  </data>
+  <data name="Activity_OptGroupDisabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
+  <data name="Activity_Period24h" xml:space="preserve">
+    <value>24h</value>
+  </data>
+  <data name="Activity_Period30d" xml:space="preserve">
+    <value>30d</value>
+  </data>
+  <data name="Activity_Period7d" xml:space="preserve">
+    <value>7d</value>
+  </data>
+  <data name="Activity_PeriodToday" xml:space="preserve">
+    <value>Today</value>
+  </data>
+  <data name="Activity_Reset" xml:space="preserve">
+    <value>Reset</value>
+  </data>
+  <data name="Activity_StatCost" xml:space="preserve">
+    <value>Total cost</value>
+  </data>
+  <data name="Activity_StatInput" xml:space="preserve">
+    <value>Input tokens</value>
+  </data>
+  <data name="Activity_StatOutput" xml:space="preserve">
+    <value>Output tokens</value>
+  </data>
+  <data name="Activity_StatRequests" xml:space="preserve">
+    <value>Requests</value>
+  </data>
+  <data name="Activity_TabDetails" xml:space="preserve">
+    <value>Details</value>
+  </data>
+  <data name="Activity_TabOverview" xml:space="preserve">
+    <value>Overview</value>
+  </data>
+  <data name="Activity_Th_Cache" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Activity_Th_Cost" xml:space="preserve">
+    <value>Cost</value>
+  </data>
+  <data name="Activity_Th_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Activity_Th_Input" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="Activity_Th_Key" xml:space="preserve">
+    <value>Key</value>
+  </data>
+  <data name="Activity_Th_Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Activity_Th_Output" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="Activity_Th_Requests" xml:space="preserve">
+    <value>Requests</value>
+  </data>
+  <data name="Activity_Th_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Activity_To" xml:space="preserve">
+    <value>To</value>
+  </data>
+  <data name="Activity_UsageRecords" xml:space="preserve">
+    <value>Usage records</value>
+  </data>
+  <data name="Nav_Activity" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+</root>

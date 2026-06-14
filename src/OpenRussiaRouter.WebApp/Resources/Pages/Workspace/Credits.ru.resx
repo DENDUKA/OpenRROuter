@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Consent_And" xml:space="preserve">
+    <value>и</value>
+  </data>
+  <data name="Consent_OfferLink" xml:space="preserve">
+    <value>Публичную оферту</value>
+  </data>
+  <data name="Consent_Prefix" xml:space="preserve">
+    <value>Я принимаю</value>
+  </data>
+  <data name="Consent_PrivacyLink" xml:space="preserve">
+    <value>Политику конфиденциальности</value>
+  </data>
+  <data name="Credits_AmountLabel" xml:space="preserve">
+    <value>Сумма</value>
+  </data>
+  <data name="Credits_BalanceHeader" xml:space="preserve">
+    <value>Текущий баланс</value>
+  </data>
+  <data name="Credits_BalanceUnavailable" xml:space="preserve">
+    <value>Не удалось загрузить баланс.</value>
+  </data>
+  <data name="Credits_CurrencyLabel" xml:space="preserve">
+    <value>Валюта</value>
+  </data>
+  <data name="Credits_Desc" xml:space="preserve">
+    <value>Текущий баланс, который используется для биллинга API-запросов.</value>
+  </data>
+  <data name="Credits_HistoryHeader" xml:space="preserve">
+    <value>История пополнений</value>
+  </data>
+  <data name="Credits_MinTopUp" xml:space="preserve">
+    <value>Минимум: ${0} USD. Авторитетный лимит проверяется на сервере.</value>
+  </data>
+  <data name="Credits_NoTopUps" xml:space="preserve">
+    <value>Пополнений ещё не было.</value>
+  </data>
+  <data name="Credits_Th_Amount" xml:space="preserve">
+    <value>Сумма</value>
+  </data>
+  <data name="Credits_Th_Date" xml:space="preserve">
+    <value>Дата</value>
+  </data>
+  <data name="Credits_Th_Reason" xml:space="preserve">
+    <value>Причина</value>
+  </data>
+  <data name="Credits_TopUpHeader" xml:space="preserve">
+    <value>Пополнить</value>
+  </data>
+  <data name="Credits_TopUpSubmit" xml:space="preserve">
+    <value>Пополнить</value>
+  </data>
+  <data name="WsNav_Credits" xml:space="preserve">
+    <value>Баланс</value>
+  </data>
+</root>

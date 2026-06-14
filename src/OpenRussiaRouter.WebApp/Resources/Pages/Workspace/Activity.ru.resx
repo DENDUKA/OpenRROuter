@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Activity_AllKeys" xml:space="preserve">
+    <value>Все ключи</value>
+  </data>
+  <data name="Activity_AllModels" xml:space="preserve">
+    <value>Все модели</value>
+  </data>
+  <data name="Activity_Apply" xml:space="preserve">
+    <value>Применить</value>
+  </data>
+  <data name="Activity_ByKey" xml:space="preserve">
+    <value>По API-ключам</value>
+  </data>
+  <data name="Activity_ByModel" xml:space="preserve">
+    <value>По моделям</value>
+  </data>
+  <data name="Activity_Desc" xml:space="preserve">
+    <value>История использования API и статистика по токенам.</value>
+  </data>
+  <data name="Activity_Filters" xml:space="preserve">
+    <value>Фильтры</value>
+  </data>
+  <data name="Activity_From" xml:space="preserve">
+    <value>С</value>
+  </data>
+  <data name="Activity_KeyFilter" xml:space="preserve">
+    <value>API-ключ</value>
+  </data>
+  <data name="Activity_ModelFilter" xml:space="preserve">
+    <value>Модель</value>
+  </data>
+  <data name="Activity_NextPage" xml:space="preserve">
+    <value>Следующая →</value>
+  </data>
+  <data name="Activity_NoData" xml:space="preserve">
+    <value>Нет данных за выбранный период.</value>
+  </data>
+  <data name="Activity_NoRecords" xml:space="preserve">
+    <value>Записей не найдено.</value>
+  </data>
+  <data name="Activity_OptGroupActive" xml:space="preserve">
+    <value>Активные</value>
+  </data>
+  <data name="Activity_OptGroupDeleted" xml:space="preserve">
+    <value>Удалённые</value>
+  </data>
+  <data name="Activity_OptGroupDisabled" xml:space="preserve">
+    <value>Отключённые</value>
+  </data>
+  <data name="Activity_Period24h" xml:space="preserve">
+    <value>24ч</value>
+  </data>
+  <data name="Activity_Period30d" xml:space="preserve">
+    <value>30д</value>
+  </data>
+  <data name="Activity_Period7d" xml:space="preserve">
+    <value>7д</value>
+  </data>
+  <data name="Activity_PeriodToday" xml:space="preserve">
+    <value>Сегодня</value>
+  </data>
+  <data name="Activity_Reset" xml:space="preserve">
+    <value>Сбросить</value>
+  </data>
+  <data name="Activity_StatCost" xml:space="preserve">
+    <value>Общая стоимость</value>
+  </data>
+  <data name="Activity_StatInput" xml:space="preserve">
+    <value>Входные токены</value>
+  </data>
+  <data name="Activity_StatOutput" xml:space="preserve">
+    <value>Выходные токены</value>
+  </data>
+  <data name="Activity_StatRequests" xml:space="preserve">
+    <value>Запросы</value>
+  </data>
+  <data name="Activity_TabDetails" xml:space="preserve">
+    <value>Детали</value>
+  </data>
+  <data name="Activity_TabOverview" xml:space="preserve">
+    <value>Обзор</value>
+  </data>
+  <data name="Activity_Th_Cache" xml:space="preserve">
+    <value>Кэш</value>
+  </data>
+  <data name="Activity_Th_Cost" xml:space="preserve">
+    <value>Стоимость</value>
+  </data>
+  <data name="Activity_Th_Date" xml:space="preserve">
+    <value>Дата</value>
+  </data>
+  <data name="Activity_Th_Input" xml:space="preserve">
+    <value>Вход</value>
+  </data>
+  <data name="Activity_Th_Key" xml:space="preserve">
+    <value>Ключ</value>
+  </data>
+  <data name="Activity_Th_Model" xml:space="preserve">
+    <value>Модель</value>
+  </data>
+  <data name="Activity_Th_Output" xml:space="preserve">
+    <value>Выход</value>
+  </data>
+  <data name="Activity_Th_Requests" xml:space="preserve">
+    <value>Запросы</value>
+  </data>
+  <data name="Activity_Th_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="Activity_To" xml:space="preserve">
+    <value>По</value>
+  </data>
+  <data name="Activity_UsageRecords" xml:space="preserve">
+    <value>Записи использования</value>
+  </data>
+  <data name="Nav_Activity" xml:space="preserve">
+    <value>Активность</value>
+  </data>
+</root>

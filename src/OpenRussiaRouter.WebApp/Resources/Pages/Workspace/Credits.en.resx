@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Consent_And" xml:space="preserve">
+    <value>and</value>
+  </data>
+  <data name="Consent_OfferLink" xml:space="preserve">
+    <value>Public Offer</value>
+  </data>
+  <data name="Consent_Prefix" xml:space="preserve">
+    <value>I accept the</value>
+  </data>
+  <data name="Consent_PrivacyLink" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Credits_AmountLabel" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="Credits_BalanceHeader" xml:space="preserve">
+    <value>Current Balance</value>
+  </data>
+  <data name="Credits_BalanceUnavailable" xml:space="preserve">
+    <value>Unable to load balance.</value>
+  </data>
+  <data name="Credits_CurrencyLabel" xml:space="preserve">
+    <value>Currency</value>
+  </data>
+  <data name="Credits_Desc" xml:space="preserve">
+    <value>Your current balance used for API request billing.</value>
+  </data>
+  <data name="Credits_HistoryHeader" xml:space="preserve">
+    <value>Top-Up History</value>
+  </data>
+  <data name="Credits_MinTopUp" xml:space="preserve">
+    <value>Minimum: ${0} USD. Authoritative limit enforced server-side.</value>
+  </data>
+  <data name="Credits_NoTopUps" xml:space="preserve">
+    <value>No top-ups yet.</value>
+  </data>
+  <data name="Credits_Th_Amount" xml:space="preserve">
+    <value>Amount</value>
+  </data>
+  <data name="Credits_Th_Date" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Credits_Th_Reason" xml:space="preserve">
+    <value>Reason</value>
+  </data>
+  <data name="Credits_TopUpHeader" xml:space="preserve">
+    <value>Top Up</value>
+  </data>
+  <data name="Credits_TopUpSubmit" xml:space="preserve">
+    <value>Top Up</value>
+  </data>
+  <data name="WsNav_Credits" xml:space="preserve">
+    <value>Credits</value>
+  </data>
+</root>

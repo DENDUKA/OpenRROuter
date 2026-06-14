@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="A11y_Currency" xml:space="preserve">
+    <value>Display currency</value>
+  </data>
+  <data name="A11y_Language" xml:space="preserve">
+    <value>Interface language</value>
+  </data>
+  <data name="A11y_SkipToContent" xml:space="preserve">
+    <value>Skip to content</value>
+  </data>
+  <data name="A11y_UserMenu" xml:space="preserve">
+    <value>User menu</value>
+  </data>
+  <data name="Footer_Offer" xml:space="preserve">
+    <value>Public Offer</value>
+  </data>
+  <data name="Footer_Privacy" xml:space="preserve">
+    <value>Privacy Policy</value>
+  </data>
+  <data name="Nav_Activity" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="Nav_Admin" xml:space="preserve">
+    <value>Admin</value>
+  </data>
+  <data name="Nav_ApiKeys" xml:space="preserve">
+    <value>API Keys</value>
+  </data>
+  <data name="Nav_Exit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="Nav_Login" xml:space="preserve">
+    <value>Login</value>
+  </data>
+  <data name="Nav_Models" xml:space="preserve">
+    <value>Models</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="Nav_SetupGuide" xml:space="preserve">
+    <value>Setup guide</value>
+  </data>
+  <data name="Nav_Workspace" xml:space="preserve">
+    <value>Workspace</value>
+  </data>
+  <data name="Sidebar_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Sidebar_ApiKeys" xml:space="preserve">
+    <value>API Keys</value>
+  </data>
+  <data name="Sidebar_Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
+  <data name="Sidebar_Models" xml:space="preserve">
+    <value>Models</value>
+  </data>
+  <data name="Sidebar_Product" xml:space="preserve">
+    <value>Product</value>
+  </data>
+  <data name="Sidebar_Usage" xml:space="preserve">
+    <value>Usage</value>
+  </data>
+  <data name="Currency_RUB" xml:space="preserve">
+    <value>RUB — Russian Ruble</value>
+  </data>
+  <data name="Currency_USD" xml:space="preserve">
+    <value>USD — US Dollar</value>
+  </data>
+  <data name="Currency_EUR" xml:space="preserve">
+    <value>EUR — Euro</value>
+  </data>
+  <data name="Language_Ru" xml:space="preserve">
+    <value>Russian</value>
+  </data>
+  <data name="Language_En" xml:space="preserve">
+    <value>English</value>
+  </data>
+</root>

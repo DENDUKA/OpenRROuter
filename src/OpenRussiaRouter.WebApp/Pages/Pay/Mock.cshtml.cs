@@ -1,8 +1,10 @@
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Pages;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -16,6 +18,7 @@ public class MockModel : PageModelBase
     private readonly IHttpClientFactory _httpFactory;
     private readonly IOptions<PaymentSettings> _settings;
     private readonly IWebHostEnvironment _env;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<MockModel> _logger;
 
     public MockModel(
@@ -23,12 +26,14 @@ public class MockModel : PageModelBase
         IHttpClientFactory httpFactory,
         IOptions<PaymentSettings> settings,
         IWebHostEnvironment env,
+        IStringLocalizer<SharedResource> localizer,
         ILogger<MockModel> logger)
     {
         _billing = billing;
         _httpFactory = httpFactory;
         _settings = settings;
         _env = env;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -53,7 +58,7 @@ public class MockModel : PageModelBase
             _logger.LogWarning(ex, "Failed to load payment {PaymentId}", paymentId);
         }
 
-        if (Payment == null) ErrorMessage = "Payment not found.";
+        if (Payment == null) ErrorMessage = _localizer["Mock_NotFound"];
         return Page();
     }
 
@@ -68,7 +73,7 @@ public class MockModel : PageModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "GetPayment failed for {PaymentId}", paymentId);
-            ErrorMessage = "Payment not found.";
+            ErrorMessage = _localizer["Mock_NotFound"];
             return Page();
         }
 
@@ -93,7 +98,7 @@ public class MockModel : PageModelBase
         {
             _logger.LogError(ex, "Self-webhook (paid) failed for payment {PaymentId}", paymentId);
             Payment = payment;
-            ErrorMessage = "Checkout failed. Please try again.";
+            ErrorMessage = _localizer["Mock_CheckoutFailed"];
             return Page();
         }
 
@@ -129,7 +134,7 @@ public class MockModel : PageModelBase
         {
             _logger.LogWarning(ex, "Cancel self-webhook failed for {PaymentId}", paymentId);
             Payment = payment;
-            ErrorMessage = "Checkout failed. Please try again.";
+            ErrorMessage = _localizer["Mock_CheckoutFailed"];
             return Page();
         }
 

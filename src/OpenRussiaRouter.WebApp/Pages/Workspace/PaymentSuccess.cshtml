@@ -1,14 +1,14 @@
 @page
 @model Workspace.PaymentSuccessModel
-@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Payment Processing"; }
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = Localizer["PaySuccess_Title"]; }
 
 <div class="ws-section-header">
-    <h2>Payment Processing</h2>
+    <h2>@Localizer["PaySuccess_Title"]</h2>
 </div>
 
 <div class="ws-panel">
     <div class="ws-panel-body">
-        <p>Your payment is being processed. Your balance will be updated within a minute.</p>
-        <a class="btn btn-primary" href="/workspace/credits">View Balance</a>
+        <p>@Localizer["PaySuccess_Lead"]</p>
+        <a class="btn btn-primary" href="/workspace/credits">@Localizer["PaySuccess_ViewBalance"]</a>
     </div>
 </div>

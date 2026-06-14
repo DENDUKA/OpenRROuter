@@ -1,10 +1,10 @@
 @page
 @model Workspace.ActivityModel
-@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Activity"; }
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = Localizer["Nav_Activity"]; }
 
 <div class="ws-section-header">
-    <h2>Activity</h2>
-    <p class="ws-section-desc">API usage history and token consumption statistics.</p>
+    <h2>@Localizer["Nav_Activity"]</h2>
+    <p class="ws-section-desc">@Localizer["Activity_Desc"]</p>
 </div>
 
 @if (Model.ErrorMessage != null)
@@ -13,53 +13,53 @@
 }
 
 <div class="act-tabs">
-    <a class="act-tab @(Model.Tab == "details" ? "act-tab--active" : "")" href="/workspace/activity?tab=details">Details</a>
-    <a class="act-tab @(Model.Tab == "overview" ? "act-tab--active" : "")" href="/workspace/activity?tab=overview">Overview</a>
+    <a class="act-tab @(Model.Tab == "details" ? "act-tab--active" : "")" href="/workspace/activity?tab=details">@Localizer["Activity_TabDetails"]</a>
+    <a class="act-tab @(Model.Tab == "overview" ? "act-tab--active" : "")" href="/workspace/activity?tab=overview">@Localizer["Activity_TabOverview"]</a>
 </div>
 
 @if (Model.Tab == "overview")
 {
     <div class="act-period-bar">
-        <a class="act-period-btn @(Model.Period == "today" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("today")">Today</a>
-        <a class="act-period-btn @(Model.Period == "24h" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("24h")">24h</a>
-        <a class="act-period-btn @(Model.Period == "7d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("7d")">7d</a>
-        <a class="act-period-btn @(Model.Period == "30d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("30d")">30d</a>
+        <a class="act-period-btn @(Model.Period == "today" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("today")">@Localizer["Activity_PeriodToday"]</a>
+        <a class="act-period-btn @(Model.Period == "24h" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("24h")">@Localizer["Activity_Period24h"]</a>
+        <a class="act-period-btn @(Model.Period == "7d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("7d")">@Localizer["Activity_Period7d"]</a>
+        <a class="act-period-btn @(Model.Period == "30d" ? "act-period-btn--active" : "")" href="@Model.BuildOverviewUrl("30d")">@Localizer["Activity_Period30d"]</a>
     </div>
 
     @if (Model.Summary != null)
     {
         <div class="act-stat-row">
             <div class="act-stat-card">
-                <div class="act-stat-label">Requests</div>
+                <div class="act-stat-label">@Localizer["Activity_StatRequests"]</div>
                 <div class="act-stat-value">@Model.Summary.TotalRequests.ToString("N0")</div>
             </div>
             <div class="act-stat-card">
-                <div class="act-stat-label">Input tokens</div>
+                <div class="act-stat-label">@Localizer["Activity_StatInput"]</div>
                 <div class="act-stat-value">@Model.Summary.TotalInputTokens.ToString("N0")</div>
             </div>
             <div class="act-stat-card">
-                <div class="act-stat-label">Output tokens</div>
+                <div class="act-stat-label">@Localizer["Activity_StatOutput"]</div>
                 <div class="act-stat-value">@Model.Summary.TotalOutputTokens.ToString("N0")</div>
             </div>
             <div class="act-stat-card">
-                <div class="act-stat-label">Total cost</div>
+                <div class="act-stat-label">@Localizer["Activity_StatCost"]</div>
                 <div class="act-stat-value">@Model.Summary.TotalCostUsd.ToString("N4") $</div>
             </div>
         </div>
 
         <div class="ws-panel">
-            <div class="ws-panel-header">By model</div>
+            <div class="ws-panel-header">@Localizer["Activity_ByModel"]</div>
             <div class="ws-panel-body table-scroll" style="padding:0">
                 @if (Model.Summary.Models.Count == 0)
                 {
-                    <p class="text-muted" style="padding:16px">No data for this period.</p>
+                    <p class="text-muted" style="padding:16px">@Localizer["Activity_NoData"]</p>
                 }
                 else
                 {
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Model</th><th class="num">Requests</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th>
+                                <th>@Localizer["Activity_Th_Model"]</th><th class="num">@Localizer["Activity_Th_Requests"]</th><th class="num">@Localizer["Activity_Th_Input"]</th><th class="num">@Localizer["Activity_Th_Output"]</th><th class="num">@Localizer["Activity_Th_Cache"]</th><th class="num">@Localizer["Activity_Th_Cost"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -81,18 +81,18 @@
         </div>
 
         <div class="ws-panel">
-            <div class="ws-panel-header">By API key</div>
+            <div class="ws-panel-header">@Localizer["Activity_ByKey"]</div>
             <div class="ws-panel-body table-scroll" style="padding:0">
                 @if (Model.Summary.Keys.Count == 0)
                 {
-                    <p class="text-muted" style="padding:16px">No data for this period.</p>
+                    <p class="text-muted" style="padding:16px">@Localizer["Activity_NoData"]</p>
                 }
                 else
                 {
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>Key</th><th class="num">Requests</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th>
+                                <th>@Localizer["Activity_Th_Key"]</th><th class="num">@Localizer["Activity_Th_Requests"]</th><th class="num">@Localizer["Activity_Th_Input"]</th><th class="num">@Localizer["Activity_Th_Output"]</th><th class="num">@Localizer["Activity_Th_Cache"]</th><th class="num">@Localizer["Activity_Th_Cost"]</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -117,23 +117,23 @@
 else
 {
     <div class="ws-panel">
-        <div class="ws-panel-header">Filters</div>
+        <div class="ws-panel-header">@Localizer["Activity_Filters"]</div>
         <div class="ws-panel-body">
             <form method="get" action="/workspace/activity" class="act-filter-form">
                 <input type="hidden" name="tab" value="details" />
                 <div class="act-filter-row">
                     <div class="act-filter-field">
-                        <label class="form-label" for="f-from">From</label>
+                        <label class="form-label" for="f-from">@Localizer["Activity_From"]</label>
                         <input type="date" id="f-from" name="from" class="form-control act-filter-date" value="@Model.FromDate" />
                     </div>
                     <div class="act-filter-field">
-                        <label class="form-label" for="f-to">To</label>
+                        <label class="form-label" for="f-to">@Localizer["Activity_To"]</label>
                         <input type="date" id="f-to" name="to" class="form-control act-filter-date" value="@Model.ToDate" />
                     </div>
                     <div class="act-filter-field act-filter-field--wide">
-                        <label class="form-label" for="f-model">Model</label>
+                        <label class="form-label" for="f-model">@Localizer["Activity_ModelFilter"]</label>
                         <select id="f-model" name="model" class="form-select">
-                            <option value="">All models</option>
+                            <option value="">@Localizer["Activity_AllModels"]</option>
                             @foreach (var m in Model.AvailableModels)
                             {
                                 <option value="@m" selected="@(Model.ModelFilter == m ? "selected" : null)">@m</option>
@@ -141,15 +141,15 @@ else
                         </select>
                     </div>
                     <div class="act-filter-field act-filter-field--wide">
-                        <label class="form-label" for="f-key">API key</label>
+                        <label class="form-label" for="f-key">@Localizer["Activity_KeyFilter"]</label>
                         <select id="f-key" name="key" class="form-select">
-                            <option value="">All keys</option>
+                            <option value="">@Localizer["Activity_AllKeys"]</option>
                             @{ var activeKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc == null && !k.IsDeleted).ToList();
-                               var disabledKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc != null && !k.IsDeleted).ToList(); 
+                               var disabledKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc != null && !k.IsDeleted).ToList();
                                var deletedKeys = Model.ApiKeys.Where(k => k.IsDeleted).ToList(); }
                             @if (activeKeys.Count > 0)
                             {
-                                <optgroup label="Active">
+                                <optgroup label="@Localizer["Activity_OptGroupActive"]">
                                     @foreach (var k in activeKeys)
                                     {
                                         <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
@@ -158,7 +158,7 @@ else
                             }
                             @if (disabledKeys.Count > 0)
                             {
-                                <optgroup label="Disabled">
+                                <optgroup label="@Localizer["Activity_OptGroupDisabled"]">
                                     @foreach (var k in disabledKeys)
                                     {
                                         <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
@@ -167,7 +167,7 @@ else
                             }
                             @if (deletedKeys.Count > 0)
                             {
-                                <optgroup label="Deleted">
+                                <optgroup label="@Localizer["Activity_OptGroupDeleted"]">
                                     @foreach (var k in deletedKeys)
                                     {
                                         <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
@@ -179,8 +179,8 @@ else
                     <div class="act-filter-actions">
                         <label class="form-label">&nbsp;</label>
                         <div class="d-flex" style="gap:8px">
-                            <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-                            <a href="/workspace/activity?tab=details" class="btn btn-secondary btn-sm">Reset</a>
+                            <button type="submit" class="btn btn-primary btn-sm">@Localizer["Activity_Apply"]</button>
+                            <a href="/workspace/activity?tab=details" class="btn btn-secondary btn-sm">@Localizer["Activity_Reset"]</a>
                         </div>
                     </div>
                 </div>
@@ -189,18 +189,18 @@ else
     </div>
 
     <div class="ws-panel">
-        <div class="ws-panel-header">Usage records</div>
+        <div class="ws-panel-header">@Localizer["Activity_UsageRecords"]</div>
         <div class="ws-panel-body table-scroll" style="padding:0">
             @if (Model.Activity.Count == 0)
             {
-                <p class="text-muted" style="padding:16px">No activity records found.</p>
+                <p class="text-muted" style="padding:16px">@Localizer["Activity_NoRecords"]</p>
             }
             else
             {
                 <table class="table">
                     <thead>
                         <tr>
-                            <th>Date</th><th>Key</th><th>Model</th><th class="num">Input</th><th class="num">Output</th><th class="num">Cache</th><th class="num">Cost</th><th>Status</th>
+                            <th>@Localizer["Activity_Th_Date"]</th><th>@Localizer["Activity_Th_Key"]</th><th>@Localizer["Activity_Th_Model"]</th><th class="num">@Localizer["Activity_Th_Input"]</th><th class="num">@Localizer["Activity_Th_Output"]</th><th class="num">@Localizer["Activity_Th_Cache"]</th><th class="num">@Localizer["Activity_Th_Cost"]</th><th>@Localizer["Activity_Th_Status"]</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -224,7 +224,7 @@ else
                 @if (Model.HasMore && Model.NextCursor != null)
                 {
                     <div class="act-pagination">
-                        <a class="btn btn-secondary btn-sm" href="@Model.BuildDetailsUrl(Model.NextCursor)">Next page →</a>
+                        <a class="btn btn-secondary btn-sm" href="@Model.BuildDetailsUrl(Model.NextCursor)">@Localizer["Activity_NextPage"]</a>
                     </div>
                 }
             }

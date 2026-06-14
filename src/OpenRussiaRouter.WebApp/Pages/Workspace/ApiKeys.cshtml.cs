@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -14,11 +16,13 @@ public class ApiKeysModel(
     AuthProvider authProvider,
     BillingProvider billingProvider,
     ControlPlaneProvider controlPlaneProvider,
+    IStringLocalizer<SharedResource> localizer,
     ILogger<ApiKeysModel> logger) : PageModelBase
 {
     private readonly AuthProvider _authClient = authProvider;
     private readonly BillingProvider _billingClient = billingProvider;
     private readonly ControlPlaneProvider _controlPlaneClient = controlPlaneProvider;
+    private readonly IStringLocalizer<SharedResource> _localizer = localizer;
     private readonly ILogger<ApiKeysModel> _logger = logger;
 
     public IReadOnlyList<ApiKeySummary> Keys { get; set; } = [];
@@ -42,7 +46,7 @@ public class ApiKeysModel(
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load API keys. UserId={UserId}", User.GetUserId());
-            ErrorMessage = "Failed to load API keys.";
+            ErrorMessage = _localizer["ApiKey_LoadFailed"];
             return;
         }
 
@@ -60,8 +64,8 @@ public class ApiKeysModel(
         {
             _logger.LogWarning(ex, "Failed to load API key limits. UserId={UserId}", User.GetUserId());
             ErrorMessage = ErrorMessage is null
-                ? "Failed to load API key limits."
-                : ErrorMessage + " Failed to load API key limits.";
+                ? _localizer["ApiKey_LimitLoadFailed"]
+                : ErrorMessage + " " + _localizer["ApiKey_LimitLoadFailed"];
         }
     }
 
@@ -69,7 +73,7 @@ public class ApiKeysModel(
     {
         if (string.IsNullOrWhiteSpace(Create.Name))
         {
-            ModelState.AddModelError("Create.Name", "Key name is required.");
+            ModelState.AddModelError("Create.Name", _localizer["ApiKey_NameRequired"]);
             await OnGetAsync();
             return Page();
         }
@@ -94,14 +98,14 @@ public class ApiKeysModel(
         catch (AuthException ex) when (ex.ErrorCode == "validation_failed")
         {
             _logger.LogWarning(ex, "Failed to create API key due to validation/limit. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
-            ErrorMessage = "Cannot create API key. Limit reached or name is invalid.";
+            ErrorMessage = _localizer["ApiKey_LimitInvalid"];
             await OnGetAsync();
             return Page();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create API key. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
-            ErrorMessage = "Failed to create API key.";
+            ErrorMessage = _localizer["ApiKey_CreateFailed"];
             await OnGetAsync();
             return Page();
         }
@@ -111,7 +115,7 @@ public class ApiKeysModel(
     {
         if (string.IsNullOrWhiteSpace(Rename.Name))
         {
-            ModelState.AddModelError("Rename.Name", "New name is required.");
+            ModelState.AddModelError("Rename.Name", _localizer["ApiKey_RenameRequired"]);
             await OnGetAsync();
             return Page();
         }
@@ -123,7 +127,7 @@ public class ApiKeysModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to rename API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to rename key.";
+            ErrorMessage = _localizer["ApiKey_RenameFailed"];
             await OnGetAsync();
             return Page();
         }
@@ -140,7 +144,7 @@ public class ApiKeysModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to disable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to disable key.";
+            ErrorMessage = _localizer["ApiKey_DisableFailed"];
             await OnGetAsync();
             return Page();
         }
@@ -157,7 +161,7 @@ public class ApiKeysModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to enable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to enable key.";
+            ErrorMessage = _localizer["ApiKey_EnableFailed"];
             await OnGetAsync();
             return Page();
         }
@@ -177,7 +181,7 @@ public class ApiKeysModel(
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to delete API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
-            ErrorMessage = "Failed to delete key.";
+            ErrorMessage = _localizer["ApiKey_DeleteFailed"];
             await OnGetAsync();
             return Page();
         }
@@ -216,15 +220,15 @@ public class ApiKeysModel(
     private string FormatLimit(string apiKeyId, bool daily)
     {
         if (!LimitSummaries.TryGetValue(apiKeyId, out var summary))
-            return "No limit";
+            return _localizer["ApiKeys_Limit_NoLimit"];
 
         var limit = daily ? summary.DailyLimitUsd : summary.WeeklyLimitUsd;
         if (!limit.HasValue)
-            return "No limit";
+            return _localizer["ApiKeys_Limit_NoLimit"];
 
         var spent = daily ? summary.DailySpentUsd : summary.WeeklySpentUsd;
         var remaining = daily ? summary.DailyRemainingUsd : summary.WeeklyRemainingUsd;
-        return $"Spent {FormatUsd(spent)} / {FormatUsd(limit.Value)}; Left {FormatUsd(remaining)}";
+        return _localizer["ApiKeys_Limit_Spent", FormatUsd(spent), FormatUsd(limit.Value), FormatUsd(remaining)];
     }
 
     private int RemainingPercent(string apiKeyId, bool daily)

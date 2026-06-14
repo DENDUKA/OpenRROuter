@@ -784,6 +784,12 @@ code.d-block {
 .ccy-btn:hover { background: var(--color-canvas-mid); color: var(--color-ink); }
 .ccy-btn.active { background: var(--color-canvas-card); color: var(--color-ink); font-weight: 600; }
 
+/* Language switcher — reuses the ccy-switch visual style for the dropdown block, and adds a
+   compact standalone variant for anonymous users in the topbar. */
+.dropdown-language { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; }
+.lang-switch { display: inline-flex; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+.lang-switch--compact { margin-right: var(--spacing-sm); }
+
 /* ── Left sidebar (public pages) ── */
 .sidebar {
     position: fixed;

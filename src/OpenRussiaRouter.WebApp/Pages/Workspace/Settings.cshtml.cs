@@ -1,15 +1,18 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Controllers;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
 
 [Authorize]
-public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> logger) : PageModelBase
+public class SettingsModel(AuthProvider authProvider, IStringLocalizer<SharedResource> localizer, ILogger<SettingsModel> logger) : PageModelBase
 {
+    private readonly IStringLocalizer<SharedResource> _localizer = localizer;
     [BindProperty]
     public string SelectedCurrency { get; set; } = "RUB";
 
@@ -38,7 +41,7 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
     {
         if (SelectedCurrency is not ("RUB" or "USD" or "EUR"))
         {
-            ErrorMessage = "Invalid currency selection.";
+            ErrorMessage = _localizer["Settings_InvalidCurrency"];
             return Page();
         }
 
@@ -48,7 +51,7 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
             var user = await authProvider.GetUserAsync(userId);
             if (user == null)
             {
-                ErrorMessage = "User not found.";
+                ErrorMessage = _localizer["Settings_UserNotFound"];
                 return Page();
             }
 
@@ -60,12 +63,12 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
                 cancellationToken: HttpContext.RequestAborted);
 
             PreferencesController.SetCurrencyCookie(Response, SelectedCurrency);
-            SaveMessage = "Settings saved.";
+            SaveMessage = _localizer["Settings_Saved"];
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Failed to save settings. UserId={UserId}", User.GetUserId());
-            ErrorMessage = "Failed to save settings.";
+            ErrorMessage = _localizer["Settings_SaveFailed"];
         }
 
         return Page();
@@ -92,22 +95,22 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
 
             PasswordInput = new PasswordInputModel();
             ModelState.Clear();
-            PasswordMessage = "Password changed.";
+            PasswordMessage = _localizer["Password_Changed"];
         }
         catch (AuthException ex)
         {
             PasswordErrorMessage = ex.ErrorCode switch
             {
-                "invalid_credentials" => "Current password is incorrect.",
-                "weak_password" => "New password must be at least 12 characters.",
-                "user_disabled" => "Your account has been disabled.",
-                _ => "Failed to change the password. Please try again."
+                "invalid_credentials" => _localizer["Password_CurrentIncorrect"],
+                "weak_password" => _localizer["Auth_WeakPassword"],
+                "user_disabled" => _localizer["Auth_UserDisabled"],
+                _ => _localizer["Password_ChangeFailed"]
             };
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogWarning(ex, "Failed to change password. UserId={UserId}", User.GetUserId());
-            PasswordErrorMessage = "Failed to change the password. Please try again.";
+            PasswordErrorMessage = _localizer["Password_ChangeFailed"];
         }
 
         return Page();
@@ -115,13 +118,15 @@ public class SettingsModel(AuthProvider authProvider, ILogger<SettingsModel> log
 
     public class PasswordInputModel
     {
-        [Required]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
         public string CurrentPassword { get; set; } = "";
 
-        [Required, MinLength(12, ErrorMessage = "Password must be at least 12 characters.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [MinLength(12, ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordMin12")]
         public string NewPassword { get; set; } = "";
 
-        [Required, Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [Compare(nameof(NewPassword), ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordsMismatch")]
         public string ConfirmNewPassword { get; set; } = "";
     }
 }

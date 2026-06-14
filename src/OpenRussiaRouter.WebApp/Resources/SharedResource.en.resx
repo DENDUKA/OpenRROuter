@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Activity_LoadFailed" xml:space="preserve">
+    <value>Failed to load activity data: {0}</value>
+  </data>
+  <data name="ApiKey_CreateFailed" xml:space="preserve">
+    <value>Failed to create API key.</value>
+  </data>
+  <data name="ApiKey_DeleteFailed" xml:space="preserve">
+    <value>Failed to delete key.</value>
+  </data>
+  <data name="ApiKey_DisableFailed" xml:space="preserve">
+    <value>Failed to disable key.</value>
+  </data>
+  <data name="ApiKey_EnableFailed" xml:space="preserve">
+    <value>Failed to enable key.</value>
+  </data>
+  <data name="ApiKey_LimitInvalid" xml:space="preserve">
+    <value>Cannot create API key. Limit reached or name is invalid.</value>
+  </data>
+  <data name="ApiKey_LimitLoadFailed" xml:space="preserve">
+    <value>Failed to load API key limits.</value>
+  </data>
+  <data name="ApiKey_LimitPositive" xml:space="preserve">
+    <value>{0} must be a positive USD amount.</value>
+  </data>
+  <data name="ApiKey_LimitSaveFailed" xml:space="preserve">
+    <value>Failed to save API key limits.</value>
+  </data>
+  <data name="ApiKey_LoadFailed" xml:space="preserve">
+    <value>Failed to load API keys.</value>
+  </data>
+  <data name="ApiKey_NameRequired" xml:space="preserve">
+    <value>Key name is required.</value>
+  </data>
+  <data name="ApiKey_NotFound" xml:space="preserve">
+    <value>API key was not found.</value>
+  </data>
+  <data name="ApiKey_RenameFailed" xml:space="preserve">
+    <value>Failed to rename key.</value>
+  </data>
+  <data name="ApiKey_RenameRequired" xml:space="preserve">
+    <value>New name is required.</value>
+  </data>
+  <data name="ApiKeys_Limit_NoLimit" xml:space="preserve">
+    <value>No limit</value>
+  </data>
+  <data name="ApiKeys_Limit_Spent" xml:space="preserve">
+    <value>Spent {0} / {1}; Left {2}</value>
+  </data>
+  <data name="Auth_AccountLocked" xml:space="preserve">
+    <value>Too many failed attempts. The account is temporarily locked — try again in 15 minutes or reset your password.</value>
+  </data>
+  <data name="Auth_CodeExpired" xml:space="preserve">
+    <value>That code has expired. Request a new one below.</value>
+  </data>
+  <data name="Auth_EmailAlreadyRegistered" xml:space="preserve">
+    <value>An account with this email already exists. Try logging in instead.</value>
+  </data>
+  <data name="Auth_EmailNotVerified" xml:space="preserve">
+    <value>Please confirm your email to finish signing up. Enter the code below or request a new one.</value>
+  </data>
+  <data name="Auth_InvalidCode" xml:space="preserve">
+    <value>Incorrect code. Please check and try again.</value>
+  </data>
+  <data name="Auth_InvalidCredentials" xml:space="preserve">
+    <value>Invalid email or password.</value>
+  </data>
+  <data name="Auth_InvalidInvite" xml:space="preserve">
+    <value>Invalid or expired invite token.</value>
+  </data>
+  <data name="Auth_InviteError" xml:space="preserve">
+    <value>An error occurred. Please try again.</value>
+  </data>
+  <data name="Auth_InviteFailed" xml:space="preserve">
+    <value>Registration failed. Please try again.</value>
+  </data>
+  <data name="Auth_LoginError" xml:space="preserve">
+    <value>An error occurred. Please try again.</value>
+  </data>
+  <data name="Auth_LoginFailed" xml:space="preserve">
+    <value>Login failed. Please try again.</value>
+  </data>
+  <data name="Auth_MissingEmail" xml:space="preserve">
+    <value>Missing email. Please start over.</value>
+  </data>
+  <data name="Auth_NoPendingReset" xml:space="preserve">
+    <value>No pending password reset for this email. Request a new code below.</value>
+  </data>
+  <data name="Auth_NoPendingVerification" xml:space="preserve">
+    <value>Nothing to verify for this email. Try logging in or signing up.</value>
+  </data>
+  <data name="Auth_PasswordResetOk" xml:space="preserve">
+    <value>Your password has been reset. Log in with the new password.</value>
+  </data>
+  <data name="Auth_PasswordResetResent" xml:space="preserve">
+    <value>If an account exists for {0}, a new code was sent.</value>
+  </data>
+  <data name="Auth_PasswordResetSent" xml:space="preserve">
+    <value>If an account exists for {0}, we sent a 6-digit code. Enter it below to set a new password.</value>
+  </data>
+  <data name="Auth_ResendCooldown" xml:space="preserve">
+    <value>Please wait a minute before requesting another code.</value>
+  </data>
+  <data name="Auth_ResendFailed" xml:space="preserve">
+    <value>Could not resend the code. Please try again.</value>
+  </data>
+  <data name="Auth_ResetFailed" xml:space="preserve">
+    <value>Password reset failed. Please try again.</value>
+  </data>
+  <data name="Auth_SignupError" xml:space="preserve">
+    <value>An error occurred. Please try again.</value>
+  </data>
+  <data name="Auth_SignupFailed" xml:space="preserve">
+    <value>Sign up failed. Please try again.</value>
+  </data>
+  <data name="Auth_TooManyAttempts" xml:space="preserve">
+    <value>Too many attempts. Request a new code below.</value>
+  </data>
+  <data name="Auth_UserDisabled" xml:space="preserve">
+    <value>Your account has been disabled.</value>
+  </data>
+  <data name="Auth_VerificationCodeSent" xml:space="preserve">
+    <value>We sent a 6-digit code to {0}. Enter it below to finish signing up.</value>
+  </data>
+  <data name="Auth_VerificationFailed" xml:space="preserve">
+    <value>Verification failed. Please try again.</value>
+  </data>
+  <data name="Auth_VerificationResent" xml:space="preserve">
+    <value>A new code was sent to {0}.</value>
+  </data>
+  <data name="Auth_WeakPassword" xml:space="preserve">
+    <value>Password must be at least 12 characters.</value>
+  </data>
+  <data name="Credits_AmountInvalid" xml:space="preserve">
+    <value>Enter a valid amount (e.g. 10.50).</value>
+  </data>
+  <data name="Credits_BalanceLoadFailed" xml:space="preserve">
+    <value>Failed to load balance.</value>
+  </data>
+  <data name="Credits_CheckoutFailed" xml:space="preserve">
+    <value>Failed to initiate checkout. Please try again.</value>
+  </data>
+  <data name="Credits_InvalidCurrency" xml:space="preserve">
+    <value>Invalid currency selection.</value>
+  </data>
+  <data name="Limits_DailyLabel" xml:space="preserve">
+    <value>Daily limit, USD</value>
+  </data>
+  <data name="Limits_WeeklyLabel" xml:space="preserve">
+    <value>Weekly limit, USD</value>
+  </data>
+  <data name="Mock_CheckoutFailed" xml:space="preserve">
+    <value>Checkout failed. Please try again.</value>
+  </data>
+  <data name="Mock_NotFound" xml:space="preserve">
+    <value>Payment not found.</value>
+  </data>
+  <data name="Model_ContextUnknown" xml:space="preserve">
+    <value>Unknown</value>
+  </data>
+  <data name="Models_LoadFailed" xml:space="preserve">
+    <value>Failed to load models.</value>
+  </data>
+  <data name="Password_ChangeFailed" xml:space="preserve">
+    <value>Failed to change the password. Please try again.</value>
+  </data>
+  <data name="Password_Changed" xml:space="preserve">
+    <value>Password changed.</value>
+  </data>
+  <data name="Password_CurrentIncorrect" xml:space="preserve">
+    <value>Current password is incorrect.</value>
+  </data>
+  <data name="Settings_InvalidCurrency" xml:space="preserve">
+    <value>Invalid currency selection.</value>
+  </data>
+  <data name="Settings_SaveFailed" xml:space="preserve">
+    <value>Failed to save settings.</value>
+  </data>
+  <data name="Settings_Saved" xml:space="preserve">
+    <value>Settings saved.</value>
+  </data>
+  <data name="Settings_UserNotFound" xml:space="preserve">
+    <value>User not found.</value>
+  </data>
+  <data name="Validation_AcceptLegal" xml:space="preserve">
+    <value>You must accept the Public Offer and Privacy Policy.</value>
+  </data>
+  <data name="Validation_Code6Digits" xml:space="preserve">
+    <value>Enter the 6-digit code.</value>
+  </data>
+  <data name="Validation_Email" xml:space="preserve">
+    <value>Enter a valid email address.</value>
+  </data>
+  <data name="Validation_PasswordMin12" xml:space="preserve">
+    <value>Password must be at least 12 characters.</value>
+  </data>
+  <data name="Validation_PasswordMin8" xml:space="preserve">
+    <value>Password must be at least 8 characters.</value>
+  </data>
+  <data name="Validation_PasswordsMismatch" xml:space="preserve">
+    <value>Passwords do not match.</value>
+  </data>
+  <data name="Validation_Required" xml:space="preserve">
+    <value>This field is required.</value>
+  </data>
+</root>

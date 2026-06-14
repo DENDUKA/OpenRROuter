@@ -1,11 +1,11 @@
 @page
 @model ErrorModel
-@{ ViewData["Title"] = "Error"; }
+@{ ViewData["Title"] = Localizer["Error_Title"]; }
 
-<h1>Error.</h1>
-<h2>An error occurred while processing your request.</h2>
+<h1>@Localizer["Error_Title"]</h1>
+<h2>@Localizer["Error_Lead"]</h2>
 
 @if (Model.RequestId != null)
 {
-    <p>Request ID: <code>@Model.RequestId</code></p>
+    <p>@Localizer["Error_RequestId"] <code>@Model.RequestId</code></p>
 }

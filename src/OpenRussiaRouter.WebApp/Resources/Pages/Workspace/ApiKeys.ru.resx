@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="ApiKeys_Cancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="ApiKeys_Create" xml:space="preserve">
+    <value>Создать</value>
+  </data>
+  <data name="ApiKeys_CreateKey" xml:space="preserve">
+    <value>Создать ключ</value>
+  </data>
+  <data name="ApiKeys_DailyAria" xml:space="preserve">
+    <value>Остаток дневного лимита</value>
+  </data>
+  <data name="ApiKeys_Delete" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="ApiKeys_DeleteConfirm" xml:space="preserve">
+    <value>Удалить ключ "{0}" из списка? Действие необратимо.</value>
+  </data>
+  <data name="ApiKeys_DeleteTitle" xml:space="preserve">
+    <value>Удалить</value>
+  </data>
+  <data name="ApiKeys_Desc" xml:space="preserve">
+    <value>Управляйте API-ключами для программного доступа. Ключи показываются только один раз при создании.</value>
+  </data>
+  <data name="ApiKeys_Disable" xml:space="preserve">
+    <value>Отключить</value>
+  </data>
+  <data name="ApiKeys_Done" xml:space="preserve">
+    <value>Готово</value>
+  </data>
+  <data name="ApiKeys_Enable" xml:space="preserve">
+    <value>Включить</value>
+  </data>
+  <data name="ApiKeys_KeyName" xml:space="preserve">
+    <value>Имя ключа</value>
+  </data>
+  <data name="ApiKeys_LimitReached" xml:space="preserve">
+    <value>Лимит достигнут</value>
+  </data>
+  <data name="ApiKeys_Limit_PercentLeft" xml:space="preserve">
+    <value>осталось {0}%</value>
+  </data>
+  <data name="ApiKeys_LimitsLink" xml:space="preserve">
+    <value>Лимиты</value>
+  </data>
+  <data name="ApiKeys_NewKeyHeader" xml:space="preserve">
+    <value>Новый API-ключ</value>
+  </data>
+  <data name="ApiKeys_NewKeyTitle" xml:space="preserve">
+    <value>Создан новый API-ключ</value>
+  </data>
+  <data name="ApiKeys_NewName" xml:space="preserve">
+    <value>Новое имя</value>
+  </data>
+  <data name="ApiKeys_NoKeys" xml:space="preserve">
+    <value>API-ключей пока нет. Создайте ключ, чтобы начать.</value>
+  </data>
+  <data name="ApiKeys_RenameHeader" xml:space="preserve">
+    <value>Переименовать API-ключ</value>
+  </data>
+  <data name="ApiKeys_Save" xml:space="preserve">
+    <value>Сохранить</value>
+  </data>
+  <data name="ApiKeys_SaveKey" xml:space="preserve">
+    <value>Сохраните ключ — он не будет показан повторно!</value>
+  </data>
+  <data name="ApiKeys_Th_Created" xml:space="preserve">
+    <value>Создан</value>
+  </data>
+  <data name="ApiKeys_Th_DailyLimit" xml:space="preserve">
+    <value>Дневной лимит</value>
+  </data>
+  <data name="ApiKeys_Th_LastUsed" xml:space="preserve">
+    <value>Последний запрос</value>
+  </data>
+  <data name="ApiKeys_Th_Name" xml:space="preserve">
+    <value>Имя</value>
+  </data>
+  <data name="ApiKeys_Th_Prefix" xml:space="preserve">
+    <value>Префикс</value>
+  </data>
+  <data name="ApiKeys_Th_Status" xml:space="preserve">
+    <value>Статус</value>
+  </data>
+  <data name="ApiKeys_Th_WeeklyLimit" xml:space="preserve">
+    <value>Недельный лимит</value>
+  </data>
+  <data name="ApiKeys_WeeklyAria" xml:space="preserve">
+    <value>Остаток недельного лимита</value>
+  </data>
+  <data name="ApiKeys_YourKeys" xml:space="preserve">
+    <value>Ваши API-ключи</value>
+  </data>
+  <data name="Btn_Copied" xml:space="preserve">
+    <value>Скопировано</value>
+  </data>
+  <data name="Btn_Copy" xml:space="preserve">
+    <value>Скопировать</value>
+  </data>
+  <data name="Nav_ApiKeys" xml:space="preserve">
+    <value>API-ключи</value>
+  </data>
+</root>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Catalog_AllModelsLabel" xml:space="preserve">
+    <value>All models</value>
+  </data>
+  <data name="Catalog_CopyAria" xml:space="preserve">
+    <value>Copy Model ID</value>
+  </data>
+  <data name="Catalog_CopyTitle" xml:space="preserve">
+    <value>Copy Model ID</value>
+  </data>
+  <data name="Catalog_CountMany" xml:space="preserve">
+    <value>{0} models available</value>
+  </data>
+  <data name="Catalog_CountOne" xml:space="preserve">
+    <value>{0} model available</value>
+  </data>
+  <data name="Catalog_Eyebrow" xml:space="preserve">
+    <value>Catalog</value>
+  </data>
+  <data name="Catalog_FilterCategoriesAria" xml:space="preserve">
+    <value>Model categories</value>
+  </data>
+  <data name="Catalog_Lead" xml:space="preserve">
+    <value>Browse available OpenAI-compatible models routed through OpenRussiaRouter.</value>
+  </data>
+  <data name="Catalog_LoadFailedTitle" xml:space="preserve">
+    <value>Could not load models.</value>
+  </data>
+  <data name="Catalog_NoModelsTitle" xml:space="preserve">
+    <value>No models configured.</value>
+  </data>
+  <data name="Catalog_PricePrefix" xml:space="preserve">
+    <value>Prices in</value>
+  </data>
+  <data name="Catalog_SearchAria" xml:space="preserve">
+    <value>Search models</value>
+  </data>
+  <data name="Catalog_SearchPlaceholder" xml:space="preserve">
+    <value>Search models</value>
+  </data>
+  <data name="Catalog_StatusAvailable" xml:space="preserve">
+    <value>Available</value>
+  </data>
+  <data name="Catalog_TagsAria" xml:space="preserve">
+    <value>Model tags</value>
+  </data>
+  <data name="Catalog_Th_Author" xml:space="preserve">
+    <value>Author</value>
+  </data>
+  <data name="Catalog_Th_CachePrice" xml:space="preserve">
+    <value>Cache / 1M</value>
+  </data>
+  <data name="Catalog_Th_Context" xml:space="preserve">
+    <value>Context</value>
+  </data>
+  <data name="Catalog_Th_InputPrice" xml:space="preserve">
+    <value>Input / 1M</value>
+  </data>
+  <data name="Catalog_Th_Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Catalog_Th_OutputPrice" xml:space="preserve">
+    <value>Output / 1M</value>
+  </data>
+  <data name="Catalog_Th_Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="Catalog_Th_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Catalog_Title" xml:space="preserve">
+    <value>Models</value>
+  </data>
+  <data name="Catalog_Filters" xml:space="preserve">
+    <value>Filters</value>
+  </data>
+  <data name="Catalog_Category_All" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="Catalog_Category_OpenAI" xml:space="preserve">
+    <value>OpenAI</value>
+  </data>
+  <data name="Catalog_Category_Anthropic" xml:space="preserve">
+    <value>Anthropic</value>
+  </data>
+  <data name="Catalog_Category_Google" xml:space="preserve">
+    <value>Google</value>
+  </data>
+  <data name="Catalog_Category_Meta" xml:space="preserve">
+    <value>Meta</value>
+  </data>
+  <data name="Catalog_Category_Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Catalog_Category_Vision" xml:space="preserve">
+    <value>Vision</value>
+  </data>
+  <data name="Catalog_Category_Coding" xml:space="preserve">
+    <value>Coding</value>
+  </data>
+</root>

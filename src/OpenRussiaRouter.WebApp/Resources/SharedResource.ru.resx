@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Activity_LoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить данные активности: {0}</value>
+  </data>
+  <data name="ApiKey_CreateFailed" xml:space="preserve">
+    <value>Не удалось создать API-ключ.</value>
+  </data>
+  <data name="ApiKey_DeleteFailed" xml:space="preserve">
+    <value>Не удалось удалить ключ.</value>
+  </data>
+  <data name="ApiKey_DisableFailed" xml:space="preserve">
+    <value>Не удалось отключить ключ.</value>
+  </data>
+  <data name="ApiKey_EnableFailed" xml:space="preserve">
+    <value>Не удалось включить ключ.</value>
+  </data>
+  <data name="ApiKey_LimitInvalid" xml:space="preserve">
+    <value>Достигнут лимит или имя некорректно.</value>
+  </data>
+  <data name="ApiKey_LimitLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить лимиты API-ключей.</value>
+  </data>
+  <data name="ApiKey_LimitPositive" xml:space="preserve">
+    <value>{0} должна быть положительной суммой в USD.</value>
+  </data>
+  <data name="ApiKey_LimitSaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить лимиты API-ключей.</value>
+  </data>
+  <data name="ApiKey_LoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить API-ключи.</value>
+  </data>
+  <data name="ApiKey_NameRequired" xml:space="preserve">
+    <value>Укажите имя ключа.</value>
+  </data>
+  <data name="ApiKey_NotFound" xml:space="preserve">
+    <value>API-ключ не найден.</value>
+  </data>
+  <data name="ApiKey_RenameFailed" xml:space="preserve">
+    <value>Не удалось переименовать ключ.</value>
+  </data>
+  <data name="ApiKey_RenameRequired" xml:space="preserve">
+    <value>Укажите новое имя.</value>
+  </data>
+  <data name="ApiKeys_Limit_NoLimit" xml:space="preserve">
+    <value>Без лимита</value>
+  </data>
+  <data name="ApiKeys_Limit_Spent" xml:space="preserve">
+    <value>Потрачено {0} из {1}; осталось {2}</value>
+  </data>
+  <data name="Auth_AccountLocked" xml:space="preserve">
+    <value>Слишком много неудачных попыток. Аккаунт временно заблокирован — повторите через 15 минут или сбросьте пароль.</value>
+  </data>
+  <data name="Auth_CodeExpired" xml:space="preserve">
+    <value>Срок действия кода истёк. Запросите новый ниже.</value>
+  </data>
+  <data name="Auth_EmailAlreadyRegistered" xml:space="preserve">
+    <value>Аккаунт с этим e-mail уже существует. Попробуйте войти.</value>
+  </data>
+  <data name="Auth_EmailNotVerified" xml:space="preserve">
+    <value>Подтвердите e-mail, чтобы завершить регистрацию. Введите код ниже или запросите новый.</value>
+  </data>
+  <data name="Auth_InvalidCode" xml:space="preserve">
+    <value>Неверный код. Проверьте и попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_InvalidCredentials" xml:space="preserve">
+    <value>Неверный e-mail или пароль.</value>
+  </data>
+  <data name="Auth_InvalidInvite" xml:space="preserve">
+    <value>Неверный или просроченный токен приглашения.</value>
+  </data>
+  <data name="Auth_InviteError" xml:space="preserve">
+    <value>Произошла ошибка. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_InviteFailed" xml:space="preserve">
+    <value>Не удалось завершить регистрацию. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_LoginError" xml:space="preserve">
+    <value>Произошла ошибка. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_LoginFailed" xml:space="preserve">
+    <value>Не удалось войти. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_MissingEmail" xml:space="preserve">
+    <value>Не указан e-mail. Начните заново.</value>
+  </data>
+  <data name="Auth_NoPendingReset" xml:space="preserve">
+    <value>Нет активного запроса на сброс пароля для этого e-mail. Запросите новый код ниже.</value>
+  </data>
+  <data name="Auth_NoPendingVerification" xml:space="preserve">
+    <value>Нечего подтверждать для этого e-mail. Попробуйте войти или зарегистрироваться.</value>
+  </data>
+  <data name="Auth_PasswordResetOk" xml:space="preserve">
+    <value>Пароль сброшен. Войдите с новым паролем.</value>
+  </data>
+  <data name="Auth_PasswordResetResent" xml:space="preserve">
+    <value>Если аккаунт с этим e-mail существует, новый код отправлен.</value>
+  </data>
+  <data name="Auth_PasswordResetSent" xml:space="preserve">
+    <value>Если аккаунт с этим e-mail существует, мы отправили на него 6-значный код. Введите его ниже, чтобы задать новый пароль.</value>
+  </data>
+  <data name="Auth_ResendCooldown" xml:space="preserve">
+    <value>Подождите минуту, прежде чем запрашивать новый код.</value>
+  </data>
+  <data name="Auth_ResendFailed" xml:space="preserve">
+    <value>Не удалось отправить код повторно. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_ResetFailed" xml:space="preserve">
+    <value>Не удалось сбросить пароль. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_SignupError" xml:space="preserve">
+    <value>Произошла ошибка. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_SignupFailed" xml:space="preserve">
+    <value>Не удалось зарегистрироваться. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_TooManyAttempts" xml:space="preserve">
+    <value>Слишком много попыток. Запросите новый код ниже.</value>
+  </data>
+  <data name="Auth_UserDisabled" xml:space="preserve">
+    <value>Ваш аккаунт отключён.</value>
+  </data>
+  <data name="Auth_VerificationCodeSent" xml:space="preserve">
+    <value>Мы отправили 6-значный код на {0}. Введите его ниже, чтобы завершить регистрацию.</value>
+  </data>
+  <data name="Auth_VerificationFailed" xml:space="preserve">
+    <value>Не удалось подтвердить e-mail. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Auth_VerificationResent" xml:space="preserve">
+    <value>Новый код отправлен на {0}.</value>
+  </data>
+  <data name="Auth_WeakPassword" xml:space="preserve">
+    <value>Пароль должен содержать не менее 12 символов.</value>
+  </data>
+  <data name="Credits_AmountInvalid" xml:space="preserve">
+    <value>Введите корректную сумму (например, 10.50).</value>
+  </data>
+  <data name="Credits_BalanceLoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить баланс.</value>
+  </data>
+  <data name="Credits_CheckoutFailed" xml:space="preserve">
+    <value>Не удалось инициировать оплату. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Credits_InvalidCurrency" xml:space="preserve">
+    <value>Неверный выбор валюты.</value>
+  </data>
+  <data name="Limits_DailyLabel" xml:space="preserve">
+    <value>Дневной лимит, USD</value>
+  </data>
+  <data name="Limits_WeeklyLabel" xml:space="preserve">
+    <value>Недельный лимит, USD</value>
+  </data>
+  <data name="Mock_CheckoutFailed" xml:space="preserve">
+    <value>Оплата не выполнена. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Mock_NotFound" xml:space="preserve">
+    <value>Платёж не найден.</value>
+  </data>
+  <data name="Model_ContextUnknown" xml:space="preserve">
+    <value>Неизвестно</value>
+  </data>
+  <data name="Models_LoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить модели.</value>
+  </data>
+  <data name="Password_ChangeFailed" xml:space="preserve">
+    <value>Не удалось сменить пароль. Попробуйте ещё раз.</value>
+  </data>
+  <data name="Password_Changed" xml:space="preserve">
+    <value>Пароль изменён.</value>
+  </data>
+  <data name="Password_CurrentIncorrect" xml:space="preserve">
+    <value>Текущий пароль неверен.</value>
+  </data>
+  <data name="Settings_InvalidCurrency" xml:space="preserve">
+    <value>Неверная валюта.</value>
+  </data>
+  <data name="Settings_SaveFailed" xml:space="preserve">
+    <value>Не удалось сохранить настройки.</value>
+  </data>
+  <data name="Settings_Saved" xml:space="preserve">
+    <value>Настройки сохранены.</value>
+  </data>
+  <data name="Settings_UserNotFound" xml:space="preserve">
+    <value>Пользователь не найден.</value>
+  </data>
+  <data name="Validation_AcceptLegal" xml:space="preserve">
+    <value>Необходимо принять Публичную оферту и Политику конфиденциальности.</value>
+  </data>
+  <data name="Validation_Code6Digits" xml:space="preserve">
+    <value>Введите 6-значный код.</value>
+  </data>
+  <data name="Validation_Email" xml:space="preserve">
+    <value>Введите корректный e-mail.</value>
+  </data>
+  <data name="Validation_PasswordMin12" xml:space="preserve">
+    <value>Пароль должен содержать не менее 12 символов.</value>
+  </data>
+  <data name="Validation_PasswordMin8" xml:space="preserve">
+    <value>Пароль должен содержать не менее 8 символов.</value>
+  </data>
+  <data name="Validation_PasswordsMismatch" xml:space="preserve">
+    <value>Пароли не совпадают.</value>
+  </data>
+  <data name="Validation_Required" xml:space="preserve">
+    <value>Поле обязательно для заполнения.</value>
+  </data>
+</root>

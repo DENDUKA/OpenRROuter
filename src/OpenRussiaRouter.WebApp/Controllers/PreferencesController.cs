@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Localization;
 using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Controllers;
@@ -46,6 +48,34 @@ public sealed class PreferencesController(
         }
 
         return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToPage("/Models");
+    }
+
+    /// <summary>
+    /// TS-010: switch the UI culture via cookie. Anonymous — the switcher must work on
+    /// <c>/login</c> and <c>/signup</c> as well as inside the workspace.
+    /// Invalid <paramref name="culture"/> values are silently ignored (no cookie set),
+    /// but the redirect still happens.
+    /// </summary>
+    [HttpPost("language")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public IActionResult SetLanguage([FromForm] string culture, [FromForm] string? returnUrl)
+    {
+        if (SupportedCultures.IsSupported(culture))
+        {
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions
+                {
+                    Path = "/",
+                    MaxAge = TimeSpan.FromDays(365),
+                    IsEssential = true,
+                    SameSite = SameSiteMode.Lax
+                });
+        }
+
+        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToPage("/Index");
     }
 
     /// <summary>Shared so the Settings page write-path keeps the topbar cookie in sync.</summary>

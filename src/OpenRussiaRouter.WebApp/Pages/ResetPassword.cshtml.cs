@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -9,30 +11,35 @@ public class ResetPasswordModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly IEmailDispatchQueue _emailQueue;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<ResetPasswordModel> _logger;
 
     [BindProperty(SupportsGet = true)]
     public string Email { get; set; } = "";
 
     [BindProperty]
-    [Required, RegularExpression(@"^\d{6}$", ErrorMessage = "Enter the 6-digit code.")]
+    [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+    [RegularExpression(@"^\d{6}$", ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Code6Digits")]
     public string Code { get; set; } = "";
 
     [BindProperty]
-    [Required, MinLength(12, ErrorMessage = "Password must be at least 12 characters.")]
+    [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+    [MinLength(12, ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordMin12")]
     public string NewPassword { get; set; } = "";
 
     [BindProperty]
-    [Required, Compare(nameof(NewPassword), ErrorMessage = "Passwords do not match.")]
+    [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+    [Compare(nameof(NewPassword), ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordsMismatch")]
     public string ConfirmPassword { get; set; } = "";
 
     public string? ErrorMessage { get; set; }
     public string? StatusMessage { get; set; }
 
-    public ResetPasswordModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, ILogger<ResetPasswordModel> logger)
+    public ResetPasswordModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<ResetPasswordModel> logger)
     {
         _authClient = authProvider;
         _emailQueue = emailQueue;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -49,7 +56,7 @@ public class ResetPasswordModel : PageModelBase
     {
         if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Missing email. Please start over.";
+            ErrorMessage = _localizer["Auth_MissingEmail"];
             return Page();
         }
         if (!ModelState.IsValid) return Page();
@@ -58,25 +65,25 @@ public class ResetPasswordModel : PageModelBase
         {
             await _authClient.ResetPasswordAsync(Email, Code, NewPassword);
 
-            TempData["StatusMessage"] = "Your password has been reset. Log in with the new password.";
+            TempData["StatusMessage"] = _localizer["Auth_PasswordResetOk"];
             return RedirectToPage("/Login");
         }
         catch (AuthException ex)
         {
             ErrorMessage = ex.ErrorCode switch
             {
-                "invalid_code" => "Incorrect code. Please check and try again.",
-                "code_expired" => "That code has expired. Request a new one below.",
-                "too_many_attempts" => "Too many attempts. Request a new code below.",
-                "no_pending_reset" => "No pending password reset for this email. Request a new code below.",
-                "weak_password" => "Password must be at least 12 characters.",
-                _ => "Password reset failed. Please try again."
+                "invalid_code" => _localizer["Auth_InvalidCode"],
+                "code_expired" => _localizer["Auth_CodeExpired"],
+                "too_many_attempts" => _localizer["Auth_TooManyAttempts"],
+                "no_pending_reset" => _localizer["Auth_NoPendingReset"],
+                "weak_password" => _localizer["Auth_WeakPassword"],
+                _ => _localizer["Auth_ResetFailed"]
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error resetting password. Email={Email}", Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_LoginError"];
         }
 
         return Page();
@@ -86,7 +93,7 @@ public class ResetPasswordModel : PageModelBase
     {
         if (string.IsNullOrWhiteSpace(Email))
         {
-            ErrorMessage = "Missing email. Please start over.";
+            ErrorMessage = _localizer["Auth_MissingEmail"];
             return Page();
         }
 
@@ -104,21 +111,21 @@ public class ResetPasswordModel : PageModelBase
             {
                 _logger.LogWarning(ex, "Failed to enqueue resend password reset email. Email={Email}", email);
             }
-            StatusMessage = $"If an account exists for {Email}, a new code was sent.";
+            StatusMessage = _localizer["Auth_PasswordResetResent", Email];
         }
         catch (AuthException ex) when (ex.ErrorCode == "resend_cooldown")
         {
-            ErrorMessage = "Please wait a minute before requesting another code.";
+            ErrorMessage = _localizer["Auth_ResendCooldown"];
         }
         catch (AuthException)
         {
             // Same generic message as success — do not disclose account existence.
-            StatusMessage = $"If an account exists for {Email}, a new code was sent.";
+            StatusMessage = _localizer["Auth_PasswordResetResent", Email];
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error resending password reset code. Email={Email}", Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_LoginError"];
         }
 
         return Page();

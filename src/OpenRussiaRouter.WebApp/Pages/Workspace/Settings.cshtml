@@ -1,10 +1,10 @@
 @page
 @model Workspace.SettingsModel
-@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = "Settings"; }
+@{ Layout = "~/Pages/Shared/_WorkspaceLayout.cshtml"; ViewData["Title"] = Localizer["Nav_Settings"]; }
 
 <div class="ws-section-header">
-    <h2>Settings</h2>
-    <p class="ws-section-desc">Account information and preferences.</p>
+    <h2>@Localizer["Nav_Settings"]</h2>
+    <p class="ws-section-desc">@Localizer["Settings_Desc"]</p>
 </div>
 
 @if (Model.SaveMessage != null)
@@ -17,43 +17,43 @@
 }
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Account</div>
+    <div class="ws-panel-header">@Localizer["Settings_AccountHeader"]</div>
     <div class="ws-panel-body">
         <div class="ws-info-row">
-            <span class="ws-info-label">Display Name</span>
-            <span>@(Model.CurrentUser?.DisplayName ?? "—")</span>
+            <span class="ws-info-label">@Localizer["Settings_DisplayName"]</span>
+            <span>@(Model.CurrentUser?.DisplayName ?? Localizer["Settings_Empty"].Value)</span>
         </div>
         <div class="ws-info-row">
-            <span class="ws-info-label">User ID</span>
-            <code>@(Model.CurrentUser?.UserId ?? "—")</code>
+            <span class="ws-info-label">@Localizer["Settings_UserId"]</span>
+            <code>@(Model.CurrentUser?.UserId ?? Localizer["Settings_Empty"].Value)</code>
         </div>
         <div class="ws-info-row">
-            <span class="ws-info-label">Role</span>
-            <span>@(Model.CurrentUser?.Role ?? "—")</span>
+            <span class="ws-info-label">@Localizer["Settings_Role"]</span>
+            <span>@(Model.CurrentUser?.Role ?? Localizer["Settings_Empty"].Value)</span>
         </div>
     </div>
 </div>
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Display Preferences</div>
+    <div class="ws-panel-header">@Localizer["Settings_DisplayPrefHeader"]</div>
     <div class="ws-panel-body">
         <form method="post" asp-page-handler="SaveCurrency">
             <div class="mb-3">
-                <label class="form-label" asp-for="SelectedCurrency">Display Currency</label>
+                <label class="form-label" asp-for="SelectedCurrency">@Localizer["Settings_CurrencyLabel"]</label>
                 <select asp-for="SelectedCurrency" class="form-select" style="max-width: 260px;">
-                    <option value="RUB">RUB — Russian Ruble</option>
-                    <option value="USD">USD — US Dollar</option>
-                    <option value="EUR">EUR — Euro</option>
+                    <option value="RUB">@Localizer["Currency_RUB"]</option>
+                    <option value="USD">@Localizer["Currency_USD"]</option>
+                    <option value="EUR">@Localizer["Currency_EUR"]</option>
                 </select>
-                <div class="text-muted mt-1" style="font-size: 13px;">Balance, prices, and history will be shown in this currency.</div>
+                <div class="text-muted mt-1" style="font-size: 13px;">@Localizer["Settings_CurrencyHelp"]</div>
             </div>
-            <button type="submit" class="btn btn-primary">Save</button>
+            <button type="submit" class="btn btn-primary">@Localizer["ApiKeys_Save"]</button>
         </form>
     </div>
 </div>
 
 <div class="ws-panel">
-    <div class="ws-panel-header">Change Password</div>
+    <div class="ws-panel-header">@Localizer["Settings_ChangePasswordHeader"]</div>
     <div class="ws-panel-body">
         @if (Model.PasswordMessage != null)
         {
@@ -65,22 +65,22 @@
         }
         <form method="post" asp-page-handler="ChangePassword" style="max-width: 420px;">
             <div class="mb-3">
-                <label class="form-label" asp-for="PasswordInput.CurrentPassword">Current password</label>
+                <label class="form-label" asp-for="PasswordInput.CurrentPassword">@Localizer["Settings_CurrentPassword"]</label>
                 <input asp-for="PasswordInput.CurrentPassword" class="form-control" type="password" autocomplete="current-password" />
                 <span asp-validation-for="PasswordInput.CurrentPassword" class="validation-message"></span>
             </div>
             <div class="mb-3">
-                <label class="form-label" asp-for="PasswordInput.NewPassword">New password</label>
+                <label class="form-label" asp-for="PasswordInput.NewPassword">@Localizer["Settings_NewPassword"]</label>
                 <input asp-for="PasswordInput.NewPassword" class="form-control" type="password" autocomplete="new-password" />
                 <span asp-validation-for="PasswordInput.NewPassword" class="validation-message"></span>
-                <div class="text-muted mt-1" style="font-size: 13px;">At least 12 characters.</div>
+                <div class="text-muted mt-1" style="font-size: 13px;">@Localizer["Settings_PasswordHelp"]</div>
             </div>
             <div class="mb-3">
-                <label class="form-label" asp-for="PasswordInput.ConfirmNewPassword">Confirm new password</label>
+                <label class="form-label" asp-for="PasswordInput.ConfirmNewPassword">@Localizer["Settings_ConfirmNewPassword"]</label>
                 <input asp-for="PasswordInput.ConfirmNewPassword" class="form-control" type="password" autocomplete="new-password" />
                 <span asp-validation-for="PasswordInput.ConfirmNewPassword" class="validation-message"></span>
             </div>
-            <button type="submit" class="btn btn-primary">Change password</button>
+            <button type="submit" class="btn btn-primary">@Localizer["Settings_ChangePasswordSubmit"]</button>
         </form>
     </div>
 </div>

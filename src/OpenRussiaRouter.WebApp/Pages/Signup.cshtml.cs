@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -9,6 +11,7 @@ public class SignupModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly IEmailDispatchQueue _emailQueue;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<SignupModel> _logger;
 
     [BindProperty]
@@ -16,10 +19,11 @@ public class SignupModel : PageModelBase
 
     public string? ErrorMessage { get; set; }
 
-    public SignupModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, ILogger<SignupModel> logger)
+    public SignupModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<SignupModel> logger)
     {
         _authClient = authProvider;
         _emailQueue = emailQueue;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -37,7 +41,7 @@ public class SignupModel : PageModelBase
 
         if (!Input.AcceptLegal)
         {
-            ModelState.AddModelError("Input.AcceptLegal", "You must accept the Public Offer and Privacy Policy.");
+            ModelState.AddModelError("Input.AcceptLegal", _localizer["Validation_AcceptLegal"]);
             return Page();
         }
 
@@ -56,22 +60,22 @@ public class SignupModel : PageModelBase
                 _logger.LogWarning(ex, "Failed to enqueue verification email. Email={Email}", result.Email);
             }
 
-            TempData["StatusMessage"] = $"We sent a 6-digit code to {result.Email}. Enter it below to finish signing up.";
+            TempData["StatusMessage"] = _localizer["Auth_VerificationCodeSent", result.Email];
             return RedirectToPage("/VerifyEmail", new { email = result.Email });
         }
         catch (AuthException ex)
         {
             ErrorMessage = ex.ErrorCode switch
             {
-                "email_already_registered" => "An account with this email already exists. Try logging in instead.",
-                "weak_password" => "Password must be at least 12 characters.",
-                _ => "Sign up failed. Please try again."
+                "email_already_registered" => _localizer["Auth_EmailAlreadyRegistered"],
+                "weak_password" => _localizer["Auth_WeakPassword"],
+                _ => _localizer["Auth_SignupFailed"]
             };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error during signup. Email={Email}", Input.Email);
-            ErrorMessage = "An error occurred. Please try again.";
+            ErrorMessage = _localizer["Auth_SignupError"];
         }
 
         return Page();
@@ -79,16 +83,19 @@ public class SignupModel : PageModelBase
 
     public class InputModel
     {
-        [Required, EmailAddress]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [EmailAddress(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Email")]
         public string Email { get; set; } = "";
 
-        [Required, MinLength(12, ErrorMessage = "Password must be at least 12 characters.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [MinLength(12, ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordMin12")]
         public string Password { get; set; } = "";
 
-        [Required, Compare(nameof(Password), ErrorMessage = "Passwords do not match.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_Required")]
+        [Compare(nameof(Password), ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_PasswordsMismatch")]
         public string ConfirmPassword { get; set; } = "";
 
-        [Required(ErrorMessage = "You must accept the Public Offer and Privacy Policy.")]
+        [Required(ErrorMessageResourceType = typeof(SharedResource), ErrorMessageResourceName = "Validation_AcceptLegal")]
         public bool AcceptLegal { get; set; }
     }
 }

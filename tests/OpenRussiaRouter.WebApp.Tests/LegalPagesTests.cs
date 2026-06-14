@@ -30,20 +30,18 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
-    [Fact]
-    public async Task PrivacyPage_ContainsTitle()
+    [Theory]
+    [InlineData("/legal/privacy", "ru", "Политика конфиденциальности")]
+    [InlineData("/legal/privacy", "en", "Privacy Policy")]
+    [InlineData("/legal/offer", "ru", "Публичная оферта")]
+    [InlineData("/legal/offer", "en", "Public Offer")]
+    public async Task LegalPage_ContainsLocalizedTitle(string path, string culture, string title)
     {
-        var response = await _client.GetAsync("/legal/privacy");
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        request.Headers.Add("Cookie", $".AspNetCore.Culture=c={culture}|uic={culture}");
+        var response = await _client.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Privacy Policy", content);
-    }
-
-    [Fact]
-    public async Task OfferPage_ContainsTitle()
-    {
-        var response = await _client.GetAsync("/legal/offer");
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Public Offer", content);
+        Assert.Contains(title, content);
     }
 
     [Fact]

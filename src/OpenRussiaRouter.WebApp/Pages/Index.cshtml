@@ -25,19 +25,19 @@
                     <img src="/favicon.png" alt="Router" width="24" height="24" />
                 </span>
             </div>
-            <h1 id="home-title" class="home-title">OpenAI-compatible API for AI models in Russia</h1>
+            <h1 id="home-title" class="home-title">@Localizer["Home_Title"]</h1>
             <p class="home-lead">
-                Signup, add credits, choose a model, and send requests through OpenRussiaRouter with one API key.
+                @Localizer["Home_Lead"]
             </p>
-            <div class="cta-row" aria-label="Primary actions">
-                <a href="/signup" class="btn btn-primary">Signup</a>
-                <a href="/models" class="btn btn-secondary">Explore models</a>
+            <div class="cta-row" aria-label="@Localizer["A11y_PrimaryActions"]">
+                <a href="/signup" class="btn btn-primary">@Localizer["Home_CtaSignup"]</a>
+                <a href="/models" class="btn btn-secondary">@Localizer["Home_CtaExplore"]</a>
             </div>
         </div>
 
         <div class="quickstart-panel" aria-labelledby="quickstart-title">
-            <div class="section-label">Quickstart</div>
-            <h2 id="quickstart-title">Start in 4 steps</h2>
+            <div class="section-label">@Localizer["Home_QuickstartLabel"]</div>
+            <h2 id="quickstart-title">@Localizer["Home_QuickstartTitle"]</h2>
             <ol class="quickstart-list">
                 <li>
                     <a class="quickstart-link" href="/signup">
@@ -50,8 +50,8 @@
                             <span class="step-number">01</span>
                         }
                         <div>
-                            <h3>Signup</h3>
-                            <p>Create your account and open the workspace.</p>
+                            <h3>@Localizer["Home_StepSignup_Title"]</h3>
+                            <p>@Localizer["Home_StepSignup_Desc"]</p>
                         </div>
                     </a>
                 </li>
@@ -66,8 +66,8 @@
                             <span class="step-number">02</span>
                         }
                         <div>
-                            <h3>Buy credits</h3>
-                            <p>Add USD balance once and use it across available models.</p>
+                            <h3>@Localizer["Home_StepBuy_Title"]</h3>
+                            <p>@Localizer["Home_StepBuy_Desc"]</p>
                         </div>
                     </a>
                 </li>
@@ -82,8 +82,8 @@
                             <span class="step-number">03</span>
                         }
                         <div>
-                            <h3>Get your API key</h3>
-                            <p>Create a key and send your first OpenAI-compatible request.</p>
+                            <h3>@Localizer["Home_StepKey_Title"]</h3>
+                            <p>@Localizer["Home_StepKey_Desc"]</p>
                         </div>
                     </a>
                 </li>
@@ -98,8 +98,8 @@
                             <span class="step-number">04</span>
                         }
                         <div>
-                            <h3>Choose a model</h3>
-                            <p>Browse the catalog and copy the public model ID.</p>
+                            <h3>@Localizer["Home_StepModel_Title"]</h3>
+                            <p>@Localizer["Home_StepModel_Desc"]</p>
                         </div>
                     </a>
                 </li>
@@ -109,51 +109,51 @@
 
     <section class="home-section home-section--split" aria-labelledby="catalog-title">
         <div>
-            <div class="section-label">Model catalog</div>
-            <h2 id="catalog-title">Choose from routed AI models</h2>
+            <div class="section-label">@Localizer["Home_CatalogLabel"]</div>
+            <h2 id="catalog-title">@Localizer["Home_CatalogTitle"]</h2>
             <p>
-                Browse available models, compare prices, and use public model IDs in OpenAI-compatible requests.
+                @Localizer["Home_CatalogLead"]
             </p>
         </div>
         <div class="section-action">
-            <a href="/models" class="btn btn-secondary">Explore models</a>
+            <a href="/models" class="btn btn-secondary">@Localizer["Home_CtaExplore"]</a>
         </div>
     </section>
 
-    <section class="home-section proof-grid" aria-label="Platform capabilities">
+    <section class="home-section proof-grid" aria-label="@Localizer["A11y_PlatformCapabilities"]">
         <div class="proof-item">
             <div class="proof-icon proof-icon-savings" aria-hidden="true"></div>
-            <h2>25% cheaper than OpenRouter</h2>
+            <h2>@Localizer["Home_ProofSavings_Title"]</h2>
             <p>
-                Route OpenAI-compatible requests through OpenRussiaRouter and keep more budget for model usage.
+                @Localizer["Home_ProofSavings_Desc"]
             </p>
         </div>
         <div class="proof-item">
             <div class="proof-icon proof-icon-billing" aria-hidden="true"></div>
-            <h2>One USD balance for all usage</h2>
+            <h2>@Localizer["Home_ProofBilling_Title"]</h2>
             <p>
-                Buy credits once, track tokens and costs, and keep API usage visible from your workspace.
+                @Localizer["Home_ProofBilling_Desc"]
             </p>
         </div>
         <div class="proof-item">
             <div class="proof-icon proof-icon-routing" aria-hidden="true"></div>
-            <h2>Routed through OpenRussiaRouter nodes</h2>
+            <h2>@Localizer["Home_ProofRouting_Title"]</h2>
             <p>
-                Requests are matched to available router nodes using the model you select from the catalog.
+                @Localizer["Home_ProofRouting_Desc"]
             </p>
         </div>
     </section>
 
     <section class="home-section home-section--split request-section" aria-labelledby="request-title">
         <div>
-            <div class="section-label">API request</div>
-            <h2 id="request-title">Use the OpenAI-compatible endpoint</h2>
+            <div class="section-label">@Localizer["Home_ApiLabel"]</div>
+            <h2 id="request-title">@Localizer["Home_ApiTitle"]</h2>
             <p>
-                Keep your existing client shape: send a bearer token, select a model, and call chat completions.
+                @Localizer["Home_ApiLead"]
             </p>
-            <a href="/docs" class="text-link">Read the setup guide</a>
+            <a href="/docs" class="text-link">@Localizer["Home_ApiGuide"]</a>
         </div>
-        <div class="code-panel" aria-label="Example curl request">
+        <div class="code-panel" aria-label="@Localizer["A11y_ExampleCurlRequest"]">
 <pre><code>curl /v1/chat/completions \
   -H "Authorization: Bearer $ORR_API_KEY" \
   -H "Content-Type: application/json" \
@@ -168,13 +168,13 @@
 
     <section class="home-section final-cta" aria-labelledby="final-cta-title">
         <div>
-            <div class="section-label">Get started</div>
-            <h2 id="final-cta-title">Ready to route your first request?</h2>
-            <p>Create an account, add credits, and start with any available model.</p>
+            <div class="section-label">@Localizer["Home_FinalLabel"]</div>
+            <h2 id="final-cta-title">@Localizer["Home_FinalTitle"]</h2>
+            <p>@Localizer["Home_FinalLead"]</p>
         </div>
         <div class="cta-row">
-            <a href="/signup" class="btn btn-primary">Signup</a>
-            <a href="/models" class="btn btn-secondary">View models</a>
+            <a href="/signup" class="btn btn-primary">@Localizer["Home_FinalCtaSignup"]</a>
+            <a href="/models" class="btn btn-secondary">@Localizer["Home_FinalCtaModels"]</a>
         </div>
     </section>
 </div>

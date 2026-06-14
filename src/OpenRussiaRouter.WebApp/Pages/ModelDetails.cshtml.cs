@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Pages.Shared;
+using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -13,6 +15,7 @@ public class ModelDetailsModel : PageModelBase
     private readonly CurrencyFormatter _currencyFormatter;
     private readonly AuthProvider _authProvider;
     private readonly ApiBaseUrlResolver _baseUrlResolver;
+    private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<ModelDetailsModel> _logger;
 
     public ModelDetailsModel(
@@ -20,12 +23,14 @@ public class ModelDetailsModel : PageModelBase
         CurrencyFormatter currencyFormatter,
         AuthProvider authProvider,
         ApiBaseUrlResolver baseUrlResolver,
+        IStringLocalizer<SharedResource> localizer,
         ILogger<ModelDetailsModel> logger)
     {
         _billingClient = billingProvider;
         _currencyFormatter = currencyFormatter;
         _authProvider = authProvider;
         _baseUrlResolver = baseUrlResolver;
+        _localizer = localizer;
         _logger = logger;
     }
 
@@ -54,7 +59,7 @@ public class ModelDetailsModel : PageModelBase
     public string? Description => ModelData?.Description;
     public string ContextDisplay => ModelData?.ContextLength is > 0
         ? FormatContext(ModelData.ContextLength.Value)
-        : "Unknown";
+        : _localizer["Model_ContextUnknown"];
     public string ModalitiesDisplay => ModelData?.Modalities ?? "Text";
     public IReadOnlyList<string> InputModalities => ParseModalities(ModelData?.InputModalities ?? ModelData?.Modalities);
     public IReadOnlyList<string> OutputModalities => ParseModalities(ModelData?.OutputModalities ?? "text");

@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="A11y_PrimaryActions" xml:space="preserve">
+    <value>Primary actions</value>
+  </data>
+  <data name="Home_ApiGuide" xml:space="preserve">
+    <value>Read the setup guide</value>
+  </data>
+  <data name="Home_ApiLabel" xml:space="preserve">
+    <value>API request</value>
+  </data>
+  <data name="Home_ApiLead" xml:space="preserve">
+    <value>Keep your existing client shape: send a bearer token, select a model, and call chat completions.</value>
+  </data>
+  <data name="Home_ApiTitle" xml:space="preserve">
+    <value>Use the OpenAI-compatible endpoint</value>
+  </data>
+  <data name="Home_CatalogLabel" xml:space="preserve">
+    <value>Model catalog</value>
+  </data>
+  <data name="Home_CatalogLead" xml:space="preserve">
+    <value>Browse available models, compare prices, and use public model IDs in OpenAI-compatible requests.</value>
+  </data>
+  <data name="Home_CatalogTitle" xml:space="preserve">
+    <value>Choose from routed AI models</value>
+  </data>
+  <data name="Home_CtaExplore" xml:space="preserve">
+    <value>Explore models</value>
+  </data>
+  <data name="Home_CtaSignup" xml:space="preserve">
+    <value>Signup</value>
+  </data>
+  <data name="Home_FinalCtaModels" xml:space="preserve">
+    <value>View models</value>
+  </data>
+  <data name="Home_FinalCtaSignup" xml:space="preserve">
+    <value>Signup</value>
+  </data>
+  <data name="Home_FinalLabel" xml:space="preserve">
+    <value>Get started</value>
+  </data>
+  <data name="Home_FinalLead" xml:space="preserve">
+    <value>Create an account, add credits, and start with any available model.</value>
+  </data>
+  <data name="Home_FinalTitle" xml:space="preserve">
+    <value>Ready to route your first request?</value>
+  </data>
+  <data name="Home_Lead" xml:space="preserve">
+    <value>Signup, add credits, choose a model, and send requests through OpenRussiaRouter with one API key.</value>
+  </data>
+  <data name="Home_ProofBilling_Desc" xml:space="preserve">
+    <value>Buy credits once, track tokens and costs, and keep API usage visible from your workspace.</value>
+  </data>
+  <data name="Home_ProofBilling_Title" xml:space="preserve">
+    <value>One USD balance for all usage</value>
+  </data>
+  <data name="Home_ProofRouting_Desc" xml:space="preserve">
+    <value>Requests are matched to available router nodes using the model you select from the catalog.</value>
+  </data>
+  <data name="Home_ProofRouting_Title" xml:space="preserve">
+    <value>Routed through OpenRussiaRouter nodes</value>
+  </data>
+  <data name="Home_ProofSavings_Desc" xml:space="preserve">
+    <value>Route OpenAI-compatible requests through OpenRussiaRouter and keep more budget for model usage.</value>
+  </data>
+  <data name="Home_ProofSavings_Title" xml:space="preserve">
+    <value>25% cheaper than OpenRouter</value>
+  </data>
+  <data name="Home_QuickstartLabel" xml:space="preserve">
+    <value>Quickstart</value>
+  </data>
+  <data name="Home_QuickstartTitle" xml:space="preserve">
+    <value>Start in 4 steps</value>
+  </data>
+  <data name="Home_StepBuy_Desc" xml:space="preserve">
+    <value>Add USD balance once and use it across available models.</value>
+  </data>
+  <data name="Home_StepBuy_Title" xml:space="preserve">
+    <value>Buy credits</value>
+  </data>
+  <data name="Home_StepKey_Desc" xml:space="preserve">
+    <value>Create a key and send your first OpenAI-compatible request.</value>
+  </data>
+  <data name="Home_StepKey_Title" xml:space="preserve">
+    <value>Get your API key</value>
+  </data>
+  <data name="Home_StepModel_Desc" xml:space="preserve">
+    <value>Browse the catalog and copy the public model ID.</value>
+  </data>
+  <data name="Home_StepModel_Title" xml:space="preserve">
+    <value>Choose a model</value>
+  </data>
+  <data name="Home_StepSignup_Desc" xml:space="preserve">
+    <value>Create your account and open the workspace.</value>
+  </data>
+  <data name="Home_StepSignup_Title" xml:space="preserve">
+    <value>Signup</value>
+  </data>
+  <data name="Home_Title" xml:space="preserve">
+    <value>OpenAI-compatible API for AI models in Russia</value>
+  </data>
+  <data name="A11y_PlatformCapabilities" xml:space="preserve">
+    <value>Platform capabilities</value>
+  </data>
+  <data name="A11y_ExampleCurlRequest" xml:space="preserve">
+    <value>Example curl request</value>
+  </data>
+</root>

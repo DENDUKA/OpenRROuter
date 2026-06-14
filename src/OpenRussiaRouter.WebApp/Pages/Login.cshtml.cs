@@ -45,9 +45,6 @@ public class LoginModel : PageModelBase
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        if (!Input.AcceptLegal)
-            ModelState.AddModelError("Input.AcceptLegal", _localizer["Validation_AcceptLegal"]);
-
         if (!ModelState.IsValid) return Page();
 
         try

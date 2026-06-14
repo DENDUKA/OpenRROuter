@@ -36,8 +36,8 @@
 
     var returnUrlForSwitchers = (path + Context.Request.QueryString).ToString();
 
-    // ViewData["Title"] is often a LocalizedHtmlString (from @Localizer["..."]); string-concat on it
-    // prints the type name instead of the text, so render IHtmlContent titles to plain text first.
+    // ViewData["Title"] is often a LocalizedHtmlString (set from the view localizer); string-concat
+    // on it prints the type name instead of the text, so render IHtmlContent titles to plain text.
     string? pageTitle = ViewData["Title"]?.ToString();
     if (ViewData["Title"] is Microsoft.AspNetCore.Html.IHtmlContent htmlTitle)
     {

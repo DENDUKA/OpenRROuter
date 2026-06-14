@@ -29,7 +29,7 @@
         <div class="models-toolbar">
             <div>
                 <div class="toolbar-label">@Localizer["Catalog_AllModelsLabel"]</div>
-                <div class="toolbar-count" id="model-count" data-count-singular="@Localizer["Catalog_CountOne"]" data-count-plural="@Localizer["Catalog_CountMany"]">@(Model.Models.Count == 1 ? Localizer["Catalog_CountOne", Model.Models.Count] : Localizer["Catalog_CountMany", Model.Models.Count])</div>
+                <div class="toolbar-count" id="model-count" data-count-singular='@Localizer.GetString("Catalog_CountOne")' data-count-plural='@Localizer.GetString("Catalog_CountMany")'>@(Model.Models.Count == 1 ? Localizer["Catalog_CountOne", Model.Models.Count] : Localizer["Catalog_CountMany", Model.Models.Count])</div>
             </div>
             <div class="toolbar-note">@Localizer["Catalog_PricePrefix"] @Model.CurrencySymbol</div>
         </div>
@@ -125,9 +125,9 @@
     .models-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-xl); padding-bottom: var(--spacing-2xl); border-bottom: 1px solid var(--color-hairline); }
     .models-lead { color: var(--color-body); max-width: 620px; font-size: 18px; line-height: 28px; }
     .models-shell { padding: var(--spacing-xl) 0 var(--spacing-3xl); }
-    .filter-group { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); }
-    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-sm); margin-bottom: var(--spacing-xl); }
-    .search { width: min(360px, 100%); border-radius: var(--radius-pill); }
+    .filter-group { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); flex: 1 1 auto; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }
+    .search { flex: 1 1 220px; max-width: 340px; border-radius: var(--radius-pill); }
     .filter-pill { height: 32px; border: 1px solid var(--color-hairline); border-radius: var(--radius-pill); background: transparent; color: var(--color-body); cursor: pointer; font: inherit; padding: 0 var(--spacing-md); transition: border-color .15s ease, color .15s ease, background-color .15s ease; }
     .filter-pill:hover, .filter-pill:focus-visible { border-color: rgba(255,255,255,.45); color: var(--color-ink); outline: none; }
     .filter-pill.active { background: var(--color-canvas-card); border-color: var(--color-border); color: var(--color-ink); }

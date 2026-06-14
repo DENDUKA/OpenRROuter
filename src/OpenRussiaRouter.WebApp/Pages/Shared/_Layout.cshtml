@@ -35,13 +35,23 @@
         ? "ccy-btn active" : "ccy-btn";
 
     var returnUrlForSwitchers = (path + Context.Request.QueryString).ToString();
+
+    // ViewData["Title"] is often a LocalizedHtmlString (from @Localizer["..."]); string-concat on it
+    // prints the type name instead of the text, so render IHtmlContent titles to plain text first.
+    string? pageTitle = ViewData["Title"]?.ToString();
+    if (ViewData["Title"] is Microsoft.AspNetCore.Html.IHtmlContent htmlTitle)
+    {
+        using var titleWriter = new System.IO.StringWriter();
+        htmlTitle.WriteTo(titleWriter, System.Text.Encodings.Web.HtmlEncoder.Default);
+        pageTitle = titleWriter.ToString();
+    }
 }
 <!DOCTYPE html>
 <html lang="@activeLang">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(ViewData["Title"] != null ? ViewData["Title"] + " - OpenRussiaRouter" : "OpenRussiaRouter")</title>
+    <title>@(string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle + " - OpenRussiaRouter")</title>
     <link rel="icon" type="image/png" href="~/favicon.png" />
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
 </head>

@@ -153,6 +153,7 @@ public static class ApiGatewayExtensions
     {
         services.AddScoped<IGatewayPipeline, GatewayPipeline>();
         services.AddScoped<ChatCompletionHandler>();
+        services.AddScoped<ImageGenerationHandler>();
         services.AddScoped<ModelsHandler>();
 
         return services;
@@ -165,6 +166,9 @@ public static class ApiGatewayExtensions
             .RequireRateLimiting(GatewayRateLimiting.PolicyName);
         app.MapPost("/v1/chat/completions/stream",
             (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleStreamAsync(ctx))
+            .RequireRateLimiting(GatewayRateLimiting.PolicyName);
+        app.MapPost("/v1/images/generations",
+            (ImageGenerationHandler handler, HttpContext ctx) => handler.HandleAsync(ctx))
             .RequireRateLimiting(GatewayRateLimiting.PolicyName);
         app.MapGet("/v1/models",
             (ModelsHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));

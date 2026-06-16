@@ -570,5 +570,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             GatewayRouterLease lease, string requestJson, string requestId,
             string userApiKey, CancellationToken ct)
             => throw new NotSupportedException("Use StreamingStubRouterProxy for streaming tests.");
+
+        public Task<RouterProxyResponse> SendImageGenerationAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException();
     }
 }

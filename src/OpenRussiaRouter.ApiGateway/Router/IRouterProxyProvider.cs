@@ -17,5 +17,12 @@ public interface IRouterProxyProvider
         string requestId,
         string userApiKey,
         CancellationToken cancellationToken);
+
+    Task<RouterProxyResponse> SendImageGenerationAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        CancellationToken cancellationToken);
 }
 

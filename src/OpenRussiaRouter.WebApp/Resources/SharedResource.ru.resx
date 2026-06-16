@@ -47,6 +47,9 @@
   <data name="ApiKey_LimitInvalid" xml:space="preserve">
     <value>Достигнут лимит или имя некорректно.</value>
   </data>
+  <data name="ApiKey_LimitReached" xml:space="preserve">
+    <value>Не удалось создать API-ключ. Достигнут максимум ключей для вашего аккаунта.</value>
+  </data>
   <data name="ApiKey_LimitLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить лимиты API-ключей.</value>
   </data>

@@ -47,6 +47,9 @@
   <data name="ApiKey_LimitInvalid" xml:space="preserve">
     <value>Cannot create API key. Limit reached or name is invalid.</value>
   </data>
+  <data name="ApiKey_LimitReached" xml:space="preserve">
+    <value>Cannot create API key. You have reached the maximum number of keys for your account.</value>
+  </data>
   <data name="ApiKey_LimitLoadFailed" xml:space="preserve">
     <value>Failed to load API key limits.</value>
   </data>

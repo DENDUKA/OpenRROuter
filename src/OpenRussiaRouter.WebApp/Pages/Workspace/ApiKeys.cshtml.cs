@@ -95,10 +95,16 @@ public class ApiKeysModel(
             }
             return RedirectToPage();
         }
-        catch (AuthException ex) when (ex.ErrorCode == "validation_failed")
+        catch (AuthException ex)
         {
-            _logger.LogWarning(ex, "Failed to create API key due to validation/limit. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
-            ErrorMessage = _localizer["ApiKey_LimitInvalid"];
+            _logger.LogWarning(ex, "Failed to create API key. UserId={UserId} Name={Name} ErrorCode={ErrorCode}", User.GetUserId(), Create.Name, ex.ErrorCode);
+            ErrorMessage = ex.ErrorCode switch
+            {
+                "api_key_limit_reached" => _localizer["ApiKey_LimitReached"],
+                "user_disabled" => _localizer["Auth_UserDisabled"],
+                "validation_failed" => _localizer["ApiKey_LimitInvalid"],
+                _ => _localizer["ApiKey_CreateFailed"]
+            };
             await OnGetAsync();
             return Page();
         }

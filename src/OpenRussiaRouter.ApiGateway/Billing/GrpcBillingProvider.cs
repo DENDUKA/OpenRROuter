@@ -78,39 +78,29 @@ public sealed class GrpcBillingProvider(
 
     public async Task<bool> RecordUsageAsync(GatewayUsageEvent usageEvent, CancellationToken cancellationToken)
     {
-        try
-        {
-            var response = await billingClient.RecordUsageAsync(
-                new RecordUsageRequest
+        var response = await billingClient.RecordUsageAsync(
+            new RecordUsageRequest
+            {
+                RequestId = usageEvent.RequestId,
+                UserId = usageEvent.UserId,
+                ApiKeyId = usageEvent.ApiKeyId,
+                ApiKeyPrefix = usageEvent.ApiKeyPrefix,
+                ModelId = usageEvent.ModelId,
+                RouterNodeId = usageEvent.RouterNodeId,
+                Usage = new TokenUsage
                 {
-                    RequestId = usageEvent.RequestId,
-                    UserId = usageEvent.UserId,
-                    ApiKeyId = usageEvent.ApiKeyId,
-                    ApiKeyPrefix = usageEvent.ApiKeyPrefix,
-                    ModelId = usageEvent.ModelId,
-                    RouterNodeId = usageEvent.RouterNodeId,
-                    Usage = new TokenUsage
-                    {
-                        InputTokens = usageEvent.Usage.InputTokens,
-                        OutputTokens = usageEvent.Usage.OutputTokens,
-                        CacheTokens = usageEvent.Usage.CacheTokens
-                    },
-                    Status = usageEvent.Status,
-                    StartedAtUtc = usageEvent.StartedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-                    CompletedAtUtc = usageEvent.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
-                    ProviderName = usageEvent.ProviderName ?? "",
-                    ProviderAccount = usageEvent.ProviderAccount ?? ""
+                    InputTokens = usageEvent.Usage.InputTokens,
+                    OutputTokens = usageEvent.Usage.OutputTokens,
+                    CacheTokens = usageEvent.Usage.CacheTokens
                 },
-                cancellationToken: cancellationToken);
+                Status = usageEvent.Status,
+                StartedAtUtc = usageEvent.StartedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                CompletedAtUtc = usageEvent.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                ProviderName = usageEvent.ProviderName ?? "",
+                ProviderAccount = usageEvent.ProviderAccount ?? ""
+            },
+            cancellationToken: cancellationToken);
 
-            return response.Accepted;
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex,
-                "Usage recording FAILED after all retries. RequestId: {RequestId}; UserId: {UserId}; ModelId: {ModelId}",
-                usageEvent.RequestId, usageEvent.UserId, usageEvent.ModelId);
-            return false;
-        }
+        return response.Accepted;
     }
 }

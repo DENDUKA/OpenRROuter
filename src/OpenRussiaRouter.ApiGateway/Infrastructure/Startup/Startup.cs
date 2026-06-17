@@ -18,7 +18,7 @@ public static class Startup
 
         services.AddGatewayGrpcClients(configuration);
         services.AddGatewayRouter();
-        services.AddGatewayHandlers();
+        services.AddGatewayHandlers(configuration);
         services.AddGatewayRateLimiting(configuration);
 
         return services;

@@ -100,7 +100,8 @@ public sealed class RouterControlPlaneService(
 
         var all = (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
             .Items
-            .Where(candidate => candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy);
+            .Where(candidate => candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy)
+            .ToList();
 
         // Filter by model capability when the store has been populated.
         // If the store is still empty (e.g. right after startup, before the first Quartz job run),

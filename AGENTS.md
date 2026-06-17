@@ -4,6 +4,10 @@
 
 This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
+## Related Projects
+
+- **9Router (fork):** `C:\Programs\F9Router` — Node.js/Next.js proxy node that handles LLM provider routing, combos, and fallback. Open RussiaRouter sends requests to 9Router nodes via HTTP.
+
 ## Build & Test Commands
 
 ```powershell

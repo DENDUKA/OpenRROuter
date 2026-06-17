@@ -149,8 +149,9 @@ public static class ApiGatewayExtensions
         return services;
     }
 
-    public static IServiceCollection AddGatewayHandlers(this IServiceCollection services)
+    public static IServiceCollection AddGatewayHandlers(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<GatewayRetryOptions>(configuration.GetSection("GatewayRetry"));
         services.AddScoped<IGatewayPipeline, GatewayPipeline>();
         services.AddScoped<ChatCompletionHandler>();
         services.AddScoped<ImageGenerationHandler>();

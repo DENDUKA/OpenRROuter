@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using OpenRussiaRouter.ApiGateway.Application.Extensions;
 using OpenRussiaRouter.ApiGateway.Application.Services;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
@@ -21,12 +23,10 @@ public sealed class ChatCompletionHandler(
     IBillingProvider billingProvider,
     IControlPlaneProvider controlPlaneProvider,
     IRouterProxyProvider routerProxy,
+    IOptions<GatewayRetryOptions> retryOptions,
     ILogger<ChatCompletionHandler> logger)
 {
-    // Safety net for the retry/failover loops: bounds the number of node attempts so a
-    // ControlPlane that keeps handing back failing nodes (single node, race, or one that
-    // ignores the exclusion set) cannot spin the gateway forever / peg CPU on a request.
-    private const int MaxRouterAttempts = 5;
+    private int MaxRouterAttempts => retryOptions.Value.MaxRouterAttempts;
 
     public async Task HandleAsync(HttpContext context)
     {
@@ -74,6 +74,7 @@ public sealed class ChatCompletionHandler(
                         auth.AllowedReasoningEfforts ?? []);
                     if (!reasoningPatch.IsSuccess)
                     {
+                        // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                         await GatewayErrors.WriteAsync(
                             context,
@@ -95,6 +96,7 @@ public sealed class ChatCompletionHandler(
 
                     bool isError = response.StatusCode >= 400;
 
+                    // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(
                         auth.Lease.LeaseId,
                         isError ? "failed" : "completed",
@@ -136,6 +138,7 @@ public sealed class ChatCompletionHandler(
                 }
                 catch
                 {
+                    // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                     throw;
                 }
@@ -190,6 +193,7 @@ public sealed class ChatCompletionHandler(
                         auth.AllowedReasoningEfforts ?? []);
                     if (!reasoningPatch.IsSuccess)
                     {
+                        // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                         await GatewayErrors.WriteAsync(
                             context,
@@ -214,6 +218,7 @@ public sealed class ChatCompletionHandler(
                         var errorBody = await session.ReadErrorBodyAsync(context.RequestAborted);
                         logger.LogWarning("Chat completion stream downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", session.StatusCode, lease.NodeId, errorBody);
 
+                        // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", CancellationToken.None);
                         
                         excludedNodes ??= new HashSet<string>();
@@ -256,6 +261,7 @@ public sealed class ChatCompletionHandler(
                     }
 
                     var completedAt = DateTimeOffset.UtcNow;
+                    // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
 
                     var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
@@ -269,6 +275,7 @@ public sealed class ChatCompletionHandler(
                 }
                 catch
                 {
+                    // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                     throw;
                 }
@@ -288,17 +295,22 @@ public sealed class ChatCompletionHandler(
 
     private async Task PassThroughErrorAsync(HttpContext context, RouterStreamSession session, CancellationToken cancellationToken)
     {
-        var statusCode = session.StatusCode;
-        var body = await session.ReadErrorBodyAsync(cancellationToken);
-        
-        logger.LogError("Streaming chat completion downstream error. StatusCode: {StatusCode}, Body: {Body}", statusCode, body);
-        
-        await session.DisposeAsync();
+        try
+        {
+            var statusCode = session.StatusCode;
+            var body = await session.ReadErrorBodyAsync(cancellationToken);
 
-        if (context.Response.HasStarted) return;
-        context.Response.StatusCode = statusCode;
-        context.Response.ContentType = "application/json";
-        await context.Response.WriteAsync(body, cancellationToken);
+            logger.LogError("Streaming chat completion downstream error. StatusCode: {StatusCode}, Body: {Body}", statusCode, body);
+
+            if (context.Response.HasStarted) return;
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(body, cancellationToken);
+        }
+        finally
+        {
+            await session.DisposeAsync();
+        }
     }
 
     private void RecordUsageFireAndForget(
@@ -314,6 +326,7 @@ public sealed class ChatCompletionHandler(
     {
         try
         {
+            // Fire-and-forget: usage recording should not be cancelled even if client disconnected.
             _ = billingProvider.RecordUsageAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
                     modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,

@@ -22,3 +22,9 @@ public sealed class GatewayHttpClientOptions
 
     public TimeSpan KeepAlivePingTimeout { get; set; } = TimeSpan.FromSeconds(30);
 }
+
+public sealed class GatewayRetryOptions
+{
+    [Range(1, 20)]
+    public int MaxRouterAttempts { get; set; } = 5;
+}

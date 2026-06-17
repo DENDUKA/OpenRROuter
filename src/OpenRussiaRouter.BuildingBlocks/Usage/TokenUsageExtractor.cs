@@ -49,21 +49,19 @@ public static class TokenUsageExtractor
         usage = default;
         var found = false;
 
-        foreach (var rawLine in body.Replace("\r\n", "\n").Split('\n'))
+        using var reader = new StringReader(body);
+        string? rawLine;
+        while ((rawLine = reader.ReadLine()) != null)
         {
-            var line = rawLine.Trim();
-            if (!line.StartsWith("data:", StringComparison.Ordinal))
-            {
+            var line = rawLine.AsSpan().Trim();
+            if (!line.StartsWith("data:".AsSpan(), StringComparison.Ordinal))
                 continue;
-            }
 
-            var data = line[5..].TrimStart();
-            if (data == "[DONE]")
-            {
+            var data = line["data:".Length..].TrimStart();
+            if (data.SequenceEqual("[DONE]".AsSpan()))
                 continue;
-            }
 
-            if (TryExtractJson(data, out var chunkUsage) && chunkUsage.TotalTokens > 0)
+            if (TryExtractJson(data.ToString(), out var chunkUsage) && chunkUsage.TotalTokens > 0)
             {
                 usage = chunkUsage;
                 found = true;

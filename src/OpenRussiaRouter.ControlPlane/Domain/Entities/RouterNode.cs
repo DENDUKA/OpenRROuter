@@ -1,3 +1,4 @@
+using System.Threading;
 using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.Contracts.ControlPlane;
 
@@ -5,6 +6,7 @@ namespace OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 public sealed class RouterNode
 {
+    private int _inFlightRequests;
 
     public RouterNode(
         string id,
@@ -36,7 +38,7 @@ public sealed class RouterNode
 
     public RouterNodeStatus Status { get; private set; } = RouterNodeStatus.Unhealthy;
 
-    public int InFlightRequests { get; private set; }
+    public int InFlightRequests => Volatile.Read(ref _inFlightRequests);
 
     public DateTimeOffset? LastCheckedAtUtc { get; private set; }
 
@@ -88,13 +90,16 @@ public sealed class RouterNode
         LastHealthErrorCode = string.IsNullOrWhiteSpace(errorCode) ? null : errorCode.Trim();
     }
 
-    public void Lease() => InFlightRequests++;
+    public void Lease() => Interlocked.Increment(ref _inFlightRequests);
 
     public void Release()
     {
-        if (InFlightRequests > 0)
+        var current = Volatile.Read(ref _inFlightRequests);
+        while (current > 0)
         {
-            InFlightRequests--;
+            var original = Interlocked.CompareExchange(ref _inFlightRequests, current - 1, current);
+            if (original == current) break;
+            current = Volatile.Read(ref _inFlightRequests);
         }
     }
 

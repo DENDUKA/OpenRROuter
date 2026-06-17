@@ -1228,7 +1228,7 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum(rate(http_server_request_duration_seconds_count{job=~\"$job\", http.response.status_code=~\"4..|5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{job=~\"$job\"}[5m])) * 100",
+              "expr": "sum(rate(http_server_request_duration_seconds_count{job=~\"$job\", http_response_status_code=~\"4..|5..\"}[5m])) / sum(rate(http_server_request_duration_seconds_count{job=~\"$job\"}[5m])) * 100",
               "legendFormat": "Error Rate",
               "range": true,
               "refId": "A"
@@ -1284,8 +1284,8 @@ data:
             {
               "datasource": { "type": "prometheus", "uid": "prometheus" },
               "editorMode": "code",
-              "expr": "sum by (http.response.status_code) (increase(http_server_request_duration_seconds_count{job=~\"$job\"}[$__range]))",
-              "legendFormat": "{{http.response.status_code}}",
+"expr": "sum by (http_response_status_code) (increase(http_server_request_duration_seconds_count{job=~\"$job\"}[$__range]))",
+          "legendFormat": "{{http_response_status_code}}",
               "range": true,
               "refId": "A"
             }

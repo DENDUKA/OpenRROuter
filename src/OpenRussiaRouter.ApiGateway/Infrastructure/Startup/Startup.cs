@@ -42,6 +42,7 @@ public static class Startup
             await next(context);
         });
 
+        app.UseMiddleware<VisitorMetricsMiddleware>();
         app.UseRateLimiter();
 
         app.MapGatewayEndpoints();

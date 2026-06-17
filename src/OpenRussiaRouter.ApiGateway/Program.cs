@@ -6,7 +6,7 @@ using OpenRussiaRouter.BuildingBlocks.Metrics;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("api-gateway");
-builder.AddOpenTelemetryMetrics("OpenRussiaRouter.ApiGateway");
+builder.AddOpenTelemetryMetrics("OpenRussiaRouter.ApiGateway", OpenTelemetryExtensions.DefaultMeterName);
 
 Startup.ConfigureServices(builder.Services, builder.Configuration);
 

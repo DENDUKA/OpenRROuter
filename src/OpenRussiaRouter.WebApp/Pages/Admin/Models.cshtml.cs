@@ -74,7 +74,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     {
                         var nodeCatalog = await _collectorProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
                         var nodeEntry = nodeCatalog.Entries
-                            .FirstOrDefault(e => string.Equals(e.UpstreamId, m.UpstreamModelId, StringComparison.OrdinalIgnoreCase));
+                            .FirstOrDefault(e => string.Equals(e.UpstreamId, m.UpstreamModelId, StringComparison.OrdinalIgnoreCase)
+                                             || string.Equals(e.PublicId, m.UpstreamModelId, StringComparison.OrdinalIgnoreCase));
                         if (nodeEntry is not null)
                         {
                             thinkingFormat = nodeEntry.ThinkingFormat;

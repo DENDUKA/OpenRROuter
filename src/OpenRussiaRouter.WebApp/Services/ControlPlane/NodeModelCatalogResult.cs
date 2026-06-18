@@ -12,7 +12,11 @@ public sealed record NodeModelCatalogEntry(
     string DisplayName,
     string ModelType,
     IReadOnlyList<string> SourceProviders,
-    IReadOnlyList<string> NodeIds);
+    IReadOnlyList<string> NodeIds,
+    bool SupportsReasoning,
+    string? ThinkingFormat,
+    bool ThinkingCanDisable,
+    IReadOnlyList<string> ThinkingOptions);
 
 public sealed record UnreachableNodeDetail(
     string NodeId,

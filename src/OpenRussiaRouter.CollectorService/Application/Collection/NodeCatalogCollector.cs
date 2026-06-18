@@ -55,7 +55,11 @@ public sealed class NodeCatalogCollector(
                     SourceProviders = model.Sources ?? [],
                     Rank = 2,
                     ConnectionId = connection.Id,
-                    Provider = string.IsNullOrWhiteSpace(connection.Provider) ? string.Empty : connection.Provider
+                    Provider = string.IsNullOrWhiteSpace(connection.Provider) ? string.Empty : connection.Provider,
+                    SupportsReasoning = model.Caps?.Reasoning ?? false,
+                    ThinkingFormat = model.Caps?.ThinkingFormat,
+                    ThinkingCanDisable = model.Caps?.ThinkingCanDisable ?? true,
+                    ThinkingOptions = model.Caps?.ThinkingOptions ?? []
                 });
             }
         }

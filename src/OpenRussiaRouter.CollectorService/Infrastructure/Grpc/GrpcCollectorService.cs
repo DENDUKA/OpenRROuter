@@ -45,10 +45,14 @@ public sealed class GrpcCollectorService(
                 UpstreamId = entry.UpstreamId,
                 PublicId = entry.PublicId,
                 DisplayName = entry.DisplayName,
-                ModelType = entry.ModelType
+                ModelType = entry.ModelType,
+                SupportsReasoning = entry.SupportsReasoning,
+                ThinkingFormat = entry.ThinkingFormat ?? string.Empty,
+                ThinkingCanDisable = entry.ThinkingCanDisable
             };
             e.SourceProviders.AddRange(entry.SourceProviders);
             e.NodeIds.AddRange(entry.NodeIds);
+            e.ThinkingOptions.AddRange(entry.ThinkingOptions);
             response.Entries.Add(e);
         }
 

@@ -200,6 +200,28 @@
                         </label>
                     </div>
                 </div>
+                @if (Model.Form.ThinkingOptions?.Count > 0)
+                {
+                    <div class="adm-form-row">
+                        <div class="form-group" style="grid-column: span 2">
+                            <label class="form-label">Reasoning capabilities <small class="text-muted">(from 9Router — read only)</small></label>
+                            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
+                                @if (!string.IsNullOrWhiteSpace(Model.Form.ThinkingFormat))
+                                {
+                                    <span class="badge badge-info">thinkingFormat: @Model.Form.ThinkingFormat</span>
+                                }
+                                <span class="badge @(Model.Form.ThinkingCanDisable ? "badge-success" : "badge-warning")">
+                                    thinkingCanDisable: @(Model.Form.ThinkingCanDisable ? "yes" : "no")
+                                </span>
+                                <span class="text-muted">Options:</span>
+                                @foreach (var opt in Model.Form.ThinkingOptions)
+                                {
+                                    <span class="badge badge-secondary">@opt</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label class="form-label">Allowed efforts</label>

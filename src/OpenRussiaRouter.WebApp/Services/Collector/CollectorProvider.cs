@@ -27,7 +27,11 @@ public sealed class CollectorProvider(
                     DisplayName: e.DisplayName,
                     ModelType: e.ModelType,
                     SourceProviders: e.SourceProviders.ToList(),
-                    NodeIds: e.NodeIds.ToList())).ToList(),
+                    NodeIds: e.NodeIds.ToList(),
+                    SupportsReasoning: e.SupportsReasoning,
+                    ThinkingFormat: string.IsNullOrWhiteSpace(e.ThinkingFormat) ? null : e.ThinkingFormat,
+                    ThinkingCanDisable: e.ThinkingCanDisable,
+                    ThinkingOptions: e.ThinkingOptions.ToList())).ToList(),
                 UnreachableNodeIds: response.UnreachableNodeIds.ToList(),
                 UnreachableNodes: response.UnreachableNodes.Select(u => new UnreachableNodeDetail(
                     NodeId: u.NodeId, Request: u.Request, Response: u.Response)).ToList(),

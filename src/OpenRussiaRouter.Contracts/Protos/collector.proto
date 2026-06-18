@@ -37,6 +37,10 @@ message UpstreamModelEntry {
   string model_type = 4;
   repeated string source_providers = 5;
   repeated string node_ids = 6;
+  bool supports_reasoning = 7;
+  string thinking_format = 8;
+  bool thinking_can_disable = 9;
+  repeated string thinking_options = 10;
 }
 
 message UnreachableNodeInfo {

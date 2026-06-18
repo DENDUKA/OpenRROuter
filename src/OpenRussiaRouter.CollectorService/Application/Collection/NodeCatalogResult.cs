@@ -17,4 +17,8 @@ public sealed class ModelObservation
     public int Rank { get; init; }
     public string ConnectionId { get; init; } = string.Empty;
     public string Provider { get; init; } = string.Empty;
+    public bool SupportsReasoning { get; init; }
+    public string? ThinkingFormat { get; init; }
+    public bool ThinkingCanDisable { get; init; } = true;
+    public IReadOnlyList<string> ThinkingOptions { get; init; } = [];
 }

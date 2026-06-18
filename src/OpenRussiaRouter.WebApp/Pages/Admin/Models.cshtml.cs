@@ -65,6 +65,28 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 var m = all.FirstOrDefault(x => x.Id == EditModelId);
                 if (m != null)
                 {
+                    // Load reasoning capabilities from node catalog
+                    string? thinkingFormat = null;
+                    bool thinkingCanDisable = true;
+                    List<string> thinkingOptions = [];
+
+                    try
+                    {
+                        var nodeCatalog = await _collectorProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
+                        var nodeEntry = nodeCatalog.Entries
+                            .FirstOrDefault(e => string.Equals(e.UpstreamId, m.UpstreamModelId, StringComparison.OrdinalIgnoreCase));
+                        if (nodeEntry is not null)
+                        {
+                            thinkingFormat = nodeEntry.ThinkingFormat;
+                            thinkingCanDisable = nodeEntry.ThinkingCanDisable;
+                            thinkingOptions = nodeEntry.ThinkingOptions.ToList();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to load node catalog for reasoning info. ModelId={ModelId}", EditModelId);
+                    }
+
                     Form = new ModelFormInput
                     {
                         Id = m.Id,
@@ -83,7 +105,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         TagIds = m.TagIds?.ToList() ?? [],
                         SupportsReasoning = m.SupportsReasoning,
                         AllowedReasoningEfforts = m.AllowedReasoningEfforts?.ToList() ?? [],
-                        DefaultReasoningEffort = m.DefaultReasoningEffort
+                        DefaultReasoningEffort = m.DefaultReasoningEffort,
+                        ThinkingFormat = thinkingFormat,
+                        ThinkingCanDisable = thinkingCanDisable,
+                        ThinkingOptions = thinkingOptions
                     };
                 }
             }
@@ -205,43 +230,73 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         try
         {
             var catalog = await _openRouterClient.LoadCatalogAsync();
-            if (catalog.Count == 0)
-            {
-                TempData["WarningMessages"] = "OpenRouter catalog is empty or unreachable.";
-                return RedirectToPage();
-            }
+            var nodeCatalog = await _collectorProvider.ListNodeModelCatalogAsync(HttpContext.RequestAborted);
 
             var models = await _billingClient.ListModelsAsync();
             int enriched = 0;
+            int reasoningEnriched = 0;
             var notFound = new List<string>();
+
+            // Build node catalog lookup by upstream model id
+            var nodeCatalogByUpstream = nodeCatalog.Entries
+                .Where(e => !string.IsNullOrWhiteSpace(e.UpstreamId))
+                .GroupBy(e => e.UpstreamId, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var model in models)
             {
-                var match = _openRouterClient.FindMatch(catalog, model.UpstreamModelId);
-                if (match is null)
+                var match = catalog.Count > 0 ? _openRouterClient.FindMatch(catalog, model.UpstreamModelId) : null;
+                if (match is null && catalog.Count > 0)
                 {
                     notFound.Add(model.UpstreamModelId);
-                    continue;
                 }
 
-                if (model.DescriptionSource == "manual")
-                    continue;
-
-                var enrichedModel = model with
+                // Enrich from OpenRouter (description, modalities, etc.)
+                ModelInfo enrichedModel;
+                if (match is not null && model.DescriptionSource != "manual")
                 {
-                    Description = match.Description,
-                    ContextLength = match.ContextLength,
-                    Modalities = match.Modalities,
-                    InputModalities = match.InputModalities,
-                    OutputModalities = match.OutputModalities,
-                    Provider = string.IsNullOrWhiteSpace(model.Provider) ? match.Provider : model.Provider,
-                    DescriptionSource = "openrouter"
-                };
-                await _billingClient.UpsertModelAsync(enrichedModel);
-                enriched++;
+                    enrichedModel = model with
+                    {
+                        Description = match.Description,
+                        ContextLength = match.ContextLength,
+                        Modalities = match.Modalities,
+                        InputModalities = match.InputModalities,
+                        OutputModalities = match.OutputModalities,
+                        Provider = string.IsNullOrWhiteSpace(model.Provider) ? match.Provider : model.Provider,
+                        DescriptionSource = "openrouter"
+                    };
+                    enriched++;
+                }
+                else
+                {
+                    enrichedModel = model;
+                }
+
+                // Enrich reasoning from 9Router node catalog
+                if (nodeCatalogByUpstream.TryGetValue(model.UpstreamModelId, out var nodeEntry)
+                    && nodeEntry.SupportsReasoning
+                    && !enrichedModel.SupportsReasoning)
+                {
+                    enrichedModel = enrichedModel with
+                    {
+                        SupportsReasoning = true,
+                        AllowedReasoningEfforts = nodeEntry.ThinkingOptions.Count > 0
+                            ? nodeEntry.ThinkingOptions
+                            : enrichedModel.AllowedReasoningEfforts,
+                        DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
+                    };
+                    reasoningEnriched++;
+                }
+
+                if (enrichedModel != model)
+                {
+                    await _billingClient.UpsertModelAsync(enrichedModel);
+                }
             }
 
             var msg = $"Enriched {enriched} model(s) from OpenRouter.";
+            if (reasoningEnriched > 0)
+                msg += $" Reasoning enabled for {reasoningEnriched} model(s) from 9Router.";
             if (notFound.Count > 0)
                 msg += $" Not found: {string.Join(", ", notFound)}.";
 
@@ -461,6 +516,9 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public bool SupportsReasoning { get; set; }
         public List<string> AllowedReasoningEfforts { get; set; } = [];
         public string? DefaultReasoningEffort { get; set; }
+        public string? ThinkingFormat { get; set; }
+        public bool ThinkingCanDisable { get; set; } = true;
+        public List<string> ThinkingOptions { get; set; } = [];
     }
 
     public static string ModalityIcon(string modality) => modality.ToLowerInvariant() switch

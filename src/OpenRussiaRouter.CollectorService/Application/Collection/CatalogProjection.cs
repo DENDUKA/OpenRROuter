@@ -62,6 +62,18 @@ public static class CatalogProjection
                         acc.SourceProviders.Add(source);
 
                 acc.NodeIds.Add(result.NodeId);
+
+                if (observation.SupportsReasoning)
+                {
+                    acc.SupportsReasoning = true;
+                    if (acc.ThinkingFormat is null && observation.ThinkingFormat is not null)
+                        acc.ThinkingFormat = observation.ThinkingFormat;
+                    if (!observation.ThinkingCanDisable)
+                        acc.ThinkingCanDisable = false;
+                    foreach (var opt in observation.ThinkingOptions)
+                        if (!acc.ThinkingOptions.Contains(opt))
+                            acc.ThinkingOptions.Add(opt);
+                }
             }
         }
 
@@ -73,7 +85,11 @@ public static class CatalogProjection
                 acc.DisplayName,
                 acc.ModelType,
                 acc.SourceProviders.OrderBy(s => s, StringComparer.Ordinal).ToList(),
-                acc.NodeIds.OrderBy(s => s, StringComparer.Ordinal).ToList()))
+                acc.NodeIds.OrderBy(s => s, StringComparer.Ordinal).ToList(),
+                acc.SupportsReasoning,
+                acc.ThinkingFormat,
+                acc.ThinkingCanDisable,
+                acc.ThinkingOptions.OrderBy(o => o, StringComparer.Ordinal).ToList()))
             .ToList();
     }
 
@@ -100,6 +116,10 @@ public static class CatalogProjection
         public int ModelTypeRank { get; set; }
         public HashSet<string> SourceProviders { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> NodeIds { get; } = new(StringComparer.OrdinalIgnoreCase);
+        public bool SupportsReasoning { get; set; }
+        public string? ThinkingFormat { get; set; }
+        public bool ThinkingCanDisable { get; set; } = true;
+        public List<string> ThinkingOptions { get; set; } = [];
     }
 }
 
@@ -109,4 +129,8 @@ public sealed record CatalogEntry(
     string DisplayName,
     string ModelType,
     IReadOnlyList<string> SourceProviders,
-    IReadOnlyList<string> NodeIds);
+    IReadOnlyList<string> NodeIds,
+    bool SupportsReasoning,
+    string? ThinkingFormat,
+    bool ThinkingCanDisable,
+    IReadOnlyList<string> ThinkingOptions);

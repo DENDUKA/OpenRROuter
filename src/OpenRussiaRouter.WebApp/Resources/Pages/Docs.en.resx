@@ -47,76 +47,8 @@
   <data name="Docs_BaseUrlLabel" xml:space="preserve">
     <value>Base URL</value>
   </data>
-  <data name="Docs_Cat_CLI" xml:space="preserve">
-    <value>CLI agent</value>
-  </data>
-  <data name="Docs_Cat_IDE" xml:space="preserve">
-    <value>IDE plugin</value>
-  </data>
-  <data name="Docs_Cat_Messenger" xml:space="preserve">
-    <value>Messengers</value>
-  </data>
-  <data name="Docs_CatalogEyebrow" xml:space="preserve">
-    <value>Tool catalog</value>
-  </data>
-  <data name="Docs_CatalogLead" xml:space="preserve">
-    <value>Connect OpenRussiaRouter to popular AI development and automation tools. Every tool uses a single OpenAI-compatible endpoint and your API key.</value>
-  </data>
-  <data name="Docs_CatalogTitle" xml:space="preserve">
-    <value>Connect your tool</value>
-  </data>
   <data name="Docs_ChatCompletions" xml:space="preserve">
     <value>Chat completions (streaming &amp; non-streaming)</value>
-  </data>
-  <data name="Docs_ClaudeCode_F1" xml:space="preserve">
-    <value>Agentic coding</value>
-  </data>
-  <data name="Docs_ClaudeCode_F2" xml:space="preserve">
-    <value>File editing and git operations</value>
-  </data>
-  <data name="Docs_ClaudeCode_F3" xml:space="preserve">
-    <value>Terminal TUI by Anthropic</value>
-  </data>
-  <data name="Docs_ClaudeCode_Hero" xml:space="preserve">
-    <value>Claude Code — Anthropic's terminal agent, connected to OpenRussiaRouter through an OpenAI-compatible endpoint</value>
-  </data>
-  <data name="Docs_ClaudeCode_Name" xml:space="preserve">
-    <value>Claude Code</value>
-  </data>
-  <data name="Docs_ClaudeCode_Short" xml:space="preserve">
-    <value>Anthropic's terminal agent — edits code, runs commands and git operations.</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way1Code" xml:space="preserve">
-    <value>export ANTHROPIC_BASE_URL="{BASE_URL}"
-export ANTHROPIC_AUTH_TOKEN="sk-orr-xxx"
-
-claude</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way1Desc" xml:space="preserve">
-    <value>Install Claude Code and set environment variables before launch. The client will pick them up automatically.</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way1Title" xml:space="preserve">
-    <value>Through environment variables</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way2Code" xml:space="preserve">
-    <value>pip install 'litellm[proxy]'
-
-cat &gt; litellm.yaml &lt;&lt;EOF
-model_list:
-  - model_name: openrussiarouter
-    litellm_params:
-      model: openai/{MODEL_ID}
-      api_base: "{BASE_URL}"
-      api_key: "sk-orr-xxx"
-EOF
-
-litellm --config litellm.yaml --port 4000</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way2Desc" xml:space="preserve">
-    <value>Run a local LiteLLM proxy that translates the Anthropic format into OpenAI-chat and point Claude Code at it.</value>
-  </data>
-  <data name="Docs_ClaudeCode_Way2Title" xml:space="preserve">
-    <value>Through LiteLLM proxy (recommended)</value>
   </data>
   <data name="Docs_Endpoint" xml:space="preserve">
     <value>Endpoint</value>
@@ -127,163 +59,17 @@ litellm --config litellm.yaml --port 4000</value>
   <data name="Docs_Eyebrow" xml:space="preserve">
     <value>Connection guide</value>
   </data>
-  <data name="Docs_Hermes_F1" xml:space="preserve">
-    <value>Persistent memory between sessions</value>
+  <data name="Docs_IntegrationLead" xml:space="preserve">
+    <value>Pick your client below. The base URL and a model id are already filled in — just paste your API key. Grab a model id from the </value>
   </data>
-  <data name="Docs_Hermes_F2" xml:space="preserve">
-    <value>21+ messengers and channels</value>
-  </data>
-  <data name="Docs_Hermes_F3" xml:space="preserve">
-    <value>Self-created skills</value>
-  </data>
-  <data name="Docs_Hermes_Hero" xml:space="preserve">
-    <value>Hermes Agent — open-source autonomous agent by Nous Research with memory and 21+ messengers, connected to OpenRussiaRouter</value>
-  </data>
-  <data name="Docs_Hermes_Name" xml:space="preserve">
-    <value>Hermes Agent</value>
-  </data>
-  <data name="Docs_Hermes_Short" xml:space="preserve">
-    <value>Open-source autonomous agent with persistent memory and 21+ messengers.</value>
-  </data>
-  <data name="Docs_Hermes_Way1Code" xml:space="preserve">
-    <value>hermes model</value>
-  </data>
-  <data name="Docs_Hermes_Way1Desc" xml:space="preserve">
-    <value>Run the built-in wizard: pick Custom endpoint, set the base URL, paste the API key and choose a default model.</value>
-  </data>
-  <data name="Docs_Hermes_Way1Title" xml:space="preserve">
-    <value>Through `hermes model` wizard</value>
-  </data>
-  <data name="Docs_Hermes_Way2Code" xml:space="preserve">
-    <value>hermes config set OPENAI_API_KEY sk-orr-xxx
-hermes config set model.provider custom
-hermes config set model.base_url {BASE_URL}
-hermes config set model.default &lt;paste-a-model-id&gt;</value>
-  </data>
-  <data name="Docs_Hermes_Way2Desc" xml:space="preserve">
-    <value>If you already have a key and want to skip the wizard — these four commands set every option at once.</value>
-  </data>
-  <data name="Docs_Hermes_Way2Title" xml:space="preserve">
-    <value>Through `hermes config set`</value>
-  </data>
-  <data name="Docs_Hermes_Way3Code" xml:space="preserve">
-    <value># ~/.hermes/.env
-OPENROUTER_API_KEY=sk-orr-xxx
-
-# ~/.hermes/config.yaml
-custom_providers:
-  - name: openrussiarouter
-    base_url: {BASE_URL}
-    key_env: OPENROUTER_API_KEY
-    api_mode: chat_completions
-
-model:
-  default: &lt;paste-a-model-id&gt;
-  provider: custom:openrussiarouter</value>
-  </data>
-  <data name="Docs_Hermes_Way3Desc" xml:space="preserve">
-    <value>A named provider is convenient when you switch between several APIs — change only the `custom:NAME/MODEL` part in commands.</value>
-  </data>
-  <data name="Docs_Hermes_Way3Title" xml:space="preserve">
-    <value>Through manual YAML edit</value>
-  </data>
-  <data name="Docs_KiloCode_F1" xml:space="preserve">
-    <value>Inline edits in the editor</value>
-  </data>
-  <data name="Docs_KiloCode_F2" xml:space="preserve">
-    <value>Side-panel chat with the agent</value>
-  </data>
-  <data name="Docs_KiloCode_F3" xml:space="preserve">
-    <value>Any model through OpenAI-compatible API</value>
-  </data>
-  <data name="Docs_KiloCode_Hero" xml:space="preserve">
-    <value>Kilo Code — AI agent inside VS Code, connected to OpenRussiaRouter through an OpenAI-compatible endpoint</value>
-  </data>
-  <data name="Docs_KiloCode_Name" xml:space="preserve">
-    <value>Kilo Code</value>
-  </data>
-  <data name="Docs_KiloCode_Short" xml:space="preserve">
-    <value>AI agent in VS Code — writes and edits code, chats in a side panel, works with any model.</value>
-  </data>
-  <data name="Docs_KiloCode_Way1Code" xml:space="preserve">
-    <value>{
-  "kiloCode.providers": [
-    {
-      "id": "openrussiarouter",
-      "name": "OpenRussiaRouter",
-      "baseUrl": "{BASE_URL}",
-      "apiKey": "sk-orr-xxx",
-      "api": "openai-chat",
-      "models": ["&lt;paste-a-model-id&gt;"]
-    }
-  ],
-  "kiloCode.defaultProviderId": "openrussiarouter"
-}</value>
-  </data>
-  <data name="Docs_KiloCode_Way1Desc" xml:space="preserve">
-    <value>In the extension settings, add a new OpenAI-compatible provider and set the base URL plus API key. If your Kilo Code UI labels differ, match the fields by their purpose — baseUrl / apiKey / api=openai-chat.</value>
-  </data>
-  <data name="Docs_KiloCode_Way1Title" xml:space="preserve">
-    <value>Through the extension settings</value>
+  <data name="Docs_IntegrationTitle" xml:space="preserve">
+    <value>Use it in your tool</value>
   </data>
   <data name="Docs_Lead" xml:space="preserve">
     <value>Connect to OpenRussiaRouter with an OpenAI-compatible request flow. Point any OpenAI client at the endpoint below and authenticate with your API key.</value>
   </data>
   <data name="Docs_ListModels" xml:space="preserve">
     <value>List models available to your account</value>
-  </data>
-  <data name="Docs_OpenClaw_F1" xml:space="preserve">
-    <value>Telegram, Discord, Slack</value>
-  </data>
-  <data name="Docs_OpenClaw_F2" xml:space="preserve">
-    <value>Open-source and free</value>
-  </data>
-  <data name="Docs_OpenClaw_F3" xml:space="preserve">
-    <value>Runs on your own server</value>
-  </data>
-  <data name="Docs_OpenClaw_Hero" xml:space="preserve">
-    <value>OpenClaw — open-source AI agent for messengers, connected to OpenRussiaRouter</value>
-  </data>
-  <data name="Docs_OpenClaw_Name" xml:space="preserve">
-    <value>OpenClaw</value>
-  </data>
-  <data name="Docs_OpenClaw_Short" xml:space="preserve">
-    <value>Open-source AI agent for Telegram, Discord and Slack — models through a single API key.</value>
-  </data>
-  <data name="Docs_OpenClaw_Way1Code" xml:space="preserve">
-    <value>{
-  "models": {
-    "mode": "merge",
-    "providers": {
-      "openrussiarouter": {
-        "baseUrl": "{BASE_URL}",
-        "apiKey": "sk-orr-xxx",
-        "api": "openai-completions",
-        "models": [
-          {
-            "id": "&lt;paste-a-model-id&gt;",
-            "name": "Default",
-            "input": ["text"]
-          }
-        ]
-      }
-    }
-  },
-  "agents": {
-    "defaults": {
-      "model": {
-        "primary": "openrussiarouter/&lt;paste-a-model-id&gt;",
-        "fallbacks": []
-      }
-    }
-  }
-}</value>
-  </data>
-  <data name="Docs_OpenClaw_Way1Desc" xml:space="preserve">
-    <value>Open `~/.openclaw/openclaw.json` and add the `models.providers.openrussiarouter` block. The `api: openai-completions` flag switches to OpenAI-chat mode.</value>
-  </data>
-  <data name="Docs_OpenClaw_Way1Title" xml:space="preserve">
-    <value>Through the openclaw.json config</value>
   </data>
   <data name="Docs_StepBuyDesc" xml:space="preserve">
     <value>Add USD balance once and use it across available models.</value>
@@ -323,69 +109,5 @@ model:
   </data>
   <data name="Docs_Title" xml:space="preserve">
     <value>Setup guide</value>
-  </data>
-  <data name="Docs_Tool_AnthropicNote" xml:space="preserve">
-    <value>Limitation. Claude Code sends requests in Anthropic format (`/v1/messages`) by default. Our gateway accepts OpenAI-chat (`/v1/chat/completions`). Direct connection works if the client supports an OpenAI preset — for guaranteed compatibility, run a LiteLLM proxy that translates between the formats.</value>
-  </data>
-  <data name="Docs_Tool_AnthropicNoteTitle" xml:space="preserve">
-    <value>Request format</value>
-  </data>
-  <data name="Docs_Tool_BackToAll" xml:space="preserve">
-    <value>All tools</value>
-  </data>
-  <data name="Docs_Tool_ConfigureTitle" xml:space="preserve">
-    <value>Configure the client</value>
-  </data>
-  <data name="Docs_Tool_CaveatsTitle" xml:space="preserve">
-    <value>Caveats</value>
-  </data>
-  <data name="Docs_Tool_GetApiKey" xml:space="preserve">
-    <value>Open the API keys section and create a new key. It starts with `sk-orr-`.</value>
-  </data>
-  <data name="Docs_Tool_GetApiKeyTitle" xml:space="preserve">
-    <value>Get your API key</value>
-  </data>
-  <data name="Docs_Tool_GetBaseUrl" xml:space="preserve">
-    <value>Copy this address — you will need it when configuring the client.</value>
-  </data>
-  <data name="Docs_Tool_GetBaseUrlTitle" xml:space="preserve">
-    <value>Copy the base URL</value>
-  </data>
-  <data name="Docs_Tool_OtherTools" xml:space="preserve">
-    <value>Other tools</value>
-  </data>
-  <data name="Docs_Tool_Verify" xml:space="preserve">
-    <value>Run the request below — if a list of models comes back, the connection works.</value>
-  </data>
-  <data name="Docs_Tool_VerifyTitle" xml:space="preserve">
-    <value>Verify the connection</value>
-  </data>
-  <data name="Docs_VerifyCode" xml:space="preserve">
-    <value>curl {BASE_URL}/models \
-  -H "Authorization: Bearer sk-orr-xxx"</value>
-  </data>
-  <data name="Docs_Hermes_Caveat1" xml:space="preserve">
-    <value>Hermes requires models with at least 64K tokens of context — pick a model with a sufficiently large window.</value>
-  </data>
-  <data name="Docs_Hermes_Caveat2" xml:space="preserve">
-    <value>If you leave the default provider (OpenRouter), the agent will look for `OPENROUTER_API_KEY`. Switch `model.provider` to `custom` or `custom:openrussiarouter`.</value>
-  </data>
-  <data name="Docs_OpenClaw_Caveat1" xml:space="preserve">
-    <value>Model format in OpenClaw commands is `openrussiarouter/&lt;paste-a-model-id&gt;`. The provider prefix is required.</value>
-  </data>
-  <data name="Docs_OpenClaw_Caveat2" xml:space="preserve">
-    <value>For production, use named providers with `fallbacks` so the agent keeps working when one model is unavailable.</value>
-  </data>
-  <data name="Docs_KiloCode_Caveat1" xml:space="preserve">
-    <value>Field names in Kilo Code settings depend on the extension version. If the UI looks different, match by purpose: `baseUrl`, `apiKey`, `api=openai-chat`.</value>
-  </data>
-  <data name="Docs_KiloCode_Caveat2" xml:space="preserve">
-    <value>After changing the provider, restart VS Code — otherwise Kilo Code keeps using the old endpoint.</value>
-  </data>
-  <data name="Docs_ClaudeCode_Caveat1" xml:space="preserve">
-    <value>Claude Code sends requests in Anthropic format (`/v1/messages`) by default. Our gateway accepts OpenAI-chat only. Use a LiteLLM proxy for guaranteed compatibility.</value>
-  </data>
-  <data name="Docs_ClaudeCode_Caveat2" xml:space="preserve">
-    <value>If the client supports an OpenAI preset through `ANTHROPIC_BASE_URL`, try direct connection — but be ready for request-format errors.</value>
   </data>
 </root>

@@ -1,0 +1,153 @@
+@using OpenRussiaRouter.WebApp.Pages
+@model OpenRussiaRouter.WebApp.Pages.Shared.DocsToolLayoutModel
+
+@{
+    var verifyRaw = Localizer[Model.VerifyCodeKey].Value;
+    var verifyResolved = verifyRaw.Replace("{BASE_URL}", Model.V1BaseUrl);
+}
+
+<div class="docs-page docs-tool-page">
+    <a class="docs-back-link" href="/docs">← @Localizer["Docs_Tool_BackToAll"]</a>
+
+    <section class="docs-tool-hero" aria-labelledby="docs-tool-title">
+        <div class="docs-tool-hero-row">
+            <div class="docs-card-icon docs-tool-icon" style="background:@Model.AccentColor" aria-hidden="true">@Model.IconLetter</div>
+            <div>
+                <div class="section-label">@Localizer[Model.CategoryKey]</div>
+                <h1 id="docs-tool-title">@Localizer[Model.NameKey]</h1>
+                <p>@Localizer[Model.HeroKey]</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="docs-section" aria-labelledby="docs-tool-stepbase">
+        <h2 id="docs-tool-stepbase">@Localizer["Docs_Tool_GetBaseUrlTitle"]</h2>
+        <p>@Localizer["Docs_Tool_GetBaseUrl"]</p>
+        <div class="docs-field" aria-label="@Localizer["Docs_BaseUrlAria"]">
+            <span class="docs-field-label">@Localizer["Docs_BaseUrlLabel"]</span>
+            <code class="docs-field-value">@Model.V1BaseUrl</code>
+            <button type="button" class="docs-copy-btn" data-copy="@Model.V1BaseUrl" data-copied="@Localizer["Btn_Copied"]" onclick="copyDocsValue(event)">@Localizer["Btn_Copy"]</button>
+        </div>
+    </section>
+
+    <section class="docs-section" aria-labelledby="docs-tool-stepkey">
+        <h2 id="docs-tool-stepkey">@Localizer["Docs_Tool_GetApiKeyTitle"]</h2>
+        <p>@Localizer["Docs_Tool_GetApiKey"]</p>
+        <p><a class="docs-inline-link" href="/workspace/apikeys">@Localizer["Docs_Tool_GetApiKeyTitle"] →</a></p>
+    </section>
+
+    @if (Model.Ways.Count > 0)
+    {
+        <section class="docs-section" aria-labelledby="docs-tool-configure">
+            <h2 id="docs-tool-configure">@Localizer["Docs_Tool_ConfigureTitle"]</h2>
+            @foreach (var way in Model.Ways)
+            {
+                var raw = Localizer[way.CodeKey].Value;
+                var resolved = raw.Replace("{BASE_URL}", Model.V1BaseUrl).Replace("{MODEL_ID}", Model.ModelId);
+                <div class="docs-tool-way">
+                    <h3>@Localizer[way.TitleKey]</h3>
+                    <p>@Localizer[way.DescKey]</p>
+                    <partial name="_CodeBlock" model="resolved" />
+                </div>
+            }
+        </section>
+    }
+
+    @if (Model.ShowAnthropicNote)
+    {
+        <div class="docs-tool-note" role="note">
+            <strong>@Localizer["Docs_Tool_AnthropicNoteTitle"].</strong>
+            @Localizer["Docs_Tool_AnthropicNote"]
+        </div>
+    }
+
+    @if (Model.CaveatKeys.Count > 0)
+    {
+        <section class="docs-section" aria-labelledby="docs-tool-caveats">
+            <h2 id="docs-tool-caveats">@Localizer["Docs_Tool_CaveatsTitle"]</h2>
+            <ul>
+                @foreach (var key in Model.CaveatKeys)
+                {
+                    <li>@Localizer[key]</li>
+                }
+            </ul>
+        </section>
+    }
+
+    <section class="docs-section" aria-labelledby="docs-tool-verify">
+        <h2 id="docs-tool-verify">@Localizer["Docs_Tool_VerifyTitle"]</h2>
+        <p>@Localizer["Docs_Tool_Verify"]</p>
+        <partial name="_CodeBlock" model="verifyResolved" />
+    </section>
+
+    @if (Model.OtherTools.Count > 0)
+    {
+        <aside class="docs-tool-aside" aria-labelledby="docs-tool-other">
+            <h2 id="docs-tool-other">@Localizer["Docs_Tool_OtherTools"]</h2>
+            <ul>
+                @foreach (var t in Model.OtherTools)
+                {
+                    <li><a href="/docs/@t.Slug">@Localizer[t.NameKey]</a></li>
+                }
+            </ul>
+        </aside>
+    }
+</div>
+
+<style>
+    .docs-tool-page { max-width: 920px; }
+    .docs-back-link {
+        display: inline-block;
+        margin: 24px 0 0;
+        font-size: 13px;
+        color: var(--color-body);
+        text-decoration: none;
+    }
+    .docs-back-link:hover { color: var(--color-ink); }
+    .docs-tool-hero { padding: 24px 0 32px; border-bottom: 1px solid var(--color-hairline); }
+    .docs-tool-hero-row {
+        display: grid;
+        grid-template-columns: 56px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+    }
+    .docs-tool-icon {
+        width: 56px;
+        height: 56px;
+        font-size: 22px;
+        border-radius: 10px;
+    }
+    .docs-tool-hero h1 { margin: 4px 0 8px; font-size: 28px; line-height: 1.2; }
+    .docs-tool-hero p { margin: 0; color: var(--color-body); font-size: 15px; line-height: 1.5; max-width: 640px; }
+    .docs-section { padding: 32px 0; border-bottom: 1px solid var(--color-hairline); }
+    .docs-section:last-of-type { border-bottom: none; }
+    .docs-section h2 { margin: 0 0 8px; font-size: 20px; }
+    .docs-section h3 { margin: 24px 0 6px; font-size: 15px; }
+    .docs-section p { margin: 0 0 12px; color: var(--color-body); font-size: 14px; line-height: 1.55; }
+    .docs-section ul { margin: 8px 0 0; padding-left: 20px; color: var(--color-body); font-size: 14px; line-height: 1.6; }
+    .docs-section ul li { margin: 4px 0; }
+    .docs-tool-way { margin-top: 16px; }
+    .docs-tool-way:first-of-type { margin-top: 0; }
+    .docs-tool-note {
+        padding: 12px 14px;
+        border-left: 3px solid #D97706;
+        background: rgba(217, 119, 6, .08);
+        border-radius: 0 var(--radius-md) var(--radius-md) 0;
+        margin: 16px 0;
+        font-size: 13.5px;
+        color: var(--color-body);
+        line-height: 1.55;
+    }
+    .docs-tool-note strong { color: var(--color-ink); margin-right: 4px; }
+    .docs-tool-aside {
+        margin-top: 24px;
+        padding: 18px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas-soft);
+    }
+    .docs-tool-aside h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; color: var(--color-mute); margin: 0 0 10px; }
+    .docs-tool-aside ul { margin: 0; padding-left: 18px; font-size: 13.5px; }
+    .docs-tool-aside li { margin: 4px 0; }
+    .docs-inline-link { color: var(--color-ink); text-decoration: underline; text-underline-offset: 3px; }
+</style>

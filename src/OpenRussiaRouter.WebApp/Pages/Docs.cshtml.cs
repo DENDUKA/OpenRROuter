@@ -3,6 +3,15 @@ using OpenRussiaRouter.WebApp.Services;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
+public sealed record DocsTool(
+    string Slug,
+    string IconLetter,
+    string AccentColor,
+    string CategoryKey,
+    string NameKey,
+    string ShortKey,
+    string[] FeatureKeys);
+
 public class DocsModel(ApiBaseUrlResolver baseUrlResolver) : PageModelBase
 {
     /// <summary>User-facing API base URL (no trailing slash, without <c>/v1</c>).</summary>
@@ -11,8 +20,8 @@ public class DocsModel(ApiBaseUrlResolver baseUrlResolver) : PageModelBase
     public string V1BaseUrl => $"{ApiBaseUrl}/v1";
     public string ChatCompletionsUrl => $"{ApiBaseUrl}/v1/chat/completions";
 
-    /// <summary>On the generic guide we don't know the model, so the snippets use a placeholder id.</summary>
-    public IntegrationExamplesModel Integration => new(V1BaseUrl, "<paste-a-model-id>", 128000);
+    /// <summary>Catalog cards rendered on <c>/docs</c>.</summary>
+    public IReadOnlyList<DocsTool> Tools => Docs.DocsCatalog.All;
 
     public async Task OnGetAsync()
     {

@@ -1,0 +1,21 @@
+@model OpenRussiaRouter.WebApp.Pages.DocsTool
+
+@*
+    Catalog card on /docs. The whole card is a link to /docs/{slug}.
+*@
+<a class="docs-card" href="/docs/@Model.Slug">
+    <div class="docs-card-icon" style="background:@Model.AccentColor" aria-hidden="true">@Model.IconLetter</div>
+    <div>
+        <div class="docs-card-head">
+            <h3>@Localizer[Model.NameKey]</h3>
+            <span class="docs-card-cat">@Localizer[Model.CategoryKey]</span>
+        </div>
+        <p>@Localizer[Model.ShortKey]</p>
+        <ul>
+            @foreach (var key in Model.FeatureKeys)
+            {
+                <li>@Localizer[key]</li>
+            }
+        </ul>
+    </div>
+</a>

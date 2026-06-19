@@ -4,9 +4,19 @@
 
 <div class="docs-page">
     <section class="docs-hero" aria-labelledby="docs-title">
-        <div class="section-label">@Localizer["Docs_Eyebrow"]</div>
-        <h1 id="docs-title">@Localizer["Docs_Title"]</h1>
-        <p>@Localizer["Docs_Lead"]</p>
+        <div class="section-label">@Localizer["Docs_CatalogEyebrow"]</div>
+        <h1 id="docs-title">@Localizer["Docs_CatalogTitle"]</h1>
+        <p>@Localizer["Docs_CatalogLead"]</p>
+    </section>
+
+    <section class="docs-section" aria-labelledby="docs-catalog">
+        <h2 id="docs-catalog" class="visually-hidden">@Localizer["Docs_CatalogTitle"]</h2>
+        <div class="docs-grid">
+            @foreach (var tool in Model.Tools)
+            {
+                <partial name="_DocsCard" model="tool" />
+            }
+        </div>
     </section>
 
     <section class="docs-section" aria-labelledby="endpoint-title">
@@ -62,12 +72,6 @@
                 </div>
             </div>
         </div>
-    </section>
-
-    <section class="docs-section" aria-labelledby="integration-title">
-        <h2 id="integration-title">@Localizer["Docs_IntegrationTitle"]</h2>
-        <p>@Localizer["Docs_IntegrationLead"]</p>
-        <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
 </div>
 
@@ -151,8 +155,67 @@
     .docs-endpoint-table { margin-top: var(--spacing-lg); }
     .docs-endpoint-table td, .docs-endpoint-table th { white-space: nowrap; }
     .docs-endpoint-table td:last-child, .docs-endpoint-table th:last-child { white-space: normal; }
+
+    .docs-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    .docs-card {
+        display: grid;
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 14px;
+        padding: 18px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background: var(--color-canvas-soft);
+        text-decoration: none;
+        color: inherit;
+        transition: border-color .15s, transform .15s;
+    }
+    .docs-card:hover { border-color: var(--color-border); transform: translateY(-1px); }
+    .docs-card-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-weight: 600;
+        font-size: 16px;
+    }
+    .docs-card-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 8px;
+        margin-bottom: 6px;
+    }
+    .docs-card h3 { margin: 0; font-size: 15px; }
+    .docs-card-cat {
+        font-size: 11px;
+        color: var(--color-mute);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        white-space: nowrap;
+    }
+    .docs-card p {
+        margin: 0 0 10px;
+        color: var(--color-body);
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .docs-card ul {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 12.5px;
+        color: var(--color-mute);
+    }
+    .docs-card ul li { margin: 2px 0; }
+
     .docs-code-panel {
-        margin-top: var(--spacing-lg);
+        margin-top: var(--spacing-md);
+        position: relative;
         border: 1px solid var(--color-hairline);
         border-radius: var(--radius-lg);
         background: var(--color-canvas-soft);
@@ -174,6 +237,32 @@
         color: inherit;
         font-size: inherit;
     }
+    .integ-copy {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-sm);
+        background: var(--color-canvas-card);
+        color: var(--color-body);
+        cursor: pointer;
+        font: inherit;
+        font-size: 12px;
+        padding: 3px 10px;
+    }
+    .integ-copy:hover { color: var(--color-ink); border-color: var(--color-border); }
+
+    .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0,0,0,0);
+        border: 0;
+    }
+
     @@media (max-width: 640px) {
         .docs-hero { padding-top: 28px; }
         .docs-section { padding: 32px 0; }
@@ -193,6 +282,19 @@
             orrCopyText(text).then(function () {
                 btn.textContent = btn.getAttribute('data-copied') || 'Copied';
                 setTimeout(function () { btn.textContent = originalText; }, 1500);
+            }).catch(function (err) { console.error('Copy failed:', err); });
+        }
+
+        // Copy the code in the same panel as the clicked button. orrCopyText is global (_Layout.cshtml).
+        function copyCodeBlock(event) {
+            var btn = event.currentTarget;
+            var pre = btn.closest('.integ-panel, .docs-code-panel')?.querySelector('pre');
+            if (!pre) return;
+            var original = btn.getAttribute('data-original') || btn.textContent;
+            btn.setAttribute('data-original', original);
+            orrCopyText(pre.textContent).then(function () {
+                btn.textContent = btn.getAttribute('data-copied') || 'Copied';
+                setTimeout(function () { btn.textContent = original; }, 1500);
             }).catch(function (err) { console.error('Copy failed:', err); });
         }
     </script>

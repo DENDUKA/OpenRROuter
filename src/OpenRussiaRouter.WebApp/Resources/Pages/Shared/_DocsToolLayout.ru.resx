@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Btn_Copied" xml:space="preserve">
+    <value>Скопировано</value>
+  </data>
+  <data name="Btn_Copy" xml:space="preserve">
+    <value>Скопировать</value>
+  </data>
+  <data name="Docs_BaseUrlAria" xml:space="preserve">
+    <value>API base URL</value>
+  </data>
+  <data name="Docs_BaseUrlLabel" xml:space="preserve">
+    <value>Base URL</value>
+  </data>
+  <data name="Docs_Tool_AnthropicNote" xml:space="preserve">
+    <value>Ограничение. Claude Code по умолчанию отправляет запросы в Anthropic-формате (`/v1/messages`). Наш gateway принимает OpenAI-chat (`/v1/chat/completions`). Прямое подключение работает, если клиент поддерживает OpenAI-preset — для гарантированной совместимости используйте LiteLLM-прокси, который переводит форматы между собой.</value>
+  </data>
+  <data name="Docs_Tool_AnthropicNoteTitle" xml:space="preserve">
+    <value>Формат запроса</value>
+  </data>
+  <data name="Docs_Tool_BackToAll" xml:space="preserve">
+    <value>Все инструменты</value>
+  </data>
+  <data name="Docs_Tool_CaveatsTitle" xml:space="preserve">
+    <value>Подводные камни</value>
+  </data>
+  <data name="Docs_Tool_ConfigureTitle" xml:space="preserve">
+    <value>Настройте клиент</value>
+  </data>
+  <data name="Docs_Tool_GetApiKey" xml:space="preserve">
+    <value>Откройте раздел API-ключей и создайте новый. Ключ начинается с `sk-orr-`.</value>
+  </data>
+  <data name="Docs_Tool_GetApiKeyTitle" xml:space="preserve">
+    <value>Получите API-ключ</value>
+  </data>
+  <data name="Docs_Tool_GetBaseUrl" xml:space="preserve">
+    <value>Скопируйте этот адрес — он понадобится при настройке клиента.</value>
+  </data>
+  <data name="Docs_Tool_GetBaseUrlTitle" xml:space="preserve">
+    <value>Скопируйте base URL</value>
+  </data>
+  <data name="Docs_Tool_OtherTools" xml:space="preserve">
+    <value>Другие инструменты</value>
+  </data>
+  <data name="Docs_Tool_Verify" xml:space="preserve">
+    <value>Выполните запрос ниже — если ответ пришёл с моделями, подключение работает.</value>
+  </data>
+  <data name="Docs_Tool_VerifyTitle" xml:space="preserve">
+    <value>Проверьте подключение</value>
+  </data>
+</root>

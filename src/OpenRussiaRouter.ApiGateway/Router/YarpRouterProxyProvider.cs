@@ -186,13 +186,18 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         }
 
         responseBody.Position = 0;
-        using var reader = new StreamReader(responseBody, Encoding.UTF8);
-        var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         var contentType = context.Response.ContentType ?? "application/json";
-
         var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
         var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
 
+        if (contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+        {
+            var bytes = responseBody.ToArray();
+            return new RouterProxyResponse(context.Response.StatusCode, contentType, "", providerName, providerAccount, bytes);
+        }
+
+        using var reader = new StreamReader(responseBody, Encoding.UTF8);
+        var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
     }
 

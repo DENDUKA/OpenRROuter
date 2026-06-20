@@ -88,6 +88,17 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
+                        <label asp-for="Form.ModelType" class="form-label">Model Type</label>
+                        <select asp-for="Form.ModelType" class="form-control">
+                            @foreach (var t in Model.ModelTypes)
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
                         <label asp-for="Form.InputPrice" class="form-label">Input Price ($/1M)</label>
                         <input asp-for="Form.InputPrice" class="form-control" type="number" step="0.000001" />
                         <span asp-validation-for="Form.InputPrice" class="validation-message"></span>
@@ -280,8 +291,8 @@
         {
             <table class="table">
                 <thead><tr>
-                    <th>Model ID</th><th>Display Name</th><th>Router Model</th>
-                    <th>Input / Output / Cache per 1M</th><th>Tags</th><th>Status</th><th>Source</th><th>Actions</th>
+                    <th>Model ID</th><th>Display Name</th><th>Type</th><th>Router Model</th>
+                            <th>Pricing</th><th>Tags</th><th>Status</th><th>Source</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                     @foreach (var m in Model.Models)
@@ -296,8 +307,27 @@
                                 </div>
                             </td>
                             <td>@m.DisplayName</td>
+                            <td>
+                                @if (m.ModelType == "audio")
+                                {
+                                    <span class="badge badge-info" title="Audio model - billed by input characters">audio</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">text</span>
+                                }
+                            </td>
                             <td><code>@m.UpstreamModelId</code></td>
-                            <td>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</td>
+                            <td>
+                                @if (m.ModelType == "audio")
+                                {
+                                    <span>Audio chars / 1M = @m.OutputPrice.ToString("N2") $</span>
+                                }
+                                else
+                                {
+                                    <span>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</span>
+                                }
+                            </td>
                             <td>
                                 @if (m.TagIds != null && m.TagIds.Count > 0)
                                 {

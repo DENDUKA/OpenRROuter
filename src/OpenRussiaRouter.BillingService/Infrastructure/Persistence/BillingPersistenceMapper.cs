@@ -56,6 +56,7 @@ public static class BillingPersistenceMapper
             DescriptionSource = model.DescriptionSource,
             TagIds = model.TagIds?.ToArray(),
             Provider = model.Provider,
+            ModelType = model.ModelType,
             SupportsReasoning = model.SupportsReasoning,
             AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
             DefaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort)
@@ -82,6 +83,7 @@ public static class BillingPersistenceMapper
             DescriptionSource: entity.DescriptionSource,
             TagIds: entity.TagIds,
             Provider: entity.Provider,
+            ModelType: entity.ModelType,
             SupportsReasoning: entity.SupportsReasoning,
             AllowedReasoningEfforts: ReasoningEffort.SplitCsv(entity.AllowedReasoningEfforts),
             DefaultReasoningEffort: ReasoningEffort.NormalizeNullable(entity.DefaultReasoningEffort));

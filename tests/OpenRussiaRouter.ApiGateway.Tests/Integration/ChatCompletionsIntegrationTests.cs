@@ -575,5 +575,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             GatewayRouterLease lease, string requestJson, string requestId,
             string userApiKey, CancellationToken ct)
             => throw new NotSupportedException();
+
+        public Task<RouterProxyResponse> SendTextToSpeechAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException();
     }
 }

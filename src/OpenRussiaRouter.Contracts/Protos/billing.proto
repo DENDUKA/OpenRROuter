@@ -168,6 +168,7 @@ message PublicModel {
   repeated string allowed_reasoning_efforts = 13;
   string input_modalities = 14;
   string output_modalities = 15;
+  string model_type = 16;
 }
 
 message ListPublicModelsResponse {
@@ -221,6 +222,7 @@ message UpsertModelPriceRequest {
   string default_reasoning_effort = 17;
   string input_modalities = 18;
   string output_modalities = 19;
+  string model_type = 20;
 }
 
 message UpsertModelPriceResponse {
@@ -256,6 +258,7 @@ message ModelDetail {
   string default_reasoning_effort = 17;
   string input_modalities = 18;
   string output_modalities = 19;
+  string model_type = 20;
 }
 
 message ListModelsResponse {

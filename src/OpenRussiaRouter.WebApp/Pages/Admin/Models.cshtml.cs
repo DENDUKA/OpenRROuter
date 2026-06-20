@@ -30,6 +30,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
     public IReadOnlyList<string> ReasoningEfforts { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
+    public IReadOnlyList<string> ModelTypes { get; } = ["text", "audio"];
     public IReadOnlyList<string> ModalityTypes { get; } = ["text", "image", "audio", "video"];
 
     /// <summary>Set when per-model enrich could not auto-match — UI prompts for an explicit OpenRouter id.</summary>
@@ -107,6 +108,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         SupportsReasoning = m.SupportsReasoning,
                         AllowedReasoningEfforts = m.AllowedReasoningEfforts?.ToList() ?? [],
                         DefaultReasoningEffort = m.DefaultReasoningEffort,
+                        ModelType = m.ModelType,
                         ThinkingFormat = thinkingFormat,
                         ThinkingCanDisable = thinkingCanDisable,
                         ThinkingOptions = thinkingOptions
@@ -183,7 +185,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 TagIds: Form.TagIds,
                 SupportsReasoning: Form.SupportsReasoning,
                 AllowedReasoningEfforts: Form.AllowedReasoningEfforts.Count > 0 ? Form.AllowedReasoningEfforts : null,
-                DefaultReasoningEffort: Form.DefaultReasoningEffort);
+                DefaultReasoningEffort: Form.DefaultReasoningEffort,
+                ModelType: Form.ModelType);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -517,6 +520,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public bool SupportsReasoning { get; set; }
         public List<string> AllowedReasoningEfforts { get; set; } = [];
         public string? DefaultReasoningEffort { get; set; }
+        public string ModelType { get; set; } = "text";
         public string? ThinkingFormat { get; set; }
         public bool ThinkingCanDisable { get; set; } = true;
         public List<string> ThinkingOptions { get; set; } = [];

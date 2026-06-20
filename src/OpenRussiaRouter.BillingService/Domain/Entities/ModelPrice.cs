@@ -17,6 +17,7 @@ public sealed record ModelPrice(
     string? DescriptionSource = null,
     IReadOnlyList<string>? TagIds = null,
     string? Provider = null,
+    string ModelType = "text",
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
     string? DefaultReasoningEffort = null);

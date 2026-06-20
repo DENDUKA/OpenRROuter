@@ -76,6 +76,7 @@ public sealed class GrpcBillingService(
                     Description = price?.Description ?? string.Empty,
                     Provider = price?.Provider ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
+                    ModelType = price?.ModelType ?? "text",
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {
@@ -282,6 +283,7 @@ public sealed class GrpcBillingService(
                 DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource,
                 TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null,
                 Provider: string.IsNullOrEmpty(request.Provider) ? null : request.Provider,
+                ModelType: string.IsNullOrEmpty(request.ModelType) ? "text" : request.ModelType,
                 SupportsReasoning: request.SupportsReasoning,
                 AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
                 DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort),
@@ -355,6 +357,7 @@ public sealed class GrpcBillingService(
                     Provider = model.Provider ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
                     DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+                    ModelType = model.ModelType ?? "text",
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {
@@ -405,6 +408,7 @@ public sealed class GrpcBillingService(
             Provider = model.Provider ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+            ModelType = model.ModelType ?? "text",
         };
         if (model.AllowedReasoningEfforts is not null)
             m.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);

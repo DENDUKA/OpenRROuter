@@ -274,6 +274,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             OutputModalities: string.IsNullOrEmpty(m.OutputModalities) ? null : m.OutputModalities,
             Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null)).ToList();
     }
@@ -298,6 +299,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
             Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort)).ToList();
@@ -327,6 +329,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DescriptionSource: string.IsNullOrEmpty(m.DescriptionSource) ? null : m.DescriptionSource,
             Provider: string.IsNullOrEmpty(m.Provider) ? null : m.Provider,
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
+            ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort);
@@ -352,7 +355,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DescriptionSource = model.DescriptionSource ?? string.Empty,
             Provider = model.Provider ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
-            DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty
+            DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+            ModelType = model.ModelType ?? "text"
         };
         if (model.TagIds != null)
         {

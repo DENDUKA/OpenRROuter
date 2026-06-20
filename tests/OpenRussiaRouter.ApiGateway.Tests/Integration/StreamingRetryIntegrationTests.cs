@@ -282,6 +282,11 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
             return Task.FromResult(sessions.Dequeue());
         }
 
+        public Task<RouterProxyResponse> SendTextToSpeechAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException();
+
         public Task<RouterProxyResponse> SendImageGenerationAsync(
             GatewayRouterLease lease, string requestJson, string requestId,
             string userApiKey, CancellationToken ct)

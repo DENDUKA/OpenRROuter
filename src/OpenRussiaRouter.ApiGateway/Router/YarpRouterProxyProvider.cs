@@ -14,6 +14,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
 {
     private const string ChatCompletionsPath = "/v1/chat/completions";
     private const string ImageGenerationsPath = "/v1/images/generations";
+    private const string AudioSpeechPath = "/v1/audio/speech";
 
     private static readonly HttpMessageInvoker ForwardingHttpClient = new(new SocketsHttpHandler
     {
@@ -123,6 +124,49 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         context.Request.Scheme = lease.EndpointUrl.Scheme;
         context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
         context.Request.Path = ImageGenerationsPath;
+        context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
+        context.Request.Headers[CorrelationIds.HeaderName] = requestId;
+        context.Request.ContentType = "application/json";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestJson));
+        context.Request.ContentLength = context.Request.Body.Length;
+        context.RequestAborted = cancellationToken;
+
+        await using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+
+        var destinationPrefix = BuildDestinationPrefix(lease.EndpointUrl);
+        var error = await forwarder.SendAsync(context, destinationPrefix, ForwardingHttpClient, RequestConfig).ConfigureAwait(false);
+        if (error != ForwarderError.None)
+        {
+            var errorFeature = context.GetForwarderErrorFeature();
+            throw new InvalidOperationException("YARP forwarding failed.", errorFeature?.Exception);
+        }
+
+        responseBody.Position = 0;
+        using var reader = new StreamReader(responseBody, Encoding.UTF8);
+        var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        var contentType = context.Response.ContentType ?? "application/json";
+
+        var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
+        var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
+
+        return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
+    }
+
+    public async Task<RouterProxyResponse> SendTextToSpeechAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Scheme = lease.EndpointUrl.Scheme;
+        context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
+        context.Request.Path = AudioSpeechPath;
         context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
         context.Request.Headers[CorrelationIds.HeaderName] = requestId;
         context.Request.ContentType = "application/json";

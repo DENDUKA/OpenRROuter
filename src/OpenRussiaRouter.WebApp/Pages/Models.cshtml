@@ -106,9 +106,9 @@
                                         <span class="text-muted">-</span>
                                     }
                                 </td>
-                                <td class="num">@Model.FormatPrice(m.InputPrice)</td>
+                                <td class="num">@(m.ModelType == "audio" ? "—" : Model.FormatPrice(m.InputPrice))</td>
                                 <td class="num">@Model.FormatPrice(m.OutputPrice)</td>
-                                <td class="num">@Model.FormatPrice(m.CacheWritePrice)</td>
+                                <td class="num">@(m.ModelType == "audio" ? "—" : Model.FormatPrice(m.CacheWritePrice))</td>
                                 <td class="num">@m.Context</td>
                                 <td><span class="badge badge-success">@Localizer["Catalog_StatusAvailable"]</span></td>
                             </tr>

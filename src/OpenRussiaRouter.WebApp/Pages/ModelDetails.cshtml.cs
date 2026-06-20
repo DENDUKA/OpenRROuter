@@ -68,6 +68,7 @@ public class ModelDetailsModel : PageModelBase
     public decimal OutputPrice => ModelData?.OutputPrice ?? 0;
     public decimal CachePrice => ModelData?.CachePrice ?? 0;
     public bool HasPricing => InputPrice > 0 || OutputPrice > 0;
+    public bool IsAudioModel => string.Equals(ModelData?.ModelType, "audio", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The public catalog id (preferred) for copy-paste snippets, falling back to the route id.</summary>
     public string PublicModelId => ModelData?.Id ?? ModelId;

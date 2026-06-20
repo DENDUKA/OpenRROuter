@@ -34,9 +34,9 @@
                     </div>
                 </div>
             </div>
-            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Input"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : Localizer["Model_PriceRoute"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Input"]</div><div class="metric-value">@(Model.IsAudioModel ? "—" : (Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : Localizer["Model_PriceRoute"]))</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Output"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.OutputPrice) : Localizer["Model_PriceRoute"])</div></div>
-            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Cache"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : Localizer["Model_PriceRoute"])</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Cache"]</div><div class="metric-value">@(Model.IsAudioModel ? "—" : (Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : Localizer["Model_PriceRoute"]))</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Context"]</div><div class="metric-value">@Model.ContextDisplay</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Status"]</div><div class="metric-value">@(Model.ModelData?.Enabled == false ? Localizer["Model_Status_Disabled"] : Localizer["Model_Status_Available"])</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Author"]</div><div class="metric-value">@Model.ProviderTitle</div></div>

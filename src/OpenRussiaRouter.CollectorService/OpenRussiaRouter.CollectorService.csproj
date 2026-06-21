@@ -2,8 +2,9 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-
+    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\billing.proto" GrpcServices="Client" Link="Protos\billing.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\collector.proto" GrpcServices="Server" Link="Protos\collector.proto" />
+
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\control-plane.proto" GrpcServices="Client" Link="Protos\control-plane.proto" />
     <ProjectReference Include="..\OpenRussiaRouter.BuildingBlocks\OpenRussiaRouter.BuildingBlocks.csproj" />
     <ProjectReference Include="..\OpenRussiaRouter.Contracts\OpenRussiaRouter.Contracts.csproj" />

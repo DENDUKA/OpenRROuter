@@ -2,8 +2,10 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OpenRussiaRouter.CollectorService.Application.Billing;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.NodeAdmin;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 
 namespace OpenRussiaRouter.CollectorService.Tests.Collection;
 
@@ -11,6 +13,9 @@ public class NodePollingWorkerTests
 {
     private static NodeCatalogCollector Collector(INodeAdminClient client) =>
         new(client, Options.Create(new CollectorOptions()).ToMonitor(), NullLogger<NodeCatalogCollector>.Instance);
+
+    private static NodeQuotaCollector QuotaCollector(INodeAdminClient client) =>
+        new(client, Options.Create(new CollectorOptions()).ToMonitor(), NullLogger<NodeQuotaCollector>.Instance);
 
     [Fact]
     public async Task RunOnceAsync_PollsRoutableNodes_AndSwapsSnapshot()
@@ -28,12 +33,15 @@ public class NodePollingWorkerTests
             {
                 Connections = [new NodeProviderWithModels { Id = "c1", IsActive = true, Models = [new NodeProviderModelInfo { Id = "m", PublicId = "m", Enabled = true }] }]
             });
+        client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProviderQuotaResponse());
 
         var store = new CollectorSnapshotStore();
         var worker = new NodePollingWorker(
-            nodes.Object, Collector(client.Object), store,
+            nodes.Object, Collector(client.Object), QuotaCollector(client.Object), ActiveModels([]), store, new QuotaSnapshotStore(),
             Options.Create(new CollectorOptions()).ToMonitor(),
             NullLogger<NodePollingWorker>.Instance, TimeProvider.System);
+
 
         await worker.RunOnceAsync(CancellationToken.None);
 
@@ -54,9 +62,10 @@ public class NodePollingWorkerTests
 
         var client = new Mock<INodeAdminClient>();
         var worker = new NodePollingWorker(
-            nodes.Object, Collector(client.Object), store,
+            nodes.Object, Collector(client.Object), QuotaCollector(client.Object), ActiveModels([]), store, new QuotaSnapshotStore(),
             Options.Create(new CollectorOptions()).ToMonitor(),
             NullLogger<NodePollingWorker>.Instance, TimeProvider.System);
+
 
         await worker.RunOnceAsync(CancellationToken.None);
 
@@ -111,7 +120,7 @@ public class NodePollingWorkerTests
         var options = new CollectorOptions { NodeListRefreshInterval = TimeSpan.FromMinutes(5) };
         var store = new CollectorSnapshotStore();
         var worker = new NodePollingWorker(
-            nodes.Object, Collector(client.Object), store,
+            nodes.Object, Collector(client.Object), QuotaCollector(client.Object), ActiveModels([]), store, new QuotaSnapshotStore(),
             Options.Create(options).ToMonitor(), NullLogger<NodePollingWorker>.Instance, time);
 
         await worker.RunOnceAsync(CancellationToken.None);
@@ -141,13 +150,24 @@ public class NodePollingWorkerTests
             {
                 Connections = [new NodeProviderWithModels { Id = "c1", IsActive = true, Models = [new NodeProviderModelInfo { Id = "m", PublicId = "m", Enabled = true }] }]
             });
+        client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProviderQuotaResponse());
         return client;
     }
 
     private NodePollingWorker BuildWorker(
         INodeListProvider nodes, INodeAdminClient client, CollectorOptions options, TimeProvider time) =>
-        new(nodes, Collector(client), new CollectorSnapshotStore(),
+        new(nodes, Collector(client), QuotaCollector(client), ActiveModels([]), new CollectorSnapshotStore(), new QuotaSnapshotStore(),
             Options.Create(options).ToMonitor(), NullLogger<NodePollingWorker>.Instance, time);
+
+    private static IActiveBillingModelProvider ActiveModels(IReadOnlyList<ActiveBillingModel> models) =>
+        new TestActiveBillingModelProvider(models);
+
+    private sealed class TestActiveBillingModelProvider(IReadOnlyList<ActiveBillingModel> models) : IActiveBillingModelProvider
+    {
+        public Task<IReadOnlyList<ActiveBillingModel>> ListActiveModelsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(models);
+    }
 
     private sealed class MutableTimeProvider(DateTimeOffset start) : TimeProvider
     {

@@ -3,11 +3,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
+using OpenRussiaRouter.CollectorService.Application.Billing;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.NodeAdmin;
 using OpenRussiaRouter.CollectorService.Application.OpenRouter;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
+using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
+
 
 
 namespace OpenRussiaRouter.CollectorService.Infrastructure.Startup;
@@ -28,7 +32,7 @@ public static class Startup
         services.AddSingleton<CollectorSnapshotStore>();
         services.AddSingleton<NodeCatalogCollector>();
         services.AddSingleton<INodeListProvider, NodeListProvider>();
-        services.AddHttpClient<INodeAdminClient, NodeAdminClient>(c => c.Timeout = TimeSpan.FromSeconds(10));
+        services.AddHttpClient<INodeAdminClient, NodeAdminClient>(c => c.Timeout = TimeSpan.FromSeconds(30));
 
         var grpcCallDeadline = TimeSpan.FromSeconds(
             configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
@@ -45,10 +49,28 @@ public static class Startup
             })
             .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
 
+        var billingUrl = configuration["GrpcServices:Billing"] ?? "http://localhost:5002";
+        services.AddGrpcClient<BillingGrpc.BillingServiceClient>(o => o.Address = new Uri(billingUrl))
+            .ConfigureChannel(o =>
+            {
+                o.HttpHandler = new SocketsHttpHandler
+                {
+                    PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                };
+            })
+            .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
+        services.AddSingleton<IActiveBillingModelProvider, GrpcActiveBillingModelProvider>();
+
         services.AddHostedService<NodePollingWorker>();
 
+        services.AddSingleton<QuotaSnapshotStore>();
+        services.AddSingleton<NodeQuotaCollector>();
+        services.AddSingleton<ProviderQuotaMeter>();
 
         services.AddSingleton<OpenRouterCatalogStore>();
+
         services.AddOptions<OpenRouterCatalogOptions>()
             .Bind(configuration.GetSection("OpenRouter"))
             .ValidateDataAnnotations()

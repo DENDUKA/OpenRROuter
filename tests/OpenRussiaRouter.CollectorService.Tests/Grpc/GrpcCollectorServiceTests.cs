@@ -1,6 +1,7 @@
 using FluentAssertions;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.OpenRouter;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 
@@ -12,7 +13,7 @@ public class GrpcCollectorServiceTests
     {
         var store = new CollectorSnapshotStore();
         store.Set(snapshot);
-        return new GrpcCollectorService(store, new OpenRouterCatalogStore());
+        return new GrpcCollectorService(store, new QuotaSnapshotStore(), new OpenRouterCatalogStore());
     }
 
     [Fact]

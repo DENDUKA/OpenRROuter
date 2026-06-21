@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Metrics;
+using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.CollectorService.Infrastructure.Startup;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -11,6 +13,8 @@ builder.AddOpenTelemetryMetrics("OpenRussiaRouter.Collector", OpenTelemetryExten
 Startup.ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
+
+_ = app.Services.GetRequiredService<ProviderQuotaMeter>();
 
 Startup.ConfigurePipeline(app);
 app.MapOpenTelemetryEndpoints();

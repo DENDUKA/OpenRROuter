@@ -14,5 +14,5 @@ public sealed class CollectorOptions
     public TimeSpan ActiveModelsRefreshInterval { get; set; } = TimeSpan.FromMinutes(5);
 
     [Range(typeof(TimeSpan), "00:00:01", "00:01:00")]
-    public TimeSpan PerNodeTimeout { get; set; } = TimeSpan.FromSeconds(10);
+    public TimeSpan PerNodeTimeout { get; set; } = TimeSpan.FromSeconds(30);
 }

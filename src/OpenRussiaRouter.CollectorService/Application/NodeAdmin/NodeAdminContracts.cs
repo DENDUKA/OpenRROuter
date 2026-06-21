@@ -47,22 +47,6 @@ public sealed record NodeModelInfo
     public string Id { get; init; } = string.Empty;
 }
 
-public sealed record NodeProviderQuotaResponse
-{
-    public IReadOnlyList<NodeProviderQuotaEntry> Providers { get; init; } = [];
-}
-
-public sealed record NodeProviderQuotaEntry
-{
-    public string ConnectionId { get; init; } = string.Empty;
-    public string Provider { get; init; } = string.Empty;
-    public string Name { get; init; } = string.Empty;
-    public bool IsActive { get; init; }
-    public bool QuotaSupported { get; init; }
-    public System.Text.Json.JsonElement? Usage { get; init; }
-    public string? Error { get; init; }
-}
-
 public sealed class NodeAdminException : Exception
 {
     public NodeAdminException(

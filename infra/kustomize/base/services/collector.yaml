@@ -35,10 +35,9 @@ spec:
               value: "http://seq:5341"
             - name: Seq__ServiceName
               value: "collector"
-            - name: GrpcServices__Billing
-              value: "http://billing-service:8080"
             - name: GrpcServices__ControlPlane
               value: "http://control-plane:8080"
+
           readinessProbe:
             httpGet:
               path: /health

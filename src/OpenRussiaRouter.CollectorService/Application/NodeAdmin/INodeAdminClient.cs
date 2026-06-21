@@ -10,7 +10,4 @@ public interface INodeAdminClient
 
     Task<NodeModelsResponse> ListModelsAsync(
         Uri endpoint, string controlToken, CancellationToken cancellationToken);
-
-    Task<NodeProviderQuotaResponse> GetProviderQuotaAsync(
-        Uri endpoint, string controlToken, bool includeInactive, CancellationToken cancellationToken);
 }

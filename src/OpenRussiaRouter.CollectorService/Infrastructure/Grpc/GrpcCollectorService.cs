@@ -1,14 +1,12 @@
 using Grpc.Core;
 using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.OpenRouter;
-using OpenRussiaRouter.CollectorService.Application.Quota;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 
 namespace OpenRussiaRouter.CollectorService.Infrastructure.Grpc;
 
 public sealed class GrpcCollectorService(
     CollectorSnapshotStore store,
-    QuotaSnapshotStore quotaStore,
     OpenRouterCatalogStore openRouterStore)
     : Collector.CollectorBase
 {
@@ -80,27 +78,6 @@ public sealed class GrpcCollectorService(
 
         var response = new GetNodeModelsResponse();
         response.PublicIds.AddRange(models);
-        return Task.FromResult(response);
-    }
-
-    public override Task<GetProviderQuotaResponse> GetProviderQuota(
-        GetProviderQuotaRequest request, ServerCallContext context)
-    {
-        var snapshot = quotaStore.Current;
-        var response = new GetProviderQuotaResponse
-        {
-            CollectedAtUtc = snapshot.CollectedAtUtc?.ToString("O") ?? string.Empty
-        };
-        foreach (var m in snapshot.Measurements)
-        {
-            response.Measurements.Add(new ProviderQuotaMeasurement
-            {
-                NodeId = m.NodeId,
-                Provider = m.Provider,
-                ConnectionId = m.ConnectionId,
-                Remaining = m.Remaining
-            });
-        }
         return Task.FromResult(response);
     }
 

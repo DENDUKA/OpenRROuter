@@ -1,25 +1,5 @@
 ---
-layout: home
-
-hero:
-  name: "OpenRussiaRouter Docs"
-  text: "Единый API для LLM"
-  tagline: "OpenAI-совместимый шлюз с балансом в USD. Один ключ, один формат запросов."
-  actions:
-    - theme: brand
-      text: Быстрый старт
-      link: /
-    - theme: alt
-      text: Справочник API
-      link: /api/reference
-
-features:
-  - title: Совместимость с OpenAI
-    details: Используйте привычные библиотеки. Формат запросов полностью совместим с OpenAI Chat Completions API.
-  - title: Единый баланс
-    details: Пополняйте баланс в одном месте и используйте любые доступные модели от разных провайдеров.
-  - title: Маршрутизация
-    details: Автоматический выбор оптимальной ноды 9Router для обеспечения высокой доступности и минимальной задержки.
+layout: doc
 ---
 
 # Быстрый старт

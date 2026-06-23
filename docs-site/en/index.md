@@ -1,25 +1,5 @@
 ---
-layout: home
-
-hero:
-  name: "OpenRussiaRouter Docs"
-  text: "Unified API for LLMs"
-  tagline: "OpenAI-compatible gateway with a single USD balance. One key, one format."
-  actions:
-    - theme: brand
-      text: Quick Start
-      link: /en/
-    - theme: alt
-      text: API Reference
-      link: /en/api/reference
-
-features:
-  - title: OpenAI Compatible
-    details: Use familiar libraries. Request format is fully compatible with OpenAI Chat Completions API.
-  - title: Unified Balance
-    details: Top up your balance in one place and use any available models from different providers.
-  - title: Smart Routing
-    details: Automatic selection of the optimal 9Router node for high availability and minimal latency.
+layout: doc
 ---
 
 # Quick Start

@@ -490,8 +490,8 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "avg by (account_name) (orr_provider_quota_percent{provider=\"gemini\", quota_name=\"session\"})",
-          "legendFormat": "{{account_name}}",
+          "expr": "avg by (account_name, quota_name) (orr_provider_quota_percent{provider=\"gemini-cli\"})",
+          "legendFormat": "{{account_name}} — {{quota_name}}",
           "refId": "A"
         }
       ],

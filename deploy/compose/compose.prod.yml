@@ -182,6 +182,10 @@ services:
       # domain even on an image built before the appsettings default was updated (no rebuild).
       # openrussiarouter.com MUST be SPF/DKIM-authenticated in Brevo before this sends mail.
       Email__SenderAddress: "noreply@openrussiarouter.com"
+      # This host blocks ALL outbound SMTP ports (25/465/587/2525), so prod sends via Brevo's
+      # HTTP API over 443. BREVO_API_KEY (xkeysib-…) is a secret from /opt/orr/.env.
+      Email__Transport: "${EMAIL_TRANSPORT:-smtp}"
+      Email__BrevoApiKey: "${BREVO_API_KEY:-}"
       # Behind Caddy (TLS termination): trust X-Forwarded-Proto so ASP.NET knows the
       # original request arrived over HTTPS (correct scheme in links, Secure cookies).
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"

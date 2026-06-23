@@ -69,7 +69,7 @@ public class ForgotPasswordModel : PageModelBase
             return Page();
         }
 
-        TempData["StatusMessage"] = _localizer["Auth_PasswordResetSent", Input.Email];
+        TempData["StatusMessage"] = _localizer["Auth_PasswordResetSent", Input.Email].Value;
         return RedirectToPage("/ResetPassword", new { email = Input.Email });
     }
 

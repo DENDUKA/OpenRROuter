@@ -60,7 +60,7 @@ public class SignupModel : PageModelBase
                 _logger.LogWarning(ex, "Failed to enqueue verification email. Email={Email}", result.Email);
             }
 
-            TempData["StatusMessage"] = _localizer["Auth_VerificationCodeSent", result.Email];
+            TempData["StatusMessage"] = _localizer["Auth_VerificationCodeSent", result.Email].Value;
             return RedirectToPage("/VerifyEmail", new { email = result.Email });
         }
         catch (AuthException ex)

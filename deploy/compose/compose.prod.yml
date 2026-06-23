@@ -175,9 +175,13 @@ services:
       ServiceAuth__BillingToken: "${S2S_WEBAPP_TOKEN}"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
-      # config (host/port/sender noreply@web-point.top) ships in appsettings.json.
+      # config (host/port) ships in appsettings.json.
       Email__SmtpUsername: "${EMAIL_SMTP_USERNAME}"
       Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD}"
+      # Branded prod sender. Overrides appsettings so the box sends from the service's own
+      # domain even on an image built before the appsettings default was updated (no rebuild).
+      # openrussiarouter.com MUST be SPF/DKIM-authenticated in Brevo before this sends mail.
+      Email__SenderAddress: "noreply@openrussiarouter.com"
       # Behind Caddy (TLS termination): trust X-Forwarded-Proto so ASP.NET knows the
       # original request arrived over HTTPS (correct scheme in links, Secure cookies).
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"

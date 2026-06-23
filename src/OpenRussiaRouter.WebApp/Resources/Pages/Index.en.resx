@@ -90,7 +90,7 @@
     <value>Data security</value>
   </data>
   <data name="Home_ProofApiKeys_Desc" xml:space="preserve">
-    <value>Set a budget and auto-reset period for each API key. Split limits between services and environments without manual control.</value>
+    <value>Set a budget and auto-reset period for each API key. Configure daily and weekly token limits.</value>
   </data>
   <data name="Home_ProofApiKeys_Title" xml:space="preserve">
     <value>Flexible API key management</value>

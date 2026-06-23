@@ -4,6 +4,7 @@ metadata:
   name: docs-site-ingress
   namespace: orr-dev
 spec:
+  ingressClassName: nginx
   rules:
     - host: docs.localhost
       http:

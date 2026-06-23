@@ -9,6 +9,7 @@ resources:
   - api-gateway.yaml
   - webapp.yaml
   - docs-site.yaml
+  - docs-site-network-policy.yaml
   - ingress.yaml
   - f9router.yaml
   - f9router-2.yaml

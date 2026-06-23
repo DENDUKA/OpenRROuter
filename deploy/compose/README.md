@@ -2,8 +2,23 @@
 
 Runs the full stack — ApiGateway, AuthService, BillingService, ControlPlane,
 CollectorService, WebApp, Postgres, Seq, and the f9router node (`Inc64/F9Router`
-fork) — on one host via Docker Compose. This is the **dev** topology; production
-uses the k8s/Kustomize/ArgoCD setup under `infra/`.
+fork) — on one host via Docker Compose. `compose.yml` is the **dev** single-host
+topology. There is also a k8s/Kustomize/ArgoCD setup under `infra/`.
+
+## Production variant (`compose.prod.yml`)
+
+The prod box (`201.51.6.246`) runs an **ORR-only** stack (no f9router — 9R lives
+elsewhere) fronted by **Caddy** with automatic Let's Encrypt TLS. It is driven by:
+
+- `compose.prod.yml` — same services minus f9router, plus a `caddy` reverse proxy and
+  the WebApp `Payments__*` env (Rollypay) — copied to `/opt/orr/compose.yml` on deploy.
+- `Caddyfile` — TLS + reverse proxy to `webapp:8080` (cabinet, admin, payment webhook).
+- `deploy-prod.sh` — full deploy (sync compose+Caddyfile from git, build, up incl. caddy).
+- `update-prod.sh` — routine update (pull → re-sync → rebuild → restart → rollback on fail).
+
+Both scripts re-sync the tracked `compose.prod.yml`/`Caddyfile` every run, so the box
+never hand-diverges from git. `.env` needs `ORR_PUBLIC_DOMAIN`, `ACME_EMAIL`, and (for
+live payments) `ROLLYPAY_*` + `PAYMENTS_ACTIVE_PROVIDER` — see `.env.example`.
 
 ## Layout on the server (`/opt/orr/`)
 

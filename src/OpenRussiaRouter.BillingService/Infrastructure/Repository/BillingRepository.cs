@@ -566,7 +566,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         }
     }
 
-    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
+    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
         DateTimeOffset? fromUtc = null,
@@ -575,15 +575,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
+        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-            return (Array.Empty<ActivityByTokenRecord>(), false);
+            return (Array.Empty<ActivityByTokenRecord>(), false, 0);
 
         using var connection = connectionFactory.CreateConnection();
         var parameters = new DynamicParameters();
         parameters.Add("ApiKeyIds", apiKeyIds.ToArray());
         parameters.Add("Limit", limit + 1);
+        parameters.Add("Offset", offset);
 
         var conditions = new List<string> { "a.api_key_id = any(@ApiKeyIds)" };
 
@@ -603,10 +605,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             parameters.Add("AfterCreatedAtUtc", afterCreatedAtUtc.Value);
         }
 
+        var whereClause = "where " + string.Join(" and ", conditions);
+
+        var countSql = $"select count(*) from activity_by_token a {whereClause}";
+        var totalCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: ct));
+
         var items = (await connection.QueryAsync<ActivityByTokenEntity>(new CommandDefinition(
                 ActivityByTokenSelectSql +
-                "where " + string.Join(" and ", conditions) + "\n" +
-                "order by a.created_at_utc desc, a.request_id desc\nlimit @Limit;",
+                whereClause + "\n" +
+                "order by a.created_at_utc desc, a.request_id desc\n" +
+                "offset @Offset limit @Limit;",
                 parameters,
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
@@ -614,7 +622,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
         var hasMore = items.Length > limit;
         if (hasMore) items = items.Take(limit).ToArray();
-        return (items, hasMore);
+        return (items, hasMore, totalCount);
     }
 
     public async Task<ActivitySummary> GetActivitySummaryAsync(

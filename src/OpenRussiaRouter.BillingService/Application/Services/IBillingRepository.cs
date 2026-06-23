@@ -42,7 +42,7 @@ public interface IBillingRepository
 
     Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default);
 
-    Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
+    Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
         DateTimeOffset? fromUtc = null,
@@ -51,6 +51,7 @@ public interface IBillingRepository
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
+        int offset = 0,
         CancellationToken ct = default);
 
     Task<ActivitySummary> GetActivitySummaryAsync(

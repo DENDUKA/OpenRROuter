@@ -460,7 +460,7 @@ public sealed class GrpcBillingService(
         ServerCallContext context)
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
-        var (items, hasMore) = await billing.ListActivityByTokenAsync(
+        var (items, hasMore, totalCount) = await billing.ListActivityByTokenAsync(
             request.ApiKeyIds.ToArray(),
             fromUtc: ParseOptionalTimestamp(request.FromUtc),
             toUtc: ParseOptionalTimestamp(request.ToUtc),
@@ -468,9 +468,10 @@ public sealed class GrpcBillingService(
             apiKeyIdFilter: string.IsNullOrEmpty(request.ApiKeyIdFilter) ? null : request.ApiKeyIdFilter,
             afterCursor: string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
             pageSize: request.PageSize > 0 ? request.PageSize : null,
+            offset: request.Offset > 0 ? request.Offset : 0,
             ct: ct).ConfigureAwait(false);
 
-        var response = new ListActivityByTokenResponse { HasMore = hasMore };
+        var response = new ListActivityByTokenResponse { HasMore = hasMore, TotalCount = totalCount };
         if (hasMore && items.Count > 0)
         {
             var last = items.Last();

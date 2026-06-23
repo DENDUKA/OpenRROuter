@@ -5,6 +5,7 @@ resources:
 - ../../../base/services
 - webapp-localhost-ingress.yaml
 - api-gateway-localhost-ingress.yaml
+- docs-site-localhost-ingress.yaml
 - f9router-localhost-ingress.yaml
 - f9router-2-localhost-ingress.yaml
 - mock-llm-node.yaml
@@ -33,6 +34,8 @@ images:
 - name: ghcr.io/denduka/collector
   newTag: dev-latest
 - name: ghcr.io/denduka/webapp
+  newTag: dev-latest
+- name: ghcr.io/denduka/docs-site
   newTag: dev-latest
 - name: ghcr.io/inc64/f9router
   newTag: dev-latest

@@ -1,0 +1,23 @@
+:root {
+  --vp-c-brand-1: #646cff;
+  --vp-c-brand-2: #747bff;
+  --vp-c-brand-3: #848bff;
+}
+
+.dark {
+  --vp-c-bg: #0a0a0a;
+  --vp-c-bg-soft: #111113;
+  --vp-c-bg-mute: #17181a;
+  
+  --vp-c-border: #26272b;
+  --vp-c-border-hard: #3f4045;
+  
+  --vp-c-text-1: #f5f5f5;
+  --vp-c-text-2: #a1a1aa;
+  --vp-c-text-3: #71717a;
+}
+
+/* Скрываем переключатель темы, делая ее всегда темной */
+.VPSwitchAppearance {
+  display: none !important;
+}

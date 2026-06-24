@@ -29,6 +29,9 @@
       </xsd:complexType>
     </xsd:element>
   </xsd:schema>
+  <data name="Verify_CheckSpam" xml:space="preserve">
+    <value>Письмо не пришло? Проверьте папку «Спам».</value>
+  </data>
   <data name="Verify_Code" xml:space="preserve">
     <value>Код подтверждения</value>
   </data>

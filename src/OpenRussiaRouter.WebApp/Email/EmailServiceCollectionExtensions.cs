@@ -17,7 +17,22 @@ public static class EmailServiceCollectionExtensions
         services.AddSingleton<IEmailDispatchQueue>(sp => sp.GetRequiredService<EmailDispatchQueue>());
         services.AddHostedService<EmailDispatchWorker>();
 
-        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        // Transport: "brevoApi" sends via Brevo's HTTP API (HTTPS/443) for hosts that block
+        // outbound SMTP; anything else (default) uses MailKit SMTP.
+        if (string.Equals(config["Email:Transport"], "brevoApi", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHttpClient(BrevoApiEmailSender.HttpClientName, c =>
+            {
+                c.BaseAddress = new Uri("https://api.brevo.com/");
+                c.Timeout = TimeSpan.FromSeconds(30);
+            });
+            services.AddScoped<IEmailSender, BrevoApiEmailSender>();
+        }
+        else
+        {
+            services.AddScoped<IEmailSender, SmtpEmailSender>();
+        }
+
         services.AddScoped<EmailBroadcastService>();
 
         return services;

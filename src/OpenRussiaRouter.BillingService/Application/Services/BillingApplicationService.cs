@@ -337,7 +337,7 @@ public sealed partial class BillingApplicationService(
         return await repository.ListUsageAsync(paginationOptions.Value.EffectivePageSize, afterCreatedAtUtc, afterRequestId, userId, ct).ConfigureAwait(false);
     }
 
-    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
+    public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
@@ -345,16 +345,17 @@ public sealed partial class BillingApplicationService(
         string? apiKeyIdFilter = null,
         string? afterCursor = null,
         int? pageSize = null,
+        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
-            return (Array.Empty<ActivityByTokenRecord>(), false);
+            return (Array.Empty<ActivityByTokenRecord>(), false, 0);
 
         var limit = pageSize ?? paginationOptions.Value.EffectivePageSize;
         ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterRequestId);
 
         return await repository.ListActivityByTokenAsync(
-            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, ct).ConfigureAwait(false);
+            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, offset, ct).ConfigureAwait(false);
     }
 
     public async Task<ActivitySummary> GetActivitySummaryAsync(

@@ -1,4 +1,6 @@
 # Shell scripts must stay LF — they run on the Linux VPS.
 *.sh text eol=lf
 compose.yml text eol=lf
+compose.prod.yml text eol=lf
+Caddyfile text eol=lf
 .env.example text eol=lf

@@ -65,7 +65,7 @@ public class ResetPasswordModel : PageModelBase
         {
             await _authClient.ResetPasswordAsync(Email, Code, NewPassword);
 
-            TempData["StatusMessage"] = _localizer["Auth_PasswordResetOk"];
+            TempData["StatusMessage"] = _localizer["Auth_PasswordResetOk"].Value;
             return RedirectToPage("/Login");
         }
         catch (AuthException ex)

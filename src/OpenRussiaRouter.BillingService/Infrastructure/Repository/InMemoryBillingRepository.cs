@@ -205,7 +205,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         return Task.CompletedTask;
     }
 
-    public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore)> ListActivityByTokenAsync(
+    public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         int limit,
         DateTimeOffset? fromUtc = null,
@@ -214,18 +214,20 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
+        int offset = 0,
         CancellationToken ct = default)
     {
+        if (apiKeyIds.Count == 0)
+            return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)Array.Empty<ActivityByTokenRecord>(), false, 0));
+
         var keySet = new HashSet<string>(apiKeyIds);
 
         var query = _activityByRequestId.Values.Where(a => keySet.Contains(a.ApiKeyId));
 
         if (fromUtc.HasValue) query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
         if (toUtc.HasValue) query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
-        if (modelIdFilter != null) query = query.Where(a => a.ModelId == modelIdFilter);
-        if (apiKeyIdFilter != null) query = query.Where(a => a.ApiKeyId == apiKeyIdFilter);
-
-        query = query.OrderByDescending(a => a.CreatedAtUtc).ThenByDescending(a => a.RequestId);
+        if (!string.IsNullOrEmpty(modelIdFilter)) query = query.Where(a => a.ModelId == modelIdFilter);
+        if (!string.IsNullOrEmpty(apiKeyIdFilter)) query = query.Where(a => a.ApiKeyId == apiKeyIdFilter);
 
         if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterRequestId))
         {
@@ -236,10 +238,18 @@ public sealed class InMemoryBillingRepository : IBillingRepository
             query = query.Where(a => a.CreatedAtUtc < afterCreatedAtUtc.Value);
         }
 
-        var items = query.Take(limit + 1).ToList();
+        // Match the PG impl: TotalCount counts all rows passing the same filters (cursor included),
+        // then offset/limit page the ordered result.
+        var ordered = query
+            .OrderByDescending(a => a.CreatedAtUtc)
+            .ThenByDescending(a => a.RequestId)
+            .ToList();
+        var totalCount = ordered.Count;
+
+        var items = ordered.Skip(offset).Take(limit + 1).ToList();
         var hasMore = items.Count > limit;
         if (hasMore) items = items.Take(limit).ToList();
-        return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore));
+        return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore, totalCount));
     }
 
     public Task<ActivitySummary> GetActivitySummaryAsync(

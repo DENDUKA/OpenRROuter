@@ -29,6 +29,9 @@
       </xsd:complexType>
     </xsd:element>
   </xsd:schema>
+  <data name="Verify_CheckSpam" xml:space="preserve">
+    <value>Didn't get the email? Check your spam folder.</value>
+  </data>
   <data name="Verify_Code" xml:space="preserve">
     <value>Verification code</value>
   </data>

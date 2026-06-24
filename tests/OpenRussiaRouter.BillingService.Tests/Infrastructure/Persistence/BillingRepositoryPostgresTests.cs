@@ -303,7 +303,7 @@ public sealed class BillingRepositoryPostgresTests
         savedUsage.Should().NotBeNull();
         savedUsage!.Cost.Amount.Should().Be(0.001m);
 
-        var (activities, _) = await repository.ListActivityByTokenAsync(["key-1"], 10);
+        var (activities, _, _) = await repository.ListActivityByTokenAsync(["key-1"], 10);
         activities.Should().ContainSingle().Which.RequestId.Should().Be("tx-req-1");
 
         var balance = await repository.GetBalanceAsync("user-1");

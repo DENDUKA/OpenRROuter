@@ -75,7 +75,7 @@ public class LoginModel : PageModelBase
             {
                 // Account exists but the email was never confirmed — send them to the
                 // verify page (where they can enter or resend the code).
-                TempData["StatusMessage"] = _localizer["Auth_EmailNotVerified"];
+                TempData["StatusMessage"] = _localizer["Auth_EmailNotVerified"].Value;
                 return RedirectToPage("/VerifyEmail", new { email = Input.Email });
             }
 

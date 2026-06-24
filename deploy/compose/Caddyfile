@@ -1,0 +1,32 @@
+# Caddyfile — reverse proxy + automatic HTTPS for the ORR prod box (201.51.6.246).
+# deploy-prod.sh / update-prod.sh copy this to /opt/orr/Caddyfile next to compose.yml.
+# Domain + ACME email come from /opt/orr/.env (see .env.example) via the caddy service:
+#
+#   ORR_PUBLIC_DOMAIN   apex domain, A record → 201.51.6.246
+#   ACME_EMAIL          Let's Encrypt account email (expiry notices)
+#
+# Caddy obtains + renews Let's Encrypt certs automatically; they persist in the caddy_data
+# volume. Ports 80 and 443 must be reachable (Docker publishes them, bypassing ufw), and the
+# domain MUST resolve to this box BEFORE first start (ACME HTTP-01 challenge needs both).
+{
+	email {$ACME_EMAIL:nusferatus64@gmail.com}
+}
+
+# User cabinet + admin + payment webhook (POST /webhook/rollypay).
+{$ORR_PUBLIC_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy webapp:8080
+}
+
+# Typo-guard alt domain → 301 to the canonical domain (path + query preserved).
+# Caddy auto-provisions a Let's Encrypt cert for these names too.
+openrussianrouter.com, www.openrussianrouter.com {
+	redir https://openrussiarouter.com{uri} permanent
+}
+
+# Optional: OpenAI-compatible LLM API on a subdomain. Uncomment ONLY AFTER adding an
+# A record  api.<domain> → 201.51.6.246 — otherwise Caddy fail-loops on cert issuance for it.
+# api.{$ORR_PUBLIC_DOMAIN} {
+# 	encode zstd gzip
+# 	reverse_proxy api-gateway:8080
+# }

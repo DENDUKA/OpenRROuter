@@ -1589,6 +1589,7 @@ open http://localhost:5341
 | CollectorService | Периодический опрос нод, capability snapshot, OpenRouter catalog |
 | E2E Tests | Playwright: API key lifecycle, node lifecycle, model sync |
 | Infra | Docker Compose, Kubernetes/Kustomize/ArgoCD, Image Updater |
+| Docs | Пользовательская документация на базе VitePress (RU/EN) развернута локально (`docs.localhost`) |
 
 ### Не реализовано / заглушки
 

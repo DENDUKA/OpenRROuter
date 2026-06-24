@@ -17,12 +17,10 @@ Cost calculation formula:
 
 ## Topping Up Balance
 
-You can top up your balance via the dashboard. We use Rollypay to process payments.
-Conversion to USD happens at the current exchange rate at the time of crediting.
+You can top up your balance via the dashboard. Conversion to USD happens at the current exchange rate at the time of crediting.
 
 In the dashboard, you can choose a convenient Display Currency, for example, rubles (RUB) or euros (EUR) — the recalculation happens automatically using current exchange rates.
 
 ## Zero Balance Errors
 
 If your balance drops below zero, the API will start returning an `insufficient_balance` error (HTTP 402 / 400).
-*Exception:* If you are using a completely free model (price of all tokens = $0.00), requests will go through even with a negative balance.

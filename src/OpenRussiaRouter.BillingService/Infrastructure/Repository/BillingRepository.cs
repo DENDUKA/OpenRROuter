@@ -607,7 +607,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
         var whereClause = "where " + string.Join(" and ", conditions);
 
-        var countSql = $"select count(*) from activity_by_token a {whereClause}";
+        var countSql = $"select count(*) from billing.activity_by_token a {whereClause}";
         var totalCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(countSql, parameters, cancellationToken: ct));
 
         var items = (await connection.QueryAsync<ActivityByTokenEntity>(new CommandDefinition(

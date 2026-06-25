@@ -15,7 +15,13 @@ public static class TokenUsageExtractor
         try
         {
             using var document = JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("usage", out var usageElement))
+            // A chunk may carry `"usage": null` (e.g. MiniMax-M3 per-delta chunks).
+            // TryGetProperty then returns true with a Null-kind element, and calling
+            // TryGetProperty on that element throws InvalidOperationException — which is
+            // NOT a JsonException, so it escapes the catch below and bubbles up as a 500.
+            // Require an actual object before reading usage fields.
+            if (!document.RootElement.TryGetProperty("usage", out var usageElement) ||
+                usageElement.ValueKind != JsonValueKind.Object)
             {
                 return false;
             }

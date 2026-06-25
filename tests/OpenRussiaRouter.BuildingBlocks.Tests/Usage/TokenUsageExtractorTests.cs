@@ -188,4 +188,42 @@ public sealed class TokenUsageExtractorTests
         usage.InputTokens.Should().Be(10);
         usage.OutputTokens.Should().Be(5);
     }
+
+    [Fact]
+    public void TryExtractJson_UsageExplicitlyNull_ReturnsFalse()
+    {
+        // MiniMax-M3 per-delta chunks carry "usage":null. TryGetProperty returns true with a
+        // Null-kind element; reading fields off it threw InvalidOperationException (which
+        // escaped the JsonException catch) → api-gateway 500. Must be treated as "no usage".
+        var json = """{"choices":[{"delta":{"content":"hi"}}],"usage":null}""";
+
+        var result = TokenUsageExtractor.TryExtractJson(json, out var usage);
+
+        result.Should().BeFalse();
+        usage.Should().Be(default(TokenUsage));
+    }
+
+    [Fact]
+    public void TryExtractStreamingSse_MiniMaxM3NullUsageChunks_DoesNotThrowAndPicksFinalUsage()
+    {
+        // Real MiniMax-M3 shape: content chunks carry "usage":null, the final chunk carries
+        // real usage (with _orr_raw). Must not throw on the null chunks and must extract the
+        // final usage. Regression for the api-gateway 500 (RouterStreamSession.CopyToAsync).
+        var body = """
+            data: {"choices":[{"index":0,"delta":{"content":"<think>","role":"assistant","reasoning":"x"}}],"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null}
+
+            data: {"choices":[{"index":0,"delta":{"content":"Red, blue, green"}}],"usage":null}
+
+            data: {"choices":[{"finish_reason":"stop","index":0,"delta":{"content":""}}],"usage":{"prompt_tokens":2030,"completion_tokens":45,"_orr_raw":{"prompt_tokens":30,"completion_tokens":45}}}
+
+            data: [DONE]
+
+            """;
+
+        var result = TokenUsageExtractor.TryExtractStreamingSse(body, out var usage);
+
+        result.Should().BeTrue();
+        usage.InputTokens.Should().Be(30);
+        usage.OutputTokens.Should().Be(45);
+    }
 }

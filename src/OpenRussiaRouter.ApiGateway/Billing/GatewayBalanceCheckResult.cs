@@ -10,5 +10,6 @@ public sealed record GatewayBalanceCheckResult(
     MoneyAmount Balance,
     string? ErrorCode,
     bool SupportsReasoning = false,
-    IReadOnlyList<string>? AllowedReasoningEfforts = null);
+    IReadOnlyList<string>? AllowedReasoningEfforts = null,
+    string? DefaultReasoningEffort = null);
 

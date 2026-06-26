@@ -119,7 +119,8 @@ public sealed partial class BillingApplicationService(
                 balance,
                 ErrorCodes.InsufficientBalance,
                 model.SupportsReasoning,
-                model.AllowedReasoningEfforts);
+                model.AllowedReasoningEfforts,
+                model.DefaultReasoningEffort);
 
         if (!isFreeModel && !string.IsNullOrWhiteSpace(apiKeyId))
         {
@@ -140,7 +141,8 @@ public sealed partial class BillingApplicationService(
                     balance,
                     ErrorCodes.ApiKeyLimitExceeded,
                     model.SupportsReasoning,
-                    model.AllowedReasoningEfforts);
+                    model.AllowedReasoningEfforts,
+                    model.DefaultReasoningEffort);
             }
         }
 
@@ -152,7 +154,8 @@ public sealed partial class BillingApplicationService(
             balance,
             null,
             model.SupportsReasoning,
-            model.AllowedReasoningEfforts);
+            model.AllowedReasoningEfforts,
+            model.DefaultReasoningEffort);
     }
 
     public async Task<IReadOnlyCollection<PublicModel>> ListPublicModelsAsync(CancellationToken ct = default)
@@ -165,7 +168,8 @@ public sealed partial class BillingApplicationService(
                 model.DisplayName,
                 model.Enabled,
                 model.SupportsReasoning,
-                model.AllowedReasoningEfforts))
+                model.AllowedReasoningEfforts,
+                model.DefaultReasoningEffort))
             .ToArray();
     }
 

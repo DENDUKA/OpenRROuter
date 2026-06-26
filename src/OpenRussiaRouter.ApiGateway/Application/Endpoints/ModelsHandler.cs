@@ -57,7 +57,8 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
                             ? new Dictionary<string, object?>
                             {
                                 ["supported"] = true,
-                                ["efforts"] = m.AllowedReasoningEfforts ?? []
+                                ["efforts"] = m.AllowedReasoningEfforts ?? [],
+                                ["default"] = m.DefaultReasoningEffort
                             }
                             : new Dictionary<string, object?>
                             {

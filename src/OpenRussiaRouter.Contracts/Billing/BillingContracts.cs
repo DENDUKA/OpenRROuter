@@ -11,14 +11,16 @@ public sealed record BalanceCheckResult(
     MoneyAmount CurrentBalance,
     string? ErrorCode,
     bool SupportsReasoning = false,
-    IReadOnlyList<string>? AllowedReasoningEfforts = null);
+    IReadOnlyList<string>? AllowedReasoningEfforts = null,
+    string? DefaultReasoningEffort = null);
 
 public sealed record PublicModel(
     string Id,
     string DisplayName,
     bool Enabled,
     bool SupportsReasoning = false,
-    IReadOnlyList<string>? AllowedReasoningEfforts = null);
+    IReadOnlyList<string>? AllowedReasoningEfforts = null,
+    string? DefaultReasoningEffort = null);
 
 public sealed record UsageEvent(
     string RequestId,

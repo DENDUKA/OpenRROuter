@@ -4,5 +4,6 @@ public sealed record GatewayPublicModel(
     string Id,
     string DisplayName,
     bool SupportsReasoning = false,
-    IReadOnlyList<string>? AllowedReasoningEfforts = null);
+    IReadOnlyList<string>? AllowedReasoningEfforts = null,
+    string? DefaultReasoningEffort = null);
 

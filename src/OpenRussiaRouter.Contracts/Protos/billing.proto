@@ -72,6 +72,7 @@ message CheckBalanceAndModelResponse {
   string router_model_id = 6;
   bool supports_reasoning = 7;
   repeated string allowed_reasoning_efforts = 8;
+  string default_reasoning_effort = 9;
 }
 
 message TokenUsage {
@@ -170,6 +171,7 @@ message PublicModel {
   string output_modalities = 15;
   string model_type = 16;
   int32 priority = 17;
+  string default_reasoning_effort = 18;
 }
 
 message ListPublicModelsResponse {

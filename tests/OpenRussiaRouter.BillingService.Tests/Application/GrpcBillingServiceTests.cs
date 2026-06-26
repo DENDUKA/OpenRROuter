@@ -303,7 +303,11 @@ public sealed class GrpcBillingServiceTests
         upsert.Upserted.Should().BeTrue();
         balance.SupportsReasoning.Should().BeTrue();
         balance.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
-        publicModels.Models.Should().ContainSingle().Which.SupportsReasoning.Should().BeTrue();
+        balance.DefaultReasoningEffort.Should().Be("medium");
+        var publicModel = publicModels.Models.Should().ContainSingle().Subject;
+        publicModel.SupportsReasoning.Should().BeTrue();
+        publicModel.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
+        publicModel.DefaultReasoningEffort.Should().Be("medium");
         models.Models.Should().ContainSingle().Which.DefaultReasoningEffort.Should().Be("medium");
     }
 

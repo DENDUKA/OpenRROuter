@@ -1,0 +1,80 @@
+name: 🚀 Deploy to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Какой сервис деплоить?"
+        required: true
+        type: choice
+        options:
+          - f9router
+          - api-gateway
+          - auth-service
+          - billing-service
+          - control-plane
+          - collector
+          - webapp
+          - all-orr
+
+# Two concurrent prod deploys must not race: serialize them.
+concurrency:
+  group: prod-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production     # ← triggers required reviewer approval
+    timeout-minutes: 15
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          port: 22
+          command_timeout: 12m
+          script: |
+            set -euo pipefail
+            cd /opt/orr
+            SERVICE="${{ inputs.service }}"
+            echo "==> Deploying: $SERVICE"
+            case "$SERVICE" in
+              f9router)  ./update-9router.sh ;;
+              all-orr)   ./update-orr.sh ;;
+              *)         ./update-orr.sh "$SERVICE" ;;
+            esac
+
+      - name: Post-deploy health check
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          port: 22
+          command_timeout: 2m
+          script: |
+            set -euo pipefail
+            SERVICE="${{ inputs.service }}"
+            case "$SERVICE" in
+              f9router)        URL="http://127.0.0.1:20128/api/health" ;;
+              api-gateway)     URL="http://127.0.0.1:8080/health" ;;
+              auth-service)    URL="http://127.0.0.1:5001/health" ;;
+              billing-service) URL="http://127.0.0.1:5002/health" ;;
+              control-plane)   URL="http://127.0.0.1:5003/health" ;;
+              collector)       URL="http://127.0.0.1:5006/health" ;;
+              webapp)          URL="http://127.0.0.1:3000/login" ;;
+              all-orr)         URL="http://127.0.0.1:8080/health" ;;
+            esac
+            echo "==> health: $SERVICE -> $URL"
+            for i in $(seq 1 12); do
+              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$URL" || echo 000)
+              echo "   attempt $i: HTTP $code"
+              [ "$code" = "200" ] && exit 0
+              sleep 5
+            done
+            echo "!! health check FAILED for $SERVICE at $URL"
+            docker compose ps
+            exit 1

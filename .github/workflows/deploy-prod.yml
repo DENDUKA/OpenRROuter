@@ -3,19 +3,38 @@ name: 🚀 Deploy to production
 on:
   workflow_dispatch:
     inputs:
-      service:
-        description: "Какой сервис деплоить?"
-        required: true
-        type: choice
-        options:
-          - f9router
-          - api-gateway
-          - auth-service
-          - billing-service
-          - control-plane
-          - collector
-          - webapp
-          - all-orr
+      f9router:
+        description: "F9Router (Node.js, нода 9router) — порт 20128"
+        type: boolean
+        default: false
+      api-gateway:
+        description: "ApiGateway (.NET) — public HTTP entry, порт 8080"
+        type: boolean
+        default: false
+      auth-service:
+        description: "AuthService (.NET gRPC) — юзеры, сессии, API keys"
+        type: boolean
+        default: false
+      billing-service:
+        description: "BillingService (.NET gRPC) — баланс, каталог моделей"
+        type: boolean
+        default: false
+      control-plane:
+        description: "ControlPlane (.NET gRPC) — реестр нод, health, leases"
+        type: boolean
+        default: false
+      collector:
+        description: "CollectorService (.NET) — poller нод/OpenRouter"
+        type: boolean
+        default: false
+      webapp:
+        description: "WebApp (Razor cabinet + admin) — порт 3000"
+        type: boolean
+        default: false
+      all-orr:
+        description: "⚠️ ALL .NET services (overrides individual picks above)"
+        type: boolean
+        default: false
 
 # Two concurrent prod deploys must not race: serialize them.
 concurrency:
@@ -25,55 +44,92 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          PICK_F9ROUTER:    ${{ inputs.f9router }}
+          PICK_API_GATEWAY: ${{ inputs.api-gateway }}
+          PICK_AUTH:        ${{ inputs.auth-service }}
+          PICK_BILLING:     ${{ inputs.billing-service }}
+          PICK_CONTROL:     ${{ inputs.control-plane }}
+          PICK_COLLECTOR:   ${{ inputs.collector }}
+          PICK_WEBAPP:      ${{ inputs.webapp }}
+          PICK_ALL_ORR:     ${{ inputs.all-orr }}
         with:
           host: ${{ secrets.PROD_SSH_HOST }}
           username: ${{ secrets.PROD_SSH_USER }}
           password: ${{ secrets.PROD_SSH_PASSWORD }}
           port: 22
-          command_timeout: 12m
+          envs: PICK_F9ROUTER,PICK_API_GATEWAY,PICK_AUTH,PICK_BILLING,PICK_CONTROL,PICK_COLLECTOR,PICK_WEBAPP,PICK_ALL_ORR
+          command_timeout: 25m
           script: |
-            set -euo pipefail
+            set -uo pipefail
             cd /opt/orr
-            SERVICE="${{ inputs.service }}"
-            echo "==> Deploying: $SERVICE"
-            case "$SERVICE" in
-              f9router)  ./update-9router.sh ;;
-              all-orr)   ./update-orr.sh ;;
-              *)         ./update-orr.sh "$SERVICE" ;;
-            esac
 
-      - name: Post-deploy health check
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.PROD_SSH_HOST }}
-          username: ${{ secrets.PROD_SSH_USER }}
-          password: ${{ secrets.PROD_SSH_PASSWORD }}
-          port: 22
-          command_timeout: 2m
-          script: |
-            set -euo pipefail
-            SERVICE="${{ inputs.service }}"
-            case "$SERVICE" in
-              f9router)        URL="http://127.0.0.1:20128/api/health" ;;
-              api-gateway)     URL="http://127.0.0.1:8080/health" ;;
-              auth-service)    URL="http://127.0.0.1:5001/health" ;;
-              billing-service) URL="http://127.0.0.1:5002/health" ;;
-              control-plane)   URL="http://127.0.0.1:5003/health" ;;
-              collector)       URL="http://127.0.0.1:5006/health" ;;
-              webapp)          URL="http://127.0.0.1:3000/login" ;;
-              all-orr)         URL="http://127.0.0.1:8080/health" ;;
-            esac
-            echo "==> health: $SERVICE -> $URL"
-            for i in $(seq 1 12); do
-              code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$URL" || echo 000)
-              echo "   attempt $i: HTTP $code"
-              [ "$code" = "200" ] && exit 0
-              sleep 5
+            # Build the ordered list of services to deploy.
+            TO_DEPLOY=()
+            [ "$PICK_F9ROUTER" = "true" ]    && TO_DEPLOY+=("f9router")
+            if [ "$PICK_ALL_ORR" = "true" ]; then
+              TO_DEPLOY+=("all-orr")
+            else
+              [ "$PICK_API_GATEWAY" = "true" ] && TO_DEPLOY+=("api-gateway")
+              [ "$PICK_AUTH" = "true" ]        && TO_DEPLOY+=("auth-service")
+              [ "$PICK_BILLING" = "true" ]     && TO_DEPLOY+=("billing-service")
+              [ "$PICK_CONTROL" = "true" ]     && TO_DEPLOY+=("control-plane")
+              [ "$PICK_COLLECTOR" = "true" ]   && TO_DEPLOY+=("collector")
+              [ "$PICK_WEBAPP" = "true" ]      && TO_DEPLOY+=("webapp")
+            fi
+
+            if [ ${#TO_DEPLOY[@]} -eq 0 ]; then
+              echo "!! Nothing selected. Tick at least one service in the workflow form."
+              exit 2
+            fi
+
+            echo "==> Deploy plan: ${TO_DEPLOY[*]}"
+            echo "========================================"
+
+            FAILED=()
+            for svc in "${TO_DEPLOY[@]}"; do
+              echo ""
+              echo "########## DEPLOY: $svc ##########"
+              if [ "$svc" = "f9router" ]; then
+                if ./update-9router.sh; then
+                  echo "==> OK: $svc"
+                else
+                  echo "!! FAILED: $svc (auto-rollback attempted by script)"
+                  FAILED+=("$svc")
+                fi
+              elif [ "$svc" = "all-orr" ]; then
+                if ./update-orr.sh; then
+                  echo "==> OK: $svc"
+                else
+                  echo "!! FAILED: $svc (auto-rollback attempted by script)"
+                  FAILED+=("$svc")
+                fi
+              else
+                if ./update-orr.sh "$svc"; then
+                  echo "==> OK: $svc"
+                else
+                  echo "!! FAILED: $svc (auto-rollback attempted by script)"
+                  FAILED+=("$svc")
+                fi
+              fi
             done
-            echo "!! health check FAILED for $SERVICE at $URL"
-            docker compose ps
-            exit 1
+
+            echo ""
+            echo "========================================"
+            echo "==> SUMMARY"
+            echo "    Plan  : ${TO_DEPLOY[*]}"
+            if [ ${#FAILED[@]} -eq 0 ]; then
+              echo "    Result: ALL OK"
+              echo ""
+              docker compose ps --format 'table {{.Service}}\t{{.Status}}'
+              exit 0
+            else
+              echo "    Failed: ${FAILED[*]}"
+              echo ""
+              docker compose ps --format 'table {{.Service}}\t{{.Status}}'
+              exit 1
+            fi

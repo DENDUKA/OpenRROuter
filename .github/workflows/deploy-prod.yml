@@ -25,7 +25,6 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production     # ← triggers required reviewer approval
     timeout-minutes: 15
     steps:
       - name: Deploy via SSH

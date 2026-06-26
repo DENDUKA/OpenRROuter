@@ -531,7 +531,6 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         [Range(0, 100000)]
         public int Priority { get; set; }
     }
-}
 
     public static string ModalityIcon(string modality) => modality.ToLowerInvariant() switch
     {

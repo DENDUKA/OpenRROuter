@@ -24,7 +24,9 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         UseCookies = false,
         EnableMultipleHttp2Connections = true,
         ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
-        ConnectTimeout = TimeSpan.FromSeconds(15)
+        ConnectTimeout = TimeSpan.FromSeconds(15),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30)
     });
 
     private static readonly HttpClient StreamingHttpClient = new(new SocketsHttpHandler
@@ -34,7 +36,9 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         AutomaticDecompression = DecompressionMethods.None,
         UseCookies = false,
         EnableMultipleHttp2Connections = true,
-        ConnectTimeout = TimeSpan.FromSeconds(15)
+        ConnectTimeout = TimeSpan.FromSeconds(15),
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        PooledConnectionIdleTimeout = TimeSpan.FromSeconds(30)
     })
     {
         Timeout = TimeSpan.FromMinutes(30)

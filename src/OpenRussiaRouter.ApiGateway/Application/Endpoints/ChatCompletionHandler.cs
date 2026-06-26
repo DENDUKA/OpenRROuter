@@ -136,6 +136,45 @@ public sealed class ChatCompletionHandler(
                     await context.Response.WriteAsync(response.Body);
                     return;
                 }
+                catch (OperationCanceledException)
+                {
+                    // Release must succeed even if client disconnected — don't cancel.
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                    throw;
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Connection broke before/while receiving the response (e.g. node
+                    // crashed mid-stream, stale pooled HTTP/2 connection, network reset).
+                    // Treat like a 5xx downstream error: release, exclude the node, retry.
+                    logger.LogWarning(ex,
+                        "Chat completion request to node {NodeId} failed before response. RequestId: {RequestId}",
+                        auth.Lease.NodeId, requestId);
+
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+
+                    excludedNodes ??= new HashSet<string>();
+                    excludedNodes.Add(auth.Lease.NodeId);
+
+                    if (++attempts >= MaxRouterAttempts)
+                    {
+                        if (lastResponse != null)
+                        {
+                            context.Response.StatusCode = lastResponse.StatusCode;
+                            context.Response.ContentType = lastResponse.ContentType;
+                            await context.Response.WriteAsync(lastResponse.Body);
+                        }
+                        else
+                        {
+                            await GatewayErrors.WriteAsync(
+                                context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                                "Upstream node connection failed", requestId);
+                        }
+                        return;
+                    }
+
+                    continue;
+                }
                 catch
                 {
                     // Release must succeed even if client disconnected — don't cancel.
@@ -272,6 +311,44 @@ public sealed class ChatCompletionHandler(
                         body.Metadata.Model, lease.NodeId,
                         (completedAt - startedAt).TotalMilliseconds, usage.TotalTokens);
                     return;
+                }
+                catch (OperationCanceledException)
+                {
+                    // Release must succeed even if client disconnected — don't cancel.
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                    throw;
+                }
+                catch (HttpRequestException ex)
+                {
+                    // Connection broke before response headers were received (e.g. node
+                    // crashed mid-handshake, stale pooled HTTP/2 connection, network reset).
+                    // We haven't committed the response yet, so we can still retry on
+                    // another node — same semantics as a non-2xx status from the node.
+                    logger.LogWarning(ex,
+                        "Stream request to node {NodeId} failed before headers. RequestId: {RequestId}",
+                        auth.Lease.NodeId, requestId);
+
+                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+
+                    excludedNodes ??= new HashSet<string>();
+                    excludedNodes.Add(auth.Lease.NodeId);
+
+                    if (++attempts >= MaxRouterAttempts)
+                    {
+                        if (lastFailedSession != null)
+                        {
+                            await PassThroughErrorAsync(context, lastFailedSession, CancellationToken.None);
+                        }
+                        else
+                        {
+                            await GatewayErrors.WriteAsync(
+                                context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                                "Upstream node connection failed", requestId);
+                        }
+                        return;
+                    }
+
+                    continue;
                 }
                 catch
                 {

@@ -214,6 +214,47 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task ModelPriority_RoundTripsAndUpdatesThroughRepository()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-priority",
+            "GPT Priority",
+            "router/gpt-priority",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true,
+            Priority: 7));
+
+        var stored = await repository.GetModelAsync("gpt-priority");
+        stored.Should().NotBeNull();
+        stored!.Priority.Should().Be(7);
+
+        // Upsert without explicit Priority falls back to default 0 — verify column is updated on conflict.
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-priority",
+            "GPT Priority",
+            "router/gpt-priority",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true));
+
+        var refreshed = await repository.GetModelAsync("gpt-priority");
+        refreshed.Should().NotBeNull();
+        refreshed!.Priority.Should().Be(0);
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task CurrencyMigration_NormalizesLegacyRubValuesAndPreventsNewOnes()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

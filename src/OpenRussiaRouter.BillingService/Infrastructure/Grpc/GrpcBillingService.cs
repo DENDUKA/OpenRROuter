@@ -77,6 +77,7 @@ public sealed class GrpcBillingService(
                     Provider = price?.Provider ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
                     ModelType = price?.ModelType ?? "text",
+                    Priority = price?.Priority ?? 0,
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {
@@ -286,7 +287,8 @@ public sealed class GrpcBillingService(
                 ModelType: string.IsNullOrEmpty(request.ModelType) ? "text" : request.ModelType,
                 SupportsReasoning: request.SupportsReasoning,
                 AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
-                DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort),
+                DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort,
+                Priority: request.Priority),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -358,6 +360,7 @@ public sealed class GrpcBillingService(
                     SupportsReasoning = model.SupportsReasoning,
                     DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                     ModelType = model.ModelType ?? "text",
+                    Priority = model.Priority,
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {

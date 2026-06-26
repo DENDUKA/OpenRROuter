@@ -111,7 +111,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         ModelType = m.ModelType,
                         ThinkingFormat = thinkingFormat,
                         ThinkingCanDisable = thinkingCanDisable,
-                        ThinkingOptions = thinkingOptions
+                        ThinkingOptions = thinkingOptions,
+                        Priority = m.Priority
                     };
                 }
             }
@@ -186,7 +187,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 SupportsReasoning: Form.SupportsReasoning,
                 AllowedReasoningEfforts: Form.AllowedReasoningEfforts.Count > 0 ? Form.AllowedReasoningEfforts : null,
                 DefaultReasoningEffort: Form.DefaultReasoningEffort,
-                ModelType: Form.ModelType);
+                ModelType: Form.ModelType,
+                Priority: Form.Priority);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -463,7 +465,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         try
         {
             Models = (await _billingClient.ListModelsAsync())
-                .OrderByDescending(model => model.Enabled)
+                .OrderByDescending(model => model.Priority)
+                .ThenByDescending(model => model.Enabled)
                 .ThenBy(model => model.Id, StringComparer.Ordinal)
                 .ToList();
         }
@@ -524,7 +527,11 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? ThinkingFormat { get; set; }
         public bool ThinkingCanDisable { get; set; } = true;
         public List<string> ThinkingOptions { get; set; } = [];
+
+        [Range(0, 100000)]
+        public int Priority { get; set; }
     }
+}
 
     public static string ModalityIcon(string modality) => modality.ToLowerInvariant() switch
     {

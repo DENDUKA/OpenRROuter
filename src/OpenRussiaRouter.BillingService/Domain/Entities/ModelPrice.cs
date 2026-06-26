@@ -20,5 +20,6 @@ public sealed record ModelPrice(
     string ModelType = "text",
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
-    string? DefaultReasoningEffort = null);
+    string? DefaultReasoningEffort = null,
+    int Priority = 0);
 

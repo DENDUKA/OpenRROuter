@@ -276,7 +276,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             TagIds: m.TagIds.Count > 0 ? m.TagIds.ToList() : null,
             ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
-            AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null)).ToList();
+            AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
+            Priority: m.Priority)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -302,7 +303,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
-            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort)).ToList();
+            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
+            Priority: m.Priority)).ToList();
     }
 
     public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
@@ -356,7 +358,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             Provider = model.Provider ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
-            ModelType = model.ModelType ?? "text"
+            ModelType = model.ModelType ?? "text",
+            Priority = model.Priority
         };
         if (model.TagIds != null)
         {

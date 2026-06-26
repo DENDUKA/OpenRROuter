@@ -308,6 +308,36 @@ public sealed class GrpcBillingServiceTests
     }
 
     [Fact]
+    public async Task Priority_RoundTripsThroughGrpcMappings()
+    {
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance);
+        var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
+
+        _ = await service.UpsertModelPrice(new UpsertModelPriceRequest
+        {
+            ModelId = "gpt-priority",
+            DisplayName = "GPT Priority",
+            UpstreamModelId = "router/gpt-priority",
+            PriceVersion = "v1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
+            Enabled = true,
+            Priority = 42
+        }, context: null!);
+
+        var publicModels = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
+        var models = await service.ListModels(new ListModelsRequest(), context: null!);
+
+        publicModels.Models.Should().ContainSingle().Which.Priority.Should().Be(42);
+        models.Models.Should().ContainSingle().Which.Priority.Should().Be(42);
+    }
+
+    [Fact]
     public async Task ListBillingAnomalies_AfterInvalidUsage_ReturnsAnomaly()
     {
         var billing = await CreateBillingWithModelAndBalanceAsync();

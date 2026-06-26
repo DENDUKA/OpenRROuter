@@ -55,6 +55,8 @@ public class ModelsModel(
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
             Models = billingModels
+                .OrderByDescending(model => model.Priority, Comparer<int>.Default)
+                .ThenBy(model => model.Id, StringComparer.Ordinal)
                 .Select(model =>
                 {
                     catalogByUpstream.TryGetValue(model.UpstreamModelId, out var catalogEntry);

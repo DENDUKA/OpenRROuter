@@ -163,6 +163,12 @@
                         </div>
                         <input type="hidden" asp-for="Form.OutputModalities" />
                     </div>
+                    <div class="form-group">
+                        <label asp-for="Form.Priority" class="form-label">Priority <small class="text-muted">(catalog sort order)</small></label>
+                        <input asp-for="Form.Priority" class="form-control" type="number" min="0" step="1" />
+                        <small class="text-muted">Higher number shows the model higher on the public /models page.</small>
+                        <span asp-validation-for="Form.Priority" class="validation-message"></span>
+                    </div>
                 </div>
                 <div class="adm-form-row adm-enrich-row">
                     <div class="form-group" style="flex:1 1 auto">
@@ -292,7 +298,7 @@
             <table class="table">
                 <thead><tr>
                     <th>Model ID</th><th>Display Name</th><th>Type</th><th>Router Model</th>
-                            <th>Pricing</th><th>Tags</th><th>Status</th><th>Source</th><th>Actions</th>
+                    <th>Pricing</th><th>Tags</th><th>Status</th><th>Priority</th><th>Source</th><th>Actions</th>
                 </tr></thead>
                 <tbody>
                     @foreach (var m in Model.Models)
@@ -349,6 +355,7 @@
                                     @(m.Enabled ? "Enabled" : "Disabled")
                                 </span>
                             </td>
+                            <td><code>@m.Priority</code></td>
                             <td>
                                 @if (m.DescriptionSource == "openrouter")
                                 {

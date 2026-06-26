@@ -26,4 +26,5 @@ public sealed class ModelPriceEntity
     public bool SupportsReasoning { get; set; }
     public string AllowedReasoningEfforts { get; set; } = string.Empty;
     public string? DefaultReasoningEffort { get; set; }
+    public int Priority { get; set; }
 }

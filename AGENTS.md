@@ -1,145 +1,157 @@
 # AGENTS.md
 
-> **IMPORTANT**: ALWAYS respond to the user in the Russian language (Всегда отвечай на русском языке).
+> **IMPORTANT**: ALWAYS respond to the user in Russian (Всегда отвечай на русском языке).
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+Compact guide for agents working in this repo. Each fact below is non-obvious
+and was learned from config/code, not from generic .NET knowledge.
 
-## Related Projects
-
-- **9Router (fork):** `C:\Programs\F9Router` — Node.js/Next.js proxy node that handles LLM provider routing, combos, and fallback. Open RussiaRouter sends requests to 9Router nodes via HTTP.
-
-## Build & Test Commands
+## Build & Test
 
 ```powershell
-# Restore dependencies
+# Restore + build + test (the -nr:false -m:1 flags are mandatory in this repo:
+# some Windows sandboxes throw opaque MSBuild node-reuse errors without them)
 dotnet restore OpenRussiaRouter.sln --configfile NuGet.Config -nr:false -m:1
+dotnet build  OpenRussiaRouter.sln --no-restore -nr:false -m:1
+dotnet test   OpenRussiaRouter.sln --no-build   -nr:false -m:1
 
-# Build solution
-dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1
-
-# Run all tests
-dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1
-
-# Run a single test project
+# Single test project
 dotnet test tests/OpenRussiaRouter.BillingService.Tests --no-build -nr:false -m:1
 
-# Run individual services
-dotnet run --project src/OpenRussiaRouter.ApiGateway
-dotnet run --project src/OpenRussiaRouter.AuthService
-dotnet run --project src/OpenRussiaRouter.BillingService
-dotnet run --project src/OpenRussiaRouter.ControlPlane
-dotnet run --project src/OpenRussiaRouter.CollectorService
-dotnet run --project src/OpenRussiaRouter.WebApp
+# Single test by name
+dotnet tests/OpenRussiaRouter.BillingService.Tests --no-build -filter "FullyQualifiedName~MyTest"
 ```
 
-**Why `-nr:false -m:1`**: Some sandboxed Windows environments fail MSBuild node reuse/parallel restore without a useful error message.
+Run services locally: `dotnet run --project src/OpenRussiaRouter.<Service>`.
 
-**Build warnings are errors**: `TreatWarningsAsErrors` is `true` in `Directory.Build.props`. A warning = build failure.
+### Build will fail on any warning
 
-**PostgreSQL integration tests** are opt-in via environment variables (Testcontainers, skip gracefully without Docker):
-- `ORR_AUTH_POSTGRES_TEST_CONNECTION`
-- `ORR_BILLING_POSTGRES_TEST_CONNECTION`
-- `ORR_CONTROL_POSTGRES_TEST_CONNECTION`
+`Directory.Build.props` sets `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`
+and `<AnalysisLevel>latest</AnalysisLevel>`. Fix warnings before committing,
+don't suppress them ad-hoc. NuGet `NU19xx` (transitive dependency) warnings
+are exempt and won't fail the build.
 
-**E2E tests** (Playwright, opt-in):
-```powershell
-# First time only — install browsers:
-pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chromium
-# Config: tests/OpenRussiaRouter.E2ETests/e2e.local.json (gitignored)
-```
+### Central Package Management
 
-## Architecture Overview
+`Directory.Packages.props` sets `<ManagePackageVersionsCentrally>true</ManagePackageVersion>`.
+**Never put `<PackageVersion>` in a `.csproj`** — all versions live in
+`Directory.Packages.props`. Adding a new package requires editing both files.
 
-OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .NET 8 microservices communicating via gRPC.
+### Test stack
 
-### Services
+- xUnit + FluentAssertions + Moq
+- **PostgreSQL integration tests use Testcontainers** — they auto-start a
+  Docker postgres container; opt-out gracefully when Docker isn't available.
+  Env vars `ORR_{AUTH|BILLING|CONTROL}_POSTGRES_TEST_CONNECTION` only override
+  the connection string, they don't enable the tests.
+- **E2E tests are Playwright, opt-in**:
+  ```powershell
+  pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chromium
+  # config: tests/OpenRussiaRouter.E2ETests/e2e.local.json (gitignored)
+  ```
 
-| Service | Role | Default Port |
+### pre-push hook builds Docker images
+
+`.githooks/pre-push` triggers `build-push.ps1` on `git push` to `main`, which
+builds and pushes changed service images to GHCR. One-time setup:
+`git config core.hooksPath .githooks`. The hook never blocks the push
+(it `exit 0`s on failure) — verify image builds separately.
+
+## Architecture
+
+OpenAI-compatible LLM gateway with $ billing, .NET 8 microservices over gRPC.
+**No Entity Framework anywhere** — Dapper + Npgsql only. Don't add EF packages,
+`DbContext`, or EF migrations.
+
+### Services (all under `src/`)
+
+| Project | Role | Port |
 |---|---|---|
-| **ApiGateway** | Public HTTP entry point, OpenAI-compatible API | HTTP 5000 |
-| **AuthService** | User accounts, sessions, API key lifecycle | gRPC 5001 |
-| **BillingService** | Balance ledger, model pricing, usage tracking | gRPC 5002 |
-| **ControlPlane** | 9Router node registry, health checks, leasing | gRPC 5003 |
-| **WebApp** | ASP.NET Core Razor Pages user cabinet & admin dashboard | HTTP 5004 |
-| **CollectorService** | Periodic node/OpenRouter polling, in-memory cache, gRPC snapshots | gRPC 5005 |
-| **BuildingBlocks** | Shared library: Money, TokenUsage, errors, migrations | — |
-| **Contracts** | Shared DTOs + `.proto` files for all gRPC interfaces | — |
+| `OpenRussiaRouter.ApiGateway` | Public OpenAI-compatible HTTP entry | HTTP 5000 |
+| `OpenRussiaRouter.AuthService` | Users, sessions, API key lifecycle | gRPC 5001 |
+| `OpenRussiaRouter.BillingService` | Balance ledger, model catalog, usage | gRPC 5002 |
+| `OpenRussiaRouter.ControlPlane` | 9Router node registry, health, leases | gRPC 5003 |
+| `OpenRussiaRouter.WebApp` | **Razor Pages** cabinet + admin (NOT Blazor) | HTTP 5004 |
+| `OpenRussiaRouter.CollectorService` | Polls nodes/OpenRouter, caches, exposes snapshots | gRPC 5005 |
+| `OpenRussiaRouter.BuildingBlocks` | Shared primitives (Money, TokenUsage, errors, migrations) | — |
+| `OpenRussiaRouter.Contracts` | DTOs + `.proto` files | — |
+| `OpenRussiaRouter.9Router` | Fork of 9Router (router core); treat as upstream, has its own CLAUDE.md | — |
 
-### API Gateway Request Flow
+Each service also has its own `CLAUDE.md` with deeper, service-specific
+conventions — read it before editing that service.
 
-`POST /v1/chat/completions` (non-streaming and streaming):
-1. Extract Bearer token → validate via AuthService gRPC
-2. Check balance + model availability via BillingService gRPC
-3. Select router node via ControlPlane gRPC (least-load)
-4. Patch request JSON: replace `model` with `router_model_id` from billing catalog
-5. Forward to 9Router node (non-streaming via YARP, streaming via `HttpCompletionOption.ResponseHeadersRead`)
-6. **Retry** on 5xx / network error before first byte reaches client (one attempt, different node)
-7. Extract token usage from response (JSON field or final SSE chunk with `include_usage`)
-8. Record usage event asynchronously (fire-and-forget gRPC call to BillingService)
-9. Release lease in ControlPlane
+### API Gateway request flow (`POST /v1/chat/completions`)
 
-Endpoints:
-- `POST /v1/chat/completions` — non-streaming and streaming (auto-detected by `stream` field)
-- `POST /v1/chat/completions/stream` — explicit streaming alias
-- `GET /v1/models` — enabled models from BillingService
-- `GET /health`, `GET /ready`
+1. Bearer token → validate via AuthService gRPC
+2. Balance + model availability via BillingService gRPC (resolves user-facing
+   `ModelId` like `ORR/Gemini-3.1-Pro` → internal `RouterModelId`)
+3. Select node via ControlPlane gRPC (capability-aware, falls back to least-load)
+4. Patch JSON: replace `model` with `RouterModelId`; if either model id contains
+   "gemini" (case-insensitive), apply `GeminiSchemaPatcher` (inlines `$ref`/`$defs`
+   in tool/function schemas — Gemini rejects `$ref`)
+5. Forward via YARP (non-streaming) or `HttpCompletionOption.ResponseHeadersRead`
+   (streaming). **Retry once** to a different node on 5xx/network error before
+   the first byte reaches the client.
+6. Extract usage from JSON body or final SSE chunk (`include_usage`)
+7. Fire-and-forget usage event to BillingService; release the lease
 
-### Key Patterns
+Endpoints: `/v1/chat/completions`, `/v1/chat/completions/stream` (explicit
+stream alias), `/v1/models`, `/health`, `/ready`.
 
-- **Repository pattern**: Each service has `I{Service}Repository` with both Dapper/PostgreSQL and in-memory implementations (in-memory used in tests)
-- **Extension method registration**: `Add{Service}Infrastructure()` / `Add{Service}Application()` in `Infrastructure/Startup/`
-- **SQL migrations**: Raw `.sql` files in `db/migrations/{service}/`, auto-applied on startup via `ApplySqlMigrationsAsync()`
-- **gRPC contracts**: `.proto` files in `src/OpenRussiaRouter.Contracts/Protos/` — `auth.proto`, `billing.proto`, `control-plane.proto`
-- **No Entity Framework** — Dapper + Npgsql only
-- **Central Package Management** — all NuGet versions in `Directory.Packages.props`
-- **Correlation IDs**: `X-Correlation-Id` header propagated via `CorrelationIdReader`, injected into Serilog context
-- **WebApp** — Razor Pages (`.cshtml` + `.cshtml.cs`), cookie auth, gRPC clients in `Services/`
+### Patterns every service shares
 
-### Shared BuildingBlocks
+- **Repository**: `I{Service}Repository` with Dapper/Postgres + in-memory impls
+  (in-memory is used in unit tests).
+- **DI registration**: `Add{Service}Infrastructure()` /
+  `Add{Service}Application()` extension methods in `Infrastructure/Startup/`.
+- **SQL migrations**: raw `.sql` files in `db/migrations/{auth|billing|control}/`,
+  auto-applied on startup via `PostgresSqlMigrationRunner`. Add a new file with
+  the next numeric prefix (e.g. `017_*.sql`).
+- **gRPC contracts**: `.proto` in `src/OpenRussiaRouter.Contracts/Protos/`
+  (`auth.proto`, `billing.proto`, `control-plane.proto`).
+- **Correlation IDs**: `X-Correlation-Id` header flows through
+  `CorrelationIdReader` into Serilog context.
 
-- `MoneyAmount` — record struct with currency, arithmetic operators
-- `TokenUsage` + `UsageCostCalculator` — token billing math
-- `TokenUsageExtractor` — extracts usage from JSON/SSE (non-streaming and streaming paths)
-- `ApiError` + `ErrorCodes` — standardized error responses
-- `PostgresSqlMigrationRunner` — runs SQL migration scripts from embedded resources
-- Serilog extensions for Seq integration
+## gRPC services config
 
-### Configuration
+Service URLs live in each consumer's `appsettings.json` under `GrpcServices`:
+`Auth` → `http://localhost:5001`, `Billing` → `:5002`, `ControlPlane` → `:5003`.
 
-gRPC service URLs and DB connection strings live in `appsettings.json` per service:
+## 9Router integration — do not confuse these tokens
 
-```json
-{
-  "GrpcServices": {
-    "Auth": "http://localhost:5001",
-    "Billing": "http://localhost:5002",
-    "ControlPlane": "http://localhost:5003"
-  }
-}
-```
+Two unrelated token types both flow through ControlPlane:
 
-### Database Migrations
+1. **Control Token** (per node). Stored in `control.router_nodes.control_token`
+   as the **raw token value**, not a secret name. Sent verbatim as
+   `Authorization: Bearer <control_token>` to the node's admin API
+   (`/api/integrations/*`). `RouterNodeProvider` has no config-based resolution.
+2. **User API keys** (`sk-or-*`). Created in WebApp, hashed in AuthService,
+   pushed to nodes on create, deactivated on revoke via
+   `control.integration_key_sync` mapping.
 
-SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `016_*.sql`).
+> The DB column used to be documented as a "secret name" — that was wrong.
+> Don't reintroduce `RouterHealthChecks:NodeTokens:{name}` resolution.
 
-Current migration counts: auth (10), billing (15), control (4).
+## Deployment — keep this ownership boundary
 
-### 9Router Integration — Two Types of Tokens
+- **GitHub Actions** (`.github/workflows/build-deploy.yml`): restore, build,
+  test, push images to `ghcr.io/denduka/<service>` with `sha-<commit>` and
+  `dev-latest` tags. Skips unchanged services via path detection.
+- **Argo CD Image Updater** (in cluster) watches `dev-latest`, resolves
+  digests, writes image overrides, lets Argo CD sync `orr-services`.
+- **Never** add a GHA job that commits image tags into Kustomize manifests
+  or calls Argo CD directly. Image Updater owns that.
 
-| Token | What it is | Where used |
-|---|---|---|
-| **Control Token** (`ROUTER_CONTROL_TOKEN`) | Actual token value (not a secret name) | ControlPlane → f9router admin API (`Authorization: Bearer <token>`) |
-| **User API Key** (`sk-or-*`) | Created by users in WebApp | Authenticated calls to LLM models via 9Router proxy |
+Expected Argo CD apps after bootstrap: `orr-infra`, `orr-services`,
+`orr-argocd-image-updater` (defined in `infra/argocd/`).
 
-**Common mistake**: `control_token` in the DB is the real token value, NOT a secret name. `RouterNodeProvider` sends it directly — there is no secret-resolution step.
+Argo CD runs with `selfHeal: true` on dev → **`kubectl set env` /
+`kubectl edit` changes are reverted within ~1 min**. All env changes must go
+through `infra/kustomize/overlays/dev/services/*-env-patch.yaml` + git.
 
-## Deployment Memory
+### Known infra gotchas
 
-Dev Kubernetes image delivery is owned by Argo CD Image Updater, not GitHub Actions.
-
-- GitHub Actions restores, builds, tests, and pushes GHCR images with `sha-<commit>` and `dev-latest` tags.
-- Argo CD Image Updater watches `dev-latest`, resolves digests, writes image overrides, and lets Argo CD sync `orr-services`.
-- **Do not** reintroduce a GitHub Actions job that commits image tags into Kustomize manifests.
-- **Do not** use `kubectl set env` — ArgoCD (`selfHeal: true`) reverts it within ~1–2 min. Change only through kustomize + git.
-
-Full 9Router node registration procedure: `docs/argo-k8s-dev-runbook.md` and CLAUDE.md.
+- 9Router node health check: dev overlay must set
+  `RouterHealthChecks__HealthPath=/api/health`. The base default `/v1/models`
+  returns 401 from f9router and the node never becomes Healthy.
+- Full local k8s runbook (kind, Argo CD, node registration, secrets):
+  `docs/argo-k8s-dev-runbook.md` and `README.md`.

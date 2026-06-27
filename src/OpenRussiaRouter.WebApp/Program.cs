@@ -244,6 +244,11 @@ builder.Services.AddScoped<PaymentCheckoutService>();
 builder.Services.AddScoped<PaymentWebhookProcessor>();
 builder.Services.AddHostedService<PaymentReconciliationWorker>();
 
+// Hourly reasoning-capability enrichment: pulls supports_reasoning + thinking_options
+// from the 9Router node catalog snapshot (cached by CollectorService) and backfills
+// the billing model_prices catalog. No-op when nodes are unreachable or already in sync.
+builder.Services.AddHostedService<ReasoningEnrichmentWorker>();
+
 // Rate limiter for the webhook endpoint. Per-IP fixed window — providers typically retry on
 // non-2xx, so we want a generous ceiling that still absorbs a misbehaving script.
 builder.Services.AddRateLimiter(options =>

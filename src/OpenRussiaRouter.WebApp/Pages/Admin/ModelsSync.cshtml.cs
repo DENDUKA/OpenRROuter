@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.BuildingBlocks.Reasoning;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
@@ -126,6 +127,12 @@ public class ModelsSyncModel(
                 continue;
             }
 
+            // Reasoning capabilities flow from 9Router node catalog. Translate the node's
+            // thinkingOptions (e.g. ["auto","none","low","medium","high"] or ["auto","on","off"])
+            // into ORR canonical efforts so the upsert doesn't reject them.
+            var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(entry.ThinkingOptions);
+            var supportsReasoning = entry.SupportsReasoning && mappedEfforts.Count > 0;
+
             var model = new ModelInfo(
                 modelId,
                 entry.DisplayName,
@@ -134,7 +141,13 @@ public class ModelsSyncModel(
                 row.InputPrice,
                 row.OutputPrice,
                 row.CachePrice,
-                row.Enabled);
+                row.Enabled,
+                ModelType: string.IsNullOrWhiteSpace(entry.ModelType) ? "text" : entry.ModelType,
+                SupportsReasoning: supportsReasoning,
+                AllowedReasoningEfforts: supportsReasoning ? mappedEfforts : null,
+                DefaultReasoningEffort: supportsReasoning
+                    ? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                    : null);
 
             try
             {

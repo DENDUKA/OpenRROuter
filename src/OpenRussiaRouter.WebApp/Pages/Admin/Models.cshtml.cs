@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.BuildingBlocks.Reasoning;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
@@ -278,20 +279,48 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     enrichedModel = model;
                 }
 
-                // Enrich reasoning from 9Router node catalog
+                // Enrich reasoning from 9Router node catalog.
+                // 9Router emits vocabularies like ["auto","on","off"] (claude-adaptive /
+                // gemini-level) or ["auto","none","low","medium","high"] (effort formats).
+                // Those raw tokens are not all canonical in BillingService, so we translate
+                // them through NodeReasoningMapper before persisting — otherwise the
+                // upsert below would throw and abort the entire enrich batch.
                 if (nodeCatalogByUpstream.TryGetValue(model.UpstreamModelId, out var nodeEntry)
-                    && nodeEntry.SupportsReasoning
-                    && !enrichedModel.SupportsReasoning)
+                    && nodeEntry.SupportsReasoning)
                 {
-                    enrichedModel = enrichedModel with
+                    var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(nodeEntry.ThinkingOptions);
+
+                    // (1) Model not yet marked reasoning-capable → enable it and backfill efforts + default.
+                    // (2) Model already reasoning-capable but allowed efforts empty → backfill from node.
+                    // Anything else (admin-curated efforts) is left alone.
+                    ModelInfo? reasoningPatched = null;
+                    if (!enrichedModel.SupportsReasoning && mappedEfforts.Count > 0)
                     {
-                        SupportsReasoning = true,
-                        AllowedReasoningEfforts = nodeEntry.ThinkingOptions.Count > 0
-                            ? nodeEntry.ThinkingOptions
-                            : enrichedModel.AllowedReasoningEfforts,
-                        DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
-                    };
-                    reasoningEnriched++;
+                        reasoningPatched = enrichedModel with
+                        {
+                            SupportsReasoning = true,
+                            AllowedReasoningEfforts = mappedEfforts,
+                            DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
+                                ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                        };
+                    }
+                    else if (enrichedModel.SupportsReasoning
+                             && (enrichedModel.AllowedReasoningEfforts is null || enrichedModel.AllowedReasoningEfforts.Count == 0)
+                             && mappedEfforts.Count > 0)
+                    {
+                        reasoningPatched = enrichedModel with
+                        {
+                            AllowedReasoningEfforts = mappedEfforts,
+                            DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
+                                ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                        };
+                    }
+
+                    if (reasoningPatched is not null)
+                    {
+                        enrichedModel = reasoningPatched;
+                        reasoningEnriched++;
+                    }
                 }
 
                 if (enrichedModel != model)

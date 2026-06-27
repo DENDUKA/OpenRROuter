@@ -345,6 +345,53 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task ListModels_ReasoningModel_AdvertisesOpenRouterContract()
+    {
+        var billing = new StubBillingProvider
+        {
+            PublicModels = new[]
+            {
+                new GatewayPublicModel(
+                    "ORR/GPT-5.5",
+                    "GPT-5.5",
+                    SupportsReasoning: true,
+                    AllowedReasoningEfforts: ["low", "medium", "high"],
+                    DefaultReasoningEffort: "medium"),
+                new GatewayPublicModel("ORR/gpt-4o", "GPT-4o")
+            }
+        };
+        var client = CreateClient(new StubAuthenticator(), billing);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/v1/models");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-test");
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var data = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
+        data.Should().HaveCount(2);
+
+        var reasoning = data.Single(e => e.GetProperty("id").GetString() == "ORR/GPT-5.5");
+        // OpenRouter-style top-level `reasoning` object present with the canonical fields.
+        reasoning.GetProperty("reasoning").GetProperty("mandatory").GetBoolean().Should().BeFalse();
+        reasoning.GetProperty("reasoning").GetProperty("supported_efforts")
+            .EnumerateArray().Select(t => t.GetString()).Should().Equal("low", "medium", "high");
+        reasoning.GetProperty("reasoning").GetProperty("default_effort").GetString().Should().Be("medium");
+        // supported_parameters contains the paired `reasoning` + `include_reasoning` strings.
+        var parameters = reasoning.GetProperty("supported_parameters")
+            .EnumerateArray().Select(t => t.GetString()).ToList();
+        parameters.Should().Contain("reasoning");
+        parameters.Should().Contain("include_reasoning");
+        parameters.Should().BeInAscendingOrder(StringComparer.Ordinal);
+
+        // Non-reasoning model: top-level `reasoning` field must be entirely absent (not null).
+        var plain = data.Single(e => e.GetProperty("id").GetString() == "ORR/gpt-4o");
+        plain.TryGetProperty("reasoning", out _).Should().BeFalse();
+        plain.GetProperty("supported_parameters")
+            .EnumerateArray().Select(t => t.GetString()).Should().NotContain("reasoning");
+    }
+
     // --- Validation ---
 
     [Fact]

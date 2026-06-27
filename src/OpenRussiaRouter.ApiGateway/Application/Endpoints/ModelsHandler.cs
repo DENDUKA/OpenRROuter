@@ -25,13 +25,6 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
 
-        if (!BearerTokenReader.TryRead(context.Request, out _))
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await GatewayErrors.WriteAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
-            return;
-        }
-
         var models = await billingProvider.ListPublicModelsAsync(context.RequestAborted);
 
         var responseBody = new

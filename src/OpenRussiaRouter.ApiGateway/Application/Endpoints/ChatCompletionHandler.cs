@@ -71,7 +71,8 @@ public sealed class ChatCompletionHandler(
                         patchedJson,
                         body.Metadata.Reasoning,
                         auth.SupportsReasoning,
-                        auth.AllowedReasoningEfforts ?? []);
+                        auth.AllowedReasoningEfforts ?? [],
+                        auth.DefaultReasoningEffort);
                     if (!reasoningPatch.IsSuccess)
                     {
                         // Release must succeed even if client disconnected — don't cancel.
@@ -229,7 +230,8 @@ public sealed class ChatCompletionHandler(
                         patchedJson,
                         body.Metadata.Reasoning,
                         auth.SupportsReasoning,
-                        auth.AllowedReasoningEfforts ?? []);
+                        auth.AllowedReasoningEfforts ?? [],
+                        auth.DefaultReasoningEffort);
                     if (!reasoningPatch.IsSuccess)
                     {
                         // Release must succeed even if client disconnected — don't cancel.

@@ -30,7 +30,16 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
-    public IReadOnlyList<string> ReasoningEfforts { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
+
+    /// <summary>
+    /// Reasoning efforts available for selection in the edit form. Derived from the 9Router
+    /// node catalog (cached via CollectorService) and mapped into the canonical ORR vocabulary
+    /// by <see cref="NodeReasoningMapper"/>. Falls back to the full canonical set when the node
+    /// hasn't reported <c>thinkingOptions</c> (e.g. node offline on first edit) so the admin can
+    /// still curate efforts manually. <c>NodeReasoningMapper</c> only emits canonical tokens
+    /// already understood by BillingService, so this list is always safe to persist.
+    /// </summary>
+    public IReadOnlyList<string> AvailableReasoningEfforts { get; set; } = NodeReasoningMapper.OrderedCanonical;
     public IReadOnlyList<string> ModelTypes { get; } = ["text", "audio"];
     public IReadOnlyList<string> ModalityTypes { get; } = ["text", "image", "audio", "video"];
 
@@ -88,6 +97,16 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, "Failed to load node catalog for reasoning info. ModelId={ModelId}", EditModelId);
+                    }
+
+                    // Build the pickable effort list from the node-reported vocabulary
+                    // (mapped to canonical tokens). If the node hasn't reported anything —
+                    // keep the full canonical fallback already set on the property — so the
+                    // admin can still curate efforts manually.
+                    var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(thinkingOptions);
+                    if (mappedEfforts.Count > 0)
+                    {
+                        AvailableReasoningEfforts = mappedEfforts;
                     }
 
                     Form = new ModelFormInput
@@ -444,7 +463,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         foreach (var effort in Form.AllowedReasoningEfforts)
         {
-            if (!ReasoningEfforts.Contains(effort, StringComparer.Ordinal))
+            if (!NodeReasoningMapper.OrderedCanonical.Contains(effort, StringComparer.Ordinal))
             {
                 ModelState.AddModelError(nameof(Form.AllowedReasoningEfforts), $"Unsupported reasoning effort '{effort}'.");
             }

@@ -151,4 +151,154 @@ public sealed class ReasoningRequestPatcherTests
         using var document = JsonDocument.Parse(result.PatchedJson);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("none");
     }
+
+    [Fact]
+    public void TryNormalize_NoReasoningFields_AppliesDefaultWhenConfigured()
+    {
+        const string json = """{"model":"gpt-test"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium", "high"],
+            defaultEffort: "high");
+
+        result.IsSuccess.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.PatchedJson);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
+    }
+
+    [Fact]
+    public void TryNormalize_NoReasoningFields_NoDefault_ReturnsBodyAsIs()
+    {
+        const string json = """{"model":"gpt-test"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium"],
+            defaultEffort: null);
+
+        result.IsSuccess.Should().BeTrue();
+        result.PatchedJson.Should().Be(json);
+    }
+
+    [Fact]
+    public void TryNormalize_NoReasoningFields_NotSupportsReasoning_DoesNotInjectDefault()
+    {
+        const string json = """{"model":"gpt-test"}""";
+
+        // Defensive: even if a default is set on a non-reasoning model, never inject it.
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: false,
+            ["high"],
+            defaultEffort: "high");
+
+        result.IsSuccess.Should().BeTrue();
+        result.PatchedJson.Should().Be(json);
+    }
+
+    [Fact]
+    public void TryNormalize_InvalidEffort_SilentlyAppliesDefaultWhenConfigured()
+    {
+        // User sent "xhigh" but model only allows [low,medium,high]; admin default is "high".
+        const string json = """{"model":"gpt-test","reasoning_effort":"xhigh"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium", "high"],
+            defaultEffort: "high");
+
+        result.IsSuccess.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.PatchedJson);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
+    }
+
+    [Fact]
+    public void TryNormalize_InvalidEffort_NoDefault_ReturnsUnsupportedReasoningEffort()
+    {
+        // No default → strict behaviour preserved (backwards compatibility for callers
+        // that never opted into the default-effort feature).
+        const string json = """{"reasoning_effort":"xhigh"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium", "high"]);
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.UnsupportedReasoningEffort);
+    }
+
+    [Fact]
+    public void TryNormalize_DefaultNotInAllowed_IsIgnored_NoReasoningCase()
+    {
+        // Defensive: admin misconfigured default outside the allowed set → drop default,
+        // do not inject anything (preserve prior behaviour for clients without reasoning).
+        const string json = """{"model":"gpt-test"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium"],
+            defaultEffort: "xhigh");
+
+        result.IsSuccess.Should().BeTrue();
+        result.PatchedJson.Should().Be(json);
+    }
+
+    [Fact]
+    public void TryNormalize_DefaultNotInAllowed_IsIgnored_InvalidEffortCase()
+    {
+        // Same defensive check on the invalid-effort path: with no usable default we fall
+        // back to the original strict error rather than injecting an unsupported effort.
+        const string json = """{"reasoning_effort":"xhigh"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium"],
+            defaultEffort: "xhigh");
+
+        result.IsSuccess.Should().BeFalse();
+        result.ErrorCode.Should().Be(ErrorCodes.UnsupportedReasoningEffort);
+    }
+
+    [Fact]
+    public void TryNormalize_DefaultIsCaseInsensitive()
+    {
+        // Admin-stored default may be any casing; the patcher must normalize before comparing
+        // against the allowed set and before injecting into the outgoing JSON.
+        const string json = """{"model":"gpt-test"}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium", "high"],
+            defaultEffort: "HIGH");
+
+        result.IsSuccess.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.PatchedJson);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
+    }
+
+    [Fact]
+    public void TryNormalize_EmptyReasoningObject_AppliesDefault()
+    {
+        // reasoning object present but no effort inside — fall back to default.
+        const string json = """{"model":"gpt-test","reasoning":{}}""";
+
+        var result = ReasoningRequestPatcher.TryNormalize(
+            json,
+            supportsReasoning: true,
+            ["low", "medium", "high"],
+            defaultEffort: "medium");
+
+        result.IsSuccess.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.PatchedJson);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("medium");
+        document.RootElement.TryGetProperty("reasoning", out _).Should().BeFalse();
+    }
 }

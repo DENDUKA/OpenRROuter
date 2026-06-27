@@ -8,23 +8,26 @@ namespace OpenRussiaRouter.WebApp.Email;
 /// BatchDelayMs pause after each message throttles throughput to respect the
 /// SMTP provider's rate limits (default 1000ms ≈ 1 msg/s).
 /// </summary>
-public class EmailDispatchWorker : BackgroundService
+public sealed class EmailDispatchWorker : BackgroundService
 {
     private readonly IEmailDispatchQueue _queue;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<EmailDispatchWorker> _logger;
     private readonly EmailSettings _settings;
+    private readonly TimeProvider _timeProvider;
 
     public EmailDispatchWorker(
         IEmailDispatchQueue queue,
         IServiceScopeFactory scopeFactory,
         ILogger<EmailDispatchWorker> logger,
-        IOptions<EmailSettings> settings)
+        IOptions<EmailSettings> settings,
+        TimeProvider? timeProvider = null)
     {
         _queue = queue;
         _scopeFactory = scopeFactory;
         _logger = logger;
         _settings = settings.Value;
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     protected override async Task ExecuteAsync(CancellationToken ct)
@@ -53,7 +56,7 @@ public class EmailDispatchWorker : BackgroundService
                     var delayMs = 1000 * (1 << (attempt - 1)); // 1s, 2s, 4s
                     _logger.LogWarning(ex, "Send to {To} failed (attempt {Attempt}/3), retry in {DelayMs}ms",
                         message.To, attempt, delayMs);
-                    await Task.Delay(delayMs, ct);
+                    await Task.Delay(TimeSpan.FromMilliseconds(delayMs), _timeProvider, ct);
                 }
                 catch (Exception ex)
                 {
@@ -64,7 +67,7 @@ public class EmailDispatchWorker : BackgroundService
             }
 
             if (processed && _settings.BatchDelayMs > 0)
-                await Task.Delay(_settings.BatchDelayMs, ct);
+                await Task.Delay(TimeSpan.FromMilliseconds(_settings.BatchDelayMs), _timeProvider, ct);
         }
 
         _logger.LogInformation("EmailDispatchWorker stopped.");

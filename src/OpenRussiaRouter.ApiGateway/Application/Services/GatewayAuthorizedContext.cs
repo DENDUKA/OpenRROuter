@@ -14,4 +14,5 @@ public sealed record GatewayAuthorizedContext(
     GatewayRouterLease Lease,
     bool SupportsReasoning,
     IReadOnlyList<string>? AllowedReasoningEfforts,
+    string? DefaultReasoningEffort,
     bool IsAdmin = false);

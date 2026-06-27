@@ -97,6 +97,7 @@ public sealed class GatewayPipeline(
             lease,
             balanceResult.SupportsReasoning,
             balanceResult.AllowedReasoningEfforts,
+            balanceResult.DefaultReasoningEffort,
             authResult.IsAdmin);
     }
 

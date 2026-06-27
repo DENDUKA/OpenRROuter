@@ -241,15 +241,19 @@
                 }
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label class="form-label">Allowed efforts</label>
+                        <label class="form-label">Allowed efforts <small class="text-muted">(from 9Router catalog)</small></label>
                         <div id="allowedReasoningEfforts" style="display:flex; flex-wrap:wrap; gap:0.75rem">
-                            @foreach (var effort in Model.ReasoningEfforts)
+                            @foreach (var effort in Model.AvailableReasoningEfforts)
                             {
                                 var selected = Model.Form.AllowedReasoningEfforts.Contains(effort, StringComparer.Ordinal);
                                 <label style="display:flex; align-items:center; gap:0.25rem; font-weight:normal;">
                                     <input type="checkbox" name="Form.AllowedReasoningEfforts" value="@effort" @(selected ? "checked" : "") />
                                     @effort
                                 </label>
+                            }
+                            @if (Model.AvailableReasoningEfforts.Count == 0)
+                            {
+                                <small class="text-muted">No reasoning capabilities reported by 9Router for this model.</small>
                             }
                         </div>
                         <span asp-validation-for="Form.AllowedReasoningEfforts" class="validation-message"></span>
@@ -258,7 +262,7 @@
                         <label asp-for="Form.DefaultReasoningEffort" class="form-label">Default effort <small class="text-muted">(optional)</small></label>
                         <select asp-for="Form.DefaultReasoningEffort" class="form-control" id="defaultReasoningEffort">
                             <option value="">— none —</option>
-                            @foreach (var effort in Model.ReasoningEfforts)
+                            @foreach (var effort in Model.AvailableReasoningEfforts)
                             {
                                 var selected = string.Equals(Model.Form.DefaultReasoningEffort, effort, StringComparison.Ordinal);
                                 <option value="@effort" selected="@(selected ? "selected" : null)">@effort</option>

@@ -273,6 +273,65 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_InvalidReasoningEffort_FallsBackToDefaultWhenConfigured()
+    {
+        // Admin set DefaultReasoningEffort="low" → invalid client effort "high" must be
+        // silently replaced with "low" and the request forwarded to the node.
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: true,
+                AllowedReasoningEfforts: ["low", "medium"],
+                DefaultReasoningEffort: "low")
+        };
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("low");
+    }
+
+    [Fact]
+    public async Task NonStreaming_NoReasoningInRequest_AppliesModelDefaultEffort()
+    {
+        // Plain request with no reasoning fields → gateway must inject admin-configured default.
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: true,
+                AllowedReasoningEfforts: ["low", "medium", "high"],
+                DefaultReasoningEffort: "high")
+        };
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
+    }
+
+    [Fact]
     public async Task NonStreaming_HappyPath_RecordsUsageAfterSuccessfulResponse()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
@@ -338,11 +397,14 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     // --- Models endpoint ---
 
     [Fact]
-    public async Task ListModels_MissingBearerToken_Returns401()
+    public async Task ListModels_IsPublic_Returns200WithoutBearerToken()
     {
+        // /v1/models is intentionally public to align with the OpenRouter contract —
+        // clients (opencode plugin, Cline, …) probe it for capability discovery before
+        // they have a chance to send credentials.
         var client = CreateClient();
         var response = await client.GetAsync("/v1/models");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

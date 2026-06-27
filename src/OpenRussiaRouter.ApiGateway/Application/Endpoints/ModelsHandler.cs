@@ -8,7 +8,9 @@ using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 
-/// <summary>Обработчик GET /v1/models — возвращает публичный каталог моделей из BillingService.</summary>
+/// <summary>Обработчик GET /v1/models — возвращает публичный каталог моделей из BillingService.
+/// Формат ответа выровнен с OpenRouter /v1/models для авто-обнаружения reasoning (top-level
+/// `reasoning` объект + paired `reasoning`/`include_reasoning` в supported_parameters).</summary>
 public sealed class ModelsHandler(IBillingProvider billingProvider)
 {
     // Null values are omitted to match OpenRouter's omit-if-absent convention — in particular

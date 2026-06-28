@@ -11,7 +11,7 @@ public sealed class NodeListProvider(RouterControlPlane.RouterControlPlaneClient
 {
     public async Task<IReadOnlyList<CollectorNode>> GetNodesAsync(CancellationToken cancellationToken)
     {
-        var response = await client.ListRouterNodesAsync(
+        var response = await client.ListRouterNodesForInternalConsumersAsync(
             new ListRouterNodesRequest(), cancellationToken: cancellationToken);
 
         var nodes = new List<CollectorNode>(response.Nodes.Count);

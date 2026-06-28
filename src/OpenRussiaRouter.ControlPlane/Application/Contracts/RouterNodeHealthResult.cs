@@ -1,4 +1,4 @@
-using OpenRussiaRouter.Contracts.ControlPlane;
+using OpenRussiaRouter.ControlPlane.Domain;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Contracts;
 

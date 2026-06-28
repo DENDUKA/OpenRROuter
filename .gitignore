@@ -15,3 +15,4 @@ TestResults/
 /.kilo
 /.claude/worktrees
 /graphify-out/cache
+/src/graphify-out/cache

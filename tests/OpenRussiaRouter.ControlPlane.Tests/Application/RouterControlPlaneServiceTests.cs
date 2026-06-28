@@ -1,6 +1,6 @@
 using FluentAssertions;
-using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
 namespace OpenRussiaRouter.ControlPlane.Tests.Application;
@@ -38,7 +38,7 @@ public sealed class RouterControlPlaneServiceTests
         var lease = await service.SelectRouterNodeAsync(null, "req-1", DateTimeOffset.UtcNow);
 
         lease.NodeId.Should().Be(node.Id);
-        var summary = (await service.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await service.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(1);
     }
 
@@ -164,7 +164,7 @@ public sealed class RouterControlPlaneServiceTests
 
         await service.ReleaseRouterNodeAsync(lease.LeaseId);
 
-        var summary = (await service.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await service.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(0);
     }
 
@@ -179,7 +179,7 @@ public sealed class RouterControlPlaneServiceTests
 
         await service.ReleaseExpiredLeasesAsync(now.AddMinutes(6));
 
-        var summary = (await service.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await service.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(0);
     }
 

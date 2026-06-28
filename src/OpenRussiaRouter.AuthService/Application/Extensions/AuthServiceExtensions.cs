@@ -23,7 +23,7 @@ public static class AuthServiceExtensions
         else
         {
             services.AddSingleton<IAuthRepository, InMemoryAuthRepository>();
-            services.AddSingleton<IAuthApiKeyValidator, InMemoryAuthApiKeyValidator>();
+            services.AddSingleton<IAuthApiKeyValidator, DapperAuthApiKeyValidator>();
         }
 
         return services;

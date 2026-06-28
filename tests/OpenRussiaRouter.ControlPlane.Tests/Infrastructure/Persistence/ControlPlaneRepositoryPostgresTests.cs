@@ -1,9 +1,9 @@
 using Dapper;
 using FluentAssertions;
 using Npgsql;
-using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
@@ -36,7 +36,7 @@ public sealed class ControlPlaneRepositoryPostgresTests
         await service.ReleaseExpiredLeasesAsync(now.AddMinutes(6));
 
         lease.NodeId.Should().Be(node.Id);
-        var summary = (await service.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await service.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(0);
         summary.Status.Should().Be(RouterNodeStatus.Healthy);
     }

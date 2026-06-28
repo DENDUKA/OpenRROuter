@@ -14,6 +14,7 @@ service RouterControlPlane {
   rpc EnableRouterNode (EnableRouterNodeRequest) returns (EnableRouterNodeResponse);
   rpc DeleteRouterNode (DeleteRouterNodeRequest) returns (DeleteRouterNodeResponse);
   rpc ListRouterNodes (ListRouterNodesRequest) returns (ListRouterNodesResponse);
+  rpc ListRouterNodesForInternalConsumers (ListRouterNodesRequest) returns (ListRouterNodesForInternalConsumersResponse);
   rpc GetRouterNodeDetails (GetRouterNodeDetailsRequest) returns (GetRouterNodeDetailsResponse);
   rpc PushUserIntegrationKey (PushUserIntegrationKeyRequest) returns (PushUserIntegrationKeyResponse);
   rpc UpdateUserIntegrationKeyStatus (UpdateUserIntegrationKeyStatusRequest) returns (UpdateUserIntegrationKeyStatusResponse);
@@ -125,6 +126,19 @@ message RouterNodeSummary {
   string status = 4;
   int32 in_flight_requests = 5;
   string last_checked_at_utc = 6;
+  reserved 7;          // removed control_token (use RouterNodeAdminSummary for trusted internal consumers)
+  reserved "control_token";
+  int32 capacity_weight = 8;
+  string last_health_error_code = 9;
+}
+
+message RouterNodeAdminSummary {
+  string node_id = 1;
+  string name = 2;
+  string endpoint_url = 3;
+  string status = 4;
+  int32 in_flight_requests = 5;
+  string last_checked_at_utc = 6;
   string control_token = 7;
   int32 capacity_weight = 8;
   string last_health_error_code = 9;
@@ -132,6 +146,10 @@ message RouterNodeSummary {
 
 message ListRouterNodesResponse {
   repeated RouterNodeSummary nodes = 1;
+}
+
+message ListRouterNodesForInternalConsumersResponse {
+  repeated RouterNodeAdminSummary nodes = 1;
 }
 
 message RouterProviderQuotaSummary {
@@ -157,7 +175,7 @@ message RouterIntegrationKeySummary {
 }
 
 message GetRouterNodeDetailsResponse {
-  RouterNodeSummary node = 1;
+  RouterNodeAdminSummary node = 1;
   repeated RouterProviderQuotaSummary providers = 2;
   repeated RouterIntegrationKeySummary keys = 3;
   string error_code = 4;

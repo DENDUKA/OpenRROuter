@@ -13,6 +13,10 @@
     <PackageReference Include="Npgsql"  />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="OpenRussiaRouter.BillingService.Tests" />
+  </ItemGroup>
+
   <!--
     Microsoft.NET.Sdk (unlike Sdk.Web) does NOT include appsettings*.json as default
     content items, so they were never published into the image. That left ServiceAuth

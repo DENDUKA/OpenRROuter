@@ -8,8 +8,8 @@ public sealed class ControlPlaneProvider(
 {
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)
     {
-        var response = await client.ListRouterNodesAsync(new ListRouterNodesRequest(), cancellationToken: cancellationToken);
-        return response.Nodes.Select(MapNode).ToList();
+        var response = await client.ListRouterNodesForInternalConsumersAsync(new ListRouterNodesRequest(), cancellationToken: cancellationToken);
+        return response.Nodes.Select(MapAdminNode).ToList();
     }
 
     public async Task<RouterNodeDetails> GetRouterNodeDetailsAsync(
@@ -29,7 +29,7 @@ public sealed class ControlPlaneProvider(
         }
 
         return new RouterNodeDetails(
-            MapNode(response.Node),
+            MapAdminNode(response.Node),
             response.Providers.Select(p => new RouterProviderQuotaInfo(
                 p.ConnectionId,
                 p.Provider,
@@ -185,7 +185,7 @@ public sealed class ControlPlaneProvider(
         return (total, response.ToAddCount, response.ToDisableCount, response.ToReactivateCount, response.ToDeleteCount);
     }
 
-    private static RouterNodeInfo MapNode(RouterNodeSummary n)
+    private static RouterNodeInfo MapAdminNode(RouterNodeAdminSummary n)
     {
         return new RouterNodeInfo(
             n.NodeId,

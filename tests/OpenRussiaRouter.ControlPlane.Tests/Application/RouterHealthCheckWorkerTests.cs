@@ -1,11 +1,11 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
@@ -28,7 +28,7 @@ public sealed class RouterHealthCheckWorkerTests
 
         await worker.RunOnceAsync(CancellationToken.None);
 
-        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await controlPlane.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.Status.Should().Be(RouterNodeStatus.Healthy);
         summary.LastCheckedAtUtc.Should().NotBeNull();
     }
@@ -49,7 +49,7 @@ public sealed class RouterHealthCheckWorkerTests
         await worker.RunOnceAsync(CancellationToken.None);
 
         healthClient.CallCount.Should().Be(0);
-        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await controlPlane.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.Status.Should().Be(RouterNodeStatus.Disabled);
     }
 

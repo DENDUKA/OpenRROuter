@@ -143,7 +143,7 @@ public sealed class ChatCompletionHandler(
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                     throw;
                 }
-                catch (HttpRequestException ex)
+                catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
                 {
                     // Connection broke before/while receiving the response (e.g. node
                     // crashed mid-stream, stale pooled HTTP/2 connection, network reset).
@@ -320,7 +320,7 @@ public sealed class ChatCompletionHandler(
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
                     throw;
                 }
-                catch (HttpRequestException ex)
+                catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
                 {
                     // Connection broke before response headers were received (e.g. node
                     // crashed mid-handshake, stale pooled HTTP/2 connection, network reset).
@@ -335,18 +335,17 @@ public sealed class ChatCompletionHandler(
                     excludedNodes ??= new HashSet<string>();
                     excludedNodes.Add(auth.Lease.NodeId);
 
+                    if (lastFailedSession != null)
+                    {
+                        await lastFailedSession.DisposeAsync();
+                        lastFailedSession = null;
+                    }
+
                     if (++attempts >= MaxRouterAttempts)
                     {
-                        if (lastFailedSession != null)
-                        {
-                            await PassThroughErrorAsync(context, lastFailedSession, CancellationToken.None);
-                        }
-                        else
-                        {
-                            await GatewayErrors.WriteAsync(
-                                context, "service_unavailable", ErrorCodes.RouterUnavailable,
-                                "Upstream node connection failed", requestId);
-                        }
+                        await GatewayErrors.WriteAsync(
+                            context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                            "Upstream node connection failed", requestId);
                         return;
                     }
 

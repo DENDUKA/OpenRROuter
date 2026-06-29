@@ -5,6 +5,9 @@ namespace OpenRussiaRouter.WebApp.Services.Legal;
 
 public class LegalDocumentService
 {
+    private const string ServiceNamePlaceholder = "{{ORR_SERVICE_NAME}}";
+    private const string ServiceName = "OpenRussiaRouter";
+
     private readonly string _docsDirectory;
     private readonly MarkdownPipeline _pipeline;
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.OrdinalIgnoreCase);
@@ -46,7 +49,8 @@ public class LegalDocumentService
             if (!File.Exists(filePath))
                 return "";
 
-            var markdown = File.ReadAllText(filePath);
+            var markdown = File.ReadAllText(filePath)
+                .Replace(ServiceNamePlaceholder, ServiceName, StringComparison.Ordinal);
             return Markdown.ToHtml(markdown, _pipeline);
         }) is { Length: > 0 } html ? html : null;
     }

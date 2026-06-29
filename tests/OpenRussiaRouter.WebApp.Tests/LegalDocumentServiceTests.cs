@@ -42,6 +42,19 @@ public class LegalDocumentServiceTests : IDisposable
     }
 
     [Fact]
+    public void GetDocumentHtml_ReplacesServiceNamePlaceholder()
+    {
+        var markdown = "# Публичная оферта {{ORR_SERVICE_NAME}}\n\nСервис {{ORR_SERVICE_NAME}}.";
+        File.WriteAllText(Path.Combine(_testDocsDirectory, "public-offer.md"), markdown);
+
+        var html = _service.GetDocumentHtml("public-offer.md");
+
+        Assert.NotNull(html);
+        Assert.DoesNotContain("{{ORR_SERVICE_NAME}}", html);
+        Assert.Equal(2, html.Split("OpenRussiaRouter").Length - 1);
+    }
+
+    [Fact]
     public void GetDocumentHtml_UnknownDocument_ReturnsNull()
     {
         var html = _service.GetDocumentHtml("unknown.md");

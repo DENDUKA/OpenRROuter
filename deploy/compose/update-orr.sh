@@ -9,6 +9,7 @@ cd "$(dirname "$0")"
 DIR=app
 ALL_SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
 REQUESTED="${1:-}"
+DEPLOY_REF="${ORR_DEPLOY_REF:-}"
 
 # Validate the requested service if any.
 if [ -n "$REQUESTED" ]; then
@@ -76,10 +77,16 @@ if [ ! -d "$DIR/.git" ]; then
   exit 1
 fi
 
-echo "==> [orr] fetch + pull"
+echo "==> [orr] fetch + update"
 before=$(git -C "$DIR" rev-parse HEAD)
-git -C "$DIR" fetch --quiet origin
-git -C "$DIR" pull --ff-only
+if [ -n "$DEPLOY_REF" ]; then
+  git check-ref-format --branch "$DEPLOY_REF" >/dev/null
+  git -C "$DIR" fetch --quiet origin "$DEPLOY_REF"
+  git -C "$DIR" checkout -B "$DEPLOY_REF" "origin/$DEPLOY_REF"
+else
+  git -C "$DIR" fetch --quiet origin
+  git -C "$DIR" pull --ff-only
+fi
 after=$(git -C "$DIR" rev-parse HEAD)
 echo "    ${before:0:9} -> ${after:0:9}"
 

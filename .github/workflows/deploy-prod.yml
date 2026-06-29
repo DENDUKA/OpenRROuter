@@ -49,6 +49,7 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
+          DEPLOY_REF:       ${{ github.ref_name }}
           PICK_F9ROUTER:    ${{ inputs.f9router }}
           PICK_API_GATEWAY: ${{ inputs.api-gateway }}
           PICK_AUTH:        ${{ inputs.auth-service }}
@@ -62,11 +63,22 @@ jobs:
           username: ${{ secrets.PROD_SSH_USER }}
           password: ${{ secrets.PROD_SSH_PASSWORD }}
           port: 22
-          envs: PICK_F9ROUTER,PICK_API_GATEWAY,PICK_AUTH,PICK_BILLING,PICK_CONTROL,PICK_COLLECTOR,PICK_WEBAPP,PICK_ALL_ORR
+          envs: DEPLOY_REF,PICK_F9ROUTER,PICK_API_GATEWAY,PICK_AUTH,PICK_BILLING,PICK_CONTROL,PICK_COLLECTOR,PICK_WEBAPP,PICK_ALL_ORR
           command_timeout: 25m
           script: |
             set -uo pipefail
             cd /opt/orr
+
+            # Deploy the same branch from which this workflow was started. The prod clone
+            # was originally bootstrapped on main, while production releases are run from
+            # Prod; a plain `git pull` therefore used to rebuild the wrong branch.
+            git check-ref-format --branch "$DEPLOY_REF" >/dev/null || {
+              echo "!! Invalid deploy ref: $DEPLOY_REF"
+              exit 2
+            }
+            git -C app fetch --quiet origin "$DEPLOY_REF" || exit 1
+            git -C app show "origin/$DEPLOY_REF:deploy/compose/update-orr.sh" > update-orr.sh || exit 1
+            chmod +x update-orr.sh
 
             # Build the ordered list of services to deploy.
             TO_DEPLOY=()
@@ -102,14 +114,14 @@ jobs:
                   FAILED+=("$svc")
                 fi
               elif [ "$svc" = "all-orr" ]; then
-                if ./update-orr.sh; then
+                if ORR_DEPLOY_REF="$DEPLOY_REF" ./update-orr.sh; then
                   echo "==> OK: $svc"
                 else
                   echo "!! FAILED: $svc (auto-rollback attempted by script)"
                   FAILED+=("$svc")
                 fi
               else
-                if ./update-orr.sh "$svc"; then
+                if ORR_DEPLOY_REF="$DEPLOY_REF" ./update-orr.sh "$svc"; then
                   echo "==> OK: $svc"
                 else
                   echo "!! FAILED: $svc (auto-rollback attempted by script)"

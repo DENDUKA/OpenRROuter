@@ -42,16 +42,26 @@ public class LegalDocumentServiceTests : IDisposable
     }
 
     [Fact]
-    public void GetDocumentHtml_ReplacesServiceNamePlaceholder()
+    public void GetDocumentHtml_ReplacesAllLegalPlaceholders()
     {
-        var markdown = "# Публичная оферта {{ORR_SERVICE_NAME}}\n\nСервис {{ORR_SERVICE_NAME}}.";
+        var markdown = """
+            # Публичная оферта {{ORR_SERVICE_NAME}}
+
+            Дата: {{ORR_DOCUMENT_DATE}}
+            Домен: {{ORR_PUBLIC_DOMAIN}}
+            Оператор: {{ORR_OPERATOR_NAME}}
+            Реквизиты: {{ORR_OPERATOR_DETAILS}}
+            Поддержка: {{ORR_SUPPORT_CONTACT}}
+            """;
         File.WriteAllText(Path.Combine(_testDocsDirectory, "public-offer.md"), markdown);
 
         var html = _service.GetDocumentHtml("public-offer.md");
 
         Assert.NotNull(html);
-        Assert.DoesNotContain("{{ORR_SERVICE_NAME}}", html);
-        Assert.Equal(2, html.Split("OpenRussiaRouter").Length - 1);
+        Assert.DoesNotContain("{{ORR_", html);
+        Assert.Contains("OpenRussiaRouter", html);
+        Assert.Contains("29.06.2026", html);
+        Assert.Contains("https://openrussiarouter.com", html);
     }
 
     [Fact]

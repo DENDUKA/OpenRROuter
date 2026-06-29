@@ -92,8 +92,8 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Contains($"<h1>{heading}", content);
         Assert.Contains("OpenRussiaRouter", content);
-        Assert.DoesNotContain("{{ORR_SERVICE_NAME}}", content);
-        Assert.Contains("{{ORR_PUBLIC_DOMAIN}}", content);
+        Assert.DoesNotContain("{{ORR_", content);
+        Assert.Contains("https://openrussiarouter.com", content);
         Assert.Contains("href=\"/legal/privacy\"", content);
         Assert.Contains("href=\"/legal/offer\"", content);
     }

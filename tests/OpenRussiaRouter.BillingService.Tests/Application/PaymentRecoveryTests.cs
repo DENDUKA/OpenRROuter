@@ -78,7 +78,7 @@ public sealed class PaymentRecoveryTests
         var payment = await service.CreatePaymentAsync("user-1", "mock", 10, "USD", 10, "USD", "tok-1", DateTimeOffset.UtcNow);
 
         // Simulate crash after tx1 (event inserted but tx2 not executed)
-        repo.InjectPaymentEvent(new PaymentEvent(
+        InjectEvent(repo, new PaymentEvent(
             "evt-crash", payment.Id, "mock", "provider-evt-1", null, "paid",
             payment.OrderId, 10m, "USD", null, "{}", true, false, 0, DateTimeOffset.UtcNow, null));
 
@@ -98,7 +98,7 @@ public sealed class PaymentRecoveryTests
         var (service, repo) = CreateService();
         var payment = await service.CreatePaymentAsync("user-1", "mock", 10, "USD", 10, "USD", "tok-2", DateTimeOffset.UtcNow);
 
-        repo.InjectPaymentEvent(new PaymentEvent(
+        InjectEvent(repo, new PaymentEvent(
             "evt-dup", payment.Id, "mock", "provider-evt-2", null, "paid",
             payment.OrderId, 10m, "USD", null, "{}", true, false, 0, DateTimeOffset.UtcNow, null));
 
@@ -119,7 +119,7 @@ public sealed class PaymentRecoveryTests
         var (service, repo) = CreateService();
         var payment = await service.CreatePaymentAsync("user-2", "mock", 5, "USD", 5, "USD", "tok-3", DateTimeOffset.UtcNow);
 
-        repo.InjectPaymentEvent(new PaymentEvent(
+        InjectEvent(repo, new PaymentEvent(
             "evt-cancel", payment.Id, "mock", "provider-evt-cancel", null, "canceled",
             payment.OrderId, null, null, "user canceled", "{}", true, false, 0, DateTimeOffset.UtcNow, null));
 
@@ -150,6 +150,9 @@ public sealed class PaymentRecoveryTests
             NullLogger<BillingApplicationService>.Instance, fx,
             Options.Create(new PaymentOptions { MinTopUpUsd = 1, MaxTopUpUsd = 10000 })), repo);
     }
+
+    private static void InjectEvent(InMemoryBillingRepository repo, PaymentEvent evt) =>
+        ((IInMemoryBillingTestHooks)repo).InjectPaymentEvent(evt);
 
     private sealed class FakeHttpClientFactory : IHttpClientFactory
     {

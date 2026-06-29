@@ -1,11 +1,12 @@
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.BuildingBlocks.Errors;
-using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -189,6 +190,17 @@ public sealed class GrpcRouterControlPlaneService(
         return response;
     }
 
+    public override async Task<ListRouterNodesForInternalConsumersResponse> ListRouterNodesForInternalConsumers(
+        ListRouterNodesRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListRouterNodesForInternalConsumersResponse();
+        response.Nodes.AddRange(
+            (await controlPlane.ListNodesForHealthChecksAsync(Ct(context)).ConfigureAwait(false))
+            .Select(MapNodeAdminSummary));
+        return response;
+    }
+
     public override async Task<GetRouterNodeDetailsResponse> GetRouterNodeDetails(
         GetRouterNodeDetailsRequest request,
         ServerCallContext context)
@@ -198,7 +210,7 @@ public sealed class GrpcRouterControlPlaneService(
         if (node is null)
             return new GetRouterNodeDetailsResponse { ErrorCode = ErrorCodes.ValidationFailed };
 
-        var response = new GetRouterNodeDetailsResponse { Node = MapNodeSummary(node) };
+        var response = new GetRouterNodeDetailsResponse { Node = MapNodeAdminSummary(node) };
         var apiErrors = new List<string>();
 
         try
@@ -469,6 +481,19 @@ public sealed class GrpcRouterControlPlaneService(
     }
 
     private static Contracts.Grpc.ControlPlane.V1.RouterNodeSummary MapNodeSummary(RouterNode node) =>
+        new()
+        {
+            NodeId = node.Id,
+            Name = node.Name,
+            EndpointUrl = node.EndpointUrl.ToString(),
+            Status = (node.Enabled ? node.Status : RouterNodeStatus.Disabled).ToString(),
+            InFlightRequests = node.InFlightRequests,
+            LastCheckedAtUtc = node.LastCheckedAtUtc?.ToString("O") ?? string.Empty,
+            CapacityWeight = node.CapacityWeight,
+            LastHealthErrorCode = node.LastHealthErrorCode ?? string.Empty
+        };
+
+    private static Contracts.Grpc.ControlPlane.V1.RouterNodeAdminSummary MapNodeAdminSummary(RouterNode node) =>
         new()
         {
             NodeId = node.Id,

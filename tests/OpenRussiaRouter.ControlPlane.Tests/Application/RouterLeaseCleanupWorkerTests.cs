@@ -1,8 +1,8 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
-using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Workers;
 
@@ -25,7 +25,7 @@ public sealed class RouterLeaseCleanupWorkerTests
 
         await worker.RunOnceAsync(now.AddMinutes(6));
 
-        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await controlPlane.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(0);
     }
 
@@ -44,7 +44,7 @@ public sealed class RouterLeaseCleanupWorkerTests
 
         await worker.RunOnceAsync(now.AddMinutes(6));
 
-        var summary = (await controlPlane.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await controlPlane.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(1);
     }
 }

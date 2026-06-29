@@ -1,5 +1,6 @@
 using OpenRussiaRouter.Contracts.ControlPlane;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Services;
@@ -161,20 +162,6 @@ public sealed class RouterControlPlaneService(
             node.Release();
             await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
         }
-    }
-
-    public async Task<IReadOnlyCollection<RouterNodeSummary>> ListRouterNodesAsync(CancellationToken ct = default)
-    {
-        return (await repository.ListNodesAsync(MaxNodePageSize, null, ct).ConfigureAwait(false))
-            .Items
-            .Select(node => new RouterNodeSummary(
-                node.Id,
-                node.Name,
-                node.EndpointUrl,
-                node.Enabled ? node.Status : RouterNodeStatus.Disabled,
-                node.InFlightRequests,
-                node.LastCheckedAtUtc))
-            .ToArray();
     }
 
     public async Task<RouterNode?> GetRouterNodeAsync(string nodeId, CancellationToken ct = default)

@@ -9,23 +9,43 @@ public static class ReasoningRequestPatcher
     public static ReasoningPatchResult TryNormalize(
         string requestJson,
         bool supportsReasoning,
-        IReadOnlyList<string> allowedEfforts)
+        IReadOnlyList<string> allowedEfforts,
+        string? defaultEffort = null)
     {
         return TryNormalize(
             requestJson,
             ChatCompletionRequestReader.Read(requestJson).Reasoning,
             supportsReasoning,
-            allowedEfforts);
+            allowedEfforts,
+            defaultEffort);
     }
 
     public static ReasoningPatchResult TryNormalize(
         string requestJson,
         ChatCompletionReasoningMetadata reasoning,
         bool supportsReasoning,
-        IReadOnlyList<string> allowedEfforts)
+        IReadOnlyList<string> allowedEfforts,
+        string? defaultEffort = null)
     {
+        var normalizedAllowed = NormalizeAllowedEfforts(allowedEfforts);
+        var normalizedDefault = NormalizeOrNull(defaultEffort);
+        // Defensive: if admin-curated default is somehow not in the allowed list, ignore it
+        // (treat as if no default were set) rather than silently injecting an unsupported effort.
+        if (normalizedDefault is not null && normalizedAllowed.Count > 0
+            && !normalizedAllowed.Contains(normalizedDefault, StringComparer.Ordinal))
+        {
+            normalizedDefault = null;
+        }
+
+        // Case 1: client sent no reasoning fields at all.
+        // Apply the model's default effort (if any) so that admin-configured defaults take
+        // effect even when clients (e.g. raw curl) never set reasoning_effort.
         if (!reasoning.HasReasoningEffort && !reasoning.HasReasoningObject)
         {
+            if (supportsReasoning && normalizedDefault is not null)
+            {
+                return InjectEffort(requestJson, normalizedDefault);
+            }
             return ReasoningPatchResult.Success(requestJson);
         }
 
@@ -51,6 +71,11 @@ public static class ReasoningRequestPatcher
         var selectedEffort = flatEffort ?? nestedEffort;
         if (selectedEffort is null)
         {
+            // reasoning object/field present but no effort value — fall back to default if any.
+            if (supportsReasoning && normalizedDefault is not null)
+            {
+                return InjectEffort(requestJson, normalizedDefault);
+            }
             return ReasoningPatchResult.Success(requestJson);
         }
 
@@ -62,12 +87,19 @@ public static class ReasoningRequestPatcher
                 requestJson);
         }
 
-        var normalizedAllowedEfforts = NormalizeAllowedEfforts(allowedEfforts);
-        if (!normalizedAllowedEfforts.Contains(selectedEffort, StringComparer.Ordinal))
+        // Case 2: client explicitly sent an effort that is not in the allowed set.
+        // If a default is configured, silently substitute it (per product decision); otherwise
+        // return the original strict error so clients learn the allowed vocabulary.
+        if (!normalizedAllowed.Contains(selectedEffort, StringComparer.Ordinal))
         {
-            var allowedList = normalizedAllowedEfforts.Count == 0
+            if (normalizedDefault is not null)
+            {
+                return InjectEffort(requestJson, normalizedDefault);
+            }
+
+            var allowedList = normalizedAllowed.Count == 0
                 ? "none configured"
-                : string.Join(", ", normalizedAllowedEfforts);
+                : string.Join(", ", normalizedAllowed);
 
             return ReasoningPatchResult.Error(
                 ErrorCodes.UnsupportedReasoningEffort,
@@ -75,6 +107,11 @@ public static class ReasoningRequestPatcher
                 requestJson);
         }
 
+        return InjectEffort(requestJson, selectedEffort);
+    }
+
+    private static ReasoningPatchResult InjectEffort(string requestJson, string effort)
+    {
         try
         {
             var node = JsonNode.Parse(requestJson);
@@ -84,7 +121,7 @@ public static class ReasoningRequestPatcher
             }
 
             obj.Remove("reasoning");
-            obj["reasoning_effort"] = selectedEffort;
+            obj["reasoning_effort"] = effort;
             return ReasoningPatchResult.Success(obj.ToJsonString());
         }
         catch (JsonException)

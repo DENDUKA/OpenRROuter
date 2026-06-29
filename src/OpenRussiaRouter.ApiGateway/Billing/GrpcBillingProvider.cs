@@ -25,7 +25,8 @@ public sealed class GrpcBillingProvider(
                 model.Id,
                 model.DisplayName,
                 model.SupportsReasoning,
-                model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToArray() : null))
+                model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToArray() : null,
+                string.IsNullOrWhiteSpace(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort))
             .ToArray();
     }
 
@@ -60,7 +61,8 @@ public sealed class GrpcBillingProvider(
                 MoneyAmount.Usd(ParseDecimal(response.BalanceUsd)),
                 string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode,
                 response.SupportsReasoning,
-                response.AllowedReasoningEfforts.Count > 0 ? response.AllowedReasoningEfforts.ToArray() : null);
+                response.AllowedReasoningEfforts.Count > 0 ? response.AllowedReasoningEfforts.ToArray() : null,
+                string.IsNullOrWhiteSpace(response.DefaultReasoningEffort) ? null : response.DefaultReasoningEffort);
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

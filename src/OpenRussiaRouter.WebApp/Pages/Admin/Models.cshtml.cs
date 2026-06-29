@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.BuildingBlocks.Reasoning;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
@@ -29,7 +30,16 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     public bool ShowForm { get; set; }
     public bool IsAdd { get; set; }
-    public IReadOnlyList<string> ReasoningEfforts { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
+
+    /// <summary>
+    /// Reasoning efforts available for selection in the edit form. Derived from the 9Router
+    /// node catalog (cached via CollectorService) and mapped into the canonical ORR vocabulary
+    /// by <see cref="NodeReasoningMapper"/>. Falls back to the full canonical set when the node
+    /// hasn't reported <c>thinkingOptions</c> (e.g. node offline on first edit) so the admin can
+    /// still curate efforts manually. <c>NodeReasoningMapper</c> only emits canonical tokens
+    /// already understood by BillingService, so this list is always safe to persist.
+    /// </summary>
+    public IReadOnlyList<string> AvailableReasoningEfforts { get; set; } = NodeReasoningMapper.OrderedCanonical;
     public IReadOnlyList<string> ModelTypes { get; } = ["text", "audio"];
     public IReadOnlyList<string> ModalityTypes { get; } = ["text", "image", "audio", "video"];
 
@@ -87,6 +97,16 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     catch (Exception ex)
                     {
                         _logger.LogWarning(ex, "Failed to load node catalog for reasoning info. ModelId={ModelId}", EditModelId);
+                    }
+
+                    // Build the pickable effort list from the node-reported vocabulary
+                    // (mapped to canonical tokens). If the node hasn't reported anything —
+                    // keep the full canonical fallback already set on the property — so the
+                    // admin can still curate efforts manually.
+                    var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(thinkingOptions);
+                    if (mappedEfforts.Count > 0)
+                    {
+                        AvailableReasoningEfforts = mappedEfforts;
                     }
 
                     Form = new ModelFormInput
@@ -278,20 +298,48 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     enrichedModel = model;
                 }
 
-                // Enrich reasoning from 9Router node catalog
+                // Enrich reasoning from 9Router node catalog.
+                // 9Router emits vocabularies like ["auto","on","off"] (claude-adaptive /
+                // gemini-level) or ["auto","none","low","medium","high"] (effort formats).
+                // Those raw tokens are not all canonical in BillingService, so we translate
+                // them through NodeReasoningMapper before persisting — otherwise the
+                // upsert below would throw and abort the entire enrich batch.
                 if (nodeCatalogByUpstream.TryGetValue(model.UpstreamModelId, out var nodeEntry)
-                    && nodeEntry.SupportsReasoning
-                    && !enrichedModel.SupportsReasoning)
+                    && nodeEntry.SupportsReasoning)
                 {
-                    enrichedModel = enrichedModel with
+                    var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(nodeEntry.ThinkingOptions);
+
+                    // (1) Model not yet marked reasoning-capable → enable it and backfill efforts + default.
+                    // (2) Model already reasoning-capable but allowed efforts empty → backfill from node.
+                    // Anything else (admin-curated efforts) is left alone.
+                    ModelInfo? reasoningPatched = null;
+                    if (!enrichedModel.SupportsReasoning && mappedEfforts.Count > 0)
                     {
-                        SupportsReasoning = true,
-                        AllowedReasoningEfforts = nodeEntry.ThinkingOptions.Count > 0
-                            ? nodeEntry.ThinkingOptions
-                            : enrichedModel.AllowedReasoningEfforts,
-                        DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
-                    };
-                    reasoningEnriched++;
+                        reasoningPatched = enrichedModel with
+                        {
+                            SupportsReasoning = true,
+                            AllowedReasoningEfforts = mappedEfforts,
+                            DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
+                                ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                        };
+                    }
+                    else if (enrichedModel.SupportsReasoning
+                             && (enrichedModel.AllowedReasoningEfforts is null || enrichedModel.AllowedReasoningEfforts.Count == 0)
+                             && mappedEfforts.Count > 0)
+                    {
+                        reasoningPatched = enrichedModel with
+                        {
+                            AllowedReasoningEfforts = mappedEfforts,
+                            DefaultReasoningEffort = enrichedModel.DefaultReasoningEffort
+                                ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                        };
+                    }
+
+                    if (reasoningPatched is not null)
+                    {
+                        enrichedModel = reasoningPatched;
+                        reasoningEnriched++;
+                    }
                 }
 
                 if (enrichedModel != model)
@@ -415,7 +463,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         foreach (var effort in Form.AllowedReasoningEfforts)
         {
-            if (!ReasoningEfforts.Contains(effort, StringComparer.Ordinal))
+            if (!NodeReasoningMapper.OrderedCanonical.Contains(effort, StringComparer.Ordinal))
             {
                 ModelState.AddModelError(nameof(Form.AllowedReasoningEfforts), $"Unsupported reasoning effort '{effort}'.");
             }

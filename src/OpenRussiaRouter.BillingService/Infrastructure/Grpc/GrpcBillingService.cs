@@ -42,6 +42,7 @@ public sealed class GrpcBillingService(
         {
             response.AllowedReasoningEfforts.AddRange(result.AllowedReasoningEfforts);
         }
+        response.DefaultReasoningEffort = result.DefaultReasoningEffort ?? string.Empty;
 
         return response;
     }
@@ -78,6 +79,7 @@ public sealed class GrpcBillingService(
                     SupportsReasoning = model.SupportsReasoning,
                     ModelType = price?.ModelType ?? "text",
                     Priority = price?.Priority ?? 0,
+                    DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {

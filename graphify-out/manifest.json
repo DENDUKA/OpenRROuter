@@ -1,0 +1,2047 @@
+{
+  "OpenRussiaRouter.ApiGateway/Application/Endpoints/ChatCompletionHandler.cs": {
+    "mtime": 1782578559.4067843,
+    "ast_hash": "f261b54d9988378d7cf4dd9b59c87f99",
+    "semantic_hash": "f261b54d9988378d7cf4dd9b59c87f99"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Endpoints/ImageGenerationHandler.cs": {
+    "mtime": 1781634533.2647715,
+    "ast_hash": "b76e8a9678b338f22d66486a36de887d",
+    "semantic_hash": "b76e8a9678b338f22d66486a36de887d"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Endpoints/ModelsHandler.cs": {
+    "mtime": 1782559599.5901725,
+    "ast_hash": "4d928864375cd801dced19dff521d885",
+    "semantic_hash": "4d928864375cd801dced19dff521d885"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Endpoints/TextToSpeechHandler.cs": {
+    "mtime": 1781995737.1571057,
+    "ast_hash": "0061ec81cecff0af2485cb10137343a3",
+    "semantic_hash": "0061ec81cecff0af2485cb10137343a3"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Extensions/ApiGatewayExtensions.cs": {
+    "mtime": 1781967638.9687357,
+    "ast_hash": "ed1a765276f24920153cb258283345fe",
+    "semantic_hash": "ed1a765276f24920153cb258283345fe"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Extensions/GatewayOptions.cs": {
+    "mtime": 1781693126.7896702,
+    "ast_hash": "01d0918d1288a568877d543bf6760c18",
+    "semantic_hash": "01d0918d1288a568877d543bf6760c18"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Extensions/GatewayRateLimiting.cs": {
+    "mtime": 1781351532.245534,
+    "ast_hash": "391a627cfc79aa58fefa57584d4a35a1",
+    "semantic_hash": "391a627cfc79aa58fefa57584d4a35a1"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Services/GatewayAuthorizedContext.cs": {
+    "mtime": 1782578559.4067843,
+    "ast_hash": "2bd76286d303bb7c9197ae8bf1cd23f5",
+    "semantic_hash": "2bd76286d303bb7c9197ae8bf1cd23f5"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Services/GatewayPipeline.cs": {
+    "mtime": 1782578559.4077847,
+    "ast_hash": "d09cec47c1e871d8d99257eaddae7472",
+    "semantic_hash": "d09cec47c1e871d8d99257eaddae7472"
+  },
+  "OpenRussiaRouter.ApiGateway/Application/Services/GatewayPreferredNodeHeaders.cs": {
+    "mtime": 1779959923.9216866,
+    "ast_hash": "77351c08e9f4fb15d9371310fc34e911",
+    "semantic_hash": "77351c08e9f4fb15d9371310fc34e911"
+  },
+  "OpenRussiaRouter.ApiGateway/Auth/ApiKeyAuthenticationResult.cs": {
+    "mtime": 1779988620.2193084,
+    "ast_hash": "20efc3e0d8cc989ab4d3879cfc58894a",
+    "semantic_hash": "20efc3e0d8cc989ab4d3879cfc58894a"
+  },
+  "OpenRussiaRouter.ApiGateway/Auth/BearerTokenReader.cs": {
+    "mtime": 1778613257.6665585,
+    "ast_hash": "90af77d11ec91384d0edd2ed4dc2f4e6",
+    "semantic_hash": "90af77d11ec91384d0edd2ed4dc2f4e6"
+  },
+  "OpenRussiaRouter.ApiGateway/Auth/GrpcApiKeyProvider.cs": {
+    "mtime": 1779988624.8736155,
+    "ast_hash": "744b3f8c0c6351649188c262ccb09104",
+    "semantic_hash": "744b3f8c0c6351649188c262ccb09104"
+  },
+  "OpenRussiaRouter.ApiGateway/Auth/IApiKeyProvider.cs": {
+    "mtime": 1779630235.7845297,
+    "ast_hash": "1debcdc58dec503da5628b9b192227ae",
+    "semantic_hash": "1debcdc58dec503da5628b9b192227ae"
+  },
+  "OpenRussiaRouter.ApiGateway/Billing/GatewayBalanceCheckResult.cs": {
+    "mtime": 1782510258.0347514,
+    "ast_hash": "ea674dff865f0922ce9e29053cfe31d0",
+    "semantic_hash": "ea674dff865f0922ce9e29053cfe31d0"
+  },
+  "OpenRussiaRouter.ApiGateway/Billing/GatewayPublicModel.cs": {
+    "mtime": 1782510248.2613652,
+    "ast_hash": "8a427d550f0e5fa13248df8b54809627",
+    "semantic_hash": "8a427d550f0e5fa13248df8b54809627"
+  },
+  "OpenRussiaRouter.ApiGateway/Billing/GatewayUsageEvent.cs": {
+    "mtime": 1779572165.457536,
+    "ast_hash": "e0b163a23efab43c9290fe41e493e269",
+    "semantic_hash": "e0b163a23efab43c9290fe41e493e269"
+  },
+  "OpenRussiaRouter.ApiGateway/Billing/GrpcBillingProvider.cs": {
+    "mtime": 1782510278.4014256,
+    "ast_hash": "ec668f2b8718d80209bdf84d38c6605b",
+    "semantic_hash": "ec668f2b8718d80209bdf84d38c6605b"
+  },
+  "OpenRussiaRouter.ApiGateway/Billing/IBillingProvider.cs": {
+    "mtime": 1781344937.1618633,
+    "ast_hash": "7fb58bad41db86b6957e5a06079ef3f6",
+    "semantic_hash": "7fb58bad41db86b6957e5a06079ef3f6"
+  },
+  "OpenRussiaRouter.ApiGateway/ControlPlane/GatewayRouterLease.cs": {
+    "mtime": 1779226807.642089,
+    "ast_hash": "a3b67032414066ef0bd6353e34089387",
+    "semantic_hash": "a3b67032414066ef0bd6353e34089387"
+  },
+  "OpenRussiaRouter.ApiGateway/ControlPlane/GrpcControlPlaneProvider.cs": {
+    "mtime": 1780585837.8780725,
+    "ast_hash": "9a1e8d9533d55b5c6833e5959a0c1092",
+    "semantic_hash": "9a1e8d9533d55b5c6833e5959a0c1092"
+  },
+  "OpenRussiaRouter.ApiGateway/ControlPlane/IControlPlaneProvider.cs": {
+    "mtime": 1780585811.1136782,
+    "ast_hash": "fe247491ec2ad4876abd124a2c11c6c8",
+    "semantic_hash": "fe247491ec2ad4876abd124a2c11c6c8"
+  },
+  "OpenRussiaRouter.ApiGateway/Http/CorrelationIdReader.cs": {
+    "mtime": 1778613257.7255604,
+    "ast_hash": "533006319a00ce7bf2266ce206d1d2ee",
+    "semantic_hash": "533006319a00ce7bf2266ce206d1d2ee"
+  },
+  "OpenRussiaRouter.ApiGateway/Http/GatewayErrors.cs": {
+    "mtime": 1781351532.2538228,
+    "ast_hash": "5b599a25e92db905a4d4b42ecc0df357",
+    "semantic_hash": "5b599a25e92db905a4d4b42ecc0df357"
+  },
+  "OpenRussiaRouter.ApiGateway/Infrastructure/Startup/Startup.cs": {
+    "mtime": 1781716581.8215716,
+    "ast_hash": "23d67cf2a7b72837bb1a37b89c67bd98",
+    "semantic_hash": "23d67cf2a7b72837bb1a37b89c67bd98"
+  },
+  "OpenRussiaRouter.ApiGateway/Infrastructure/Startup/VisitorMetricsMiddleware.cs": {
+    "mtime": 1781716573.0672648,
+    "ast_hash": "1f89fa2a5ffa55c9ac202893b5f66419",
+    "semantic_hash": "1f89fa2a5ffa55c9ac202893b5f66419"
+  },
+  "OpenRussiaRouter.ApiGateway/OpenAi/ChatCompletionRequestReader.cs": {
+    "mtime": 1780996501.2778878,
+    "ast_hash": "582b46eb8d3e53bc19758a0229a8ace4",
+    "semantic_hash": "582b46eb8d3e53bc19758a0229a8ace4"
+  },
+  "OpenRussiaRouter.ApiGateway/OpenAi/GeminiSchemaPatcher.cs": {
+    "mtime": 1780235486.71604,
+    "ast_hash": "a066013134d3ee2175f4d610a05bd721",
+    "semantic_hash": "a066013134d3ee2175f4d610a05bd721"
+  },
+  "OpenRussiaRouter.ApiGateway/OpenAi/ReasoningRequestPatcher.cs": {
+    "mtime": 1782578559.4087832,
+    "ast_hash": "3570ecd0b8fb75beb3819f559ee9cb52",
+    "semantic_hash": "3570ecd0b8fb75beb3819f559ee9cb52"
+  },
+  "OpenRussiaRouter.ApiGateway/OpenAi/SseRequestPatcher.cs": {
+    "mtime": 1780235481.9688804,
+    "ast_hash": "740190a7c00ffe78de5c3bc25864dc8a",
+    "semantic_hash": "740190a7c00ffe78de5c3bc25864dc8a"
+  },
+  "OpenRussiaRouter.ApiGateway/OpenRussiaRouter.ApiGateway.csproj": {
+    "mtime": 1781379358.7970781,
+    "ast_hash": "e4e9de5716054a2286645c0ce5a46503",
+    "semantic_hash": "e4e9de5716054a2286645c0ce5a46503"
+  },
+  "OpenRussiaRouter.ApiGateway/Program.cs": {
+    "mtime": 1781716582.833251,
+    "ast_hash": "fe37c2f654c518826d93af02413cf15f",
+    "semantic_hash": "fe37c2f654c518826d93af02413cf15f"
+  },
+  "OpenRussiaRouter.ApiGateway/Properties/launchSettings.json": {
+    "mtime": 1778573853.9056962,
+    "ast_hash": "897d6ab63e1486388daec74a7b55d39d",
+    "semantic_hash": "897d6ab63e1486388daec74a7b55d39d"
+  },
+  "OpenRussiaRouter.ApiGateway/Router/IRouterProxyProvider.cs": {
+    "mtime": 1781967554.8126304,
+    "ast_hash": "df3afd6200410090d7ea604292587eb6",
+    "semantic_hash": "df3afd6200410090d7ea604292587eb6"
+  },
+  "OpenRussiaRouter.ApiGateway/Router/RouterProxyResponse.cs": {
+    "mtime": 1781995703.0108097,
+    "ast_hash": "ea30f1c3f40aefa3520762158017b3fb",
+    "semantic_hash": "ea30f1c3f40aefa3520762158017b3fb"
+  },
+  "OpenRussiaRouter.ApiGateway/Router/RouterStreamSession.cs": {
+    "mtime": 1779572134.6703086,
+    "ast_hash": "99f20161bfaa50183f93f5aa4460736e",
+    "semantic_hash": "99f20161bfaa50183f93f5aa4460736e"
+  },
+  "OpenRussiaRouter.ApiGateway/Router/RouterUsageExtractor.cs": {
+    "mtime": 1779405398.1617384,
+    "ast_hash": "d2b34e6cb627efb445b620402446695b",
+    "semantic_hash": "d2b34e6cb627efb445b620402446695b"
+  },
+  "OpenRussiaRouter.ApiGateway/Router/YarpRouterProxyProvider.cs": {
+    "mtime": 1782505008.32227,
+    "ast_hash": "7932ecbbd8767d559f6e05d46a1c6835",
+    "semantic_hash": "7932ecbbd8767d559f6e05d46a1c6835"
+  },
+  "OpenRussiaRouter.ApiGateway/appsettings.Development.json": {
+    "mtime": 1781003927.3138666,
+    "ast_hash": "982ab6e19232a276c564b57a80bdbfc0",
+    "semantic_hash": "982ab6e19232a276c564b57a80bdbfc0"
+  },
+  "OpenRussiaRouter.ApiGateway/appsettings.Production.json": {
+    "mtime": 1778829196.1619537,
+    "ast_hash": "54385447a29edcb977c31ae13aebbe22",
+    "semantic_hash": "54385447a29edcb977c31ae13aebbe22"
+  },
+  "OpenRussiaRouter.ApiGateway/appsettings.json": {
+    "mtime": 1781969770.1049423,
+    "ast_hash": "f509cc06bfda5622d0120f67962f30ec",
+    "semantic_hash": "f509cc06bfda5622d0120f67962f30ec"
+  },
+  "OpenRussiaRouter.AuthService/Application/Abstractions/IPasswordHasher.cs": {
+    "mtime": 1781292772.9084427,
+    "ast_hash": "fdb4afd4604ea0dbe341b54feaf2a52e",
+    "semantic_hash": "fdb4afd4604ea0dbe341b54feaf2a52e"
+  },
+  "OpenRussiaRouter.AuthService/Application/Abstractions/ISecretHasher.cs": {
+    "mtime": 1781292773.1272857,
+    "ast_hash": "98405aa708a6eea92c1853236380e730",
+    "semantic_hash": "98405aa708a6eea92c1853236380e730"
+  },
+  "OpenRussiaRouter.AuthService/Application/Extensions/AuthServiceExtensions.cs": {
+    "mtime": 1782626130.3301437,
+    "ast_hash": "b58e04b7bfc4b0d27d034a357b13b20c",
+    "semantic_hash": "b58e04b7bfc4b0d27d034a357b13b20c"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/ApiKeyFactory.cs": {
+    "mtime": 1781292804.0608735,
+    "ast_hash": "0501d9e18e53a6b6d5da2ad9ada2fc61",
+    "semantic_hash": "0501d9e18e53a6b6d5da2ad9ada2fc61"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/AuthAccountApplicationService.cs": {
+    "mtime": 1781302113.8236074,
+    "ast_hash": "b3b95d35ed2338ed995dbc1bf30dd80a",
+    "semantic_hash": "b3b95d35ed2338ed995dbc1bf30dd80a"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/AuthErrorCodes.cs": {
+    "mtime": 1781302113.8306174,
+    "ast_hash": "b353ddc7995261b1fca5d04ea0e112b1",
+    "semantic_hash": "b353ddc7995261b1fca5d04ea0e112b1"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/EmailVerificationService.cs": {
+    "mtime": 1781302113.832185,
+    "ast_hash": "ba7512404aa4eedacfebce7a190efeab",
+    "semantic_hash": "ba7512404aa4eedacfebce7a190efeab"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/GoogleAuthService.cs": {
+    "mtime": 1781283611.9052324,
+    "ast_hash": "52e124e54197589385cd88adf4b119f0",
+    "semantic_hash": "52e124e54197589385cd88adf4b119f0"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/IAuthApiKeyValidator.cs": {
+    "mtime": 1779487088.257567,
+    "ast_hash": "2d3fbcf4dfad9878ca7f37a1a82cb528",
+    "semantic_hash": "2d3fbcf4dfad9878ca7f37a1a82cb528"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/IAuthRepository.cs": {
+    "mtime": 1781302113.8425865,
+    "ast_hash": "49ee7e0fa55a2fec211655ff1c5383de",
+    "semantic_hash": "49ee7e0fa55a2fec211655ff1c5383de"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/InviteRegistrationService.cs": {
+    "mtime": 1781292802.3076262,
+    "ast_hash": "be991e9fcab435aa37cd6cfc46e378fd",
+    "semantic_hash": "be991e9fcab435aa37cd6cfc46e378fd"
+  },
+  "OpenRussiaRouter.AuthService/Application/Services/LoginService.cs": {
+    "mtime": 1781302113.8425865,
+    "ast_hash": "938863ceafb46778bf1d086702bb7d8c",
+    "semantic_hash": "938863ceafb46778bf1d086702bb7d8c"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/ApiKey.cs": {
+    "mtime": 1780733544.2884212,
+    "ast_hash": "fbf2e8132ccee4e26918495dd438cf90",
+    "semantic_hash": "fbf2e8132ccee4e26918495dd438cf90"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/EmailVerification.cs": {
+    "mtime": 1781302113.8680787,
+    "ast_hash": "0923a5a233c02bbc2ceabed4f76551d4",
+    "semantic_hash": "0923a5a233c02bbc2ceabed4f76551d4"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/ExternalLogin.cs": {
+    "mtime": 1779553321.2008848,
+    "ast_hash": "3755c3ba2e7580e6623ba1d8043c6d35",
+    "semantic_hash": "3755c3ba2e7580e6623ba1d8043c6d35"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/Invite.cs": {
+    "mtime": 1778613257.8445616,
+    "ast_hash": "9c7f65ee8cdb79df18681b90780aea68",
+    "semantic_hash": "9c7f65ee8cdb79df18681b90780aea68"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/UserAccount.cs": {
+    "mtime": 1781302113.8759415,
+    "ast_hash": "acf3e14ce5d8ed2b52aebe57d6d77ce8",
+    "semantic_hash": "acf3e14ce5d8ed2b52aebe57d6d77ce8"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Entities/UserSession.cs": {
+    "mtime": 1778613257.861559,
+    "ast_hash": "9c32e5df155d6a7e02bce2cbd6ab0bc3",
+    "semantic_hash": "9c32e5df155d6a7e02bce2cbd6ab0bc3"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Enums/UserRole.cs": {
+    "mtime": 1778613257.8705583,
+    "ast_hash": "5909fcfa92455107a01005b8b189901e",
+    "semantic_hash": "5909fcfa92455107a01005b8b189901e"
+  },
+  "OpenRussiaRouter.AuthService/Domain/Enums/UserStatus.cs": {
+    "mtime": 1780468666.2213457,
+    "ast_hash": "de82be419be17c92a9389f3e9f5f5115",
+    "semantic_hash": "de82be419be17c92a9389f3e9f5f5115"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Grpc/GrpcAuthService.cs": {
+    "mtime": 1781302113.882772,
+    "ast_hash": "f5bdc501b6455e9a859c950e3c67b658",
+    "semantic_hash": "f5bdc501b6455e9a859c950e3c67b658"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Http/HealthController.cs": {
+    "mtime": 1781283558.3783257,
+    "ast_hash": "9611c21214de9d1cf9863f09fcbca4ae",
+    "semantic_hash": "9611c21214de9d1cf9863f09fcbca4ae"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/ApiKeyEntity.cs": {
+    "mtime": 1780733582.976248,
+    "ast_hash": "aa7254bf5e382cc960ab8059e1351c17",
+    "semantic_hash": "aa7254bf5e382cc960ab8059e1351c17"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/AuthDbConnectionFactory.cs": {
+    "mtime": 1778608774.7619126,
+    "ast_hash": "a82b16d792949289647c100824fba66b",
+    "semantic_hash": "a82b16d792949289647c100824fba66b"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/AuthPersistenceMapper.cs": {
+    "mtime": 1781302113.8895836,
+    "ast_hash": "2333b3b3754d62c0d0ef27954d95a2e5",
+    "semantic_hash": "2333b3b3754d62c0d0ef27954d95a2e5"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/EmailVerificationEntity.cs": {
+    "mtime": 1780468666.2517087,
+    "ast_hash": "82f51e57e96f0f11e75b175a4c75c035",
+    "semantic_hash": "82f51e57e96f0f11e75b175a4c75c035"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/ExternalLoginEntity.cs": {
+    "mtime": 1779553568.2246475,
+    "ast_hash": "63e04a9b502b6f9eb0748f5722e4bdd0",
+    "semantic_hash": "63e04a9b502b6f9eb0748f5722e4bdd0"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/IAuthDbConnectionFactory.cs": {
+    "mtime": 1778608765.734394,
+    "ast_hash": "bc20228c3e02b052849da5f799a52324",
+    "semantic_hash": "bc20228c3e02b052849da5f799a52324"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/InviteEntity.cs": {
+    "mtime": 1778608679.8196733,
+    "ast_hash": "79521aed624841f1330a39a03e6445a9",
+    "semantic_hash": "79521aed624841f1330a39a03e6445a9"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Persistence/UserAccountEntity.cs": {
+    "mtime": 1781302113.898814,
+    "ast_hash": "8f91393e724d3f75b1387dd4df5c3fe9",
+    "semantic_hash": "8f91393e724d3f75b1387dd4df5c3fe9"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Repository/AuthApiKeyValidator.cs": {
+    "mtime": 1781295320.517052,
+    "ast_hash": "4b01e36f87c6ef6c791acbec1cbe1a57",
+    "semantic_hash": "4b01e36f87c6ef6c791acbec1cbe1a57"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Repository/AuthRepository.cs": {
+    "mtime": 1781302113.9060216,
+    "ast_hash": "e3674b9ef53de88af776db7fce5e0e3d",
+    "semantic_hash": "e3674b9ef53de88af776db7fce5e0e3d"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Repository/InMemoryAuthRepository.cs": {
+    "mtime": 1781302113.9070218,
+    "ast_hash": "1685d4aa12bcd9c6ebec5b772362f142",
+    "semantic_hash": "1685d4aa12bcd9c6ebec5b772362f142"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Security/ISecretGenerator.cs": {
+    "mtime": 1779215189.008575,
+    "ast_hash": "298396b9a0b0986632f76a566f3edcee",
+    "semantic_hash": "298396b9a0b0986632f76a566f3edcee"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Security/Pbkdf2PasswordHasher.cs": {
+    "mtime": 1781292784.1194692,
+    "ast_hash": "96538d85a881e6a9cd5f8322530f4713",
+    "semantic_hash": "96538d85a881e6a9cd5f8322530f4713"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Security/SecretGenerator.cs": {
+    "mtime": 1779215194.0031197,
+    "ast_hash": "46257ac22930b0090fcbb393a6ae38ea",
+    "semantic_hash": "46257ac22930b0090fcbb393a6ae38ea"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Security/Sha256SecretHasher.cs": {
+    "mtime": 1781292785.4864163,
+    "ast_hash": "29bf0d97a806be4d054e06bc63591e57",
+    "semantic_hash": "29bf0d97a806be4d054e06bc63591e57"
+  },
+  "OpenRussiaRouter.AuthService/Infrastructure/Startup/Startup.cs": {
+    "mtime": 1779631998.429947,
+    "ast_hash": "bf8d285bec90e590a0effb5e7f5c4f39",
+    "semantic_hash": "bf8d285bec90e590a0effb5e7f5c4f39"
+  },
+  "OpenRussiaRouter.AuthService/OpenRussiaRouter.AuthService.csproj": {
+    "mtime": 1780948518.7444377,
+    "ast_hash": "ee96ee0b19c2b482a64ef2f1d56c36b6",
+    "semantic_hash": "ee96ee0b19c2b482a64ef2f1d56c36b6"
+  },
+  "OpenRussiaRouter.AuthService/Program.cs": {
+    "mtime": 1780149269.5136726,
+    "ast_hash": "84401cf53bd3ad2343b661540d367081",
+    "semantic_hash": "84401cf53bd3ad2343b661540d367081"
+  },
+  "OpenRussiaRouter.AuthService/Properties/launchSettings.json": {
+    "mtime": 1778573853.9221778,
+    "ast_hash": "04dfbef60a7acb30c8b82980ac225662",
+    "semantic_hash": "04dfbef60a7acb30c8b82980ac225662"
+  },
+  "OpenRussiaRouter.AuthService/appsettings.Development.json": {
+    "mtime": 1778573853.9231813,
+    "ast_hash": "b627ccff10c19bf6a76ba459aeb82a0a",
+    "semantic_hash": "b627ccff10c19bf6a76ba459aeb82a0a"
+  },
+  "OpenRussiaRouter.AuthService/appsettings.Production.json": {
+    "mtime": 1778829196.1979244,
+    "ast_hash": "54385447a29edcb977c31ae13aebbe22",
+    "semantic_hash": "54385447a29edcb977c31ae13aebbe22"
+  },
+  "OpenRussiaRouter.AuthService/appsettings.json": {
+    "mtime": 1778583530.4767227,
+    "ast_hash": "6baac772e3ebc53540349d02b5af7b1e",
+    "semantic_hash": "6baac772e3ebc53540349d02b5af7b1e"
+  },
+  "OpenRussiaRouter.BillingService/Application/Extensions/BillingServiceExtensions.cs": {
+    "mtime": 1781298507.436496,
+    "ast_hash": "10c95d8f80c05cc8dbad2c5d7dc922c3",
+    "semantic_hash": "10c95d8f80c05cc8dbad2c5d7dc922c3"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/BillingApplicationService.cs": {
+    "mtime": 1782510237.9659443,
+    "ast_hash": "8297e38c7b988b481f328fa9b89f7ac0",
+    "semantic_hash": "8297e38c7b988b481f328fa9b89f7ac0"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/BillingPaginationOptions.cs": {
+    "mtime": 1779981007.1540973,
+    "ast_hash": "768087928bd57eff7e8135373d229512",
+    "semantic_hash": "768087928bd57eff7e8135373d229512"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/FxQuoteService.cs": {
+    "mtime": 1780950633.158042,
+    "ast_hash": "ed305c5959264d175706946291723635",
+    "semantic_hash": "ed305c5959264d175706946291723635"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/IBillingRepository.cs": {
+    "mtime": 1782230559.6880336,
+    "ast_hash": "12e6e6df592d2014c6a5f074ba0c7c33",
+    "semantic_hash": "12e6e6df592d2014c6a5f074ba0c7c33"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/ReasoningEffort.cs": {
+    "mtime": 1780996501.3016176,
+    "ast_hash": "e047746132eaeaf4346bbd05a7ac6cbd",
+    "semantic_hash": "e047746132eaeaf4346bbd05a7ac6cbd"
+  },
+  "OpenRussiaRouter.BillingService/Application/Services/RecordUsageResult.cs": {
+    "mtime": 1778608743.2045255,
+    "ast_hash": "774618da98c5a4eb637ca28c4d4777b5",
+    "semantic_hash": "774618da98c5a4eb637ca28c4d4777b5"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/ActivityByTokenRecord.cs": {
+    "mtime": 1779572344.4097154,
+    "ast_hash": "64d1a87bacd773a858ea464178ec88af",
+    "semantic_hash": "64d1a87bacd773a858ea464178ec88af"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/ActivitySummary.cs": {
+    "mtime": 1779545739.3947937,
+    "ast_hash": "4f5d0ffece5e8322da11455136f5043b",
+    "semantic_hash": "4f5d0ffece5e8322da11455136f5043b"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/AdminRequestRecord.cs": {
+    "mtime": 1779572352.1232653,
+    "ast_hash": "8e1f9333bffdeda9bdcd0b909f4b8493",
+    "semantic_hash": "8e1f9333bffdeda9bdcd0b909f4b8493"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/ApiKeyLimitSummary.cs": {
+    "mtime": 1781344778.5043533,
+    "ast_hash": "92f0f2cba3b059470fd3dfeca2b6768e",
+    "semantic_hash": "92f0f2cba3b059470fd3dfeca2b6768e"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/ApiKeySpendLimit.cs": {
+    "mtime": 1781344778.5043533,
+    "ast_hash": "47a016ca3b8375499fecfc7ac3a88910",
+    "semantic_hash": "47a016ca3b8375499fecfc7ac3a88910"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/BillingAnomaly.cs": {
+    "mtime": 1778613258.009561,
+    "ast_hash": "caa1d354b2fde478b97b0f8c50eb1320",
+    "semantic_hash": "caa1d354b2fde478b97b0f8c50eb1320"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/LedgerEntry.cs": {
+    "mtime": 1778613258.0125606,
+    "ast_hash": "ae5d12782d2d1b7a6a89683918e11618",
+    "semantic_hash": "ae5d12782d2d1b7a6a89683918e11618"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/ModelPrice.cs": {
+    "mtime": 1782505008.3315785,
+    "ast_hash": "aa17d5a13c17e62fde204d1bdbec01b2",
+    "semantic_hash": "aa17d5a13c17e62fde204d1bdbec01b2"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/Payment.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "4df3d1aa2ee3e45361b16a24f6ec8c10",
+    "semantic_hash": "4df3d1aa2ee3e45361b16a24f6ec8c10"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/PaymentEvent.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "1ec38f7eb0dc6c6767fec169c3e23623",
+    "semantic_hash": "1ec38f7eb0dc6c6767fec169c3e23623"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/Tag.cs": {
+    "mtime": 1780083192.0649407,
+    "ast_hash": "6cc8fbd295a05646ab6e71efa112c52b",
+    "semantic_hash": "6cc8fbd295a05646ab6e71efa112c52b"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Entities/UsageRecord.cs": {
+    "mtime": 1779572347.934937,
+    "ast_hash": "2e1f0f3803ff3d42ba956d4c3ceb4c3f",
+    "semantic_hash": "2e1f0f3803ff3d42ba956d4c3ceb4c3f"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Enums/LedgerEntryType.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "757002d092ddfd91409957959915ea69",
+    "semantic_hash": "757002d092ddfd91409957959915ea69"
+  },
+  "OpenRussiaRouter.BillingService/Domain/Enums/PaymentStatus.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "abbae2bf56ef9c48b5f703a0d9cc9fe7",
+    "semantic_hash": "abbae2bf56ef9c48b5f703a0d9cc9fe7"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Auth/ServiceAuthInterceptor.cs": {
+    "mtime": 1781345177.9629538,
+    "ast_hash": "b3c4fdf89cda5aff20e1cae69d04552c",
+    "semantic_hash": "b3c4fdf89cda5aff20e1cae69d04552c"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Auth/ServiceAuthOptions.cs": {
+    "mtime": 1781003927.32828,
+    "ast_hash": "ca4e67f639e9fac5f0c53081fec5d4cd",
+    "semantic_hash": "ca4e67f639e9fac5f0c53081fec5d4cd"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Grpc/GrpcBillingService.cs": {
+    "mtime": 1782510197.8339224,
+    "ast_hash": "ed0390d985b926033d9f42eef111f6f4",
+    "semantic_hash": "ed0390d985b926033d9f42eef111f6f4"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Http/HealthController.cs": {
+    "mtime": 1781345177.96496,
+    "ast_hash": "96b2cc0d602362bda44b9435e61703d2",
+    "semantic_hash": "96b2cc0d602362bda44b9435e61703d2"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/ActivityByTokenEntity.cs": {
+    "mtime": 1779572361.503433,
+    "ast_hash": "de0efcdc29f71e9145c0d7ad25516c06",
+    "semantic_hash": "de0efcdc29f71e9145c0d7ad25516c06"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/ActivitySummaryEntities.cs": {
+    "mtime": 1780038639.2138922,
+    "ast_hash": "d39033dfc3b4d08e22a90162a1c17e6c",
+    "semantic_hash": "d39033dfc3b4d08e22a90162a1c17e6c"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/AdminRequestEntity.cs": {
+    "mtime": 1779572370.706086,
+    "ast_hash": "02028dff7976fe9e61a547ab8db288d7",
+    "semantic_hash": "02028dff7976fe9e61a547ab8db288d7"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/BillingAnomalyEntity.cs": {
+    "mtime": 1778608678.7619352,
+    "ast_hash": "803712babc59751a03646988fa795af0",
+    "semantic_hash": "803712babc59751a03646988fa795af0"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/BillingDbConnectionFactory.cs": {
+    "mtime": 1778613258.032559,
+    "ast_hash": "f239ea7c5ef0393349beaf1e61133449",
+    "semantic_hash": "f239ea7c5ef0393349beaf1e61133449"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/BillingPersistenceMapper.cs": {
+    "mtime": 1782505008.352667,
+    "ast_hash": "dca9fc801a93e5dd99f9114e57b48bb2",
+    "semantic_hash": "dca9fc801a93e5dd99f9114e57b48bb2"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/IBillingDbConnectionFactory.cs": {
+    "mtime": 1778608578.8686163,
+    "ast_hash": "dea85620fbbb1771e99a60f8d414828d",
+    "semantic_hash": "dea85620fbbb1771e99a60f8d414828d"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/LedgerEntryEntity.cs": {
+    "mtime": 1778608676.3967943,
+    "ast_hash": "3da2cff52376c6764b2da3767b0aa9dd",
+    "semantic_hash": "3da2cff52376c6764b2da3767b0aa9dd"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/ModelPriceEntity.cs": {
+    "mtime": 1782505008.3621914,
+    "ast_hash": "f6807ea4f3f9178f73cbbb4bacd28af9",
+    "semantic_hash": "f6807ea4f3f9178f73cbbb4bacd28af9"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/PaymentEntity.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "2e753e6ee7799130575555f99281efdf",
+    "semantic_hash": "2e753e6ee7799130575555f99281efdf"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/PaymentEventEntity.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "9eb3e50c6fa0a3761ec0b7054a1add5c",
+    "semantic_hash": "9eb3e50c6fa0a3761ec0b7054a1add5c"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/TagEntity.cs": {
+    "mtime": 1780083192.0676706,
+    "ast_hash": "f785548adbf178fceb6e2b81111c2f67",
+    "semantic_hash": "f785548adbf178fceb6e2b81111c2f67"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Persistence/UsageRecordEntity.cs": {
+    "mtime": 1779572365.471893,
+    "ast_hash": "856c4f72b673397bc981f13559de4f89",
+    "semantic_hash": "856c4f72b673397bc981f13559de4f89"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Repository/BillingRepository.cs": {
+    "mtime": 1782505008.371277,
+    "ast_hash": "2efc9984bb93b93e40068ea218b27902",
+    "semantic_hash": "2efc9984bb93b93e40068ea218b27902"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Repository/IInMemoryBillingTestHooks.cs": {
+    "mtime": 1782626220.858017,
+    "ast_hash": "9530f09af464188b98219f4cb3edac34",
+    "semantic_hash": "9530f09af464188b98219f4cb3edac34"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Repository/InMemoryBillingRepository.cs": {
+    "mtime": 1782626220.8860693,
+    "ast_hash": "104d8dd995a7742a6134eec00c12517f",
+    "semantic_hash": "104d8dd995a7742a6134eec00c12517f"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Startup/Startup.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "254cca9b1d2d66a5eb24dd7cebe7ead7",
+    "semantic_hash": "254cca9b1d2d66a5eb24dd7cebe7ead7"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Workers/FxRateRefresher.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "85bc479d1e09da333114c11d1222c7c2",
+    "semantic_hash": "85bc479d1e09da333114c11d1222c7c2"
+  },
+  "OpenRussiaRouter.BillingService/Infrastructure/Workers/PaymentEventRecoveryWorker.cs": {
+    "mtime": 1780910415.1230206,
+    "ast_hash": "7e7f47f00157117286b520e0d940a2b8",
+    "semantic_hash": "7e7f47f00157117286b520e0d940a2b8"
+  },
+  "OpenRussiaRouter.BillingService/OpenRussiaRouter.BillingService.csproj": {
+    "mtime": 1782626220.8654878,
+    "ast_hash": "83549ad2084ff8c5724bc8b8f69bed7f",
+    "semantic_hash": "83549ad2084ff8c5724bc8b8f69bed7f"
+  },
+  "OpenRussiaRouter.BillingService/Program.cs": {
+    "mtime": 1780149274.8265686,
+    "ast_hash": "c1daa0a96d38356ed255c99a7a25a47d",
+    "semantic_hash": "c1daa0a96d38356ed255c99a7a25a47d"
+  },
+  "OpenRussiaRouter.BillingService/Properties/launchSettings.json": {
+    "mtime": 1778573853.9301789,
+    "ast_hash": "93577d9213bd28020dfc6d5925710a22",
+    "semantic_hash": "93577d9213bd28020dfc6d5925710a22"
+  },
+  "OpenRussiaRouter.BillingService/appsettings.Development.json": {
+    "mtime": 1781969810.7693038,
+    "ast_hash": "5f6d9d1cc5437cd588a6b8cb61d59236",
+    "semantic_hash": "5f6d9d1cc5437cd588a6b8cb61d59236"
+  },
+  "OpenRussiaRouter.BillingService/appsettings.Production.json": {
+    "mtime": 1778829196.1979244,
+    "ast_hash": "54385447a29edcb977c31ae13aebbe22",
+    "semantic_hash": "54385447a29edcb977c31ae13aebbe22"
+  },
+  "OpenRussiaRouter.BillingService/appsettings.json": {
+    "mtime": 1781969777.9996731,
+    "ast_hash": "687d029e205bc9101c7c2dee5b742626",
+    "semantic_hash": "687d029e205bc9101c7c2dee5b742626"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Common/EmailValidator.cs": {
+    "mtime": 1778611973.374705,
+    "ast_hash": "e0740b6a6d9fe93a98715519d2746c24",
+    "semantic_hash": "e0740b6a6d9fe93a98715519d2746c24"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Common/Preconditions.cs": {
+    "mtime": 1781292729.491995,
+    "ast_hash": "c786251e325e1661469dcc016a140779",
+    "semantic_hash": "c786251e325e1661469dcc016a140779"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Errors/ErrorCodes.cs": {
+    "mtime": 1781351532.2871735,
+    "ast_hash": "93d51888d8f9dbfb8cb903d7b0332869",
+    "semantic_hash": "93d51888d8f9dbfb8cb903d7b0332869"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Grpc/GrpcDeadlineInterceptor.cs": {
+    "mtime": 1781292714.9533367,
+    "ast_hash": "928f3ac30b6daf606d9f9314c4714e43",
+    "semantic_hash": "928f3ac30b6daf606d9f9314c4714e43"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Grpc/ServiceAuthClientInterceptor.cs": {
+    "mtime": 1781003927.3623967,
+    "ast_hash": "d85a3f1a7b99223590e967b0f5b38c4a",
+    "semantic_hash": "d85a3f1a7b99223590e967b0f5b38c4a"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Health/ServiceHealth.cs": {
+    "mtime": 1778613258.0785632,
+    "ast_hash": "9fb5df5262c084784eeca7fa83b5730b",
+    "semantic_hash": "9fb5df5262c084784eeca7fa83b5730b"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Logging/SeqLoggingExtensions.cs": {
+    "mtime": 1778968360.6611488,
+    "ast_hash": "dd3a2554393a142ef46f02ec5b9e0ec2",
+    "semantic_hash": "dd3a2554393a142ef46f02ec5b9e0ec2"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Metrics/OpenTelemetryExtensions.cs": {
+    "mtime": 1781184937.133144,
+    "ast_hash": "79b9ff34bf533c4546ac9e1c430e8f88",
+    "semantic_hash": "79b9ff34bf533c4546ac9e1c430e8f88"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Migrations/PostgresSqlMigrationRunner.cs": {
+    "mtime": 1778706826.3736703,
+    "ast_hash": "f4637de724a5cf9be1d274ca14f318ec",
+    "semantic_hash": "f4637de724a5cf9be1d274ca14f318ec"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Migrations/RepositoryMigrationPath.cs": {
+    "mtime": 1778744957.22521,
+    "ast_hash": "783b9c22e509a5b2f38c238bdad1e896",
+    "semantic_hash": "783b9c22e509a5b2f38c238bdad1e896"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Migrations/SqlMigration.cs": {
+    "mtime": 1778706603.8225582,
+    "ast_hash": "eca695914493bf0240048bee8f280eda",
+    "semantic_hash": "eca695914493bf0240048bee8f280eda"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Migrations/SqlMigrationLoader.cs": {
+    "mtime": 1778706603.8244798,
+    "ast_hash": "c423379739c5b10e2a0c1c5c5d3a1684",
+    "semantic_hash": "c423379739c5b10e2a0c1c5c5d3a1684"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Migrations/WebApplicationMigrationExtensions.cs": {
+    "mtime": 1778706765.1523874,
+    "ast_hash": "ae051fcc4e4cb2ce3915e5f55826ce9f",
+    "semantic_hash": "ae051fcc4e4cb2ce3915e5f55826ce9f"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Money/Currency.cs": {
+    "mtime": 1780038647.5927334,
+    "ast_hash": "5f79895584b1fc095ae0f77e8cbbbb17",
+    "semantic_hash": "5f79895584b1fc095ae0f77e8cbbbb17"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Money/MoneyAmount.cs": {
+    "mtime": 1780038639.2330012,
+    "ast_hash": "aa1abaddf2c9c256d33e7077400e39e0",
+    "semantic_hash": "aa1abaddf2c9c256d33e7077400e39e0"
+  },
+  "OpenRussiaRouter.BuildingBlocks/OpenRussiaRouter.BuildingBlocks.csproj": {
+    "mtime": 1781184930.8619335,
+    "ast_hash": "65b51e4054547190d3934b6e3620dc31",
+    "semantic_hash": "65b51e4054547190d3934b6e3620dc31"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Reasoning/NodeReasoningMapper.cs": {
+    "mtime": 1782546839.4455457,
+    "ast_hash": "f73baad00401fee280ad82eb29777b11",
+    "semantic_hash": "f73baad00401fee280ad82eb29777b11"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Telemetry/CorrelationIds.cs": {
+    "mtime": 1778613258.1005585,
+    "ast_hash": "1c9e68c7c42f346fa871f044da61956e",
+    "semantic_hash": "1c9e68c7c42f346fa871f044da61956e"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Usage/IUsageCostCalculator.cs": {
+    "mtime": 1778613258.1025631,
+    "ast_hash": "056705e8c64151bf762e685c7cb5289f",
+    "semantic_hash": "056705e8c64151bf762e685c7cb5289f"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Usage/ModelTokenPrice.cs": {
+    "mtime": 1778613258.1095588,
+    "ast_hash": "fa75cb11d2bdb449c31635e17a818944",
+    "semantic_hash": "fa75cb11d2bdb449c31635e17a818944"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Usage/TokenUsage.cs": {
+    "mtime": 1780175119.28825,
+    "ast_hash": "2c95cd5ea9aca289fafc8356c7c640f8",
+    "semantic_hash": "2c95cd5ea9aca289fafc8356c7c640f8"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Usage/TokenUsageExtractor.cs": {
+    "mtime": 1782505008.380686,
+    "ast_hash": "b6aeb3243cb1edd7ef00f97ba7e2bbd5",
+    "semantic_hash": "b6aeb3243cb1edd7ef00f97ba7e2bbd5"
+  },
+  "OpenRussiaRouter.BuildingBlocks/Usage/UsageCostCalculator.cs": {
+    "mtime": 1780175063.2955532,
+    "ast_hash": "07588a82036fd941eb19d03133fd4f6d",
+    "semantic_hash": "07588a82036fd941eb19d03133fd4f6d"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Billing/ActiveBillingModel.cs": {
+    "mtime": 1782057192.4900904,
+    "ast_hash": "3db500e8dff5cf821297f01a06a6eed8",
+    "semantic_hash": "3db500e8dff5cf821297f01a06a6eed8"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Billing/GrpcActiveBillingModelProvider.cs": {
+    "mtime": 1782057220.12541,
+    "ast_hash": "87b21450420f90c5fb02444d413d482a",
+    "semantic_hash": "87b21450420f90c5fb02444d413d482a"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Billing/IActiveBillingModelProvider.cs": {
+    "mtime": 1782057199.1775758,
+    "ast_hash": "991b27e58a77a98842a94f4596fd0b02",
+    "semantic_hash": "991b27e58a77a98842a94f4596fd0b02"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/CatalogProjection.cs": {
+    "mtime": 1781777948.473537,
+    "ast_hash": "e13794db5b5ef34edb5b9fff581bf8cb",
+    "semantic_hash": "e13794db5b5ef34edb5b9fff581bf8cb"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/CollectorNode.cs": {
+    "mtime": 1781042479.2983415,
+    "ast_hash": "f8f637ac3fc2bde99fe1f05235541695",
+    "semantic_hash": "f8f637ac3fc2bde99fe1f05235541695"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/CollectorOptions.cs": {
+    "mtime": 1782057574.9488482,
+    "ast_hash": "da006a792ae91a9e926804c0df193672",
+    "semantic_hash": "da006a792ae91a9e926804c0df193672"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/CollectorSnapshot.cs": {
+    "mtime": 1780422738.287651,
+    "ast_hash": "9c90b5747a542cca84f20968d69c563e",
+    "semantic_hash": "9c90b5747a542cca84f20968d69c563e"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/CollectorSnapshotStore.cs": {
+    "mtime": 1780422738.287651,
+    "ast_hash": "d6e09897aa5fc6a61e940c75d567137b",
+    "semantic_hash": "d6e09897aa5fc6a61e940c75d567137b"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/NodeCatalogCollector.cs": {
+    "mtime": 1781777865.0393834,
+    "ast_hash": "5d514c0f7256587e0c9e7e5e581ecae1",
+    "semantic_hash": "5d514c0f7256587e0c9e7e5e581ecae1"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/NodeCatalogResult.cs": {
+    "mtime": 1781777817.9528997,
+    "ast_hash": "61af7147bd1b398929898387b22b027a",
+    "semantic_hash": "61af7147bd1b398929898387b22b027a"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/NodeListProvider.cs": {
+    "mtime": 1782625940.1704872,
+    "ast_hash": "df5e1096bcedf721e4fcd00501af9906",
+    "semantic_hash": "df5e1096bcedf721e4fcd00501af9906"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Collection/NodePollingWorker.cs": {
+    "mtime": 1782057300.7259102,
+    "ast_hash": "c06db5baf53e587f4e414242b9a8e1cf",
+    "semantic_hash": "c06db5baf53e587f4e414242b9a8e1cf"
+  },
+  "OpenRussiaRouter.CollectorService/Application/NodeAdmin/INodeAdminClient.cs": {
+    "mtime": 1782057228.8159747,
+    "ast_hash": "fb22b7d8a2c9efdc6d8a3c8e60b66b72",
+    "semantic_hash": "fb22b7d8a2c9efdc6d8a3c8e60b66b72"
+  },
+  "OpenRussiaRouter.CollectorService/Application/NodeAdmin/NodeAdminClient.cs": {
+    "mtime": 1782057246.5910385,
+    "ast_hash": "2a5726105e1e5153ef55264977266636",
+    "semantic_hash": "2a5726105e1e5153ef55264977266636"
+  },
+  "OpenRussiaRouter.CollectorService/Application/NodeAdmin/NodeAdminContracts.cs": {
+    "mtime": 1782057259.388088,
+    "ast_hash": "a2fb0add1f4c91c4761ceb0b33f5e63f",
+    "semantic_hash": "a2fb0add1f4c91c4761ceb0b33f5e63f"
+  },
+  "OpenRussiaRouter.CollectorService/Application/OpenRouter/OpenRouterCatalogClient.cs": {
+    "mtime": 1781042573.8243015,
+    "ast_hash": "6acf48afa0fcbcfaeba49836f50089ca",
+    "semantic_hash": "6acf48afa0fcbcfaeba49836f50089ca"
+  },
+  "OpenRussiaRouter.CollectorService/Application/OpenRouter/OpenRouterCatalogContracts.cs": {
+    "mtime": 1780422738.2984161,
+    "ast_hash": "385914bdaa8a25edbf0dd0b891af731d",
+    "semantic_hash": "385914bdaa8a25edbf0dd0b891af731d"
+  },
+  "OpenRussiaRouter.CollectorService/Application/OpenRouter/OpenRouterCatalogOptions.cs": {
+    "mtime": 1780422738.3004005,
+    "ast_hash": "0b7cf57022c45ccafdc71acba7cd3e1d",
+    "semantic_hash": "0b7cf57022c45ccafdc71acba7cd3e1d"
+  },
+  "OpenRussiaRouter.CollectorService/Application/OpenRouter/OpenRouterCatalogPoller.cs": {
+    "mtime": 1781042562.3375492,
+    "ast_hash": "f5314b7ba83d5f88fbcd91d2c7a106a8",
+    "semantic_hash": "f5314b7ba83d5f88fbcd91d2c7a106a8"
+  },
+  "OpenRussiaRouter.CollectorService/Application/OpenRouter/OpenRouterCatalogStore.cs": {
+    "mtime": 1780422738.3004005,
+    "ast_hash": "7eb042c0ed92eea8f7c1f5999fc18203",
+    "semantic_hash": "7eb042c0ed92eea8f7c1f5999fc18203"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/ActiveModelQuotaMeasurement.cs": {
+    "mtime": 1782057124.8100052,
+    "ast_hash": "82345da64c350bd73217e61216724769",
+    "semantic_hash": "82345da64c350bd73217e61216724769"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/NodeQuotaCollector.cs": {
+    "mtime": 1782057187.038675,
+    "ast_hash": "448e799303ef024e8ccf90767e85c3bb",
+    "semantic_hash": "448e799303ef024e8ccf90767e85c3bb"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/ProviderQuotaMeter.cs": {
+    "mtime": 1782057161.4330463,
+    "ast_hash": "17c75d6933a82c04b62da510e0d2c02b",
+    "semantic_hash": "17c75d6933a82c04b62da510e0d2c02b"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/QuotaMeasurement.cs": {
+    "mtime": 1782057111.4292963,
+    "ast_hash": "a4cbfe1bdb8850439576fec011f51f72",
+    "semantic_hash": "a4cbfe1bdb8850439576fec011f51f72"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/QuotaSnapshot.cs": {
+    "mtime": 1782057131.6549838,
+    "ast_hash": "41714bbd3d442594f6c839437f069f1c",
+    "semantic_hash": "41714bbd3d442594f6c839437f069f1c"
+  },
+  "OpenRussiaRouter.CollectorService/Application/Quota/QuotaSnapshotStore.cs": {
+    "mtime": 1782057140.369237,
+    "ast_hash": "ce3ade9dac0195c5a88c796ded221115",
+    "semantic_hash": "ce3ade9dac0195c5a88c796ded221115"
+  },
+  "OpenRussiaRouter.CollectorService/Infrastructure/Grpc/GrpcCollectorService.cs": {
+    "mtime": 1782057451.228991,
+    "ast_hash": "16a3725cfdf1133b348f0bf1602e9177",
+    "semantic_hash": "16a3725cfdf1133b348f0bf1602e9177"
+  },
+  "OpenRussiaRouter.CollectorService/Infrastructure/Startup/Startup.cs": {
+    "mtime": 1782057329.6960216,
+    "ast_hash": "26e2ee7f7d3a37a65defeda2334aae3f",
+    "semantic_hash": "26e2ee7f7d3a37a65defeda2334aae3f"
+  },
+  "OpenRussiaRouter.CollectorService/OpenRussiaRouter.CollectorService.csproj": {
+    "mtime": 1782057374.3614068,
+    "ast_hash": "bccf47c699b4f805d1e536d4939aa1e4",
+    "semantic_hash": "bccf47c699b4f805d1e536d4939aa1e4"
+  },
+  "OpenRussiaRouter.CollectorService/Program.cs": {
+    "mtime": 1782057352.5450459,
+    "ast_hash": "c92ec9859c2e4e86ddefec3d0cc9963d",
+    "semantic_hash": "c92ec9859c2e4e86ddefec3d0cc9963d"
+  },
+  "OpenRussiaRouter.CollectorService/appsettings.json": {
+    "mtime": 1782057397.0089817,
+    "ast_hash": "063e83cdf1e7543dbf9c076b348944ab",
+    "semantic_hash": "063e83cdf1e7543dbf9c076b348944ab"
+  },
+  "OpenRussiaRouter.Contracts/Auth/AuthContracts.cs": {
+    "mtime": 1780733793.9324262,
+    "ast_hash": "8e7b18696275b640716f7f5d23d65c8f",
+    "semantic_hash": "8e7b18696275b640716f7f5d23d65c8f"
+  },
+  "OpenRussiaRouter.Contracts/Billing/BillingContracts.cs": {
+    "mtime": 1782510168.1653037,
+    "ast_hash": "11a385b23658939084fe45dd5bf4ad71",
+    "semantic_hash": "11a385b23658939084fe45dd5bf4ad71"
+  },
+  "OpenRussiaRouter.Contracts/ControlPlane/ControlPlaneContracts.cs": {
+    "mtime": 1782625638.7212825,
+    "ast_hash": "805278cadcd215ab5f181094ae4ecb7a",
+    "semantic_hash": "805278cadcd215ab5f181094ae4ecb7a"
+  },
+  "OpenRussiaRouter.Contracts/OpenRussiaRouter.Contracts.csproj": {
+    "mtime": 1780148879.2611737,
+    "ast_hash": "534f51c504362577d794141f6e95ecc1",
+    "semantic_hash": "534f51c504362577d794141f6e95ecc1"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Abstractions/Integration/IRouterNodeHealthProvider.cs": {
+    "mtime": 1782625301.2973244,
+    "ast_hash": "7f96be1b514b6e87506d5dcc151fe166",
+    "semantic_hash": "7f96be1b514b6e87506d5dcc151fe166"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Abstractions/Integration/IRouterNodeProvider.cs": {
+    "mtime": 1782625301.2973244,
+    "ast_hash": "306d37c4eb003d39a7eb35a855c219dc",
+    "semantic_hash": "306d37c4eb003d39a7eb35a855c219dc"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Abstractions/Persistence/IControlPlaneRepository.cs": {
+    "mtime": 1782625301.2973244,
+    "ast_hash": "f594628877191fb98030f4c3b3786b69",
+    "semantic_hash": "f594628877191fb98030f4c3b3786b69"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Contracts/RouterNodeHealthResult.cs": {
+    "mtime": 1782625740.3743358,
+    "ast_hash": "e180e0c1f1321592ce0520338c213825",
+    "semantic_hash": "e180e0c1f1321592ce0520338c213825"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Contracts/RouterNodeProviderContracts.cs": {
+    "mtime": 1781038482.4993556,
+    "ast_hash": "094e98f64b05ceb2f540ec06d9a95e4a",
+    "semantic_hash": "094e98f64b05ceb2f540ec06d9a95e4a"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Extensions/ControlPlaneExtensions.cs": {
+    "mtime": 1782625353.7614052,
+    "ast_hash": "a4ff7f9e5360867232b4f0f494efb0f4",
+    "semantic_hash": "a4ff7f9e5360867232b4f0f494efb0f4"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Options/CapabilityReplicaOptions.cs": {
+    "mtime": 1781038452.3650987,
+    "ast_hash": "b7c67ea8f972f372c26e7fb9782092a5",
+    "semantic_hash": "b7c67ea8f972f372c26e7fb9782092a5"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Options/RouterHealthCheckOptions.cs": {
+    "mtime": 1781038433.8809578,
+    "ast_hash": "bdf3eea55150d076cdf3a6ecfb24efb9",
+    "semantic_hash": "bdf3eea55150d076cdf3a6ecfb24efb9"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Options/RouterLeaseCleanupOptions.cs": {
+    "mtime": 1781038439.024263,
+    "ast_hash": "dc1f35c85e658924a65275f3ecb86bd3",
+    "semantic_hash": "dc1f35c85e658924a65275f3ecb86bd3"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Options/RouterNodeProviderCacheOptions.cs": {
+    "mtime": 1781038444.5245383,
+    "ast_hash": "e439e7dcfb000e07b5f02e0c5287bf02",
+    "semantic_hash": "e439e7dcfb000e07b5f02e0c5287bf02"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Services/NodeModelCapabilityStore.cs": {
+    "mtime": 1781692982.9238644,
+    "ast_hash": "6d8ebace7741d578c8806aa952fb8d2c",
+    "semantic_hash": "6d8ebace7741d578c8806aa952fb8d2c"
+  },
+  "OpenRussiaRouter.ControlPlane/Application/Services/RouterControlPlaneService.cs": {
+    "mtime": 1782625740.373327,
+    "ast_hash": "f69fc9e0577fa74b75e5b72d72e5c254",
+    "semantic_hash": "f69fc9e0577fa74b75e5b72d72e5c254"
+  },
+  "OpenRussiaRouter.ControlPlane/Domain/Entities/RouterLease.cs": {
+    "mtime": 1778613258.2022457,
+    "ast_hash": "39c2d658cb5fe1ae7e2f32829409e898",
+    "semantic_hash": "39c2d658cb5fe1ae7e2f32829409e898"
+  },
+  "OpenRussiaRouter.ControlPlane/Domain/Entities/RouterNode.cs": {
+    "mtime": 1782625740.373327,
+    "ast_hash": "42f6a5449fc7363e7f8558ee94e58eca",
+    "semantic_hash": "42f6a5449fc7363e7f8558ee94e58eca"
+  },
+  "OpenRussiaRouter.ControlPlane/Domain/RouterNodeStatus.cs": {
+    "mtime": 1782625638.7087069,
+    "ast_hash": "dae0e78cbf5f8a497db6ed22828f4978",
+    "semantic_hash": "dae0e78cbf5f8a497db6ed22828f4978"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Grpc/GrpcRouterControlPlaneService.cs": {
+    "mtime": 1782625919.2559342,
+    "ast_hash": "099442de9f6e99f1081bad0f4ef80050",
+    "semantic_hash": "099442de9f6e99f1081bad0f4ef80050"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Http/CachedRouterNodeProvider.cs": {
+    "mtime": 1782625353.7910016,
+    "ast_hash": "9c241e5f2792aec026d25b9a2c62375e",
+    "semantic_hash": "9c241e5f2792aec026d25b9a2c62375e"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Http/HealthController.cs": {
+    "mtime": 1781040998.8448608,
+    "ast_hash": "0690e095253ac761c7b9d234f23c81c6",
+    "semantic_hash": "0690e095253ac761c7b9d234f23c81c6"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Http/RouterNodeHealthProvider.cs": {
+    "mtime": 1782625740.3885157,
+    "ast_hash": "e803e8c064aa6bf3a2f2601078b6bbed",
+    "semantic_hash": "e803e8c064aa6bf3a2f2601078b6bbed"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Http/RouterNodeProvider.cs": {
+    "mtime": 1782625353.7910016,
+    "ast_hash": "7bbe7883d395f174ae9d651c187b3700",
+    "semantic_hash": "7bbe7883d395f174ae9d651c187b3700"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Http/RouterNodeProviderCacheStore.cs": {
+    "mtime": 1779743815.4992948,
+    "ast_hash": "ecd794c8b0f563dc832be98982f41808",
+    "semantic_hash": "ecd794c8b0f563dc832be98982f41808"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Persistence/ControlPlaneDbConnectionFactory.cs": {
+    "mtime": 1778613258.2102444,
+    "ast_hash": "250ff20c61312a6c30dda6eb9c07f70d",
+    "semantic_hash": "250ff20c61312a6c30dda6eb9c07f70d"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Persistence/ControlPlanePersistenceMapper.cs": {
+    "mtime": 1782625759.9771302,
+    "ast_hash": "515b313085302b3acb355bff3bae5414",
+    "semantic_hash": "515b313085302b3acb355bff3bae5414"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Persistence/IControlPlaneDbConnectionFactory.cs": {
+    "mtime": 1778608578.5228088,
+    "ast_hash": "1774d57ce4ca88f0b3f614485d5757b2",
+    "semantic_hash": "1774d57ce4ca88f0b3f614485d5757b2"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Persistence/RouterLeaseEntity.cs": {
+    "mtime": 1778608675.5984082,
+    "ast_hash": "40e06e324fb0236ab011e30e12427aa1",
+    "semantic_hash": "40e06e324fb0236ab011e30e12427aa1"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Persistence/RouterNodeEntity.cs": {
+    "mtime": 1782625759.9771302,
+    "ast_hash": "da6c8ab5f8d4e246791e4426553a6a55",
+    "semantic_hash": "da6c8ab5f8d4e246791e4426553a6a55"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Repository/ControlPlaneRepository.cs": {
+    "mtime": 1782625353.779413,
+    "ast_hash": "8d74050b0e874dd6b3c53a16e36e328a",
+    "semantic_hash": "8d74050b0e874dd6b3c53a16e36e328a"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Repository/InMemoryControlPlaneRepository.cs": {
+    "mtime": 1782625353.7714052,
+    "ast_hash": "1a7db2fcfda8d4e462f9ad610ebea566",
+    "semantic_hash": "1a7db2fcfda8d4e462f9ad610ebea566"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Startup/Startup.cs": {
+    "mtime": 1781298464.391547,
+    "ast_hash": "492bad5f6464b0d0656fb2b0c6dd6dbe",
+    "semantic_hash": "492bad5f6464b0d0656fb2b0c6dd6dbe"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Workers/CapabilityReplicaRefresher.cs": {
+    "mtime": 1781038564.6239448,
+    "ast_hash": "a1da41a180c761ffcc69e5af544e3af0",
+    "semantic_hash": "a1da41a180c761ffcc69e5af544e3af0"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Workers/RouterHealthCheckWorker.cs": {
+    "mtime": 1782625353.7910016,
+    "ast_hash": "175989527ef450dfb16c2cb5012eb239",
+    "semantic_hash": "175989527ef450dfb16c2cb5012eb239"
+  },
+  "OpenRussiaRouter.ControlPlane/Infrastructure/Workers/RouterLeaseCleanupWorker.cs": {
+    "mtime": 1781038550.9605567,
+    "ast_hash": "3d02476d4a3bd2c5391b9491f81f21f2",
+    "semantic_hash": "3d02476d4a3bd2c5391b9491f81f21f2"
+  },
+  "OpenRussiaRouter.ControlPlane/OpenRussiaRouter.ControlPlane.csproj": {
+    "mtime": 1780948531.992173,
+    "ast_hash": "32c5f3b6740895d6547279f94938a99a",
+    "semantic_hash": "32c5f3b6740895d6547279f94938a99a"
+  },
+  "OpenRussiaRouter.ControlPlane/Program.cs": {
+    "mtime": 1780149279.4290924,
+    "ast_hash": "7a7993b7f03ea288c11cafd5afa78216",
+    "semantic_hash": "7a7993b7f03ea288c11cafd5afa78216"
+  },
+  "OpenRussiaRouter.ControlPlane/Properties/launchSettings.json": {
+    "mtime": 1778573853.9462147,
+    "ast_hash": "a267e510f058ae50dd85b4da98000c21",
+    "semantic_hash": "a267e510f058ae50dd85b4da98000c21"
+  },
+  "OpenRussiaRouter.ControlPlane/appsettings.Development.json": {
+    "mtime": 1781038363.7860072,
+    "ast_hash": "b204d0a0ddff06addc0b51bcfea86150",
+    "semantic_hash": "b204d0a0ddff06addc0b51bcfea86150"
+  },
+  "OpenRussiaRouter.ControlPlane/appsettings.Production.json": {
+    "mtime": 1779743832.0425131,
+    "ast_hash": "6cce62466c94287c811279b43b983ef8",
+    "semantic_hash": "6cce62466c94287c811279b43b983ef8"
+  },
+  "OpenRussiaRouter.ControlPlane/appsettings.json": {
+    "mtime": 1781038355.6653862,
+    "ast_hash": "9cf4575c2bae35088b9091480f1fa6ca",
+    "semantic_hash": "9cf4575c2bae35088b9091480f1fa6ca"
+  },
+  "OpenRussiaRouter.WebApp/Api/PaymentWebhookEndpoint.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "72839bd29850c76d028f4894d83ae774",
+    "semantic_hash": "72839bd29850c76d028f4894d83ae774"
+  },
+  "OpenRussiaRouter.WebApp/Controllers/Admin/GatewayTestController.cs": {
+    "mtime": 1779996056.7033274,
+    "ast_hash": "94d234320b27d55bb6efa153b0f9ab62",
+    "semantic_hash": "94d234320b27d55bb6efa153b0f9ab62"
+  },
+  "OpenRussiaRouter.WebApp/Controllers/PreferencesController.cs": {
+    "mtime": 1781438822.6592047,
+    "ast_hash": "fbfa85e8afcd702c6340c768624126b4",
+    "semantic_hash": "fbfa85e8afcd702c6340c768624126b4"
+  },
+  "OpenRussiaRouter.WebApp/Email/BrevoApiEmailSender.cs": {
+    "mtime": 1782284607.5033524,
+    "ast_hash": "283cd5c8f0bdd1e7f19866396e54fe75",
+    "semantic_hash": "283cd5c8f0bdd1e7f19866396e54fe75"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailBroadcastService.cs": {
+    "mtime": 1780468666.2895138,
+    "ast_hash": "b358bb157577022c50f48eb929e3a960",
+    "semantic_hash": "b358bb157577022c50f48eb929e3a960"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailDispatchQueue.cs": {
+    "mtime": 1780468666.2995706,
+    "ast_hash": "f87dec3bc155c77a78ec347101c8e0f4",
+    "semantic_hash": "f87dec3bc155c77a78ec347101c8e0f4"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailDispatchWorker.cs": {
+    "mtime": 1782579452.7608788,
+    "ast_hash": "2dc3a3f2e1ac938e42d9e7d7ed81dc67",
+    "semantic_hash": "2dc3a3f2e1ac938e42d9e7d7ed81dc67"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailServiceCollectionExtensions.cs": {
+    "mtime": 1782284607.5108807,
+    "ast_hash": "5f4218a9dc72da4a4bf89a6460ac4762",
+    "semantic_hash": "5f4218a9dc72da4a4bf89a6460ac4762"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailSettings.cs": {
+    "mtime": 1782284607.5178823,
+    "ast_hash": "d5b0f18d200a7507e7127e87e871a07c",
+    "semantic_hash": "d5b0f18d200a7507e7127e87e871a07c"
+  },
+  "OpenRussiaRouter.WebApp/Email/EmailTemplates.cs": {
+    "mtime": 1781302113.9236982,
+    "ast_hash": "a208405dcad14425730e363239fcf4c3",
+    "semantic_hash": "a208405dcad14425730e363239fcf4c3"
+  },
+  "OpenRussiaRouter.WebApp/Email/IEmailDispatchQueue.cs": {
+    "mtime": 1780468666.3413663,
+    "ast_hash": "436c52b8c3082bb77e4f53d6aad473c2",
+    "semantic_hash": "436c52b8c3082bb77e4f53d6aad473c2"
+  },
+  "OpenRussiaRouter.WebApp/Email/IEmailSender.cs": {
+    "mtime": 1780468666.34905,
+    "ast_hash": "bf696d1f9b8a86c1f7e47dcdeb619415",
+    "semantic_hash": "bf696d1f9b8a86c1f7e47dcdeb619415"
+  },
+  "OpenRussiaRouter.WebApp/Email/SmtpEmailSender.cs": {
+    "mtime": 1780468666.3578427,
+    "ast_hash": "f6ea25d1d9836a7f73978e47056c07d6",
+    "semantic_hash": "f6ea25d1d9836a7f73978e47056c07d6"
+  },
+  "OpenRussiaRouter.WebApp/OpenRussiaRouter.WebApp.csproj": {
+    "mtime": 1781455470.149174,
+    "ast_hash": "d3ed30f91cb6246ed5ebb33d27e8cb44",
+    "semantic_hash": "d3ed30f91cb6246ed5ebb33d27e8cb44"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Anomalies.cshtml": {
+    "mtime": 1778923696.4013553,
+    "ast_hash": "21765c60dc6d74bcd70016315c2366b7",
+    "semantic_hash": "21765c60dc6d74bcd70016315c2366b7"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Anomalies.cshtml.cs": {
+    "mtime": 1779980271.0848875,
+    "ast_hash": "4eb40b2b5bef8e20a3bcb0ebbd5df249",
+    "semantic_hash": "4eb40b2b5bef8e20a3bcb0ebbd5df249"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Broadcast.cshtml": {
+    "mtime": 1780468666.3747113,
+    "ast_hash": "8dc77dc90dcf34916e80cadea6320277",
+    "semantic_hash": "8dc77dc90dcf34916e80cadea6320277"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Broadcast.cshtml.cs": {
+    "mtime": 1780468666.3824916,
+    "ast_hash": "49f013d1e2f5caf425acc2e475292c38",
+    "semantic_hash": "49f013d1e2f5caf425acc2e475292c38"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/GatewayTest.cshtml": {
+    "mtime": 1780224107.862085,
+    "ast_hash": "470ad83e088e34a882bca706adfb5c86",
+    "semantic_hash": "470ad83e088e34a882bca706adfb5c86"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/GatewayTest.cshtml.cs": {
+    "mtime": 1779993556.4764047,
+    "ast_hash": "40e065cf477dd432898b32717cf2fc69",
+    "semantic_hash": "40e065cf477dd432898b32717cf2fc69"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Index.cshtml": {
+    "mtime": 1781075096.7697496,
+    "ast_hash": "44df39320ed7ad8e0592398a4b972040",
+    "semantic_hash": "44df39320ed7ad8e0592398a4b972040"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Index.cshtml.cs": {
+    "mtime": 1781075096.7845607,
+    "ast_hash": "4866e3f939612ba1410adec3c1d1a80b",
+    "semantic_hash": "4866e3f939612ba1410adec3c1d1a80b"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Models.cshtml": {
+    "mtime": 1782578559.4100032,
+    "ast_hash": "48feb60055679e389f5815bc6b9f2df5",
+    "semantic_hash": "48feb60055679e389f5815bc6b9f2df5"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Models.cshtml.cs": {
+    "mtime": 1782578559.4120028,
+    "ast_hash": "ee166d8920f2d2c5b4fdcb6a4c59e85c",
+    "semantic_hash": "ee166d8920f2d2c5b4fdcb6a4c59e85c"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/ModelsSync.cshtml": {
+    "mtime": 1781459395.028401,
+    "ast_hash": "84ec75b405e0743b4f9c4a5ac2a9c5b3",
+    "semantic_hash": "84ec75b405e0743b4f9c4a5ac2a9c5b3"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/ModelsSync.cshtml.cs": {
+    "mtime": 1782546915.7569838,
+    "ast_hash": "7afa7549dc9092f82a1d99a7ba79b782",
+    "semantic_hash": "7afa7549dc9092f82a1d99a7ba79b782"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeDetails.cshtml": {
+    "mtime": 1780866240.2816694,
+    "ast_hash": "faf8ddb569612c36782403ecc048a432",
+    "semantic_hash": "faf8ddb569612c36782403ecc048a432"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeDetails.cshtml.cs": {
+    "mtime": 1780866186.7006505,
+    "ast_hash": "23d65e3e5f0121df03e176abfe42a069",
+    "semantic_hash": "23d65e3e5f0121df03e176abfe42a069"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeEdit.cshtml": {
+    "mtime": 1779828625.7276018,
+    "ast_hash": "d6f0ebd830a1b5b0bbdc94b9e6915a10",
+    "semantic_hash": "d6f0ebd830a1b5b0bbdc94b9e6915a10"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeEdit.cshtml.cs": {
+    "mtime": 1781293317.9998066,
+    "ast_hash": "e4e13f7ede76124d01e39298d28baffa",
+    "semantic_hash": "e4e13f7ede76124d01e39298d28baffa"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeProviderLimits.cshtml": {
+    "mtime": 1779350823.053042,
+    "ast_hash": "625aa5112905cae15537c36f211b91b4",
+    "semantic_hash": "625aa5112905cae15537c36f211b91b4"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/NodeProviderLimits.cshtml.cs": {
+    "mtime": 1779661856.0527465,
+    "ast_hash": "458e915199a631006cdedb63fda87553",
+    "semantic_hash": "458e915199a631006cdedb63fda87553"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Nodes.cshtml": {
+    "mtime": 1780221288.7540033,
+    "ast_hash": "fa1195fd21158ad79e2a1a311c4fc420",
+    "semantic_hash": "fa1195fd21158ad79e2a1a311c4fc420"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Nodes.cshtml.cs": {
+    "mtime": 1780422738.3334887,
+    "ast_hash": "ab97bccc69e694274b4c78bda4376c7d",
+    "semantic_hash": "ab97bccc69e694274b4c78bda4376c7d"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Requests.cshtml": {
+    "mtime": 1780611443.7355247,
+    "ast_hash": "d8130f6b6201acac758d3082afa791d2",
+    "semantic_hash": "d8130f6b6201acac758d3082afa791d2"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Requests.cshtml.cs": {
+    "mtime": 1779980526.910078,
+    "ast_hash": "8409c614c8eb5f71ee218cc27adefbf8",
+    "semantic_hash": "8409c614c8eb5f71ee218cc27adefbf8"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Tags.cshtml": {
+    "mtime": 1780223973.7946086,
+    "ast_hash": "6baeff4ed68eae4bbef07761288d345b",
+    "semantic_hash": "6baeff4ed68eae4bbef07761288d345b"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Tags.cshtml.cs": {
+    "mtime": 1780083192.0729725,
+    "ast_hash": "c1d391f08b7cdb4ed22b12f639352077",
+    "semantic_hash": "c1d391f08b7cdb4ed22b12f639352077"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/UserEdit.cshtml": {
+    "mtime": 1780701783.4711626,
+    "ast_hash": "c51ded304a2672e619019d7549c8e717",
+    "semantic_hash": "c51ded304a2672e619019d7549c8e717"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/UserEdit.cshtml.cs": {
+    "mtime": 1780701776.202436,
+    "ast_hash": "c1ffb2d98ebad2d35cf5011731df1737",
+    "semantic_hash": "c1ffb2d98ebad2d35cf5011731df1737"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Users.cshtml": {
+    "mtime": 1780701794.2810397,
+    "ast_hash": "c932c91eb6c2dfb7145d5d121d666cd6",
+    "semantic_hash": "c932c91eb6c2dfb7145d5d121d666cd6"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/Users.cshtml.cs": {
+    "mtime": 1781293263.794002,
+    "ast_hash": "9b87827eb4cbd0ee790cc83d7d359f04",
+    "semantic_hash": "9b87827eb4cbd0ee790cc83d7d359f04"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Admin/_ViewImports.cshtml": {
+    "mtime": 1778924130.8118386,
+    "ast_hash": "3b19ebae71743caef12e78e26079b030",
+    "semantic_hash": "3b19ebae71743caef12e78e26079b030"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Docs.cshtml": {
+    "mtime": 1781898822.6248407,
+    "ast_hash": "18ba3c7c0a5cd4a9289fd561c89a9237",
+    "semantic_hash": "18ba3c7c0a5cd4a9289fd561c89a9237"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Docs.cshtml.cs": {
+    "mtime": 1781898822.6248407,
+    "ast_hash": "b37b3b3c98135458d7afa6029ef04034",
+    "semantic_hash": "b37b3b3c98135458d7afa6029ef04034"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Error.cshtml": {
+    "mtime": 1781438822.6682122,
+    "ast_hash": "834476e91e4937c8243f21e9273a0fd3",
+    "semantic_hash": "834476e91e4937c8243f21e9273a0fd3"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Error.cshtml.cs": {
+    "mtime": 1778923512.4796312,
+    "ast_hash": "50d459ad389d97b4160c304c6b045bf0",
+    "semantic_hash": "50d459ad389d97b4160c304c6b045bf0"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ForgotPassword.cshtml": {
+    "mtime": 1781438822.6692102,
+    "ast_hash": "ba7c1da8c363dd1fe06f4ec7d8f3363a",
+    "semantic_hash": "ba7c1da8c363dd1fe06f4ec7d8f3363a"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ForgotPassword.cshtml.cs": {
+    "mtime": 1782284607.5250795,
+    "ast_hash": "2124c45e6442129b041d2ce37d4e5d6e",
+    "semantic_hash": "2124c45e6442129b041d2ce37d4e5d6e"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Index.cshtml": {
+    "mtime": 1782229979.6086,
+    "ast_hash": "3cff2abe12afaea515bc03e6dee1e21a",
+    "semantic_hash": "3cff2abe12afaea515bc03e6dee1e21a"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Index.cshtml.cs": {
+    "mtime": 1780699916.398169,
+    "ast_hash": "8d2f03c6f46ccb29a2d18b51abe3f128",
+    "semantic_hash": "8d2f03c6f46ccb29a2d18b51abe3f128"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Invite.cshtml": {
+    "mtime": 1781438822.6729681,
+    "ast_hash": "cfce1866f4f5722e72c29a43d185c74d",
+    "semantic_hash": "cfce1866f4f5722e72c29a43d185c74d"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Invite.cshtml.cs": {
+    "mtime": 1781438822.6739697,
+    "ast_hash": "842d4036991fc13f90f2ac2259656bf4",
+    "semantic_hash": "842d4036991fc13f90f2ac2259656bf4"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Legal/Offer.cshtml": {
+    "mtime": 1781438822.6739697,
+    "ast_hash": "f71f933834657dd5e5d4f4ac1a3d7360",
+    "semantic_hash": "f71f933834657dd5e5d4f4ac1a3d7360"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Legal/Offer.cshtml.cs": {
+    "mtime": 1781438822.6809673,
+    "ast_hash": "efd5696975001feda719532c1ce4e585",
+    "semantic_hash": "efd5696975001feda719532c1ce4e585"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Legal/Privacy.cshtml": {
+    "mtime": 1781438822.6809673,
+    "ast_hash": "11c3e63f689d251db3a69d4d2670c0e8",
+    "semantic_hash": "11c3e63f689d251db3a69d4d2670c0e8"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Legal/Privacy.cshtml.cs": {
+    "mtime": 1781438822.6911535,
+    "ast_hash": "35ae27bc7179572ce514a8241f5f9d01",
+    "semantic_hash": "35ae27bc7179572ce514a8241f5f9d01"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Login.cshtml": {
+    "mtime": 1781455470.1591306,
+    "ast_hash": "8b48d4916e548d33149f2060f72c6fee",
+    "semantic_hash": "8b48d4916e548d33149f2060f72c6fee"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Login.cshtml.cs": {
+    "mtime": 1782284607.532262,
+    "ast_hash": "78b2371471c2cdc8573e823bdd622305",
+    "semantic_hash": "78b2371471c2cdc8573e823bdd622305"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Login/ExternalCallback.cshtml": {
+    "mtime": 1779553915.0956414,
+    "ast_hash": "2ef096623b383a1ff2b48d441ab74ae3",
+    "semantic_hash": "2ef096623b383a1ff2b48d441ab74ae3"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Login/ExternalCallback.cshtml.cs": {
+    "mtime": 1779630235.9346707,
+    "ast_hash": "861d34da937419fb9495ab938ed40357",
+    "semantic_hash": "861d34da937419fb9495ab938ed40357"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Logout.cshtml": {
+    "mtime": 1778923403.463552,
+    "ast_hash": "49ba100ef492d3af42e35cac537eba42",
+    "semantic_hash": "49ba100ef492d3af42e35cac537eba42"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Logout.cshtml.cs": {
+    "mtime": 1778923404.520804,
+    "ast_hash": "474342a1d7013a9147d99fbedf216206",
+    "semantic_hash": "474342a1d7013a9147d99fbedf216206"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ModelDetails.cshtml": {
+    "mtime": 1781994617.6593294,
+    "ast_hash": "759b041a4fdd3ca522922d64ed865271",
+    "semantic_hash": "759b041a4fdd3ca522922d64ed865271"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ModelDetails.cshtml.cs": {
+    "mtime": 1781994618.3177774,
+    "ast_hash": "411231d112599a213e6387cf40c92b72",
+    "semantic_hash": "411231d112599a213e6387cf40c92b72"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Models.cshtml": {
+    "mtime": 1782236962.112632,
+    "ast_hash": "4598f99fc39ae7b6c76788a202904366",
+    "semantic_hash": "4598f99fc39ae7b6c76788a202904366"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Models.cshtml.cs": {
+    "mtime": 1782505008.4262965,
+    "ast_hash": "967067852b29d7125f19d8ec73af4d61",
+    "semantic_hash": "967067852b29d7125f19d8ec73af4d61"
+  },
+  "OpenRussiaRouter.WebApp/Pages/PageModelBase.cs": {
+    "mtime": 1778924171.0287175,
+    "ast_hash": "5ac700dc8aaf1edff4db83dadd8eac93",
+    "semantic_hash": "5ac700dc8aaf1edff4db83dadd8eac93"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Pay/Mock.cshtml": {
+    "mtime": 1781438822.7101538,
+    "ast_hash": "52335e4ea92206ace63fd6501dd65f22",
+    "semantic_hash": "52335e4ea92206ace63fd6501dd65f22"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Pay/Mock.cshtml.cs": {
+    "mtime": 1781438822.7111533,
+    "ast_hash": "1b6183042f65ecf6178d0f65cfca967c",
+    "semantic_hash": "1b6183042f65ecf6178d0f65cfca967c"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Pay/_ViewImports.cshtml": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "b67c38d0a6f6ce497e0f440a6679795d",
+    "semantic_hash": "b67c38d0a6f6ce497e0f440a6679795d"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ResetPassword.cshtml": {
+    "mtime": 1782284607.53918,
+    "ast_hash": "0a49a56b165229c5c1a39b0535b5f761",
+    "semantic_hash": "0a49a56b165229c5c1a39b0535b5f761"
+  },
+  "OpenRussiaRouter.WebApp/Pages/ResetPassword.cshtml.cs": {
+    "mtime": 1782284607.545918,
+    "ast_hash": "0badc384d7f879f98035f54da922a082",
+    "semantic_hash": "0badc384d7f879f98035f54da922a082"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Shared/IntegrationExamplesModel.cs": {
+    "mtime": 1781075096.8442366,
+    "ast_hash": "a757502824a0e06f1eb6c0bdd61a08c2",
+    "semantic_hash": "a757502824a0e06f1eb6c0bdd61a08c2"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Shared/_AdminLayout.cshtml": {
+    "mtime": 1780866209.3371172,
+    "ast_hash": "ec348d03020ce48bbc7756077e8a3735",
+    "semantic_hash": "ec348d03020ce48bbc7756077e8a3735"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Shared/_IntegrationExamples.cshtml": {
+    "mtime": 1781438822.7131531,
+    "ast_hash": "3a9d7debed50b822076cbd5da50ef0ea",
+    "semantic_hash": "3a9d7debed50b822076cbd5da50ef0ea"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Shared/_Layout.cshtml": {
+    "mtime": 1781441288.0553048,
+    "ast_hash": "0fb6778741b4854a9c92c7200b9f5dd8",
+    "semantic_hash": "0fb6778741b4854a9c92c7200b9f5dd8"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Shared/_WorkspaceLayout.cshtml": {
+    "mtime": 1781438822.721153,
+    "ast_hash": "76a202519f7db380feb3436c5455c797",
+    "semantic_hash": "76a202519f7db380feb3436c5455c797"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Signup.cshtml": {
+    "mtime": 1781455470.178614,
+    "ast_hash": "31c065deec6e964338f887167395a556",
+    "semantic_hash": "31c065deec6e964338f887167395a556"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Signup.cshtml.cs": {
+    "mtime": 1782284607.5532494,
+    "ast_hash": "ba403ef57b8274cafd76741182e6c3e2",
+    "semantic_hash": "ba403ef57b8274cafd76741182e6c3e2"
+  },
+  "OpenRussiaRouter.WebApp/Pages/VerifyEmail.cshtml": {
+    "mtime": 1782284607.5614798,
+    "ast_hash": "89c3041e0bd482b4dc01c44b4ccb3b68",
+    "semantic_hash": "89c3041e0bd482b4dc01c44b4ccb3b68"
+  },
+  "OpenRussiaRouter.WebApp/Pages/VerifyEmail.cshtml.cs": {
+    "mtime": 1781438822.7231574,
+    "ast_hash": "72954e47778d249a648bcb9d4017a037",
+    "semantic_hash": "72954e47778d249a648bcb9d4017a037"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Activity.cshtml": {
+    "mtime": 1781438822.7241547,
+    "ast_hash": "3c4e294fa51d95f996c7790a1efac1c0",
+    "semantic_hash": "3c4e294fa51d95f996c7790a1efac1c0"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Activity.cshtml.cs": {
+    "mtime": 1781438822.7251523,
+    "ast_hash": "0ec139cfe31b386f13b6b5bd842a0d5b",
+    "semantic_hash": "0ec139cfe31b386f13b6b5bd842a0d5b"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/ApiKeys.cshtml": {
+    "mtime": 1781438822.7251523,
+    "ast_hash": "7bab5e16d306ee5b4b665ce2cf38b243",
+    "semantic_hash": "7bab5e16d306ee5b4b665ce2cf38b243"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/ApiKeys.cshtml.cs": {
+    "mtime": 1781521189.766812,
+    "ast_hash": "454c06f24633c45491a7abd97e681ac5",
+    "semantic_hash": "454c06f24633c45491a7abd97e681ac5"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/ApiKeys/Limits.cshtml": {
+    "mtime": 1781438822.7271535,
+    "ast_hash": "7e50adcde4c60a982a45cc55a3afcf95",
+    "semantic_hash": "7e50adcde4c60a982a45cc55a3afcf95"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/ApiKeys/Limits.cshtml.cs": {
+    "mtime": 1781438822.7271535,
+    "ast_hash": "f1a2a42eed894c59e59485b1c4851343",
+    "semantic_hash": "f1a2a42eed894c59e59485b1c4851343"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Credits.cshtml": {
+    "mtime": 1781438822.7281542,
+    "ast_hash": "55b1b24f4aa98b3c36c730eb1593d866",
+    "semantic_hash": "55b1b24f4aa98b3c36c730eb1593d866"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Credits.cshtml.cs": {
+    "mtime": 1781438822.7281542,
+    "ast_hash": "fdc7c02344a2bce2f197a67cd66e5a6e",
+    "semantic_hash": "fdc7c02344a2bce2f197a67cd66e5a6e"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Index.cshtml": {
+    "mtime": 1778923525.1557164,
+    "ast_hash": "8e95a1690fa7a51019a1eb86583ed2e1",
+    "semantic_hash": "8e95a1690fa7a51019a1eb86583ed2e1"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Index.cshtml.cs": {
+    "mtime": 1778923526.3742845,
+    "ast_hash": "713f35738a0c3911c75134e918f03541",
+    "semantic_hash": "713f35738a0c3911c75134e918f03541"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/PaymentSuccess.cshtml": {
+    "mtime": 1781438822.7291563,
+    "ast_hash": "2b43a214c82ff98447344cb5efc3001a",
+    "semantic_hash": "2b43a214c82ff98447344cb5efc3001a"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/PaymentSuccess.cshtml.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "be445cff8ce27df654750dcaa43b0163",
+    "semantic_hash": "be445cff8ce27df654750dcaa43b0163"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Settings.cshtml": {
+    "mtime": 1781438822.730153,
+    "ast_hash": "fa1468272853fb63faaf88647ccbe937",
+    "semantic_hash": "fa1468272853fb63faaf88647ccbe937"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/Settings.cshtml.cs": {
+    "mtime": 1781438822.730153,
+    "ast_hash": "4ae3f427405e0bce65cb6c97981eb8f5",
+    "semantic_hash": "4ae3f427405e0bce65cb6c97981eb8f5"
+  },
+  "OpenRussiaRouter.WebApp/Pages/Workspace/_ViewImports.cshtml": {
+    "mtime": 1778924131.3380075,
+    "ast_hash": "f3bb433926730a69ba04d15803227126",
+    "semantic_hash": "f3bb433926730a69ba04d15803227126"
+  },
+  "OpenRussiaRouter.WebApp/Pages/_ViewImports.cshtml": {
+    "mtime": 1781438822.7311523,
+    "ast_hash": "084f16802a74f2bb998f5a9873722309",
+    "semantic_hash": "084f16802a74f2bb998f5a9873722309"
+  },
+  "OpenRussiaRouter.WebApp/Pages/_ViewStart.cshtml": {
+    "mtime": 1778923265.9456933,
+    "ast_hash": "b33d6936004c0b3bc4551de7dd9d9669",
+    "semantic_hash": "b33d6936004c0b3bc4551de7dd9d9669"
+  },
+  "OpenRussiaRouter.WebApp/Program.cs": {
+    "mtime": 1782546958.0581107,
+    "ast_hash": "f0ecfe0420cea074eee0b6eb584aa2e8",
+    "semantic_hash": "f0ecfe0420cea074eee0b6eb584aa2e8"
+  },
+  "OpenRussiaRouter.WebApp/Properties/AssemblyAttributes.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "56fcef4bba6ee200de76dbd9130a33ef",
+    "semantic_hash": "56fcef4bba6ee200de76dbd9130a33ef"
+  },
+  "OpenRussiaRouter.WebApp/Properties/launchSettings.json": {
+    "mtime": 1778573853.9522476,
+    "ast_hash": "7c6d0a53c9ef7300ec52650d701efc98",
+    "semantic_hash": "7c6d0a53c9ef7300ec52650d701efc98"
+  },
+  "OpenRussiaRouter.WebApp/Services/ApiBaseUrlResolver.cs": {
+    "mtime": 1781075096.8960762,
+    "ast_hash": "eac1f0c8e6df827f1d61e0029740e829",
+    "semantic_hash": "eac1f0c8e6df827f1d61e0029740e829"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/ApiKeyInfo.cs": {
+    "mtime": 1780701986.8435836,
+    "ast_hash": "a53b431f46053646bf94db437d74a884",
+    "semantic_hash": "a53b431f46053646bf94db437d74a884"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/AuthException.cs": {
+    "mtime": 1778608673.146696,
+    "ast_hash": "fcff3b78feda68b77cd76112f8eb5072",
+    "semantic_hash": "fcff3b78feda68b77cd76112f8eb5072"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/AuthProvider.cs": {
+    "mtime": 1781302113.9590554,
+    "ast_hash": "4b832bf06823918515b7f7997284e338",
+    "semantic_hash": "4b832bf06823918515b7f7997284e338"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/CreateApiKeyResponse.cs": {
+    "mtime": 1778608672.8948488,
+    "ast_hash": "725555f8a98ae0cc841ca7b7d5008425",
+    "semantic_hash": "725555f8a98ae0cc841ca7b7d5008425"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/InviteCompletionResponse.cs": {
+    "mtime": 1778608672.07404,
+    "ast_hash": "7bb4d7dc60c0d8eb1d807ecc5bfd7524",
+    "semantic_hash": "7bb4d7dc60c0d8eb1d807ecc5bfd7524"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/LoginResponse.cs": {
+    "mtime": 1778835142.3556705,
+    "ast_hash": "19f57567d906c8462e5339b24ada8e31",
+    "semantic_hash": "19f57567d906c8462e5339b24ada8e31"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/RegistrationResult.cs": {
+    "mtime": 1780468666.491192,
+    "ast_hash": "80d68ff7ff9ab65038bd1261dffb45f6",
+    "semantic_hash": "80d68ff7ff9ab65038bd1261dffb45f6"
+  },
+  "OpenRussiaRouter.WebApp/Services/Auth/UserInfo.cs": {
+    "mtime": 1781037894.091377,
+    "ast_hash": "3a35637194528ce5a783f94a975e1c95",
+    "semantic_hash": "3a35637194528ce5a783f94a975e1c95"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/ActivityByTokenInfo.cs": {
+    "mtime": 1780038639.2717712,
+    "ast_hash": "ed2c06ed90a072404a29f100fb1eb8b3",
+    "semantic_hash": "ed2c06ed90a072404a29f100fb1eb8b3"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/ActivitySummaryInfo.cs": {
+    "mtime": 1780038639.2717712,
+    "ast_hash": "de5303da67dc1767edb7110046175f29",
+    "semantic_hash": "de5303da67dc1767edb7110046175f29"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/AdminRequestInfo.cs": {
+    "mtime": 1780038639.2717712,
+    "ast_hash": "c69c00395190386c87764e39507e6e92",
+    "semantic_hash": "c69c00395190386c87764e39507e6e92"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/AnomalyInfo.cs": {
+    "mtime": 1778608669.2851992,
+    "ast_hash": "e76a2cd678d28fc532c5691fa7e9c569",
+    "semantic_hash": "e76a2cd678d28fc532c5691fa7e9c569"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/ApiKeyLimitSettingsInfo.cs": {
+    "mtime": 1781344969.591152,
+    "ast_hash": "a6be9391b7d9ab6dd2b432104949cfef",
+    "semantic_hash": "a6be9391b7d9ab6dd2b432104949cfef"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/ApiKeyLimitSummaryInfo.cs": {
+    "mtime": 1781344969.5917172,
+    "ast_hash": "d03c86aa9e9412ab2ec206568f1ddbf4",
+    "semantic_hash": "d03c86aa9e9412ab2ec206568f1ddbf4"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/BalanceInfo.cs": {
+    "mtime": 1778608668.1536896,
+    "ast_hash": "f18436a27e6a0e347fbb6858ce89770d",
+    "semantic_hash": "f18436a27e6a0e347fbb6858ce89770d"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/BillingException.cs": {
+    "mtime": 1778608669.6416032,
+    "ast_hash": "9d6e96d2146e41e0e679649dfbdbff6e",
+    "semantic_hash": "9d6e96d2146e41e0e679649dfbdbff6e"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/BillingProvider.cs": {
+    "mtime": 1782505008.4368186,
+    "ast_hash": "1f87804268da4362f7d8e810887159f2",
+    "semantic_hash": "1f87804268da4362f7d8e810887159f2"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/ModelInfo.cs": {
+    "mtime": 1782505008.4473374,
+    "ast_hash": "c2d9ca06889e42e2d3ec4d69ef2c2819",
+    "semantic_hash": "c2d9ca06889e42e2d3ec4d69ef2c2819"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/PaymentInfo.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "30f8f499a5a0820c74b4d3219d7aff22",
+    "semantic_hash": "30f8f499a5a0820c74b4d3219d7aff22"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/PlatformSettingKeys.cs": {
+    "mtime": 1781075096.9144206,
+    "ast_hash": "25eea52183965c27dc2e1d7ad9c635ec",
+    "semantic_hash": "25eea52183965c27dc2e1d7ad9c635ec"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/TagInfo.cs": {
+    "mtime": 1780083192.0759706,
+    "ast_hash": "767be492fa7ec9e4af4e2572fbfefc8b",
+    "semantic_hash": "767be492fa7ec9e4af4e2572fbfefc8b"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/TopUpInfo.cs": {
+    "mtime": 1779393143.8798783,
+    "ast_hash": "49b78614a9b57b4b489baeaa90f8f0a5",
+    "semantic_hash": "49b78614a9b57b4b489baeaa90f8f0a5"
+  },
+  "OpenRussiaRouter.WebApp/Services/Billing/UsageInfo.cs": {
+    "mtime": 1780038639.2758617,
+    "ast_hash": "cf80e1f5879b77d8acc8065953aa5349",
+    "semantic_hash": "cf80e1f5879b77d8acc8065953aa5349"
+  },
+  "OpenRussiaRouter.WebApp/Services/Collector/CollectorProvider.cs": {
+    "mtime": 1781778066.6781583,
+    "ast_hash": "8aed0767e2e3ba31c84085cab9096d9b",
+    "semantic_hash": "8aed0767e2e3ba31c84085cab9096d9b"
+  },
+  "OpenRussiaRouter.WebApp/Services/ColorContrast.cs": {
+    "mtime": 1780223938.8652134,
+    "ast_hash": "5ab5be4d4ceaa564acc5570a68f01b9c",
+    "semantic_hash": "5ab5be4d4ceaa564acc5570a68f01b9c"
+  },
+  "OpenRussiaRouter.WebApp/Services/ControlPlane/ControlPlaneProvider.cs": {
+    "mtime": 1782625990.8372416,
+    "ast_hash": "8e565dc3fdc59328bda938ad4e2e1751",
+    "semantic_hash": "8e565dc3fdc59328bda938ad4e2e1751"
+  },
+  "OpenRussiaRouter.WebApp/Services/ControlPlane/NodeModelCatalogResult.cs": {
+    "mtime": 1781778027.5655904,
+    "ast_hash": "d9217a779d463ad00646cd766e8b4ee1",
+    "semantic_hash": "d9217a779d463ad00646cd766e8b4ee1"
+  },
+  "OpenRussiaRouter.WebApp/Services/ControlPlane/RouterNodeApiProvider.cs": {
+    "mtime": 1779828625.7412064,
+    "ast_hash": "15b67287495b7b0928e28efeeaf41694",
+    "semantic_hash": "15b67287495b7b0928e28efeeaf41694"
+  },
+  "OpenRussiaRouter.WebApp/Services/ControlPlane/RouterNodeDetails.cs": {
+    "mtime": 1779197444.2877028,
+    "ast_hash": "f6106237dfe719103def72ba0089419b",
+    "semantic_hash": "f6106237dfe719103def72ba0089419b"
+  },
+  "OpenRussiaRouter.WebApp/Services/ControlPlane/RouterNodeInfo.cs": {
+    "mtime": 1779226887.6118684,
+    "ast_hash": "6bd19547dd29cbedc40732e78b1aba1f",
+    "semantic_hash": "6bd19547dd29cbedc40732e78b1aba1f"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/CbrClient.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "df101ec884fd8c6291820526bf63c618",
+    "semantic_hash": "df101ec884fd8c6291820526bf63c618"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/CbrExchangeRateProvider.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "16a72f400a3fefd5e0beeb243acd4ecd",
+    "semantic_hash": "16a72f400a3fefd5e0beeb243acd4ecd"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/CbrRateRefresher.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "0758dcd43423ffa8834d031699d928e2",
+    "semantic_hash": "0758dcd43423ffa8834d031699d928e2"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/CbrRateSnapshot.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "2103994511df760f0171e2edb51eac0e",
+    "semantic_hash": "2103994511df760f0171e2edb51eac0e"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/CurrencyFormatter.cs": {
+    "mtime": 1781460292.640545,
+    "ast_hash": "d9b15463dd51e96c94ed180e0ba6370c",
+    "semantic_hash": "d9b15463dd51e96c94ed180e0ba6370c"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/DisplayCurrency.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "1d71e76a64b4d86d7d01c852312aec2b",
+    "semantic_hash": "1d71e76a64b4d86d7d01c852312aec2b"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/ExchangeRateSettings.cs": {
+    "mtime": 1780910415.138002,
+    "ast_hash": "dbab56c48edcc0f7dca735779965e30b",
+    "semantic_hash": "dbab56c48edcc0f7dca735779965e30b"
+  },
+  "OpenRussiaRouter.WebApp/Services/Currency/IExchangeRateProvider.cs": {
+    "mtime": 1780910415.1530392,
+    "ast_hash": "ead9a4c376a2bda308c10e03c7390952",
+    "semantic_hash": "ead9a4c376a2bda308c10e03c7390952"
+  },
+  "OpenRussiaRouter.WebApp/Services/Enrichment/IOpenRouterCatalogClient.cs": {
+    "mtime": 1780306004.3708866,
+    "ast_hash": "a6d804134914ac6a919f7831b60b942d",
+    "semantic_hash": "a6d804134914ac6a919f7831b60b942d"
+  },
+  "OpenRussiaRouter.WebApp/Services/Enrichment/OpenRouterCatalogClient.cs": {
+    "mtime": 1781297946.1894813,
+    "ast_hash": "c6b65eba448208458fdaffdad7e53878",
+    "semantic_hash": "c6b65eba448208458fdaffdad7e53878"
+  },
+  "OpenRussiaRouter.WebApp/Services/Enrichment/OpenRouterModelDto.cs": {
+    "mtime": 1781297940.3892064,
+    "ast_hash": "990b952bd6e09d93fdbeded220c8a808",
+    "semantic_hash": "990b952bd6e09d93fdbeded220c8a808"
+  },
+  "OpenRussiaRouter.WebApp/Services/Enrichment/ReasoningEnrichmentWorker.cs": {
+    "mtime": 1782546937.8090591,
+    "ast_hash": "2882a47e100436b99a99f1de7eb6c20a",
+    "semantic_hash": "2882a47e100436b99a99f1de7eb6c20a"
+  },
+  "OpenRussiaRouter.WebApp/Services/Legal/LegalDocumentService.cs": {
+    "mtime": 1781438822.7630055,
+    "ast_hash": "ce5ca3e1248bc90545acc6ccba975faf",
+    "semantic_hash": "ce5ca3e1248bc90545acc6ccba975faf"
+  },
+  "OpenRussiaRouter.WebApp/Services/Localization/SupportedCultures.cs": {
+    "mtime": 1781438822.7640078,
+    "ast_hash": "bfaa219666dea452a7b2c35ab9b6dff3",
+    "semantic_hash": "bfaa219666dea452a7b2c35ab9b6dff3"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/IPaymentProvider.cs": {
+    "mtime": 1780910415.1537108,
+    "ast_hash": "0aa5e1cf81df5806345ddecf313a91a3",
+    "semantic_hash": "0aa5e1cf81df5806345ddecf313a91a3"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/MockPaymentProvider.cs": {
+    "mtime": 1780910415.1542327,
+    "ast_hash": "2b2ccda28df97b29b56c7f59328fef35",
+    "semantic_hash": "2b2ccda28df97b29b56c7f59328fef35"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentCheckoutService.cs": {
+    "mtime": 1780910415.1542327,
+    "ast_hash": "8b2540172918d2ac52ff762f6e436274",
+    "semantic_hash": "8b2540172918d2ac52ff762f6e436274"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentDtos.cs": {
+    "mtime": 1780910415.15476,
+    "ast_hash": "035f850ed1ea6d0ae7bf400212ffa871",
+    "semantic_hash": "035f850ed1ea6d0ae7bf400212ffa871"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentProviderRegistry.cs": {
+    "mtime": 1780910415.1552804,
+    "ast_hash": "fd1fa69bbcdd20344510bea1a9a0eed0",
+    "semantic_hash": "fd1fa69bbcdd20344510bea1a9a0eed0"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentReconciliationWorker.cs": {
+    "mtime": 1780910415.155799,
+    "ast_hash": "9daacb5676c33662a657b361345e8e26",
+    "semantic_hash": "9daacb5676c33662a657b361345e8e26"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentSettings.cs": {
+    "mtime": 1781378775.9192543,
+    "ast_hash": "eba5362b590bf7efa13ebf2410b513b9",
+    "semantic_hash": "eba5362b590bf7efa13ebf2410b513b9"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentStartupGuard.cs": {
+    "mtime": 1780950633.1744795,
+    "ast_hash": "6e53786df274f364fb04f47fdb8e1557",
+    "semantic_hash": "6e53786df274f364fb04f47fdb8e1557"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/PaymentWebhookProcessor.cs": {
+    "mtime": 1780910415.1568413,
+    "ast_hash": "1292c269b297e35436c97f157d6babaa",
+    "semantic_hash": "1292c269b297e35436c97f157d6babaa"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/Rollypay/RollypayClient.cs": {
+    "mtime": 1781378775.9261937,
+    "ast_hash": "b5d20a6a81be8a4712fb90c0ed6a9aed",
+    "semantic_hash": "b5d20a6a81be8a4712fb90c0ed6a9aed"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/Rollypay/RollypayPaymentProvider.cs": {
+    "mtime": 1781378775.9354908,
+    "ast_hash": "de3ef08ee4e5f33aa7679c0dfa6805ef",
+    "semantic_hash": "de3ef08ee4e5f33aa7679c0dfa6805ef"
+  },
+  "OpenRussiaRouter.WebApp/Services/Payments/Rollypay/RollypayWebhookVerifier.cs": {
+    "mtime": 1781378775.9354908,
+    "ast_hash": "bfe2be38ca1bbed18b29dbf59aba5669",
+    "semantic_hash": "bfe2be38ca1bbed18b29dbf59aba5669"
+  },
+  "OpenRussiaRouter.WebApp/Services/State/ClaimsExtensions.cs": {
+    "mtime": 1778923250.2647846,
+    "ast_hash": "34c67d91799aa2c7dc4561f5e9737704",
+    "semantic_hash": "34c67d91799aa2c7dc4561f5e9737704"
+  },
+  "OpenRussiaRouter.WebApp/Services/State/UserSession.cs": {
+    "mtime": 1778835136.2765276,
+    "ast_hash": "01460603df913f04b3f88b143be664c7",
+    "semantic_hash": "01460603df913f04b3f88b143be664c7"
+  },
+  "OpenRussiaRouter.WebApp/SharedResource.cs": {
+    "mtime": 1781438822.7640078,
+    "ast_hash": "177269d5ac5b42eb78ae4c08f0c9b51d",
+    "semantic_hash": "177269d5ac5b42eb78ae4c08f0c9b51d"
+  },
+  "OpenRussiaRouter.WebApp/appsettings.Development.json": {
+    "mtime": 1781003927.3741586,
+    "ast_hash": "ce5236c4fa106f5a5280d58a861aa844",
+    "semantic_hash": "ce5236c4fa106f5a5280d58a861aa844"
+  },
+  "OpenRussiaRouter.WebApp/appsettings.Production.json": {
+    "mtime": 1778829196.309112,
+    "ast_hash": "54385447a29edcb977c31ae13aebbe22",
+    "semantic_hash": "54385447a29edcb977c31ae13aebbe22"
+  },
+  "OpenRussiaRouter.WebApp/appsettings.json": {
+    "mtime": 1782284607.5962174,
+    "ast_hash": "5488b8c0c232069c0b1a3b0a0c05d148",
+    "semantic_hash": "5488b8c0c232069c0b1a3b0a0c05d148"
+  },
+  "OpenRussiaRouter.ApiGateway/CLAUDE.md": {
+    "mtime": 1780731849.3537543,
+    "ast_hash": "bc4e2f2ed3329a98de142bf5e4583a3e",
+    "semantic_hash": "bc4e2f2ed3329a98de142bf5e4583a3e"
+  },
+  "OpenRussiaRouter.AuthService/CLAUDE.md": {
+    "mtime": 1781302113.8574903,
+    "ast_hash": "75252e860682d87e46a2ccd02ea65a19",
+    "semantic_hash": "75252e860682d87e46a2ccd02ea65a19"
+  },
+  "OpenRussiaRouter.BillingService/CLAUDE.md": {
+    "mtime": 1780731905.2913375,
+    "ast_hash": "892f76f42d8fa32abdc3d8516a2f2009",
+    "semantic_hash": "892f76f42d8fa32abdc3d8516a2f2009"
+  },
+  "OpenRussiaRouter.BuildingBlocks/CLAUDE.md": {
+    "mtime": 1780732088.9652696,
+    "ast_hash": "964b1a7b6781e061d72ada0694d76e65",
+    "semantic_hash": "964b1a7b6781e061d72ada0694d76e65"
+  },
+  "OpenRussiaRouter.CollectorService/CLAUDE.md": {
+    "mtime": 1780731973.0494137,
+    "ast_hash": "687056c303c7560289b9560d8f97bc58",
+    "semantic_hash": "687056c303c7560289b9560d8f97bc58"
+  },
+  "OpenRussiaRouter.Contracts/CLAUDE.md": {
+    "mtime": 1780732050.9075074,
+    "ast_hash": "0c3831c3b69000048bcfa002a95faa8b",
+    "semantic_hash": "0c3831c3b69000048bcfa002a95faa8b"
+  },
+  "OpenRussiaRouter.ControlPlane/CLAUDE.md": {
+    "mtime": 1780731943.9470348,
+    "ast_hash": "06a318db58d6d8676b27b55b42f2bba3",
+    "semantic_hash": "06a318db58d6d8676b27b55b42f2bba3"
+  },
+  "OpenRussiaRouter.WebApp/CLAUDE.md": {
+    "mtime": 1780731998.7388787,
+    "ast_hash": "5d515754e7aefa5bcb8284df4a034faf",
+    "semantic_hash": "5d515754e7aefa5bcb8284df4a034faf"
+  },
+  "OpenRussiaRouter.WebApp/wwwroot/favicon.png": {
+    "mtime": 1778573853.9532626,
+    "ast_hash": "eab4f24ab5ff80be586dcdab8e87dc9c",
+    "semantic_hash": "eab4f24ab5ff80be586dcdab8e87dc9c"
+  },
+  "OpenRussiaRouter.WebApp/wwwroot/icons/claude.png": {
+    "mtime": 1780579531.2679713,
+    "ast_hash": "6ef465e6e627348b5c3456996e017cdc",
+    "semantic_hash": "6ef465e6e627348b5c3456996e017cdc"
+  },
+  "OpenRussiaRouter.WebApp/wwwroot/icons/gemini.png": {
+    "mtime": 1780579531.7733493,
+    "ast_hash": "2fc5b0ed7f72e307386db9b309410b84",
+    "semantic_hash": "2fc5b0ed7f72e307386db9b309410b84"
+  },
+  "OpenRussiaRouter.WebApp/wwwroot/icons/llama.png": {
+    "mtime": 1780579532.2781737,
+    "ast_hash": "d45f72a981dcfe33eafad216e534e4a5",
+    "semantic_hash": "d45f72a981dcfe33eafad216e534e4a5"
+  },
+  "OpenRussiaRouter.WebApp/wwwroot/icons/openai.png": {
+    "mtime": 1780579530.5894322,
+    "ast_hash": "e3bee6d8ec720e7a53d27b324db3cd12",
+    "semantic_hash": "e3bee6d8ec720e7a53d27b324db3cd12"
+  }
+}

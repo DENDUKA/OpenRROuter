@@ -1,6 +1,5 @@
 using System.Threading;
 using OpenRussiaRouter.BuildingBlocks.Common;
-using OpenRussiaRouter.Contracts.ControlPlane;
 
 namespace OpenRussiaRouter.ControlPlane.Domain.Entities;
 

@@ -273,6 +273,65 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_InvalidReasoningEffort_FallsBackToDefaultWhenConfigured()
+    {
+        // Admin set DefaultReasoningEffort="low" → invalid client effort "high" must be
+        // silently replaced with "low" and the request forwarded to the node.
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: true,
+                AllowedReasoningEfforts: ["low", "medium"],
+                DefaultReasoningEffort: "low")
+        };
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("low");
+    }
+
+    [Fact]
+    public async Task NonStreaming_NoReasoningInRequest_AppliesModelDefaultEffort()
+    {
+        // Plain request with no reasoning fields → gateway must inject admin-configured default.
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true,
+                "gpt-4",
+                "gpt-4",
+                "v1",
+                MoneyAmount.Usd(100),
+                null,
+                SupportsReasoning: true,
+                AllowedReasoningEfforts: ["low", "medium", "high"],
+                DefaultReasoningEffort: "high")
+        };
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
+    }
+
+    [Fact]
     public async Task NonStreaming_HappyPath_RecordsUsageAfterSuccessfulResponse()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
@@ -338,11 +397,61 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     // --- Models endpoint ---
 
     [Fact]
-    public async Task ListModels_MissingBearerToken_Returns401()
+    public async Task ListModels_IsPublic_Returns200WithoutBearerToken()
     {
+        // /v1/models is intentionally public to align with the OpenRouter contract —
+        // clients (opencode plugin, Cline, …) probe it for capability discovery before
+        // they have a chance to send credentials.
         var client = CreateClient();
         var response = await client.GetAsync("/v1/models");
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ListModels_ReasoningModel_AdvertisesOpenRouterContract()
+    {
+        var billing = new StubBillingProvider
+        {
+            PublicModels = new[]
+            {
+                new GatewayPublicModel(
+                    "ORR/GPT-5.5",
+                    "GPT-5.5",
+                    SupportsReasoning: true,
+                    AllowedReasoningEfforts: ["low", "medium", "high"],
+                    DefaultReasoningEffort: "medium"),
+                new GatewayPublicModel("ORR/gpt-4o", "GPT-4o")
+            }
+        };
+        var client = CreateClient(new StubAuthenticator(), billing);
+
+        var request = new HttpRequestMessage(HttpMethod.Get, "/v1/models");
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "sk-test");
+        var response = await client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var doc = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var data = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
+        data.Should().HaveCount(2);
+
+        var reasoning = data.Single(e => e.GetProperty("id").GetString() == "ORR/GPT-5.5");
+        // OpenRouter-style top-level `reasoning` object present with the canonical fields.
+        reasoning.GetProperty("reasoning").GetProperty("mandatory").GetBoolean().Should().BeFalse();
+        reasoning.GetProperty("reasoning").GetProperty("supported_efforts")
+            .EnumerateArray().Select(t => t.GetString()).Should().Equal("low", "medium", "high");
+        reasoning.GetProperty("reasoning").GetProperty("default_effort").GetString().Should().Be("medium");
+        // supported_parameters contains the paired `reasoning` + `include_reasoning` strings.
+        var parameters = reasoning.GetProperty("supported_parameters")
+            .EnumerateArray().Select(t => t.GetString()).ToList();
+        parameters.Should().Contain("reasoning");
+        parameters.Should().Contain("include_reasoning");
+        parameters.Should().BeInAscendingOrder(StringComparer.Ordinal);
+
+        // Non-reasoning model: top-level `reasoning` field must be entirely absent (not null).
+        var plain = data.Single(e => e.GetProperty("id").GetString() == "ORR/gpt-4o");
+        plain.TryGetProperty("reasoning", out _).Should().BeFalse();
+        plain.GetProperty("supported_parameters")
+            .EnumerateArray().Select(t => t.GetString()).Should().NotContain("reasoning");
     }
 
     // --- Validation ---

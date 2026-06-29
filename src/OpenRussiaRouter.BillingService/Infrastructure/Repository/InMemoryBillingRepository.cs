@@ -7,7 +7,7 @@ using OpenRussiaRouter.BuildingBlocks.Errors;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
-public sealed class InMemoryBillingRepository : IBillingRepository
+public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBillingTestHooks
 {
     private readonly ConcurrentDictionary<string, LedgerEntry> _ledgerByIdempotencyKey = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ApiKeySpendLimit> _apiKeySpendLimits = new(StringComparer.Ordinal);
@@ -610,7 +610,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository
         }
     }
 
-    public void InjectPaymentEvent(PaymentEvent evt)
+    void IInMemoryBillingTestHooks.InjectPaymentEvent(PaymentEvent evt)
     {
         lock (_paymentSync)
             _paymentEvents[evt.Id] = evt;

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Application.Options;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;

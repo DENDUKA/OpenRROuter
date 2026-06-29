@@ -3,11 +3,12 @@ using FluentAssertions;
 using Grpc.Core;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.BuildingBlocks.Errors;
-using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -62,7 +63,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
             context: null!);
 
         response.Accepted.Should().BeTrue();
-        var summary = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which;
+        var summary = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
         summary.InFlightRequests.Should().Be(0);
     }
 
@@ -94,7 +95,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
 
         var updated = await service.UpdateRouterNodeControlToken(
             new UpdateRouterNodeControlTokenRequest { NodeId = nodeId, ControlToken = "secret-b" },
@@ -113,7 +114,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
 
         var response = await service.UpdateRouterNodeControlToken(
             new UpdateRouterNodeControlTokenRequest { NodeId = nodeId, ControlToken = "" },
@@ -128,7 +129,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
 
         var updated = await service.UpdateRouterNode(
             new UpdateRouterNodeRequest
@@ -159,7 +160,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
 
         var response = await service.UpdateRouterNode(
             new UpdateRouterNodeRequest
@@ -181,7 +182,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
 
         var disabled = await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
         var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
@@ -194,7 +195,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task GetRouterNodeDetails_ExistingNode_ReturnsConnectionAndIntegrationApiData()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
         var service = CreateService(control, providerClient: new StubProviderClient());
 
         var response = await service.GetRouterNodeDetails(
@@ -290,7 +291,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
         var service = CreateService(control);
 
         var deleted = await service.DeleteRouterNode(
-            new DeleteRouterNodeRequest { NodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id },
+            new DeleteRouterNodeRequest { NodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id },
             context: null!);
         var nodes = await service.ListRouterNodes(new ListRouterNodesRequest(), context: null!);
 
@@ -317,7 +318,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
         var service = CreateService(control);
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
         await service.DisableRouterNode(new DisableRouterNodeRequest { NodeId = nodeId }, context: null!);
 
         var response = await service.EnableRouterNode(
@@ -359,7 +360,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task GetRouterNodeDetails_ProviderThrows_ReturnsNodeWithApiError()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
         var service = CreateService(control, providerClient: new ThrowingProviderClient());
 
         var response = await service.GetRouterNodeDetails(
@@ -375,7 +376,7 @@ public sealed class GrpcRouterControlPlaneServiceTests
     public async Task GetRouterNodeDetails_ProviderHangs_ReturnsNodeWithApiError()
     {
         var control = await CreateControlPlaneWithHealthyNodeAsync();
-        var nodeId = (await control.ListRouterNodesAsync()).Should().ContainSingle().Which.Id;
+        var nodeId = (await control.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which.Id;
         var service = CreateService(control, providerClient: new HangingProviderClient());
         var started = System.Diagnostics.Stopwatch.StartNew();
 

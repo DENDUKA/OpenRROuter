@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using OpenRussiaRouter.ControlPlane.Application.Abstractions;
+using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 

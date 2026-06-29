@@ -1,7 +1,7 @@
 using OpenRussiaRouter.ControlPlane.Application.Contracts;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
-namespace OpenRussiaRouter.ControlPlane.Application.Abstractions;
+namespace OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
 
 public interface IRouterNodeHealthProvider
 {

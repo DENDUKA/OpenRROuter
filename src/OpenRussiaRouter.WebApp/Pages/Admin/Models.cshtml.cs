@@ -450,6 +450,36 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         }
     }
 
+    public async Task<IActionResult> OnGetOpenRouterPriceAsync(string modelId)
+    {
+        if (string.IsNullOrWhiteSpace(modelId))
+            return new JsonResult(new { success = false, error = "Model ID is empty" });
+
+        try
+        {
+            var catalog = await _openRouterClient.LoadCatalogAsync();
+            if (catalog.Count == 0)
+                return new JsonResult(new { success = false, error = "OpenRouter catalog is empty or unreachable" });
+
+            var match = _openRouterClient.FindMatch(catalog, modelId);
+            if (match == null)
+                return new JsonResult(new { success = false, error = $"Model '{modelId}' not found on OpenRouter" });
+
+            return new JsonResult(new
+            {
+                success = true,
+                inputPrice = match.InputPrice,
+                outputPrice = match.OutputPrice,
+                cachePrice = match.CachePrice
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to fetch OpenRouter price for model {ModelId}", modelId);
+            return new JsonResult(new { success = false, error = "Internal error checking price" });
+        }
+    }
+
     private void NormalizeAndValidateReasoning()
     {
         Form.AllowedReasoningEfforts = Form.AllowedReasoningEfforts

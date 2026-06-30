@@ -57,7 +57,7 @@
                     </div>
                 </div>
                 <div class="adm-form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label asp-for="Form.RouterModelId" class="form-label">Router Model</label>
                         @{
                             var hasCurrent = !string.IsNullOrWhiteSpace(Model.Form.RouterModelId);
@@ -65,7 +65,7 @@
                         }
                         @if (Model.AvailableNodeModels.Count > 0 || currentMissing)
                         {
-                            <select asp-for="Form.RouterModelId" class="form-control">
+                            <select asp-for="Form.RouterModelId" class="form-control" id="routerModelIdSelect">
                                 <option value="">— select from node —</option>
                                 @if (currentMissing)
                                 {
@@ -83,10 +83,13 @@
                         }
                         else
                         {
-                            <input asp-for="Form.RouterModelId" class="form-control" placeholder="e.g. minimax/MiniMax-M2.7" />
+                            <input asp-for="Form.RouterModelId" class="form-control" id="routerModelIdSelect" placeholder="e.g. minimax/MiniMax-M2.7" />
                             <small class="text-muted">Nodes unavailable — enter model ID manually</small>
                         }
+                        <div id="orPriceDisplay" style="font-size: 13px; margin-top: 0.4rem;"></div>
                     </div>
+                </div>
+                <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.ModelType" class="form-label">Model Type</label>
                         <select asp-for="Form.ModelType" class="form-control">
@@ -485,4 +488,60 @@
     document.querySelectorAll('.modality-checks').forEach(group => {
         group.querySelectorAll('input[type="checkbox"]').forEach(cb => syncModalityChecks(cb));
     });
+
+    (() => {
+        const routerModelInput = document.getElementById('routerModelIdSelect');
+        const orPriceDisplay = document.getElementById('orPriceDisplay');
+        
+        if (!routerModelInput || !orPriceDisplay) return;
+
+        let debounceTimer;
+
+        async function fetchOpenRouterPrice(modelId) {
+            if (!modelId) {
+                orPriceDisplay.innerHTML = '';
+                return;
+            }
+
+            orPriceDisplay.innerHTML = '<span class="text-muted">Fetching OpenRouter price...</span>';
+
+            try {
+                const response = await fetch(`?handler=OpenRouterPrice&modelId=${encodeURIComponent(modelId)}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    const formatPrice = p => p !== null ? `$${p.toFixed(2)}` : 'N/A';
+                    orPriceDisplay.innerHTML = `<span style="color: var(--color-success);">OpenRouter cost (per 1M): Prompt ${formatPrice(data.inputPrice)} / Completion ${formatPrice(data.outputPrice)}</span>`;
+                } else {
+                    orPriceDisplay.innerHTML = `<span style="color: var(--color-danger);">${data.error}</span>`;
+                }
+            } catch (error) {
+                orPriceDisplay.innerHTML = '<span style="color: var(--color-danger);">Failed to fetch price.</span>';
+            }
+        }
+
+        routerModelInput.addEventListener('change', (e) => {
+            fetchOpenRouterPrice(e.target.value.trim());
+        });
+
+        // For text input we want to debounce the fetching
+        if (routerModelInput.tagName === 'INPUT') {
+            routerModelInput.addEventListener('input', (e) => {
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    fetchOpenRouterPrice(e.target.value.trim());
+                }, 500);
+            });
+        }
+
+        // Fetch price initially if there's a selected value
+        if (routerModelInput.value) {
+            fetchOpenRouterPrice(routerModelInput.value.trim());
+        }
+    })();
 </script>

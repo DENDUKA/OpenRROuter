@@ -25,9 +25,10 @@ public class OpenRouterCatalogClientTests
     public async Task LoadAsync_FlattensEntries_AndPricing()
     {
         const string body = """
-        {"data":[{"slug":"openai/gpt-4o","name":"OpenAI: GPT-4o","author_display_name":"OpenAI",
-        "description":"desc","context_length":128000,"input_modalities":["text","image"],
-        "endpoint":{"pricing":{"prompt":"0.000005","completion":"0.000015","input_cache_read":"0.0000025"}}}]}
+        {"data":[{"id":"openai/gpt-4o","name":"OpenAI: GPT-4o","author_display_name":"OpenAI",
+        "description":"desc","context_length":128000,
+        "architecture":{"input_modalities":["text","image"],"output_modalities":["text"]},
+        "pricing":{"prompt":"0.000005","completion":"0.000015","input_cache_read":"0.0000025"}}]}
         """;
         var entries = await Build(HttpStatusCode.OK, body).LoadAsync(CancellationToken.None);
 

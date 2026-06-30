@@ -39,3 +39,20 @@ public sealed record OpenRouterMatchResult(
     decimal? InputPrice,
     decimal? OutputPrice,
     decimal? CachePrice);
+
+// Direct OpenRouter /api/v1/models response shape (used by the HTTP fallback path when
+// CollectorService is unavailable). The public API nests modalities under "architecture".
+public sealed record OpenRouterDirectResponse(
+    [property: JsonPropertyName("data")] IReadOnlyList<OpenRouterDirectModel> Data);
+
+public sealed record OpenRouterDirectModel(
+    [property: JsonPropertyName("id")] string? Id,
+    [property: JsonPropertyName("name")] string? Name,
+    [property: JsonPropertyName("description")] string? Description,
+    [property: JsonPropertyName("context_length")] int? ContextLength,
+    [property: JsonPropertyName("architecture")] OpenRouterDirectArchitecture? Architecture,
+    [property: JsonPropertyName("pricing")] OpenRouterPricing? Pricing);
+
+public sealed record OpenRouterDirectArchitecture(
+    [property: JsonPropertyName("input_modalities")] IReadOnlyList<string>? InputModalities,
+    [property: JsonPropertyName("output_modalities")] IReadOnlyList<string>? OutputModalities);

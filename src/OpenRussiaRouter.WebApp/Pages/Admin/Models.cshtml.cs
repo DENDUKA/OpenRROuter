@@ -459,7 +459,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         {
             var catalog = await _openRouterClient.LoadCatalogAsync();
             if (catalog.Count == 0)
-                return new JsonResult(new { success = false, error = "OpenRouter catalog is empty or unreachable" });
+                return new JsonResult(new { success = false, error = "Не удалось загрузить каталог OpenRouter (CollectorService недоступен и прямой запрос к OpenRouter не удался). Проверьте интернет-соединение и состояние CollectorService." });
 
             var match = _openRouterClient.FindMatch(catalog, modelId);
             if (match == null)

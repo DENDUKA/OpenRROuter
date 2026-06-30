@@ -201,6 +201,11 @@ builder.Services.AddHttpClient("DirectNodeChat", client =>
     PooledConnectionIdleTimeout = TimeSpan.FromSeconds(60),
 });
 
+builder.Services.AddHttpClient("OpenRouterDirect", client =>
+{
+    client.BaseAddress = new Uri("https://openrouter.ai/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
 builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
 
 builder.Services.AddEmailInfrastructure(builder.Configuration);

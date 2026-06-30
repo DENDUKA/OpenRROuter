@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 using CollectorGrpc = OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector;
@@ -7,6 +9,7 @@ namespace OpenRussiaRouter.WebApp.Services.Enrichment;
 
 public sealed class OpenRouterCatalogClient(
     CollectorGrpc.CollectorClient collectorClient,
+    IHttpClientFactory httpClientFactory,
     ILogger<OpenRouterCatalogClient> logger) : IOpenRouterCatalogClient
 {
     private static readonly string[] _strippableSuffixes = [":free", ":beta", ":nitro", ":extended", ":thinking", ":online"];
@@ -21,6 +24,19 @@ public sealed class OpenRouterCatalogClient(
 
     public async Task<IReadOnlyList<OpenRouterModelEntry>> LoadCatalogAsync(
         CancellationToken cancellationToken = default)
+    {
+        // First try the CollectorService gRPC cache (the normal path).
+        var grpcCatalog = await TryLoadFromCollectorAsync(cancellationToken);
+        if (grpcCatalog.Count > 0)
+            return grpcCatalog;
+
+        // Fallback: fetch directly from OpenRouter public API. This keeps price lookup
+        // working even when CollectorService is down or hasn't fetched the catalog yet.
+        logger.LogWarning("OpenRouter catalog from collector is empty; falling back to direct OpenRouter API fetch");
+        return await TryLoadFromOpenRouterDirectAsync(cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<OpenRouterModelEntry>> TryLoadFromCollectorAsync(CancellationToken cancellationToken)
     {
         try
         {
@@ -47,6 +63,40 @@ public sealed class OpenRouterCatalogClient(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to load OpenRouter catalog from collector");
+            return [];
+        }
+    }
+
+    private async Task<IReadOnlyList<OpenRouterModelEntry>> TryLoadFromOpenRouterDirectAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var client = httpClientFactory.CreateClient("OpenRouterDirect");
+            var response = await client.GetFromJsonAsync<OpenRouterDirectResponse>(
+                "api/v1/models", cancellationToken).ConfigureAwait(false);
+
+            var data = response?.Data ?? [];
+            return data
+                .Where(d => !string.IsNullOrWhiteSpace(d.Id))
+                .Select(d => new OpenRouterModelEntry(
+                    Slug: d.Id!,
+                    Name: string.IsNullOrEmpty(d.Name) ? null : d.Name,
+                    ShortName: null,
+                    AuthorDisplayName: null,
+                    Description: string.IsNullOrEmpty(d.Description) ? null : d.Description,
+                    ContextLength: d.ContextLength > 0 ? d.ContextLength : null,
+                    InputModalities: (d.Architecture?.InputModalities ?? []).ToList(),
+                    Pricing: new OpenRouterPricing(
+                        Prompt: d.Pricing?.Prompt,
+                        Completion: d.Pricing?.Completion,
+                        InputCacheRead: d.Pricing?.InputCacheRead)))
+                .ToList();
+        }
+        catch (Exception ex) when (
+            ex is HttpRequestException or JsonException ||
+            (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            logger.LogWarning(ex, "Direct OpenRouter API fetch failed");
             return [];
         }
     }

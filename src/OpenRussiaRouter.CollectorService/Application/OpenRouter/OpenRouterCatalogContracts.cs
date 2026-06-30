@@ -11,11 +11,12 @@ public sealed record OpenRouterModelDto(
     [property: JsonPropertyName("author_display_name")] string? AuthorDisplayName,
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("context_length")] int? ContextLength,
-    [property: JsonPropertyName("input_modalities")] IReadOnlyList<string>? InputModalities,
+    [property: JsonPropertyName("architecture")] OpenRouterArchitectureDto? Architecture,
     [property: JsonPropertyName("pricing")] OpenRouterPricingDto? Pricing);
 
-public sealed record OpenRouterEndpointDto(
-    [property: JsonPropertyName("pricing")] OpenRouterPricingDto? Pricing);
+public sealed record OpenRouterArchitectureDto(
+    [property: JsonPropertyName("input_modalities")] IReadOnlyList<string>? InputModalities,
+    [property: JsonPropertyName("output_modalities")] IReadOnlyList<string>? OutputModalities);
 
 public sealed record OpenRouterPricingDto(
     [property: JsonPropertyName("prompt")] string? Prompt,

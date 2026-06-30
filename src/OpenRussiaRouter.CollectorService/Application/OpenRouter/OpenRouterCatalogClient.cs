@@ -21,7 +21,7 @@ public sealed class OpenRouterCatalogClient(HttpClient httpClient, ILogger<OpenR
                     d.AuthorDisplayName ?? string.Empty,
                     d.Description ?? string.Empty,
                     d.ContextLength ?? 0,
-                    d.InputModalities ?? [],
+                    d.Architecture?.InputModalities ?? [],
                     d.Pricing?.Prompt ?? string.Empty,
                     d.Pricing?.Completion ?? string.Empty,
                     d.Pricing?.InputCacheRead ?? string.Empty))

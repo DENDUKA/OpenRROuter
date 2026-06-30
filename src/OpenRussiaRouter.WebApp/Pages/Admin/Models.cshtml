@@ -516,7 +516,7 @@
                 
                 if (data.success) {
                     const formatPrice = p => p !== null ? `$${p.toFixed(2)}` : 'N/A';
-                    orPriceDisplay.innerHTML = `<span style="color: var(--color-success);">OpenRouter cost (per 1M): Prompt ${formatPrice(data.inputPrice)} / Completion ${formatPrice(data.outputPrice)}</span>`;
+                    orPriceDisplay.innerHTML = `<span style="color: var(--color-success);">OpenRouter cost (per 1M): Input ${formatPrice(data.inputPrice)} / Output ${formatPrice(data.outputPrice)} / Cache ${formatPrice(data.cachePrice)}</span>`;
                 } else {
                     orPriceDisplay.innerHTML = `<span style="color: var(--color-danger);">${data.error}</span>`;
                 }

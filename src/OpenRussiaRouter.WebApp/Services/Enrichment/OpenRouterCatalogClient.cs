@@ -14,7 +14,10 @@ public sealed class OpenRouterCatalogClient(
     // Reasoning-effort qualifiers some providers append to the model id (e.g. "gpt-oss-120b-medium",
     // "gemini-3.1-pro-low"). OpenRouter slugs don't carry these, so we strip them — but only as a
     // fallback after exact strategies, because real slugs can also end this way (mistral-medium, o4-mini-high).
-    private static readonly string[] _effortQualifiers = ["minimal", "low", "medium", "high"];
+    // We also support the "-review" suffix that is common in 9Router.
+    private static readonly string[] _effortQualifiers = ["minimal", "low", "medium", "high", "xhigh", "max"];
+
+    private static readonly string[] _9routerSuffixes = ["-review", "-spark", "-search", "-thought"];
 
     public async Task<IReadOnlyList<OpenRouterModelEntry>> LoadCatalogAsync(
         CancellationToken cancellationToken = default)
@@ -36,10 +39,10 @@ public sealed class OpenRouterCatalogClient(
                 Description: string.IsNullOrEmpty(e.Description) ? null : e.Description,
                 ContextLength: e.ContextLength > 0 ? e.ContextLength : null,
                 InputModalities: e.InputModalities.ToList(),
-                Endpoint: new OpenRouterEndpoint(new OpenRouterPricing(
+                Pricing: new OpenRouterPricing(
                     Prompt: string.IsNullOrEmpty(e.PricePrompt) ? null : e.PricePrompt,
                     Completion: string.IsNullOrEmpty(e.PriceCompletion) ? null : e.PriceCompletion,
-                    InputCacheRead: string.IsNullOrEmpty(e.PriceInputCacheRead) ? null : e.PriceInputCacheRead)))).ToList();
+                    InputCacheRead: string.IsNullOrEmpty(e.PriceInputCacheRead) ? null : e.PriceInputCacheRead))).ToList();
         }
         catch (Exception ex)
         {
@@ -69,23 +72,28 @@ public sealed class OpenRouterCatalogClient(
 
         // Strategy ladder, from most to least confident. First hit wins.
         var match =
-            // 1. Exact slug (case-insensitive).
-            entries.FirstOrDefault(e => string.Equals(e.Slug, id, StringComparison.OrdinalIgnoreCase))
-            // 2. Strip versioning/variant suffix on either side, then exact.
+        // 1. Exact slug (case-insensitive).
+        entries.FirstOrDefault(e => string.Equals(e.Slug, id, StringComparison.OrdinalIgnoreCase))
+        // 1b. Exact slug without vendor prefix
+        ?? entries.FirstOrDefault(e => string.Equals(e.Slug, idEff, StringComparison.OrdinalIgnoreCase))
+        // 2. Strip versioning/variant suffix on either side, then exact.
             ?? entries.FirstOrDefault(e => string.Equals(StripSuffix(e.Slug), StripSuffix(id), StringComparison.OrdinalIgnoreCase))
             // 3. Fully normalized slug (separators/case/punctuation removed).
             ?? entries.FirstOrDefault(e => Normalize(e.Slug) == normId)
-            // 4. Slug-tail match — handles vendor prefix present on one side only
-            //    (e.g. upstream "gpt-4o" vs OpenRouter "openai/gpt-4o").
-            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlug)
-            // 5. Cross match: full upstream id vs candidate tail, or vice versa.
+        // 4. Slug-tail match — handles vendor prefix present on one side only
+        //    (e.g. upstream "gpt-4o" vs OpenRouter "openai/gpt-4o").
+        ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlug)
+        // 4b. Match if upstream id is literally just the slug without vendor (e.g. "gemini-3.1-pro-preview")
+        ?? entries.FirstOrDefault(e => string.Equals(Slug(e.Slug), id, StringComparison.OrdinalIgnoreCase))
+        // 5. Cross match: full upstream id vs candidate tail, or vice versa.
             ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normId || Normalize(e.Slug) == normSlug)
             // 6. Fall back to the human-readable name (after stripping the "Vendor:" prefix).
             ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlug)
-            // 7-9. Repeat the slug/cross/name strategies after stripping the effort qualifier
-            //      (e.g. "ag/gpt-oss-120b-medium" -> "gpt-oss-120b" == "openai/gpt-oss-120b").
-            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlugEff)
-            ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normIdEff || Normalize(e.Slug) == normSlugEff)
+        // 7-9. Repeat the slug/cross/name strategies after stripping the effort qualifier
+        //      (e.g. "ag/gpt-oss-120b-medium" -> "gpt-oss-120b" == "openai/gpt-oss-120b").
+        ?? entries.FirstOrDefault(e => string.Equals(Slug(e.Slug), Slug(idEff), StringComparison.OrdinalIgnoreCase))
+        ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normSlugEff)
+        ?? entries.FirstOrDefault(e => Normalize(Slug(e.Slug)) == normIdEff || Normalize(e.Slug) == normSlugEff)
             ?? entries.FirstOrDefault(e => !string.IsNullOrWhiteSpace(e.Name) && Normalize(NameSlug(e.Name!)) == normSlugEff);
 
         // 10. Last resort: provider appended trailing tokens OpenRouter expresses as a longer slug
@@ -103,7 +111,7 @@ public sealed class OpenRouterCatalogClient(
 
         if (match is null) return null;
 
-        var pricing = match.Endpoint?.Pricing;
+        var pricing = match.Pricing;
         return new OpenRouterMatchResult(
             match.Slug,
             string.IsNullOrWhiteSpace(match.Description) ? null : match.Description.Trim(),
@@ -125,14 +133,25 @@ public sealed class OpenRouterCatalogClient(
         return modelId;
     }
 
-    /// <summary>Removes a single trailing "-{minimal|low|medium|high}" reasoning-effort token.</summary>
+    /// <summary>Removes a single trailing "-{minimal|low|medium|high}" reasoning-effort token, as well as 9Router suffixes.</summary>
     private static string StripEffort(string modelId)
     {
+        // First strip any 9Router-specific suffixes
+        foreach (var suffix in _9routerSuffixes)
+        {
+            if (modelId.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+            {
+                modelId = modelId[..^suffix.Length];
+                // Continue checking as we might have "-high-review" which becomes "-high" and needs further stripping
+            }
+        }
+
         var dash = modelId.LastIndexOf('-');
         if (dash > 0 && dash < modelId.Length - 1)
         {
             var tail = modelId[(dash + 1)..];
-            if (_effortQualifiers.Contains(tail, StringComparer.OrdinalIgnoreCase))
+            if (_effortQualifiers.Contains(tail, StringComparer.OrdinalIgnoreCase) || 
+                string.Equals(tail, "none", StringComparison.OrdinalIgnoreCase))
                 return modelId[..dash];
         }
         return modelId;

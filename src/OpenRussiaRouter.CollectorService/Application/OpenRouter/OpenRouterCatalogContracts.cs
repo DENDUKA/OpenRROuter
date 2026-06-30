@@ -6,13 +6,13 @@ public sealed record OpenRouterModelsResponse(
     [property: JsonPropertyName("data")] IReadOnlyList<OpenRouterModelDto> Data);
 
 public sealed record OpenRouterModelDto(
-    [property: JsonPropertyName("slug")] string Slug,
+    [property: JsonPropertyName("id")] string Slug,
     [property: JsonPropertyName("name")] string? Name,
     [property: JsonPropertyName("author_display_name")] string? AuthorDisplayName,
     [property: JsonPropertyName("description")] string? Description,
     [property: JsonPropertyName("context_length")] int? ContextLength,
     [property: JsonPropertyName("input_modalities")] IReadOnlyList<string>? InputModalities,
-    [property: JsonPropertyName("endpoint")] OpenRouterEndpointDto? Endpoint);
+    [property: JsonPropertyName("pricing")] OpenRouterPricingDto? Pricing);
 
 public sealed record OpenRouterEndpointDto(
     [property: JsonPropertyName("pricing")] OpenRouterPricingDto? Pricing);

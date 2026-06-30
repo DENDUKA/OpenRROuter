@@ -11,7 +11,7 @@ public sealed class OpenRouterCatalogClient(HttpClient httpClient, ILogger<OpenR
         try
         {
             var response = await httpClient.GetFromJsonAsync<OpenRouterModelsResponse>(
-                "api/frontend/models", cancellationToken).ConfigureAwait(false);
+                "api/v1/models", cancellationToken).ConfigureAwait(false);
             var data = response?.Data ?? [];
             return data
                 .Where(d => !string.IsNullOrWhiteSpace(d.Slug))
@@ -22,9 +22,9 @@ public sealed class OpenRouterCatalogClient(HttpClient httpClient, ILogger<OpenR
                     d.Description ?? string.Empty,
                     d.ContextLength ?? 0,
                     d.InputModalities ?? [],
-                    d.Endpoint?.Pricing?.Prompt ?? string.Empty,
-                    d.Endpoint?.Pricing?.Completion ?? string.Empty,
-                    d.Endpoint?.Pricing?.InputCacheRead ?? string.Empty))
+                    d.Pricing?.Prompt ?? string.Empty,
+                    d.Pricing?.Completion ?? string.Empty,
+                    d.Pricing?.InputCacheRead ?? string.Empty))
                 .ToList();
         }
         catch (Exception ex) when (

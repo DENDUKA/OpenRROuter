@@ -35,6 +35,8 @@
             <div asp-validation-summary="ModelOnly" class="validation-message"></div>
             <form method="post" asp-page-handler="Save">
                 <input type="hidden" name="isNew" value="@(Model.IsAdd ? "true" : "false")" />
+                
+                <h5 class="adm-form-group-title">Basic Info</h5>
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.Id" class="form-label">Model ID</label>
@@ -85,8 +87,6 @@
                             <small class="text-muted">Nodes unavailable — enter model ID manually</small>
                         }
                     </div>
-                </div>
-                <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.ModelType" class="form-label">Model Type</label>
                         <select asp-for="Form.ModelType" class="form-control">
@@ -97,6 +97,26 @@
                         </select>
                     </div>
                 </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Provider" class="form-label">Provider</label>
+                        <input asp-for="Form.Provider" class="form-control" placeholder="e.g. OpenAI" />
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.Priority" class="form-label">Priority <small class="text-muted">(catalog sort order)</small></label>
+                        <input asp-for="Form.Priority" class="form-control" type="number" min="0" step="1" />
+                        <small class="text-muted">Higher number shows the model higher on the public /models page.</small>
+                        <span asp-validation-for="Form.Priority" class="validation-message"></span>
+                    </div>
+                    <div class="form-group" style="align-self: center; margin-top: 1.5rem;">
+                        <label class="form-label" style="margin-bottom: 0;">
+                            <input asp-for="Form.Enabled" type="checkbox" />
+                            Enabled (model is available to API clients)
+                        </label>
+                    </div>
+                </div>
+
+                <h5 class="adm-form-group-title">Pricing</h5>
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.InputPrice" class="form-label">Input Price ($/1M)</label>
@@ -114,12 +134,8 @@
                         <span asp-validation-for="Form.CachePrice" class="validation-message"></span>
                     </div>
                 </div>
-                <div class="adm-form-row">
-                    <div class="form-group" style="grid-column: span 3">
-                        <label asp-for="Form.Description" class="form-label">Description <small class="text-muted">(optional)</small></label>
-                        <textarea asp-for="Form.Description" class="form-control" rows="3" placeholder="Model description (auto-filled by Enrich from OpenRouter or enter manually)"></textarea>
-                    </div>
-                </div>
+
+                <h5 class="adm-form-group-title">Capabilities & Modalities</h5>
                 <div class="adm-form-row">
                     <div class="form-group">
                         <label asp-for="Form.ContextLength" class="form-label">Context Length (tokens)</label>
@@ -128,10 +144,6 @@
                     <div class="form-group">
                         <label asp-for="Form.Modalities" class="form-label">Modalities <small class="text-muted">(legacy)</small></label>
                         <input asp-for="Form.Modalities" class="form-control" placeholder="e.g. text, image" />
-                    </div>
-                    <div class="form-group">
-                        <label asp-for="Form.Provider" class="form-label">Provider</label>
-                        <input asp-for="Form.Provider" class="form-control" placeholder="e.g. OpenAI" />
                     </div>
                 </div>
                 <div class="adm-form-row">
@@ -163,64 +175,21 @@
                         </div>
                         <input type="hidden" asp-for="Form.OutputModalities" />
                     </div>
-                    <div class="form-group">
-                        <label asp-for="Form.Priority" class="form-label">Priority <small class="text-muted">(catalog sort order)</small></label>
-                        <input asp-for="Form.Priority" class="form-control" type="number" min="0" step="1" />
-                        <small class="text-muted">Higher number shows the model higher on the public /models page.</small>
-                        <span asp-validation-for="Form.Priority" class="validation-message"></span>
-                    </div>
                 </div>
-                <div class="adm-form-row adm-enrich-row">
-                    <div class="form-group" style="flex:1 1 auto">
-                        <label class="form-label">OpenRouter model ID <small class="text-muted">(optional — leave blank to auto-match)</small></label>
-                        <input name="openRouterId" class="form-control" value="@Model.EnrichOpenRouterId"
-                               placeholder="e.g. openai/gpt-4o" autocomplete="off"
-                               @(Model.EnrichNotFound ? "autofocus" : "") />
-                    </div>
-                    <div class="form-group" style="align-self:flex-end">
-                        <button type="submit" asp-page-handler="EnrichModel" class="btn btn-secondary"
-                                title="Fetch description, context length, modalities, provider and prices from OpenRouter into the fields above. Review, then Save.">
-                            Fetch from OpenRouter
-                        </button>
-                        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:normal; margin-top:0.4rem;">
-                            <input type="checkbox" name="fillPrices" value="true" @(Model.EnrichFillPrices ? "checked" : "") />
-                            Fill price fields
-                        </label>
-                    </div>
-                </div>
+
+                <h5 class="adm-form-group-title">Reasoning (Thinking)</h5>
                 <div class="adm-form-row">
                     <div class="form-group" style="grid-column: span 3">
-                        <label class="form-label">Tags</label>
-                        <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
-                            @foreach (var tag in Model.AvailableTags)
-                            {
-                                var isChecked = Model.Form.TagIds.Contains(tag.Id);
-                                <label style="display:flex; align-items:center; gap:0.25rem; font-weight:normal;">
-                                    <input type="checkbox" name="Form.TagIds" value="@tag.Id" @(isChecked ? "checked" : "") />
-                                    @tag.DisplayName
-                                </label>
-                            }
-                        </div>
-                    </div>
-                </div>
-                <div class="adm-form-row">
-                    <div class="form-group">
-                        <label class="form-label">
+                        <label class="form-label" style="margin-bottom: 0;">
                             <input asp-for="Form.SupportsReasoning" type="checkbox" id="supportsReasoning" />
                             Supports reasoning
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">
-                            <input asp-for="Form.Enabled" type="checkbox" />
-                            Enabled (model is available to API clients)
                         </label>
                     </div>
                 </div>
                 @if (Model.Form.ThinkingOptions?.Count > 0)
                 {
                     <div class="adm-form-row">
-                        <div class="form-group" style="grid-column: span 2">
+                        <div class="form-group" style="grid-column: span 3">
                             <label class="form-label">Reasoning capabilities <small class="text-muted">(from 9Router — read only)</small></label>
                             <div style="display:flex; flex-wrap:wrap; gap:0.5rem; align-items:center;">
                                 @if (!string.IsNullOrWhiteSpace(Model.Form.ThinkingFormat))
@@ -240,7 +209,7 @@
                     </div>
                 }
                 <div class="adm-form-row">
-                    <div class="form-group">
+                    <div class="form-group" style="grid-column: span 2">
                         <label class="form-label">Allowed efforts <small class="text-muted">(from 9Router catalog)</small></label>
                         <div id="allowedReasoningEfforts" style="display:flex; flex-wrap:wrap; gap:0.75rem">
                             @foreach (var effort in Model.AvailableReasoningEfforts)
@@ -272,7 +241,49 @@
                         <span asp-validation-for="Form.DefaultReasoningEffort" class="validation-message"></span>
                     </div>
                 </div>
-                <div class="adm-btn-row">
+
+                <h5 class="adm-form-group-title">Enrichment & Metadata</h5>
+                <div class="adm-form-row">
+                    <div class="form-group" style="grid-column: span 3">
+                        <label asp-for="Form.Description" class="form-label">Description <small class="text-muted">(optional)</small></label>
+                        <textarea asp-for="Form.Description" class="form-control" rows="3" placeholder="Model description (auto-filled by Enrich from OpenRouter or enter manually)"></textarea>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group" style="grid-column: span 3">
+                        <label class="form-label">Tags</label>
+                        <div style="display:flex; flex-wrap:wrap; gap:0.5rem">
+                            @foreach (var tag in Model.AvailableTags)
+                            {
+                                var isChecked = Model.Form.TagIds.Contains(tag.Id);
+                                <label style="display:flex; align-items:center; gap:0.25rem; font-weight:normal;">
+                                    <input type="checkbox" name="Form.TagIds" value="@tag.Id" @(isChecked ? "checked" : "") />
+                                    @tag.DisplayName
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="adm-form-row adm-enrich-row" style="margin-top: 0.5rem; padding-top: 1rem; border-top: 1px dashed var(--color-hairline);">
+                    <div class="form-group" style="flex:1 1 auto">
+                        <label class="form-label">OpenRouter model ID <small class="text-muted">(optional — leave blank to auto-match)</small></label>
+                        <input name="openRouterId" class="form-control" value="@Model.EnrichOpenRouterId"
+                               placeholder="e.g. openai/gpt-4o" autocomplete="off"
+                               @(Model.EnrichNotFound ? "autofocus" : "") />
+                    </div>
+                    <div class="form-group" style="align-self:flex-end">
+                        <button type="submit" asp-page-handler="EnrichModel" class="btn btn-secondary"
+                                title="Fetch description, context length, modalities, provider and prices from OpenRouter into the fields above. Review, then Save.">
+                            Fetch from OpenRouter
+                        </button>
+                        <label style="display:flex; align-items:center; gap:0.35rem; font-weight:normal; margin-top:0.4rem;">
+                            <input type="checkbox" name="fillPrices" value="true" @(Model.EnrichFillPrices ? "checked" : "") />
+                            Fill price fields
+                        </label>
+                    </div>
+                </div>
+
+                <div class="adm-btn-row" style="margin-top: 2rem;">
                     <button type="submit" class="btn btn-primary">Save</button>
                     <a class="btn btn-secondary" href="/admin/models">Cancel</a>
                 </div>
@@ -418,6 +429,8 @@
     .modality-check:has(input:checked) { background: var(--color-canvas-card); border-color: var(--color-ink); }
     .modality-check input { display: none; }
     .modality-icon { display: inline-flex; align-items: center; }
+    .adm-form-group-title { margin-top: 1.5rem; margin-bottom: 1rem; padding-bottom: 0.25rem; border-bottom: 1px solid var(--color-hairline); color: var(--color-text); font-weight: 600; font-size: 1.1rem; }
+    .adm-form-group-title:first-of-type { margin-top: 0; }
 </style>
 
 <script>

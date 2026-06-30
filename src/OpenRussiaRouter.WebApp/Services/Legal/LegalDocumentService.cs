@@ -6,8 +6,20 @@ namespace OpenRussiaRouter.WebApp.Services.Legal;
 public class LegalDocumentService
 {
     private readonly string _docsDirectory;
+    private readonly IReadOnlyDictionary<string, string> _templateValues;
     private readonly MarkdownPipeline _pipeline;
     private readonly ConcurrentDictionary<string, string> _cache = new(StringComparer.OrdinalIgnoreCase);
+
+    private static readonly IReadOnlyDictionary<string, string> DefaultTemplateValues =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["ORR_SERVICE_NAME"] = "OpenRussiaRouter",
+            ["ORR_DOCUMENT_DATE"] = "29.06.2026",
+            ["ORR_PUBLIC_DOMAIN"] = "https://openrussiarouter.com",
+            ["ORR_OPERATOR_NAME"] = "OpenRussiaRouter",
+            ["ORR_OPERATOR_DETAILS"] = "официальный сайт: https://openrussiarouter.com",
+            ["ORR_SUPPORT_CONTACT"] = "через официальный интерфейс OpenRussiaRouter"
+        };
 
     private static readonly HashSet<string> AllowedDocuments = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -15,24 +27,51 @@ public class LegalDocumentService
         "public-offer.md"
     };
 
-    public LegalDocumentService(IWebHostEnvironment environment)
+    public LegalDocumentService(IWebHostEnvironment environment, IConfiguration configuration)
+        : this(ResolveDocsDirectory(environment), BuildTemplateValues(configuration))
     {
-        var baseDir = AppContext.BaseDirectory;
-        var candidate = Path.Combine(baseDir, "docs", "mandatory");
-        _docsDirectory = Directory.Exists(candidate)
-            ? candidate
-            : Path.Combine(environment.ContentRootPath, "docs", "mandatory");
+    }
+
+    internal LegalDocumentService(string docsDirectory)
+        : this(docsDirectory, DefaultTemplateValues)
+    {
+    }
+
+    private LegalDocumentService(
+        string docsDirectory,
+        IReadOnlyDictionary<string, string> templateValues)
+    {
+        _docsDirectory = docsDirectory;
+        _templateValues = templateValues;
         _pipeline = new MarkdownPipelineBuilder()
             .DisableHtml()
             .Build();
     }
 
-    internal LegalDocumentService(string docsDirectory)
+    private static string ResolveDocsDirectory(IWebHostEnvironment environment)
     {
-        _docsDirectory = docsDirectory;
-        _pipeline = new MarkdownPipelineBuilder()
-            .DisableHtml()
-            .Build();
+        var candidate = Path.Combine(AppContext.BaseDirectory, "docs", "mandatory");
+        return Directory.Exists(candidate)
+            ? candidate
+            : Path.Combine(environment.ContentRootPath, "docs", "mandatory");
+    }
+
+    private static IReadOnlyDictionary<string, string> BuildTemplateValues(IConfiguration configuration)
+    {
+        return DefaultTemplateValues.ToDictionary(
+            pair => pair.Key,
+            pair => configuration[$"Legal:{pair.Key}"]
+                ?? configuration[pair.Key]
+                ?? pair.Value,
+            StringComparer.Ordinal);
+    }
+
+    private string ReplaceTemplateValues(string markdown)
+    {
+        foreach (var (name, value) in _templateValues)
+            markdown = markdown.Replace($"{{{{{name}}}}}", value, StringComparison.Ordinal);
+
+        return markdown;
     }
 
     public string? GetDocumentHtml(string documentName)
@@ -46,7 +85,7 @@ public class LegalDocumentService
             if (!File.Exists(filePath))
                 return "";
 
-            var markdown = File.ReadAllText(filePath);
+            var markdown = ReplaceTemplateValues(File.ReadAllText(filePath));
             return Markdown.ToHtml(markdown, _pipeline);
         }) is { Length: > 0 } html ? html : null;
     }

@@ -4,6 +4,7 @@ namespace: orr-dev
 resources:
   - ../../../base/infra
 patches:
+  - path: postgres-secret-analytics-patch.yaml
   - path: seq-nodeport.yaml
   - path: grafana-nodeport.yaml
 commonAnnotations:

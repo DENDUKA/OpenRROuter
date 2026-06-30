@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -17,7 +18,8 @@ public sealed partial class BillingApplicationService(
     IOptions<BillingPaginationOptions> paginationOptions,
     ILogger<BillingApplicationService> logger,
     FxQuoteService? fxQuoteService = null,
-    IOptions<PaymentOptions>? paymentOptions = null)
+    IOptions<PaymentOptions>? paymentOptions = null,
+    IProductAnalytics? productAnalytics = null)
 {
     public async Task<LedgerEntry> CreateVirtualTopUpAsync(
         string adminId,
@@ -184,7 +186,10 @@ public sealed partial class BillingApplicationService(
         ArgumentNullException.ThrowIfNull(usageEvent);
 
         if (await repository.GetUsageAsync(usageEvent.RequestId, ct).ConfigureAwait(false) is { } existing)
+        {
+            EmitApiRequestCompleted(usageEvent);
             return new RecordUsageResult(true, existing.RequestId, existing.Cost, null);
+        }
 
         try
         {
@@ -234,7 +239,9 @@ public sealed partial class BillingApplicationService(
         if (usageEvent.Usage.TotalTokens == 0 || priceVersion is null)
         {
             await repository.RecordUsageWithTransactionAsync(activity, null, null, ct).ConfigureAwait(false);
-            return new RecordUsageResult(true, usageEvent.RequestId, cost, null);
+            var zeroCostResult = new RecordUsageResult(true, usageEvent.RequestId, cost, null);
+            EmitApiRequestCompleted(usageEvent);
+            return zeroCostResult;
         }
 
         var usage = new UsageRecord(
@@ -262,7 +269,9 @@ public sealed partial class BillingApplicationService(
 
         await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry, ct).ConfigureAwait(false);
 
-        return new RecordUsageResult(true, usage.RequestId, usage.Cost, null);
+        var usageResult = new RecordUsageResult(true, usage.RequestId, usage.Cost, null);
+        EmitApiRequestCompleted(usageEvent);
+        return usageResult;
     }
 
     public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default) =>
@@ -480,8 +489,24 @@ public sealed partial class BillingApplicationService(
             throw new PaymentOperationException(ErrorCodes.PaymentInvalidTransition);
     }
 
-    public Task<ConfirmOutcome> ConfirmPaymentByProviderAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default) =>
-        repository.ConfirmPaymentAtomicAsync(evt, nowUtc, ct);
+    public async Task<ConfirmOutcome> ConfirmPaymentByProviderAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        var outcome = await repository.ConfirmPaymentAtomicAsync(evt, nowUtc, ct).ConfigureAwait(false);
+        if (outcome.Confirmed && outcome.Payment is not null)
+        {
+            EmitAnalytics(
+                AnalyticsEvents.PaymentCompleted,
+                () => productAnalytics!.PaymentCompleted(
+                    outcome.Payment.UserId,
+                    new PaymentAnalytics(
+                        outcome.Payment.Provider,
+                        outcome.Payment.ProviderCurrency,
+                        outcome.Payment.ProviderAmount,
+                        outcome.Payment.Id)));
+        }
+
+        return outcome;
+    }
 
     public Task<ApplyOutcome> ApplyPaymentEventAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default) =>
         repository.ApplyPaymentEventAtomicAsync(evt, nowUtc, paymentOptions?.Value.AutoReverseChargeback ?? false, ct);
@@ -555,6 +580,69 @@ public sealed partial class BillingApplicationService(
 
     [GeneratedRegex(@"^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$", RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
     private static partial Regex HexColorRegex();
+
+    private void EmitAnalytics(string eventName, Action emit)
+    {
+        if (productAnalytics is null)
+            return;
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                emit();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Analytics emission failed for event {EventName}.", eventName);
+            }
+        });
+    }
+
+    private void EmitApiRequestCompleted(UsageEvent usageEvent)
+    {
+        ApiEndpoint? endpoint = null;
+        if (!string.IsNullOrEmpty(usageEvent.Endpoint))
+        {
+            endpoint = usageEvent.Endpoint switch
+            {
+                "chat_completions" => ApiEndpoint.ChatCompletions,
+                "tts" => ApiEndpoint.Tts,
+                _ => null,
+            };
+        }
+
+        EmitAnalytics(
+            AnalyticsEvents.ApiRequestCompleted,
+            () => productAnalytics!.ApiRequestCompleted(
+                usageEvent.UserId,
+                new ApiRequestAnalytics(
+                    usageEvent.ModelId,
+                    MapStatusToStatusCode(usageEvent.Status),
+                    (int)usageEvent.Usage.InputTokens,
+                    (int)usageEvent.Usage.OutputTokens,
+                    (long)(usageEvent.CompletedAtUtc - usageEvent.StartedAtUtc).TotalMilliseconds,
+                    usageEvent.RequestId,
+                    endpoint,
+                    usageEvent.Stream)));
+    }
+
+    private static int MapStatusToStatusCode(string? status)
+    {
+        if (string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "usage_missing", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(status, "succeeded", StringComparison.OrdinalIgnoreCase))
+        {
+            return 200;
+        }
+
+        if (string.Equals(status, "invalid_token_count", StringComparison.OrdinalIgnoreCase))
+        {
+            return 400;
+        }
+
+        return 500;
+    }
 }
 
 public sealed class PaymentOperationException(string errorCode) : Exception(errorCode)

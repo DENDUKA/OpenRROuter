@@ -1,6 +1,8 @@
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.AuthService.Application.Abstractions;
 using OpenRussiaRouter.AuthService.Domain.Entities;
 using OpenRussiaRouter.AuthService.Domain.Enums;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Application.Services;
@@ -11,7 +13,9 @@ public sealed class AuthAccountApplicationService(
     EmailVerificationService emailVerification,
     IPasswordHasher passwordHasher,
     ApiKeyFactory apiKeyFactory,
-    ISecretHasher secretHasher)
+    ISecretHasher secretHasher,
+    IProductAnalytics? productAnalytics = null,
+    ILogger<AuthAccountApplicationService>? logger = null)
 {
     private const int DefaultPageSize = 1000;
     private const int MinPasswordLength = 12;
@@ -99,6 +103,9 @@ public sealed class AuthAccountApplicationService(
             case VerificationCheck.Confirmed:
                 await repository.ActivateUserAndDeleteVerificationAsync(user.Id, ct).ConfigureAwait(false);
                 user.Activate();
+                EmitAnalytics(
+                    AnalyticsEvents.UserVerified,
+                    () => productAnalytics!.UserVerified(user.Id, "email"));
                 return VerifyEmailResult.Success(user);
 
             case VerificationCheck.Expired:
@@ -272,6 +279,9 @@ public sealed class AuthAccountApplicationService(
 
         var created = apiKeyFactory.Create(userId, name, nowUtc);
         await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
+        EmitAnalytics(
+            AnalyticsEvents.ApiKeyCreated,
+            () => productAnalytics!.ApiKeyCreated(userId));
         return CreateApiKeyResult.Success(created);
     }
 
@@ -337,6 +347,24 @@ public sealed class AuthAccountApplicationService(
     public async Task<IReadOnlyCollection<UserAccount>> ListUsersAsync(CancellationToken ct = default)
     {
         return (await repository.ListUsersAsync(DefaultPageSize, null, ct).ConfigureAwait(false)).Items;
+    }
+
+    private void EmitAnalytics(string eventName, Action emit)
+    {
+        if (productAnalytics is null)
+            return;
+
+        _ = Task.Run(() =>
+        {
+            try
+            {
+                emit();
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Analytics emission failed for event {EventName}.", eventName);
+            }
+        });
     }
 }
 

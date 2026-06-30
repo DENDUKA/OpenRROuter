@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.BillingService.Application.Extensions;
 using OpenRussiaRouter.BillingService.Infrastructure.Auth;
 using OpenRussiaRouter.BillingService.Infrastructure.Grpc;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Infrastructure.Workers;
@@ -26,6 +27,7 @@ public static class Startup
         var connectionString = configuration.GetConnectionString("BillingDb");
         services.AddBillingInfrastructure(connectionString);
         services.AddBillingApplicationServices();
+        services.AddProductAnalytics(configuration);
         services.Configure<ExchangeRateOptions>(configuration.GetSection("ExchangeRates"));
         services.Configure<PaymentOptions>(configuration.GetSection("Payments"));
         services.Configure<ServiceAuthOptions>(configuration.GetSection("ServiceAuth"));

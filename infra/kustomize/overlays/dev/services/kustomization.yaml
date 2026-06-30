@@ -17,6 +17,8 @@ patches:
 - path: f9router-nodeport.yaml
 - path: f9router-2-nodeport.yaml
 - path: control-plane-env-patch.yaml
+- path: auth-service-env-patch.yaml
+- path: billing-service-env-patch.yaml
 - path: webapp-env-patch.yaml
 - path: webapp-email-patch.yaml
 commonAnnotations:

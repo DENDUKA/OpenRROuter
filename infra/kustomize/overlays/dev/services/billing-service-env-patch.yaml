@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-service
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: billing-service
+          env:
+            - name: ProductAnalytics__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: analytics-connection

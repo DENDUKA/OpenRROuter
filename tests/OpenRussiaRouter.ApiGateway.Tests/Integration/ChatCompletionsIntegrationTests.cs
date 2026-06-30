@@ -362,6 +362,22 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_HappyPath_UsageEventCarriesChatCompletionsEndpointAndStreamFalse()
+    {
+        const string routerBody = """{"id":"chatcmpl-1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5}}""";
+        var router = new StubRouterProxy { Response = new RouterProxyResponse(200, "application/json", routerBody) };
+        var billing = new StubBillingProvider();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        await Task.Delay(50);
+        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastUsageEvent!.Endpoint.Should().Be("chat_completions");
+        billing.LastUsageEvent.Stream.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task NonStreaming_RouterBodyWithoutUsage_RecordsUsageMissingActivity()
     {
         const string routerBody = """{"id":"chatcmpl-1","choices":[{"message":{"content":"Hi"}}]}""";

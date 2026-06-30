@@ -34,5 +34,7 @@ public sealed record UsageEvent(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset CompletedAtUtc,
     string? ProviderName = null,
-    string? ProviderAccount = null);
+    string? ProviderAccount = null,
+    string? Endpoint = null,
+    bool? Stream = null);
 

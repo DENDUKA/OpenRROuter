@@ -13,7 +13,3 @@ spec:
               value: "GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM"
             - name: ApiGatewayUrl
               value: "http://api-gateway"
-            - name: PostHog__ProjectApiKey
-              value: "phc_wqiMwT6DhVHqt3JMmJ4UFdf2G4wjtn8vVLXTV8gDetoK"
-            - name: PostHog__ApiHost
-              value: "https://us.i.posthog.com"

@@ -14,4 +14,6 @@ public sealed record GatewayUsageEvent(
     DateTimeOffset StartedAtUtc,
     DateTimeOffset CompletedAtUtc,
     string? ProviderName = null,
-    string? ProviderAccount = null);
+    string? ProviderAccount = null,
+    string? Endpoint = null,
+    bool? Stream = null);

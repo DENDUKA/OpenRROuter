@@ -125,7 +125,7 @@ public sealed class ChatCompletionHandler(
                     var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
                     var status = hasUsage ? "completed" : "usage_missing";
 
-                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt);
+                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: false);
 
                     logger.LogInformation(
                         "Chat completion completed. Model: {Model}, Node: {NodeId}, DurationMs: {DurationMs}, Tokens: {Tokens}",
@@ -306,7 +306,7 @@ public sealed class ChatCompletionHandler(
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
 
                     var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
-                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt);
+                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: true);
 
                     logger.LogInformation(
                         "Streaming chat completion completed. Model: {Model}, Node: {NodeId}, DurationMs: {DurationMs}, Tokens: {Tokens}",
@@ -400,7 +400,9 @@ public sealed class ChatCompletionHandler(
         TokenUsage usage,
         string status,
         DateTimeOffset startedAt,
-        DateTimeOffset completedAt)
+        DateTimeOffset completedAt,
+        string? endpoint = null,
+        bool? stream = null)
     {
         try
         {
@@ -408,7 +410,7 @@ public sealed class ChatCompletionHandler(
             _ = billingProvider.RecordUsageAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
                     modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
-                    providerName, providerAccount),
+                    providerName, providerAccount, endpoint, stream),
                 CancellationToken.None)
                 .ContinueWith(
                     t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),

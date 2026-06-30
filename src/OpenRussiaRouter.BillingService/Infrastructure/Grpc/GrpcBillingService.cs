@@ -113,7 +113,9 @@ public sealed class GrpcBillingService(
             ParseTimestamp(request.StartedAtUtc),
             ParseTimestamp(request.CompletedAtUtc),
             string.IsNullOrEmpty(request.ProviderName) ? null : request.ProviderName,
-            string.IsNullOrEmpty(request.ProviderAccount) ? null : request.ProviderAccount);
+            string.IsNullOrEmpty(request.ProviderAccount) ? null : request.ProviderAccount,
+            string.IsNullOrEmpty(request.Endpoint) ? null : request.Endpoint,
+            request.Stream);
 
         var result = await billing.RecordUsageAsync(usageEvent, DateTimeOffset.UtcNow, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 

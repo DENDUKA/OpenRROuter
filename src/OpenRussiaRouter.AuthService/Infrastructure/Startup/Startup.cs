@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.AuthService.Application.Extensions;
 using OpenRussiaRouter.AuthService.Infrastructure.Grpc;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Health;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 
@@ -21,6 +22,7 @@ public static class Startup
         var connectionString = configuration.GetConnectionString("AuthDb");
         services.AddAuthInfrastructure(connectionString);
         services.AddAuthApplicationServices();
+        services.AddProductAnalytics(configuration);
 
         return services;
     }

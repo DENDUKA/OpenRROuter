@@ -1,0 +1,16 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: auth-service
+          env:
+            - name: ProductAnalytics__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: analytics-connection

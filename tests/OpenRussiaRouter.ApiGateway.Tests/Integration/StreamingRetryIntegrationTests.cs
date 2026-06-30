@@ -120,6 +120,22 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
+    public async Task Streaming_HappyPath_UsageEventCarriesChatCompletionsEndpointAndStreamTrue()
+    {
+        var billing = new StubBillingProvider();
+        var router = new SequentialStreamingProxy(CreateSuccessSession("data: {\"choices\":[]}\n\ndata: [DONE]\n\n"));
+        var client = CreateStreamingClient(billing: billing, router: router);
+
+        var response = await PostStreamAsync(client);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        await Task.Delay(50);
+        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastUsageEvent!.Endpoint.Should().Be("chat_completions");
+        billing.LastUsageEvent.Stream.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Streaming_NullModel_Returns400()
     {
         var client = CreateStreamingClient();

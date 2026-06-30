@@ -94,6 +94,8 @@ message RecordUsageRequest {
   string api_key_prefix = 10;
   string provider_name = 11;
   string provider_account = 12;
+  string endpoint = 13;
+  bool stream = 14;
 }
 
 message RecordUsageResponse {

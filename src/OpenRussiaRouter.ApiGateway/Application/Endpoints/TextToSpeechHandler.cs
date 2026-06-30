@@ -115,7 +115,7 @@ public sealed class TextToSpeechHandler(
                     var usage = new TokenUsage(InputTokens: 0, OutputTokens: characters, CacheTokens: 0);
                     var status = characters > 0 ? "completed" : "usage_missing";
 
-                    RecordUsageFireAndForget(requestId, auth, model, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt);
+                    RecordUsageFireAndForget(requestId, auth, model, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "tts", stream: false);
 
                     logger.LogInformation(
                         "TTS completed. Model: {Model}, Voice: {Voice}, Node: {NodeId}, DurationMs: {DurationMs}, Characters: {Characters}",
@@ -235,14 +235,16 @@ public sealed class TextToSpeechHandler(
         TokenUsage usage,
         string status,
         DateTimeOffset startedAt,
-        DateTimeOffset completedAt)
+        DateTimeOffset completedAt,
+        string? endpoint = null,
+        bool? stream = null)
     {
         try
         {
             _ = billingProvider.RecordUsageAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
                     modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
-                    providerName, providerAccount),
+                    providerName, providerAccount, endpoint, stream),
                 CancellationToken.None)
                 .ContinueWith(
                     t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),

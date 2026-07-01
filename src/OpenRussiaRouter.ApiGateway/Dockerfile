@@ -12,12 +12,14 @@ COPY src/OpenRussiaRouter.ApiGateway/OpenRussiaRouter.ApiGateway.csproj src/Open
 RUN dotnet restore src/OpenRussiaRouter.ApiGateway/OpenRussiaRouter.ApiGateway.csproj --configfile NuGet.Config
 
 COPY src/ src/
+COPY db/ db/
 RUN dotnet publish src/OpenRussiaRouter.ApiGateway/OpenRussiaRouter.ApiGateway.csproj \
     -c Release -o /app/publish --no-restore
 
 FROM ${RUNTIME_IMAGE} AS runtime
 WORKDIR /app
 COPY --from=build /app/publish .
+COPY --from=build /src/db ./db
 
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080

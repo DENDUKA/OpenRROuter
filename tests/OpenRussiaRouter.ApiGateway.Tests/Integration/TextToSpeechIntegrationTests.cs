@@ -4,6 +4,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
@@ -28,18 +29,17 @@ public sealed class TextToSpeechIntegrationTests : IClassFixture<WebApplicationF
         {
             Response = new RouterProxyResponse(200, "audio/mpeg", string.Empty, BodyBytes: new byte[] { 1, 2, 3 })
         };
-        var billing = new StubBillingProvider();
-        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+        var outbox = new InMemoryUsageOutboxRepository();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), new StubControlPlane(), router, outbox);
 
         var response = await PostTtsAsync(client, """{"model":"tts-1","input":"hello world","voice":"alloy"}""", bearer: "sk-ok_key");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        await Task.Delay(50);
-        billing.LastUsageEvent.Should().NotBeNull();
-        billing.LastUsageEvent!.Endpoint.Should().Be("tts");
-        billing.LastUsageEvent.Stream.Should().BeFalse();
+        var record = outbox.GetAll().Single();
+        record.Endpoint.Should().Be("tts");
+        record.Stream.Should().BeFalse();
         // Output tokens billed as Unicode character count of the input.
-        billing.LastUsageEvent.Usage.OutputTokens.Should().Be("hello world".Length);
+        record.Usage.OutputTokens.Should().Be("hello world".Length);
     }
 
     // --- Helpers ---
@@ -48,15 +48,23 @@ public sealed class TextToSpeechIntegrationTests : IClassFixture<WebApplicationF
         IApiKeyProvider? auth = null,
         IBillingProvider? billing = null,
         IControlPlaneProvider? control = null,
-        IRouterProxyProvider? router = null)
+        IRouterProxyProvider? router = null,
+        IUsageOutboxRepository? outbox = null)
     {
-        return factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
+        return factory.WithWebHostBuilder(b =>
         {
-            services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
-            services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
-            services.AddScoped<IControlPlaneProvider>(_ => control ?? new StubControlPlane());
-            services.AddScoped<IRouterProxyProvider>(_ => router ?? new StubRouterProxy());
-        })).CreateClient();
+            b.UseSetting("SqlMigrations:Enabled", "false");
+            b.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IOptions<UsageOutboxOptions>>(
+                    Options.Create(new UsageOutboxOptions { PollInterval = TimeSpan.FromHours(1) }));
+                services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
+                services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
+                services.AddScoped<IUsageOutboxRepository>(_ => outbox ?? new InMemoryUsageOutboxRepository());
+                services.AddScoped<IControlPlaneProvider>(_ => control ?? new StubControlPlane());
+                services.AddScoped<IRouterProxyProvider>(_ => router ?? new StubRouterProxy());
+            });
+        }).CreateClient();
     }
 
     private static async Task<HttpResponseMessage> PostTtsAsync(HttpClient client, string body, string? bearer = null)

@@ -20,7 +20,7 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 /// </summary>
 public sealed class ChatCompletionHandler(
     IGatewayPipeline pipeline,
-    IBillingProvider billingProvider,
+    IUsageOutboxRepository outboxRepository,
     IControlPlaneProvider controlPlaneProvider,
     IRouterProxyProvider routerProxy,
     IOptions<GatewayRetryOptions> retryOptions,
@@ -125,7 +125,7 @@ public sealed class ChatCompletionHandler(
                     var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
                     var status = hasUsage ? "completed" : "usage_missing";
 
-                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: false);
+                    await RecordUsageAsync(requestId, auth, body.Metadata.Model!, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: false);
 
                     logger.LogInformation(
                         "Chat completion completed. Model: {Model}, Node: {NodeId}, DurationMs: {DurationMs}, Tokens: {Tokens}",
@@ -306,7 +306,7 @@ public sealed class ChatCompletionHandler(
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "completed", CancellationToken.None);
 
                     var status = usage.TotalTokens > 0 ? "completed" : "usage_missing";
-                    RecordUsageFireAndForget(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: true);
+                    await RecordUsageAsync(requestId, auth, body.Metadata.Model!, providerName, providerAccount, usage, status, startedAt, completedAt, endpoint: "chat_completions", stream: true);
 
                     logger.LogInformation(
                         "Streaming chat completion completed. Model: {Model}, Node: {NodeId}, DurationMs: {DurationMs}, Tokens: {Tokens}",
@@ -391,7 +391,7 @@ public sealed class ChatCompletionHandler(
         }
     }
 
-    private void RecordUsageFireAndForget(
+    private async Task RecordUsageAsync(
         string requestId,
         GatewayAuthorizedContext auth,
         string modelId,
@@ -406,19 +406,15 @@ public sealed class ChatCompletionHandler(
     {
         try
         {
-            // Fire-and-forget: usage recording should not be cancelled even if client disconnected.
-            _ = billingProvider.RecordUsageAsync(
+            await outboxRepository.EnqueueAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
                     modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
                     providerName, providerAccount, endpoint, stream),
-                CancellationToken.None)
-                .ContinueWith(
-                    t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
-                    TaskContinuationOptions.OnlyOnFaulted);
+                CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to submit usage recording. RequestId: {RequestId}", requestId);
+            logger.LogError(ex, "Failed to enqueue usage recording. RequestId: {RequestId}", requestId);
         }
     }
 }

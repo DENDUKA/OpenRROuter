@@ -99,7 +99,9 @@ public sealed class GrpcBillingProvider(
                 StartedAtUtc = usageEvent.StartedAtUtc.ToString("O", CultureInfo.InvariantCulture),
                 CompletedAtUtc = usageEvent.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture),
                 ProviderName = usageEvent.ProviderName ?? "",
-                ProviderAccount = usageEvent.ProviderAccount ?? ""
+                ProviderAccount = usageEvent.ProviderAccount ?? "",
+                Endpoint = usageEvent.Endpoint ?? "",
+                Stream = usageEvent.Stream ?? false
             },
             cancellationToken: cancellationToken);
 

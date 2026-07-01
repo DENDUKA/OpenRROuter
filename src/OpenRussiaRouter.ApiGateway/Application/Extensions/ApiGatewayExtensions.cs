@@ -161,6 +161,18 @@ public static class ApiGatewayExtensions
         return services;
     }
 
+    public static IServiceCollection AddGatewayUsageOutbox(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("GatewayDb");
+        services.AddSingleton<IGatewayDbConnectionFactory>(_ =>
+            new GatewayDbConnectionFactory(connectionString ?? string.Empty));
+        services.AddScoped<IUsageOutboxRepository, PostgresUsageOutboxRepository>();
+        services.Configure<UsageOutboxOptions>(configuration.GetSection("UsageOutbox"));
+        services.AddHostedService<UsageOutboxDispatcher>();
+
+        return services;
+    }
+
     public static WebApplication MapGatewayEndpoints(this WebApplication app)
     {
         app.MapPost("/v1/chat/completions",

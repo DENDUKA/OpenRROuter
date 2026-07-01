@@ -10,9 +10,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper"  />
     <PackageReference Include="Google.Protobuf"  />
     <PackageReference Include="Grpc.Net.ClientFactory"  />
     <PackageReference Include="Microsoft.Extensions.Http.Resilience"  />
+    <PackageReference Include="Npgsql"  />
     <PackageReference Include="Grpc.Tools" >
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

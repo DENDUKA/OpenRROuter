@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
@@ -75,13 +76,17 @@ public sealed class RateLimitingIntegrationTests : IClassFixture<WebApplicationF
     {
         return factory.WithWebHostBuilder(b =>
         {
+            b.UseSetting("SqlMigrations:Enabled", "false");
             b.UseSetting("RateLimiting:Enabled", enabled ? "true" : "false");
             b.UseSetting("RateLimiting:PermitLimit", permitLimit.ToString());
             b.UseSetting("RateLimiting:WindowSeconds", "60");
             b.ConfigureTestServices(services =>
             {
+                services.AddSingleton<IOptions<UsageOutboxOptions>>(
+                    Options.Create(new UsageOutboxOptions { PollInterval = TimeSpan.FromHours(1) }));
                 services.AddScoped<IApiKeyProvider>(_ => new StubAuthenticator());
                 services.AddScoped<IBillingProvider>(_ => new StubBillingProvider());
+                services.AddScoped<IUsageOutboxRepository>(_ => new InMemoryUsageOutboxRepository());
                 services.AddScoped<IControlPlaneProvider>(_ => new StubControlPlane());
                 services.AddScoped<IRouterProxyProvider>(_ => new StubRouterProxy());
             });

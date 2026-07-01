@@ -19,6 +19,7 @@ public static class Startup
         services.AddGatewayGrpcClients(configuration);
         services.AddGatewayRouter();
         services.AddGatewayHandlers(configuration);
+        services.AddGatewayUsageOutbox(configuration);
         services.AddGatewayRateLimiting(configuration);
 
         return services;

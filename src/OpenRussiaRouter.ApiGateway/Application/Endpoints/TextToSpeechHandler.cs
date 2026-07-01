@@ -20,7 +20,7 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 /// </summary>
 public sealed class TextToSpeechHandler(
     IGatewayPipeline pipeline,
-    IBillingProvider billingProvider,
+    IUsageOutboxRepository outboxRepository,
     IControlPlaneProvider controlPlaneProvider,
     IRouterProxyProvider routerProxy,
     ILogger<TextToSpeechHandler> logger)
@@ -115,7 +115,7 @@ public sealed class TextToSpeechHandler(
                     var usage = new TokenUsage(InputTokens: 0, OutputTokens: characters, CacheTokens: 0);
                     var status = characters > 0 ? "completed" : "usage_missing";
 
-                    RecordUsageFireAndForget(requestId, auth, model, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "tts", stream: false);
+                    await RecordUsageAsync(requestId, auth, model, response.ProviderName, response.ProviderAccount, usage, status, startedAt, completedAt, endpoint: "tts", stream: false);
 
                     logger.LogInformation(
                         "TTS completed. Model: {Model}, Voice: {Voice}, Node: {NodeId}, DurationMs: {DurationMs}, Characters: {Characters}",
@@ -226,7 +226,7 @@ public sealed class TextToSpeechHandler(
         }
     }
 
-    private void RecordUsageFireAndForget(
+    private async Task RecordUsageAsync(
         string requestId,
         GatewayAuthorizedContext auth,
         string modelId,
@@ -241,18 +241,15 @@ public sealed class TextToSpeechHandler(
     {
         try
         {
-            _ = billingProvider.RecordUsageAsync(
+            await outboxRepository.EnqueueAsync(
                 new GatewayUsageEvent(requestId, auth.UserId, auth.ApiKeyId, auth.ApiKeyPrefix,
                     modelId, auth.Lease.NodeId, usage, status, startedAt, completedAt,
                     providerName, providerAccount, endpoint, stream),
-                CancellationToken.None)
-                .ContinueWith(
-                    t => logger.LogError(t.Exception, "Usage recording failed. RequestId: {RequestId}", requestId),
-                    TaskContinuationOptions.OnlyOnFaulted);
+                CancellationToken.None).ConfigureAwait(false);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to submit usage recording. RequestId: {RequestId}", requestId);
+            logger.LogError(ex, "Failed to enqueue usage recording. RequestId: {RequestId}", requestId);
         }
     }
 }

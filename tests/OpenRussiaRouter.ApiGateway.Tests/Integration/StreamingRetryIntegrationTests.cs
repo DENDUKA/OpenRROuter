@@ -5,6 +5,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
@@ -105,34 +106,32 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     [Fact]
     public async Task Streaming_NoUsageInStream_RecordsUsageMissingActivity()
     {
-        var billing = new StubBillingProvider();
+        var outbox = new InMemoryUsageOutboxRepository();
         var router = new SequentialStreamingProxy(CreateSuccessSession("data: {\"choices\":[]}\n\ndata: [DONE]\n\n"));
-        var client = CreateStreamingClient(billing: billing, router: router);
+        var client = CreateStreamingClient(router: router, outbox: outbox);
 
         var response = await PostStreamAsync(client);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        await Task.Delay(50);
-        billing.LastUsageEvent.Should().NotBeNull();
-        billing.LastUsageEvent!.Status.Should().Be("usage_missing");
-        billing.LastUsageEvent.Usage.TotalTokens.Should().Be(0);
-        billing.LastUsageEvent.ApiKeyPrefix.Should().Be("sk-or-test");
+        var record = outbox.GetAll().Single();
+        record.Status.Should().Be("usage_missing");
+        record.Usage.TotalTokens.Should().Be(0);
+        record.ApiKeyPrefix.Should().Be("sk-or-test");
     }
 
     [Fact]
     public async Task Streaming_HappyPath_UsageEventCarriesChatCompletionsEndpointAndStreamTrue()
     {
-        var billing = new StubBillingProvider();
+        var outbox = new InMemoryUsageOutboxRepository();
         var router = new SequentialStreamingProxy(CreateSuccessSession("data: {\"choices\":[]}\n\ndata: [DONE]\n\n"));
-        var client = CreateStreamingClient(billing: billing, router: router);
+        var client = CreateStreamingClient(router: router, outbox: outbox);
 
         var response = await PostStreamAsync(client);
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        await Task.Delay(50);
-        billing.LastUsageEvent.Should().NotBeNull();
-        billing.LastUsageEvent!.Endpoint.Should().Be("chat_completions");
-        billing.LastUsageEvent.Stream.Should().BeTrue();
+        var record = outbox.GetAll().Single();
+        record.Endpoint.Should().Be("chat_completions");
+        record.Stream.Should().BeTrue();
     }
 
     [Fact]
@@ -149,9 +148,10 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     public async Task Streaming_AdminBypassDisabledModel_UsesAdminFlag()
     {
         var billing = new StubBillingProvider();
+        var outbox = new InMemoryUsageOutboxRepository();
         var auth = new AdminStubAuthenticator();
         var router = new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n"));
-        var client = CreateStreamingClient(auth: auth, billing: billing, router: router);
+        var client = CreateStreamingClient(auth: auth, billing: billing, router: router, outbox: outbox);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/v1/chat/completions/stream")
         {
@@ -161,8 +161,8 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         request.Headers.TryAddWithoutValidation("X-ORR-Admin-Test", "1");
         await client.SendAsync(request);
 
-        await Task.Delay(50);
-        billing.LastUsageEvent.Should().NotBeNull();
+        billing.LastAdminBypassDisabled.Should().BeTrue();
+        outbox.GetAll().Should().ContainSingle();
     }
 
     // --- Helpers ---
@@ -171,15 +171,23 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         IApiKeyProvider? auth = null,
         IBillingProvider? billing = null,
         RetryTrackingControlPlane? control = null,
-        SequentialStreamingProxy? router = null)
+        SequentialStreamingProxy? router = null,
+        IUsageOutboxRepository? outbox = null)
     {
-        return factory.WithWebHostBuilder(b => b.ConfigureTestServices(services =>
+        return factory.WithWebHostBuilder(b =>
         {
-            services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
-            services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
-            services.AddScoped<IControlPlaneProvider>(_ => control ?? new RetryTrackingControlPlane());
-            services.AddScoped<IRouterProxyProvider>(_ => router ?? new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n")));
-        })).CreateClient();
+            b.UseSetting("SqlMigrations:Enabled", "false");
+            b.ConfigureTestServices(services =>
+            {
+                services.AddSingleton<IOptions<UsageOutboxOptions>>(
+                    Options.Create(new UsageOutboxOptions { PollInterval = TimeSpan.FromHours(1) }));
+                services.AddScoped<IApiKeyProvider>(_ => auth ?? new StubAuthenticator());
+                services.AddScoped<IBillingProvider>(_ => billing ?? new StubBillingProvider());
+                services.AddScoped<IUsageOutboxRepository>(_ => outbox ?? new InMemoryUsageOutboxRepository());
+                services.AddScoped<IControlPlaneProvider>(_ => control ?? new RetryTrackingControlPlane());
+                services.AddScoped<IRouterProxyProvider>(_ => router ?? new SequentialStreamingProxy(CreateSuccessSession("data: [DONE]\n\n")));
+            });
+        }).CreateClient();
     }
 
     private static async Task<HttpResponseMessage> PostStreamAsync(HttpClient client)
@@ -230,12 +238,16 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     private sealed class StubBillingProvider : IBillingProvider
     {
         public GatewayUsageEvent? LastUsageEvent { get; private set; }
+        public bool LastAdminBypassDisabled { get; private set; }
 
         public Task<IReadOnlyCollection<GatewayPublicModel>> ListPublicModelsAsync(CancellationToken ct)
             => Task.FromResult<IReadOnlyCollection<GatewayPublicModel>>(Array.Empty<GatewayPublicModel>());
 
         public Task<GatewayBalanceCheckResult> CheckBalanceAndModelAsync(string userId, string apiKeyId, string modelId, bool adminBypassDisabled, CancellationToken ct)
-            => Task.FromResult(new GatewayBalanceCheckResult(true, modelId, modelId, "v1", MoneyAmount.Usd(100), null));
+        {
+            LastAdminBypassDisabled = adminBypassDisabled;
+            return Task.FromResult(new GatewayBalanceCheckResult(true, modelId, modelId, "v1", MoneyAmount.Usd(100), null));
+        }
 
         public Task<bool> RecordUsageAsync(GatewayUsageEvent ev, CancellationToken ct)
         {

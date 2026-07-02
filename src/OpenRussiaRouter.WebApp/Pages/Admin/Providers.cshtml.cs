@@ -141,6 +141,21 @@ public class ProvidersModel(BillingProvider billingProvider, ILogger<ProvidersMo
         }
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(string id)
+    {
+        try
+        {
+            await _billingClient.DeleteModelProviderAsync(id);
+            TempData["SuccessMessage"] = "Provider deleted.";
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete provider. Id={Id}", id);
+            TempData["ErrorMessage"] = $"Failed to delete provider: {ex.Message}";
+        }
+        return RedirectToPage();
+    }
+
     private async Task LoadProviders()
     {
         try

@@ -94,4 +94,5 @@ public interface IBillingRepository
     Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default);
     Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default);
     Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);
+    Task DeleteModelProviderAsync(string id, CancellationToken ct = default);
 }

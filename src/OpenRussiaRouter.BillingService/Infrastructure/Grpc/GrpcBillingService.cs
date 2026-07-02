@@ -964,4 +964,20 @@ public sealed class GrpcBillingService(
             return new UpsertProviderResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
     }
+
+    public override async Task<DeleteProviderResponse> DeleteModelProvider(
+        DeleteProviderRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            await billing.DeleteModelProviderAsync(request.ProviderId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            return new DeleteProviderResponse { Deleted = true };
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "DeleteModelProvider failed. Id: {Id}", request.ProviderId);
+            return new DeleteProviderResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
+    }
 }

@@ -1512,4 +1512,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false);
         return entity is null ? null : BillingPersistenceMapper.ToDomain(entity);
     }
+
+    public async Task DeleteModelProviderAsync(string id, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update billing.model_prices set provider_id = null where provider_id = @Id;
+            delete from billing.model_providers where id = @Id;
+            """,
+            new { Id = id },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
 }

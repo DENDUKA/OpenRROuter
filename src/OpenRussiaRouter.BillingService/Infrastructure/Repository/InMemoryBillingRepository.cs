@@ -669,6 +669,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default) =>
         Task.FromResult(_modelProviders.GetValueOrDefault(id));
 
+    public Task DeleteModelProviderAsync(string id, CancellationToken ct = default)
+    {
+        _modelProviders.Remove(id);
+        foreach (var model in _models.Values)
+        {
+            if (string.Equals(model.ProviderId, id, StringComparison.Ordinal))
+                _models[model.ModelId] = model with { ProviderId = null };
+        }
+        return Task.CompletedTask;
+    }
+
     private static ApiKeyLimitSummary CreateLimitSummary(
         string apiKeyId,
         MoneyAmount? dailyLimit,

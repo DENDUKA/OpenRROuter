@@ -28,7 +28,8 @@ public sealed class ServiceAuthInterceptor(
         "ConfirmPaymentByProvider",
         "ApplyPaymentEvent",
         "AcquireStalePayments",
-        "UpsertModelProvider"
+        "UpsertModelProvider",
+        "DeleteModelProvider"
     };
 
     private readonly ServiceAuthOptions auth = options.Value;

@@ -38,6 +38,7 @@ service BillingService {
   rpc ListModelProviders (ListProvidersRequest) returns (ListProvidersResponse);
   rpc GetModelProvider (GetProviderRequest) returns (GetProviderResponse);
   rpc UpsertModelProvider (UpsertProviderRequest) returns (UpsertProviderResponse);
+  rpc DeleteModelProvider (DeleteProviderRequest) returns (DeleteProviderResponse);
 }
 
 message GetPlatformSettingRequest {
@@ -641,4 +642,13 @@ message UpsertProviderResponse {
   bool upserted = 1;
   string provider_id = 2;
   string error_code = 3;
+}
+
+message DeleteProviderRequest {
+  string provider_id = 1;
+}
+
+message DeleteProviderResponse {
+  bool deleted = 1;
+  string error_code = 2;
 }

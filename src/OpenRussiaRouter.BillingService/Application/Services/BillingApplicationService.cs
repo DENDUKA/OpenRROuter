@@ -479,6 +479,9 @@ public sealed partial class BillingApplicationService(
     public Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default)
         => repository.GetModelProviderLogoAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
+    public Task DeleteModelProviderAsync(string id, CancellationToken ct = default)
+        => repository.DeleteModelProviderAsync(Preconditions.RequireValue(id, nameof(id)), ct);
+
     public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
         => repository.GetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), ct);
 

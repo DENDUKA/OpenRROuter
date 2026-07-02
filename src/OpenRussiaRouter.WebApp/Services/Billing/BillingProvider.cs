@@ -763,4 +763,15 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             throw new BillingException(response.ErrorCode);
         }
     }
+
+    public async Task DeleteModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.DeleteModelProviderAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.DeleteProviderRequest { ProviderId = providerId },
+            cancellationToken: cancellationToken);
+        if (!response.Deleted)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+    }
 }

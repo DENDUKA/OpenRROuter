@@ -277,7 +277,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
-            Priority: m.Priority)).ToList();
+            Priority: m.Priority,
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -304,7 +305,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
-            Priority: m.Priority)).ToList();
+            Priority: m.Priority,
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId)).ToList();
     }
 
     public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
@@ -334,7 +336,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             ModelType: string.IsNullOrEmpty(m.ModelType) ? "text" : m.ModelType,
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
-            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort);
+            DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId);
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -356,6 +359,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             OutputModalities = model.OutputModalities ?? string.Empty,
             DescriptionSource = model.DescriptionSource ?? string.Empty,
             Provider = model.Provider ?? string.Empty,
+            ProviderId = model.ProviderId ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
             ModelType = model.ModelType ?? "text",
@@ -701,6 +705,62 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
    private static decimal? ParseOptionalDecimal(string value) =>
        string.IsNullOrWhiteSpace(value) ? null : decimal.Parse(value, CultureInfo.InvariantCulture);
 
-   private static decimal ParseDecimal(string value) =>
-       string.IsNullOrWhiteSpace(value) ? 0m : decimal.Parse(value, CultureInfo.InvariantCulture);
+    private static decimal ParseDecimal(string value) =>
+        string.IsNullOrWhiteSpace(value) ? 0m : decimal.Parse(value, CultureInfo.InvariantCulture);
+
+    public async Task<IReadOnlyList<ProviderInfo>> ListModelProvidersAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await client.ListModelProvidersAsync(new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListProvidersRequest(), cancellationToken: cancellationToken);
+        return response.Providers.Select(p => new ProviderInfo(
+            p.Id,
+            p.DisplayName,
+            string.IsNullOrEmpty(p.DescriptionRu) ? null : p.DescriptionRu,
+            string.IsNullOrEmpty(p.DescriptionEn) ? null : p.DescriptionEn,
+            p.LogoBytes.Length > 0 ? p.LogoBytes.ToByteArray() : null,
+            string.IsNullOrEmpty(p.LogoContentType) ? null : p.LogoContentType,
+            string.IsNullOrEmpty(p.CreatedAtUtc) ? default : DateTimeOffset.Parse(p.CreatedAtUtc, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(p.UpdatedAtUtc) ? default : DateTimeOffset.Parse(p.UpdatedAtUtc, CultureInfo.InvariantCulture))).ToList();
+    }
+
+    public async Task<ProviderInfo?> GetModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetModelProviderAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetProviderRequest { ProviderId = providerId },
+            cancellationToken: cancellationToken);
+        if (!response.Found || response.Provider is null)
+            return null;
+        var p = response.Provider;
+        return new ProviderInfo(
+            p.Id,
+            p.DisplayName,
+            string.IsNullOrEmpty(p.DescriptionRu) ? null : p.DescriptionRu,
+            string.IsNullOrEmpty(p.DescriptionEn) ? null : p.DescriptionEn,
+            p.LogoBytes.Length > 0 ? p.LogoBytes.ToByteArray() : null,
+            string.IsNullOrEmpty(p.LogoContentType) ? null : p.LogoContentType,
+            string.IsNullOrEmpty(p.CreatedAtUtc) ? default : DateTimeOffset.Parse(p.CreatedAtUtc, CultureInfo.InvariantCulture),
+            string.IsNullOrEmpty(p.UpdatedAtUtc) ? default : DateTimeOffset.Parse(p.UpdatedAtUtc, CultureInfo.InvariantCulture));
+    }
+
+    public async Task UpsertModelProviderAsync(ProviderInfo provider, CancellationToken cancellationToken = default)
+    {
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.UpsertProviderRequest
+        {
+            Id = provider.Id,
+            DisplayName = provider.DisplayName,
+            DescriptionRu = provider.DescriptionRu ?? string.Empty,
+            DescriptionEn = provider.DescriptionEn ?? string.Empty,
+            LogoContentType = provider.LogoContentType ?? string.Empty,
+            ClearLogo = provider.LogoBytes is null && provider.LogoContentType is null
+        };
+        if (provider.LogoBytes is { Length: > 0 })
+        {
+            request.LogoBytes = Google.Protobuf.ByteString.CopyFrom(provider.LogoBytes);
+        }
+
+        var response = await client.UpsertModelProviderAsync(request, cancellationToken: cancellationToken);
+        if (!response.Upserted)
+        {
+            throw new BillingException(response.ErrorCode);
+        }
+    }
 }

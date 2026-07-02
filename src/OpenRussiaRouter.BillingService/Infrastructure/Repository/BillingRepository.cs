@@ -196,7 +196,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
                 description, context_length, modalities, input_modalities, output_modalities, description_source,
-                tag_ids, provider,
+                tag_ids, provider, provider_id,
                 supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, model_type,
                 priority
             )
@@ -205,7 +205,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
                 @Description, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
-                @TagIds, @Provider,
+                @TagIds, @Provider, @ProviderId,
                 @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @ModelType,
                 @Priority
             )
@@ -220,6 +220,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 enabled = excluded.enabled,
                 tag_ids = excluded.tag_ids,
                 provider = excluded.provider,
+                provider_id = excluded.provider_id,
                 supports_reasoning = excluded.supports_reasoning,
                 allowed_reasoning_efforts = excluded.allowed_reasoning_efforts,
                 default_reasoning_effort = excluded.default_reasoning_effort,
@@ -274,6 +275,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model.OutputModalities,
                 model.DescriptionSource,
                 model.Provider,
+                model.ProviderId,
                 TagIds = model.TagIds?.ToArray() ?? [],
                 model.SupportsReasoning,
                 AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
@@ -1352,13 +1354,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             output_modalities as OutputModalities,
             description_source as DescriptionSource,
             tag_ids as TagIds,
-            provider as Provider,
+            coalesce(model_provider.display_name, billing.model_prices.provider) as Provider,
+            provider_id as ProviderId,
             supports_reasoning as SupportsReasoning,
             allowed_reasoning_efforts as AllowedReasoningEfforts,
             default_reasoning_effort as DefaultReasoningEffort,
             model_type as ModelType,
             priority as Priority
         from billing.model_prices
+        left join billing.model_providers model_provider
+            on model_provider.id = billing.model_prices.provider_id
 
         """;
 
@@ -1447,5 +1452,64 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         public decimal? WeeklyLimitAmount { get; set; }
         public decimal DailySpent { get; set; }
         public decimal WeeklySpent { get; set; }
+    }
+
+    private const string ModelProviderSelectSql =
+        """
+        select id as Id, display_name as DisplayName, description_ru as DescriptionRu,
+               description_en as DescriptionEn, logo_bytes as LogoBytes,
+               logo_content_type as LogoContentType,
+               created_at_utc as CreatedAtUtc, updated_at_utc as UpdatedAtUtc
+        from billing.model_providers
+        """;
+
+    public async Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var items = (await connection.QueryAsync<ModelProviderEntity>(new CommandDefinition(
+            ModelProviderSelectSql + " order by display_name;",
+            cancellationToken: ct)).ConfigureAwait(false))
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+        return items;
+    }
+
+    public async Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var entity = await connection.QuerySingleOrDefaultAsync<ModelProviderEntity>(new CommandDefinition(
+            ModelProviderSelectSql + " where id = @Id;",
+            new { Id = id },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return entity is null ? null : BillingPersistenceMapper.ToDomain(entity);
+    }
+
+    public async Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into billing.model_providers (id, display_name, description_ru, description_en, logo_bytes, logo_content_type, created_at_utc, updated_at_utc)
+            values (@Id, @DisplayName, @DescriptionRu, @DescriptionEn, @LogoBytes, @LogoContentType, @CreatedAtUtc, @UpdatedAtUtc)
+            on conflict (id) do update set
+                display_name = excluded.display_name,
+                description_ru = excluded.description_ru,
+                description_en = excluded.description_en,
+                logo_bytes = excluded.logo_bytes,
+                logo_content_type = excluded.logo_content_type,
+                updated_at_utc = excluded.updated_at_utc;
+            """,
+            BillingPersistenceMapper.ToEntity(provider),
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var entity = await connection.QuerySingleOrDefaultAsync<ModelProviderEntity>(new CommandDefinition(
+            ModelProviderSelectSql + " where id = @Id;",
+            new { Id = id },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return entity is null ? null : BillingPersistenceMapper.ToDomain(entity);
     }
 }

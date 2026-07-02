@@ -89,4 +89,9 @@ public interface IBillingRepository
     Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default);
     Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default);
     Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);
+
+    Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default);
+    Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default);
+    Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default);
+    Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);
 }

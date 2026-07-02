@@ -102,8 +102,15 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label asp-for="Form.Provider" class="form-label">Provider</label>
-                        <input asp-for="Form.Provider" class="form-control" placeholder="e.g. OpenAI" />
+                        <label asp-for="Form.ProviderId" class="form-label">Provider</label>
+                        <select asp-for="Form.ProviderId" class="form-control">
+                            <option value="">— no provider —</option>
+                            @foreach (var p in Model.AvailableProviders)
+                            {
+                                <option value="@p.Id">@p.DisplayName</option>
+                            }
+                        </select>
+                        <input type="hidden" asp-for="Form.Provider" />
                     </div>
                     <div class="form-group">
                         <label asp-for="Form.Priority" class="form-label">Priority <small class="text-muted">(catalog sort order)</small></label>

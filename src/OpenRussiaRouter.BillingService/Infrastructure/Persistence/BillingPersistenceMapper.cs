@@ -56,6 +56,7 @@ public static class BillingPersistenceMapper
             DescriptionSource = model.DescriptionSource,
             TagIds = model.TagIds?.ToArray(),
             Provider = model.Provider,
+            ProviderId = model.ProviderId,
             ModelType = model.ModelType,
             SupportsReasoning = model.SupportsReasoning,
             AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
@@ -88,7 +89,8 @@ public static class BillingPersistenceMapper
             SupportsReasoning: entity.SupportsReasoning,
             AllowedReasoningEfforts: ReasoningEffort.SplitCsv(entity.AllowedReasoningEfforts),
             DefaultReasoningEffort: ReasoningEffort.NormalizeNullable(entity.DefaultReasoningEffort),
-            Priority: entity.Priority);
+            Priority: entity.Priority,
+            ProviderId: entity.ProviderId);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)
@@ -257,4 +259,32 @@ public static class BillingPersistenceMapper
         entity.EventType, entity.OrderId, entity.ConfirmedAmount, entity.ConfirmedCurrency, entity.Reason,
         entity.RawPayload, entity.SignatureOk, entity.Processed, entity.Attempts, entity.ReceivedAtUtc,
         entity.ProcessedAtUtc);
+
+    public static ModelProviderEntity ToEntity(ModelProvider provider)
+    {
+        return new ModelProviderEntity
+        {
+            Id = provider.Id,
+            DisplayName = provider.DisplayName,
+            DescriptionRu = provider.DescriptionRu,
+            DescriptionEn = provider.DescriptionEn,
+            LogoBytes = provider.LogoBytes,
+            LogoContentType = provider.LogoContentType,
+            CreatedAtUtc = provider.CreatedAtUtc,
+            UpdatedAtUtc = provider.UpdatedAtUtc
+        };
+    }
+
+    public static ModelProvider ToDomain(ModelProviderEntity entity)
+    {
+        return new ModelProvider(
+            entity.Id,
+            entity.DisplayName,
+            entity.DescriptionRu,
+            entity.DescriptionEn,
+            entity.LogoBytes,
+            entity.LogoContentType,
+            entity.CreatedAtUtc,
+            entity.UpdatedAtUtc);
+    }
 }

@@ -22,6 +22,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
     public IReadOnlyList<string> AvailableNodeModels { get; set; } = [];
     public IReadOnlyList<TagInfo> AvailableTags { get; set; } = [];
     public Dictionary<string, TagInfo> TagsById { get; set; } = [];
+    public IReadOnlyList<ProviderInfo> AvailableProviders { get; set; } = [];
+    public Dictionary<string, ProviderInfo> ProvidersById { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public string? SuccessMessage { get; set; }
     public IReadOnlyList<string> WarningMessages { get; set; } = [];
@@ -124,6 +126,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         InputModalities = m.InputModalities,
                         OutputModalities = m.OutputModalities,
                         Provider = m.Provider,
+                        ProviderId = m.ProviderId,
                         TagIds = m.TagIds?.ToList() ?? [],
                         SupportsReasoning = m.SupportsReasoning,
                         AllowedReasoningEfforts = m.AllowedReasoningEfforts?.ToList() ?? [],
@@ -183,32 +186,40 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 return Page();
             }
 
+            await LoadProviders();
+
             var routerModelId = string.IsNullOrWhiteSpace(Form.RouterModelId)
-                ? Form.Id.Trim()
-                : Form.RouterModelId.Trim();
+                    ? Form.Id.Trim()
+                    : Form.RouterModelId.Trim();
+
+            var providerId = string.IsNullOrWhiteSpace(Form.ProviderId) ? null : Form.ProviderId.Trim();
+            var resolvedProvider = providerId is null
+                ? (string.IsNullOrWhiteSpace(Form.Provider) ? null : Form.Provider.Trim())
+                : (ProvidersById.TryGetValue(providerId, out var prov) ? prov.DisplayName : providerId);
 
             var m = new ModelInfo(
-                Form.Id.Trim(),
-                Form.DisplayName.Trim(),
-                routerModelId,
-                orig?.PriceVersion ?? "v1",
-                Form.InputPrice,
-                Form.OutputPrice,
-                Form.CachePrice,
-                Form.Enabled,
-                Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
-                ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
-                Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
-                InputModalities: string.IsNullOrWhiteSpace(Form.InputModalities) ? null : Form.InputModalities.Trim(),
-                OutputModalities: string.IsNullOrWhiteSpace(Form.OutputModalities) ? null : Form.OutputModalities.Trim(),
-                DescriptionSource: DetermineSource(orig, Form),
-                Provider: string.IsNullOrWhiteSpace(Form.Provider) ? null : Form.Provider.Trim(),
-                TagIds: Form.TagIds,
-                SupportsReasoning: Form.SupportsReasoning,
-                AllowedReasoningEfforts: Form.AllowedReasoningEfforts.Count > 0 ? Form.AllowedReasoningEfforts : null,
-                DefaultReasoningEffort: Form.DefaultReasoningEffort,
-                ModelType: Form.ModelType,
-                Priority: Form.Priority);
+                    Form.Id.Trim(),
+                    Form.DisplayName.Trim(),
+                    routerModelId,
+                    orig?.PriceVersion ?? "v1",
+                    Form.InputPrice,
+                    Form.OutputPrice,
+                    Form.CachePrice,
+                    Form.Enabled,
+                    Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
+                    ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
+                    Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
+                    InputModalities: string.IsNullOrWhiteSpace(Form.InputModalities) ? null : Form.InputModalities.Trim(),
+                    OutputModalities: string.IsNullOrWhiteSpace(Form.OutputModalities) ? null : Form.OutputModalities.Trim(),
+                    DescriptionSource: DetermineSource(orig, Form),
+                    Provider: resolvedProvider,
+                    TagIds: Form.TagIds,
+                    SupportsReasoning: Form.SupportsReasoning,
+                    AllowedReasoningEfforts: Form.AllowedReasoningEfforts.Count > 0 ? Form.AllowedReasoningEfforts : null,
+                    DefaultReasoningEffort: Form.DefaultReasoningEffort,
+                    ModelType: Form.ModelType,
+                    Priority: Form.Priority,
+                    ProviderId: providerId);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -413,7 +424,11 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             Form.InputModalities = match.InputModalities;
             Form.OutputModalities = match.OutputModalities;
             if (!string.IsNullOrWhiteSpace(match.Provider))
+            {
                 Form.Provider = match.Provider;
+                await LoadProviders();
+                Form.ProviderId = ResolveProviderId(match.Provider);
+            }
 
             // Echo the matched id back into the input so the admin sees exactly what was used.
             EnrichOpenRouterId = match.MatchedId;
@@ -533,9 +548,17 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             : orig?.DescriptionSource;
     }
 
+    private string? ResolveProviderId(string? providerName)
+    {
+        if (string.IsNullOrWhiteSpace(providerName))
+            return null;
+        return ProvidersById.Values
+            .FirstOrDefault(p => string.Equals(p.DisplayName, providerName, StringComparison.OrdinalIgnoreCase))?.Id;
+    }
+
     private async Task LoadFormData()
     {
-        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels(), LoadTags());
+        await Task.WhenAll(LoadModels(), LoadAvailableNodeModels(), LoadTags(), LoadProviders());
     }
 
     private async Task LoadModels()
@@ -573,6 +596,19 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         }
     }
 
+    private async Task LoadProviders()
+    {
+        try
+        {
+            AvailableProviders = await _billingClient.ListModelProvidersAsync();
+            ProvidersById = AvailableProviders.ToDictionary(p => p.Id, StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load providers.");
+        }
+    }
+
     public class ModelFormInput
     {
         [Required]
@@ -597,6 +633,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         public string? InputModalities { get; set; }
         public string? OutputModalities { get; set; }
         public string? Provider { get; set; }
+        public string? ProviderId { get; set; }
         public List<string> TagIds { get; set; } = [];
         public bool SupportsReasoning { get; set; }
         public List<string> AllowedReasoningEfforts { get; set; } = [];

@@ -646,6 +646,29 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     private decimal BalanceUnsafe(string userId) =>
         _ledgerByIdempotencyKey.Values.Where(e => e.UserId == userId).Sum(e => e.Amount.Amount);
 
+    private readonly Dictionary<string, ModelProvider> _modelProviders = new(StringComparer.Ordinal);
+
+    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default)
+    {
+        IReadOnlyCollection<ModelProvider> providers = _modelProviders.Values
+            .OrderBy(p => p.DisplayName, StringComparer.Ordinal)
+            .ToList();
+        return Task.FromResult(providers);
+    }
+
+    public Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default) =>
+        Task.FromResult(_modelProviders.GetValueOrDefault(id));
+
+    public Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        _modelProviders[provider.Id] = provider;
+        return Task.CompletedTask;
+    }
+
+    public Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default) =>
+        Task.FromResult(_modelProviders.GetValueOrDefault(id));
+
     private static ApiKeyLimitSummary CreateLimitSummary(
         string apiKeyId,
         MoneyAmount? dailyLimit,

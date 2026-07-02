@@ -1,0 +1,138 @@
+@page
+@model Admin.ProvidersModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Providers - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Providers</h2>
+    <p>Manage model providers (display name, logo, descriptions).</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+@if (Model.ShowForm)
+{
+    <div class="adm-card">
+        <div class="adm-card-header">@(Model.IsAdd ? "Add Provider" : $"Edit Provider: {Model.Form.Id}")</div>
+        <div class="adm-card-body">
+            <div asp-validation-summary="ModelOnly" class="validation-message"></div>
+            <form method="post" asp-page-handler="Save" enctype="multipart/form-data">
+                <input type="hidden" name="isNew" value="@(Model.IsAdd ? "true" : "false")" />
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Id" class="form-label">Provider ID</label>
+                        @if (Model.IsAdd)
+                        {
+                            <input asp-for="Form.Id" class="form-control" />
+                        }
+                        else
+                        {
+                            <input asp-for="Form.Id" class="form-control" readonly />
+                        }
+                        <span asp-validation-for="Form.Id" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.DisplayName" class="form-label">Display Name</label>
+                        <input asp-for="Form.DisplayName" class="form-control" />
+                        <span asp-validation-for="Form.DisplayName" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label class="form-label">Logo <small class="text-muted">(PNG, JPEG, WebP — max 256 KiB)</small></label>
+                        @if (Model.ExistingLogoUrl != null)
+                        {
+                            <div style="margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;">
+                                <img src="@Model.ExistingLogoUrl" alt="Current logo" style="max-height:48px;max-width:120px;border-radius:4px;border:1px solid var(--color-hairline);" />
+                                <label style="display:flex;align-items:center;gap:0.25rem;font-weight:normal;font-size:13px;">
+                                    <input type="checkbox" name="clearLogo" value="true" /> Remove logo
+                                </label>
+                            </div>
+                        }
+                        <input type="file" name="logoFile" accept=".png,.jpg,.jpeg,.webp" class="form-control" />
+                        @if (ViewData.ModelState.TryGetValue("logoFile", out var logoState))
+                        {
+                            foreach (var error in logoState.Errors)
+                            {
+                                <span class="validation-message">@error.ErrorMessage</span>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.DescriptionRu" class="form-label">Description (RU)</label>
+                        <textarea asp-for="Form.DescriptionRu" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.DescriptionEn" class="form-label">Description (EN)</label>
+                        <textarea asp-for="Form.DescriptionEn" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="adm-btn-row">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <a class="btn btn-secondary" href="/admin/providers">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Providers List</span>
+        <div class="adm-btn-row">
+            <a class="btn btn-sm btn-primary" href="?action=add">Add Provider</a>
+        </div>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Providers.Count == 0)
+        {
+            <p class="text-muted">No providers configured.</p>
+        }
+        else
+        {
+            <table class="table">
+                <thead><tr>
+                    <th>ID</th><th>Display Name</th><th>Logo</th><th>RU</th><th>EN</th><th>Actions</th>
+                </tr></thead>
+                <tbody>
+                    @foreach (var p in Model.Providers)
+                    {
+                        <tr>
+                            <td><code>@p.Id</code></td>
+                            <td>@p.DisplayName</td>
+                            <td>
+                                @if (p.LogoBytes is { Length: > 0 } && p.LogoContentType != null)
+                                {
+                                    <img src="/admin/providers/logo/@Uri.EscapeDataString(p.Id)?v=@p.UpdatedAtUtc.UtcDateTime.Ticks" alt="@p.DisplayName" style="max-height:32px;max-width:80px;border-radius:3px;" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted">&mdash;</span>
+                                }
+                            </td>
+                            <td>@(string.IsNullOrEmpty(p.DescriptionRu) ? "—" : "✓")</td>
+                            <td>@(string.IsNullOrEmpty(p.DescriptionEn) ? "—" : "✓")</td>
+                            <td class="adm-actions-cell">
+                                <a class="btn-icon" title="Edit" aria-label="Edit"
+                                   href="?action=edit&id=@Uri.EscapeDataString(p.Id)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

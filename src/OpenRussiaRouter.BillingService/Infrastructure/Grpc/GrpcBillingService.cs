@@ -76,6 +76,7 @@ public sealed class GrpcBillingService(
                     OutputModalities = price?.OutputModalities ?? string.Empty,
                     Description = price?.Description ?? string.Empty,
                     Provider = price?.Provider ?? string.Empty,
+                    ProviderId = price?.ProviderId ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
                     ModelType = price?.ModelType ?? "text",
                     Priority = price?.Priority ?? 0,
@@ -288,6 +289,7 @@ public sealed class GrpcBillingService(
                 DescriptionSource: string.IsNullOrEmpty(request.DescriptionSource) ? null : request.DescriptionSource,
                 TagIds: request.TagIds.Count > 0 ? request.TagIds.ToList() : null,
                 Provider: string.IsNullOrEmpty(request.Provider) ? null : request.Provider,
+                ProviderId: string.IsNullOrEmpty(request.ProviderId) ? null : request.ProviderId,
                 ModelType: string.IsNullOrEmpty(request.ModelType) ? "text" : request.ModelType,
                 SupportsReasoning: request.SupportsReasoning,
                 AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
@@ -361,6 +363,7 @@ public sealed class GrpcBillingService(
                     OutputModalities = model.OutputModalities ?? string.Empty,
                     DescriptionSource = model.DescriptionSource ?? string.Empty,
                     Provider = model.Provider ?? string.Empty,
+                    ProviderId = model.ProviderId ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
                     DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                     ModelType = model.ModelType ?? "text",
@@ -413,6 +416,7 @@ public sealed class GrpcBillingService(
             OutputModalities = model.OutputModalities ?? string.Empty,
             DescriptionSource = model.DescriptionSource ?? string.Empty,
             Provider = model.Provider ?? string.Empty,
+            ProviderId = model.ProviderId ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
             ModelType = model.ModelType ?? "text",
@@ -880,5 +884,84 @@ public sealed class GrpcBillingService(
             return null;
 
         return MoneyAmount.Usd(decimal.Parse(value, CultureInfo.InvariantCulture));
+    }
+
+    public override async Task<ListProvidersResponse> ListModelProviders(
+        ListProvidersRequest request,
+        ServerCallContext context)
+    {
+        var response = new ListProvidersResponse();
+        response.Providers.AddRange(
+            (await billing.ListModelProvidersAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            .Select(p => new Contracts.Grpc.Billing.V1.ModelProvider
+            {
+                Id = p.Id,
+                DisplayName = p.DisplayName,
+                DescriptionRu = p.DescriptionRu ?? string.Empty,
+                DescriptionEn = p.DescriptionEn ?? string.Empty,
+                LogoBytes = p.LogoBytes is { Length: > 0 } ? Google.Protobuf.ByteString.CopyFrom(p.LogoBytes) : Google.Protobuf.ByteString.Empty,
+                LogoContentType = p.LogoContentType ?? string.Empty,
+                CreatedAtUtc = p.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                UpdatedAtUtc = p.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            }));
+        return response;
+    }
+
+    public override async Task<GetProviderResponse> GetModelProvider(
+        GetProviderRequest request,
+        ServerCallContext context)
+    {
+        var provider = await billing.GetModelProviderAsync(request.ProviderId, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        if (provider is null)
+            return new GetProviderResponse { Found = false };
+
+        return new GetProviderResponse
+        {
+            Found = true,
+            Provider = new Contracts.Grpc.Billing.V1.ModelProvider
+            {
+                Id = provider.Id,
+                DisplayName = provider.DisplayName,
+                DescriptionRu = provider.DescriptionRu ?? string.Empty,
+                DescriptionEn = provider.DescriptionEn ?? string.Empty,
+                LogoBytes = provider.LogoBytes is { Length: > 0 } ? Google.Protobuf.ByteString.CopyFrom(provider.LogoBytes) : Google.Protobuf.ByteString.Empty,
+                LogoContentType = provider.LogoContentType ?? string.Empty,
+                CreatedAtUtc = provider.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture),
+                UpdatedAtUtc = provider.UpdatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+            }
+        };
+    }
+
+    public override async Task<UpsertProviderResponse> UpsertModelProvider(
+        UpsertProviderRequest request,
+        ServerCallContext context)
+    {
+        try
+        {
+            var logoBytes = request.ClearLogo
+                ? null
+                : (request.LogoBytes.Length > 0 ? request.LogoBytes.ToArray() : null);
+
+            var logoContentType = request.ClearLogo
+                ? null
+                : (string.IsNullOrEmpty(request.LogoContentType) ? null : request.LogoContentType);
+
+            await billing.UpsertModelProviderAsync(
+                new OpenRussiaRouter.BillingService.Domain.Entities.ModelProvider(
+                    request.Id,
+                    request.DisplayName,
+                    string.IsNullOrEmpty(request.DescriptionRu) ? null : request.DescriptionRu,
+                    string.IsNullOrEmpty(request.DescriptionEn) ? null : request.DescriptionEn,
+                    logoBytes,
+                    logoContentType),
+                context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+
+            return new UpsertProviderResponse { Upserted = true, ProviderId = request.Id };
+        }
+        catch (Exception ex) when (ex is ArgumentException or FormatException)
+        {
+            logger.LogWarning(ex, "UpsertModelProvider failed. Id: {Id}", request.Id);
+            return new UpsertProviderResponse { ErrorCode = ErrorCodes.ValidationFailed };
+        }
     }
 }

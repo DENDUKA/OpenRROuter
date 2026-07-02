@@ -35,6 +35,9 @@ service BillingService {
   rpc AcquireStalePayments (AcquireStalePaymentsRequest) returns (AcquireStalePaymentsResponse);
   rpc GetPlatformSetting (GetPlatformSettingRequest) returns (GetPlatformSettingResponse);
   rpc SetPlatformSetting (SetPlatformSettingRequest) returns (SetPlatformSettingResponse);
+  rpc ListModelProviders (ListProvidersRequest) returns (ListProvidersResponse);
+  rpc GetModelProvider (GetProviderRequest) returns (GetProviderResponse);
+  rpc UpsertModelProvider (UpsertProviderRequest) returns (UpsertProviderResponse);
 }
 
 message GetPlatformSettingRequest {
@@ -174,6 +177,7 @@ message PublicModel {
   string model_type = 16;
   int32 priority = 17;
   string default_reasoning_effort = 18;
+  string provider_id = 19;
 }
 
 message ListPublicModelsResponse {
@@ -229,6 +233,7 @@ message UpsertModelPriceRequest {
   string output_modalities = 19;
   string model_type = 20;
   int32 priority = 21;
+  string provider_id = 22;
 }
 
 message UpsertModelPriceResponse {
@@ -266,6 +271,7 @@ message ModelDetail {
   string output_modalities = 19;
   string model_type = 20;
   int32  priority = 21;
+  string provider_id = 22;
 }
 
 message ListModelsResponse {
@@ -592,4 +598,47 @@ message AcquireStalePaymentsRequest {
 
 message AcquireStalePaymentsResponse {
   repeated PaymentRecord records = 1;
+}
+
+message ModelProvider {
+  string id = 1;
+  string display_name = 2;
+  string description_ru = 3;
+  string description_en = 4;
+  bytes logo_bytes = 5;
+  string logo_content_type = 6;
+  string created_at_utc = 7;
+  string updated_at_utc = 8;
+}
+
+message ListProvidersRequest {
+}
+
+message ListProvidersResponse {
+  repeated ModelProvider providers = 1;
+}
+
+message GetProviderRequest {
+  string provider_id = 1;
+}
+
+message GetProviderResponse {
+  ModelProvider provider = 1;
+  bool found = 2;
+}
+
+message UpsertProviderRequest {
+  string id = 1;
+  string display_name = 2;
+  string description_ru = 3;
+  string description_en = 4;
+  bytes logo_bytes = 5;
+  string logo_content_type = 6;
+  bool clear_logo = 7;
+}
+
+message UpsertProviderResponse {
+  bool upserted = 1;
+  string provider_id = 2;
+  string error_code = 3;
 }

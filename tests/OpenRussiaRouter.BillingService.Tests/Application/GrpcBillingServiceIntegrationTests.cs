@@ -79,6 +79,7 @@ public sealed class GrpcBillingServiceIntegrationTests
     [InlineData("ConfirmPaymentByProvider")]
     [InlineData("ApplyPaymentEvent")]
     [InlineData("AcquireStalePayments")]
+    [InlineData("UpsertModelProvider")]
     public async Task MutatingMethod_WithoutS2sToken_ReturnsUnauthenticated(string methodName)
     {
         await using var factory = BuildFactory();
@@ -266,6 +267,9 @@ public sealed class GrpcBillingServiceIntegrationTests
                 break;
             case "AcquireStalePayments":
                 await client.AcquireStalePaymentsAsync(new AcquireStalePaymentsRequest());
+                break;
+            case "UpsertModelProvider":
+                await client.UpsertModelProviderAsync(new UpsertProviderRequest());
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(methodName), methodName, null);

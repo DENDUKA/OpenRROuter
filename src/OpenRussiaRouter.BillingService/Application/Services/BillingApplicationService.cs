@@ -54,6 +54,14 @@ public sealed partial class BillingApplicationService(
 
         var allowedReasoningEfforts = ReasoningEffort.NormalizeList(model.AllowedReasoningEfforts);
         var defaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort);
+        var providerId = string.IsNullOrWhiteSpace(model.ProviderId) ? null : model.ProviderId.Trim();
+        ModelProvider? provider = null;
+
+        if (providerId is not null)
+        {
+            provider = await repository.GetModelProviderAsync(providerId, ct).ConfigureAwait(false)
+                ?? throw new ArgumentException($"Provider '{providerId}' was not found.", nameof(model.ProviderId));
+        }
 
         foreach (var effort in allowedReasoningEfforts)
         {
@@ -74,7 +82,9 @@ public sealed partial class BillingApplicationService(
         model = model with
         {
             AllowedReasoningEfforts = allowedReasoningEfforts.Count == 0 ? null : allowedReasoningEfforts,
-            DefaultReasoningEffort = defaultReasoningEffort
+            DefaultReasoningEffort = defaultReasoningEffort,
+            ProviderId = providerId,
+            Provider = provider?.DisplayName ?? model.Provider
         };
 
         await repository.UpsertModelAsync(model, ct).ConfigureAwait(false);
@@ -423,6 +433,51 @@ public sealed partial class BillingApplicationService(
 
     public Task DeleteTagAsync(string id, CancellationToken ct = default)
         => repository.DeleteTagAsync(Preconditions.RequireValue(id, nameof(id)), ct);
+
+    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default)
+        => repository.ListModelProvidersAsync(ct);
+
+    public Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default)
+        => repository.GetModelProviderAsync(Preconditions.RequireValue(id, nameof(id)), ct);
+
+    public async Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(provider);
+        var id = Preconditions.RequireValue(provider.Id, nameof(provider.Id));
+        var displayName = Preconditions.RequireValue(provider.DisplayName, nameof(provider.DisplayName));
+
+        if (!TagIdRegex().IsMatch(id))
+            throw new ArgumentException("Provider ID must be alphanumeric with dashes, underscores, dots or slashes.", nameof(provider.Id));
+
+        if (id.Length > 50)
+            throw new ArgumentException("Provider ID cannot be longer than 50 characters.", nameof(provider.Id));
+
+        if (displayName.Length > 200)
+            throw new ArgumentException("Provider display name cannot be longer than 200 characters.", nameof(provider.DisplayName));
+
+        if (provider.LogoBytes is { Length: > 0 })
+        {
+            if (provider.LogoContentType is not ("image/png" or "image/jpeg" or "image/webp"))
+                throw new ArgumentException("Logo must be PNG, JPEG, or WebP.", nameof(provider.LogoBytes));
+
+            if (provider.LogoBytes.Length > 256 * 1024)
+                throw new ArgumentException("Logo must be at most 256 KiB.", nameof(provider.LogoBytes));
+        }
+
+        var now = DateTimeOffset.UtcNow;
+        var existing = await repository.GetModelProviderAsync(id, ct).ConfigureAwait(false);
+
+        await repository.UpsertModelProviderAsync(provider with
+        {
+            Id = id,
+            DisplayName = displayName,
+            CreatedAtUtc = existing?.CreatedAtUtc ?? now,
+            UpdatedAtUtc = now
+        }, ct).ConfigureAwait(false);
+    }
+
+    public Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default)
+        => repository.GetModelProviderLogoAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
     public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
         => repository.GetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), ct);

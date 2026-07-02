@@ -21,5 +21,6 @@ public sealed record ModelPrice(
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
     string? DefaultReasoningEffort = null,
-    int Priority = 0);
+    int Priority = 0,
+    string? ProviderId = null);
 

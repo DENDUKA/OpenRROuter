@@ -840,7 +840,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             """
             select
                 id as Id,
-                display_name as DisplayName,
+            billing.model_prices.display_name as DisplayName,
                 color as Color
             from billing.tags
             order by display_name;

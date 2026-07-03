@@ -98,10 +98,10 @@ public class ProvidersModel(BillingProvider billingProvider, ILogger<ProvidersMo
             var logoFile = Request.Form.Files.GetFile("logoFile");
             if (logoFile is { Length: > 0 })
             {
-                var allowedTypes = new[] { "image/png", "image/jpeg", "image/webp" };
+                var allowedTypes = new[] { "image/png", "image/jpeg", "image/webp", "image/svg+xml" };
                 if (!allowedTypes.Contains(logoFile.ContentType))
                 {
-                    ModelState.AddModelError("logoFile", "Logo must be PNG, JPEG, or WebP.");
+                    ModelState.AddModelError("logoFile", "Logo must be PNG, JPEG, WebP, or SVG.");
                     await LoadProviders();
                     return Page();
                 }

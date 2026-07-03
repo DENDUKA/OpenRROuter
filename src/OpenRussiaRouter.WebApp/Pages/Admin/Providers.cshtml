@@ -45,7 +45,7 @@
                 </div>
                 <div class="adm-form-row">
                     <div class="form-group">
-                        <label class="form-label">Logo <small class="text-muted">(PNG, JPEG, WebP — max 256 KiB)</small></label>
+                        <label class="form-label">Logo <small class="text-muted">(PNG, JPEG, WebP, SVG — max 256 KiB)</small></label>
                         @if (Model.ExistingLogoUrl != null)
                         {
                             <div style="margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;">
@@ -55,7 +55,7 @@
                                 </label>
                             </div>
                         }
-                        <input type="file" name="logoFile" accept=".png,.jpg,.jpeg,.webp" class="form-control" />
+                        <input type="file" name="logoFile" accept=".png,.jpg,.jpeg,.webp,.svg" class="form-control" />
                         @if (ViewData.ModelState.TryGetValue("logoFile", out var logoState))
                         {
                             foreach (var error in logoState.Errors)

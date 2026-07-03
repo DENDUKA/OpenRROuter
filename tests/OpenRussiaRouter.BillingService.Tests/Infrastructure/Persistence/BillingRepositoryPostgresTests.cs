@@ -255,6 +255,38 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task ListModels_WithProviderJoin_ReturnsModelDisplayName()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        await repository.UpsertModelProviderAsync(new ModelProvider("openai", "OpenAI"));
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-provider",
+            "GPT Provider Model",
+            "router/gpt-provider",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true,
+            ProviderId: "openai"));
+
+        var publicModel = (await repository.ListEnabledModelsAsync(10)).Items.Should().ContainSingle().Which;
+        var adminModel = (await repository.ListAllModelsAsync(10)).Items.Should().ContainSingle().Which;
+
+        publicModel.DisplayName.Should().Be("GPT Provider Model");
+        publicModel.Provider.Should().Be("OpenAI");
+        adminModel.DisplayName.Should().Be("GPT Provider Model");
+        adminModel.Provider.Should().Be("OpenAI");
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task CurrencyMigration_NormalizesLegacyRubValuesAndPreventsNewOnes()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

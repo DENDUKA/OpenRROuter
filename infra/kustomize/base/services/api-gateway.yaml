@@ -31,6 +31,11 @@ spec:
               value: "http://billing-service:8080"
             - name: GrpcServices__ControlPlane
               value: "http://control-plane:8080"
+            - name: ConnectionStrings__GatewayDb
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: gateway-connection
             - name: ServiceAuth__BillingToken
               valueFrom:
                 secretKeyRef:

@@ -294,6 +294,9 @@ spec:
               app: control-plane
         - podSelector:
             matchLabels:
+              app: api-gateway
+        - podSelector:
+            matchLabels:
               app: db-create
       ports:
         - port: 5432

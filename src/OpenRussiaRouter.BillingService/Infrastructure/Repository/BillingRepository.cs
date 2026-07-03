@@ -840,7 +840,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             """
             select
                 id as Id,
-            billing.model_prices.display_name as DisplayName,
+                display_name as DisplayName,
                 color as Color
             from billing.tags
             order by display_name;
@@ -1339,7 +1339,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     private const string ModelPriceSelectSql = """
         select
             model_id as ModelId,
-            display_name as DisplayName,
+            billing.model_prices.display_name as DisplayName,
             router_model_id as RouterModelId,
             price_version as PriceVersion,
             input_per_million_amount as InputPerMillionAmount,

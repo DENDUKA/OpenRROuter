@@ -111,7 +111,7 @@
                             <td>
                                 @if (p.LogoBytes is { Length: > 0 } && p.LogoContentType != null)
                                 {
-                                    <img src="/admin/providers/logo/@Uri.EscapeDataString(p.Id)?v=@p.UpdatedAtUtc.UtcDateTime.Ticks" alt="@p.DisplayName" style="max-height:32px;max-width:80px;border-radius:3px;" />
+                                    <img src="/providers/logo/@Uri.EscapeDataString(p.Id)?v=@p.UpdatedAtUtc.UtcDateTime.Ticks" alt="@p.DisplayName" style="max-height:32px;max-width:80px;border-radius:3px;" />
                                 }
                                 else
                                 {

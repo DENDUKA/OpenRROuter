@@ -17,29 +17,42 @@
             <input id="model-search" class="search" type="search" placeholder="@Localizer["Catalog_SearchPlaceholder"]" oninput="filterModels()" />
 
             <div class="filter-group" role="group" aria-label="@Localizer["Catalog_FilterCategoriesAria"]">
-                @foreach (var cat in ModelsModel.Categories)
+                <button type="button" class="filter-pill active"
+                        aria-pressed="true"
+                        onclick="setCategory('All', this)">
+                    <span class="filter-pill-icon" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    @Localizer["Catalog_Category_All"]
+                </button>
+
+                @foreach (var cat in Model.ProviderCategories)
                 {
-                    <button type="button" class="filter-pill @(cat == "All" ? "active" : "")"
-                            aria-pressed="@(cat == "All" ? "true" : "false")"
-                            onclick="setCategory('@cat', this)">
+                    <button type="button" class="filter-pill"
+                            aria-pressed="false"
+                            onclick="setCategory('@cat.Id', this)">
                         <span class="filter-pill-icon" aria-hidden="true">
-                            @switch (cat)
+                            @if (cat.IconUrl != null)
                             {
-                                case "All":
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>
-                                    break;
-                                case "OpenAI":
-                                    <img src="/icons/openai.png" width="14" height="14" alt="" />
-                                    break;
-                                case "Anthropic":
-                                    <img src="/icons/claude.png" width="14" height="14" alt="" />
-                                    break;
-                                case "Google":
-                                    <img src="/icons/gemini.png" width="14" height="14" alt="" />
-                                    break;
-                                case "Meta":
-                                    <img src="/icons/llama.png" width="14" height="14" alt="" />
-                                    break;
+                                <img src="@cat.IconUrl" width="14" height="14" alt="" />
+                            }
+                            else
+                            {
+                                @cat.DisplayName[0]
+                            }
+                        </span>
+                        @cat.DisplayName
+                    </button>
+                }
+
+                @foreach (var cat in Model.CapabilityCategories)
+                {
+                    <button type="button" class="filter-pill"
+                            aria-pressed="false"
+                            onclick="setCategory('@cat.Id', this)">
+                        <span class="filter-pill-icon" aria-hidden="true">
+                            @switch (cat.Id)
+                            {
                                 case "Text":
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H3"></path><path d="M21 12H3"></path><path d="M15.5 18H3"></path></svg>
                                     break;
@@ -51,7 +64,7 @@
                                     break;
                             }
                         </span>
-                        @Localizer[$"Catalog_Category_{cat}"]
+                        @cat.DisplayName
                     </button>
                 }
             </div>
@@ -111,7 +124,7 @@
                                     <div class="model-cell">
                                         @if (!string.IsNullOrEmpty(m.ProviderId) && Model.ProviderHasLogo.TryGetValue(m.ProviderId, out var hasLogo) && hasLogo)
                                         {
-                                            <img class="model-icon" src="/admin/providers/logo/@m.ProviderId" alt="" aria-hidden="true" />
+                                            <img class="model-icon" src="/providers/logo/@m.ProviderId" alt="" aria-hidden="true" />
                                         }
                                         else if (ModelsModel.TryGetStaticIcon(m.Provider, out var iconPath))
                                         {

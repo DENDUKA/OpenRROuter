@@ -50,7 +50,7 @@ public class ProvidersModel(BillingProvider billingProvider, ILogger<ProvidersMo
                         DescriptionRu = provider.DescriptionRu,
                         DescriptionEn = provider.DescriptionEn
                     };
-                    ExistingLogoUrl = $"/admin/providers/logo/{Uri.EscapeDataString(provider.Id)}?v={provider.UpdatedAtUtc.UtcDateTime.Ticks}";
+                    ExistingLogoUrl = $"/providers/logo/{Uri.EscapeDataString(provider.Id)}?v={provider.UpdatedAtUtc.UtcDateTime.Ticks}";
                 }
             }
             catch (Exception ex)

@@ -19,6 +19,9 @@ public class ModelsModel(
     ILogger<ModelsModel> logger) : PageModelBase
 {
     private const string CatalogCacheKey = "public-models-node-catalog";
+    private const string ProvidersCacheKey = "public-models-providers";
+    private static readonly TimeSpan ProvidersCacheDuration = TimeSpan.FromHours(1);
+
     // NOTE: do not store `localizer` in a field — the primary-constructor parameter is
     // captured by the lambda below, and capturing it in a field as well trips CS9124
     // (TreatWarningsAsErrors=true). Pass it explicitly where needed instead.
@@ -32,7 +35,8 @@ public class ModelsModel(
     public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
     public string CurrencySymbol => Currency.Symbol();
 
-    public static readonly string[] Categories = ["All", "OpenAI", "Anthropic", "Google", "Meta", "Text", "Vision", "Coding"];
+    public IReadOnlyList<FilterCategory> ProviderCategories { get; private set; } = [];
+    public IReadOnlyList<FilterCategory> CapabilityCategories { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
@@ -42,19 +46,34 @@ public class ModelsModel(
             var billingModelsTask = BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
             var tagsTask = BillingProvider.ListTagsAsync(HttpContext.RequestAborted);
             var catalogTask = GetCachedCatalogAsync(HttpContext.RequestAborted);
-            var providersTask = BillingProvider.ListModelProvidersAsync(HttpContext.RequestAborted);
 
-            await Task.WhenAll(billingModelsTask, tagsTask, catalogTask, providersTask);
+            await Task.WhenAll(billingModelsTask, tagsTask, catalogTask);
 
             var billingModels = await billingModelsTask;
             var catalog = await catalogTask;
             CatalogMetadataUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
             var tagsById = (await tagsTask).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
-            var providers = await providersTask;
+            var providers = await GetCachedProvidersAsync(HttpContext.RequestAborted);
             ProviderHasLogo = providers
                 .Where(p => !string.IsNullOrEmpty(p.Id))
                 .ToDictionary(p => p.Id, p => p.LogoBytes is { Length: > 0 }, StringComparer.OrdinalIgnoreCase);
+
+            ProviderCategories = providers
+                .Where(p => !string.IsNullOrEmpty(p.Id))
+                .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .Select(p => new FilterCategory(
+                    p.Id,
+                    p.DisplayName,
+                    p.LogoBytes is { Length: > 0 } ? $"/providers/logo/{p.Id}" : null))
+                .ToList();
+
+            CapabilityCategories =
+            [
+                new("Text", localizer["Catalog_Category_Text"], null),
+                new("Vision", localizer["Catalog_Category_Vision"], null),
+                new("Coding", localizer["Catalog_Category_Coding"], null),
+            ];
 
             var catalogByUpstream = catalog.Entries
                 .Where(e => !string.IsNullOrWhiteSpace(e.UpstreamId))
@@ -147,6 +166,15 @@ public class ModelsModel(
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
 
+    private async Task<IReadOnlyList<ProviderInfo>> GetCachedProvidersAsync(CancellationToken cancellationToken)
+    {
+        return await memoryCache.GetOrCreateAsync(ProvidersCacheKey, async entry =>
+        {
+            entry.AbsoluteExpirationRelativeToNow = ProvidersCacheDuration;
+            return await BillingProvider.ListModelProvidersAsync(cancellationToken);
+        }) ?? [];
+    }
+
     private static PublicModelRow MapModel(
         ModelInfo model,
         NodeModelCatalogEntry? catalogEntry,
@@ -216,4 +244,6 @@ public class ModelsModel(
         string Id,
         string DisplayName,
         string? Color);
+
+    public sealed record FilterCategory(string Id, string DisplayName, string? IconUrl);
 }

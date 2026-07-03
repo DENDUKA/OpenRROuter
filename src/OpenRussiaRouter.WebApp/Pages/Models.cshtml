@@ -109,7 +109,18 @@
                                 onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                 <td>
                                     <div class="model-cell">
-                                        <div class="model-icon" aria-hidden="true">@initials</div>
+                                        @if (!string.IsNullOrEmpty(m.ProviderId) && Model.ProviderHasLogo.TryGetValue(m.ProviderId, out var hasLogo) && hasLogo)
+                                        {
+                                            <img class="model-icon" src="/admin/providers/logo/@m.ProviderId" alt="" aria-hidden="true" />
+                                        }
+                                        else if (ModelsModel.TryGetStaticIcon(m.Provider, out var iconPath))
+                                        {
+                                            <img class="model-icon" src="@iconPath" alt="" aria-hidden="true" />
+                                        }
+                                        else
+                                        {
+                                            <div class="model-icon" aria-hidden="true">@initials</div>
+                                        }
                                         <div>
                                             <div style="display: flex; align-items: center; gap: 6px;">
                                                 <div class="model-name">@m.DisplayName</div>
@@ -167,7 +178,7 @@
     .toolbar-label { font-size: 18px; color: var(--color-ink); }
     .toolbar-count, .toolbar-note { color: var(--color-mute); font-size: 14px; }
     .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 280px; }
-    .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); }
+    .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); object-fit: contain; }
     .model-name { color: var(--color-ink); font-weight: 500; }
     .model-table tbody tr { cursor: pointer; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }

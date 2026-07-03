@@ -26,6 +26,7 @@ public class ModelsModel(
     public IReadOnlyList<PublicModelRow> Models { get; private set; } = [];
     public string? ErrorMessage { get; private set; }
     public bool CatalogMetadataUnavailable { get; private set; }
+    public IReadOnlyDictionary<string, bool> ProviderHasLogo { get; private set; } = new Dictionary<string, bool>();
 
     /// <summary>Display currency for catalog prices: profile choice for signed-in users, USD for anonymous.</summary>
     public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
@@ -41,13 +42,19 @@ public class ModelsModel(
             var billingModelsTask = BillingProvider.ListPublicModelsAsync(HttpContext.RequestAborted);
             var tagsTask = BillingProvider.ListTagsAsync(HttpContext.RequestAborted);
             var catalogTask = GetCachedCatalogAsync(HttpContext.RequestAborted);
+            var providersTask = BillingProvider.ListModelProvidersAsync(HttpContext.RequestAborted);
 
-            await Task.WhenAll(billingModelsTask, tagsTask, catalogTask);
+            await Task.WhenAll(billingModelsTask, tagsTask, catalogTask, providersTask);
 
             var billingModels = await billingModelsTask;
             var catalog = await catalogTask;
             CatalogMetadataUnavailable = !string.IsNullOrWhiteSpace(catalog.Error);
             var tagsById = (await tagsTask).ToDictionary(t => t.Id, StringComparer.Ordinal);
+
+            var providers = await providersTask;
+            ProviderHasLogo = providers
+                .Where(p => !string.IsNullOrEmpty(p.Id))
+                .ToDictionary(p => p.Id, p => p.LogoBytes is { Length: > 0 }, StringComparer.OrdinalIgnoreCase);
 
             var catalogByUpstream = catalog.Entries
                 .Where(e => !string.IsNullOrWhiteSpace(e.UpstreamId))
@@ -76,6 +83,33 @@ public class ModelsModel(
         var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         if (parts.Length == 0) return "AI";
         return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+    }
+
+    private static readonly Dictionary<string, string> KnownProviderIcons = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["openai"] = "/icons/openai.png",
+        ["anthropic"] = "/icons/claude.png",
+        ["google"] = "/icons/gemini.png",
+        ["meta"] = "/icons/llama.png",
+    };
+
+    public static bool TryGetStaticIcon(string provider, out string iconPath)
+    {
+        if (string.IsNullOrWhiteSpace(provider))
+        {
+            iconPath = null!;
+            return false;
+        }
+        foreach (var (key, path) in KnownProviderIcons)
+        {
+            if (provider.Contains(key, StringComparison.OrdinalIgnoreCase))
+            {
+                iconPath = path;
+                return true;
+            }
+        }
+        iconPath = null!;
+        return false;
     }
 
     public string FormatPrice(decimal usdPrice) =>
@@ -150,6 +184,7 @@ public class ModelsModel(
             model.CachePrice,
             model.ModelType,
             provider,
+            model.ProviderId,
             capability,
             FormatContext(model.ContextLength),
             tags);
@@ -172,6 +207,7 @@ public class ModelsModel(
         decimal CacheWritePrice,
         string ModelType,
         string Provider,
+        string? ProviderId,
         string Capability,
         string Context,
         IReadOnlyList<PublicTagRow> Tags);

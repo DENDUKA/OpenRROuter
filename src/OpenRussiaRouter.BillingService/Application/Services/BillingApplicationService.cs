@@ -457,8 +457,8 @@ public sealed partial class BillingApplicationService(
 
         if (provider.LogoBytes is { Length: > 0 })
         {
-            if (provider.LogoContentType is not ("image/png" or "image/jpeg" or "image/webp"))
-                throw new ArgumentException("Logo must be PNG, JPEG, or WebP.", nameof(provider.LogoBytes));
+            if (provider.LogoContentType is not ("image/png" or "image/jpeg" or "image/webp" or "image/svg+xml"))
+                throw new ArgumentException("Logo must be PNG, JPEG, WebP, or SVG.", nameof(provider.LogoBytes));
 
             if (provider.LogoBytes.Length > 256 * 1024)
                 throw new ArgumentException("Logo must be at most 256 KiB.", nameof(provider.LogoBytes));

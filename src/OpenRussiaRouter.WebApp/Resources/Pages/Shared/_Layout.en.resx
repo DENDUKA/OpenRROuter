@@ -65,6 +65,9 @@
   <data name="Nav_Models" xml:space="preserve">
     <value>Models</value>
   </data>
+  <data name="Nav_Providers" xml:space="preserve">
+    <value>Providers</value>
+  </data>
   <data name="Nav_Settings" xml:space="preserve">
     <value>Settings</value>
   </data>

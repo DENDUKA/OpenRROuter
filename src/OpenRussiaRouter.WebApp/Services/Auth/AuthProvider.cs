@@ -4,7 +4,7 @@ using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
 
 namespace OpenRussiaRouter.WebApp.Services.Auth;
 
-public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
+public class AuthProvider(AuthGrpc.AuthServiceClient client)
 {
     public async Task<LoginResponse> LoginAsync(string email, string password, CancellationToken cancellationToken = default)
     {
@@ -106,7 +106,7 @@ public sealed class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new CreateApiKeyResponse(response.ApiKeyId, response.RawKey, response.Name);
     }
 
-    public async Task<IReadOnlyList<ApiKeySummary>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken cancellationToken = default)
+    public virtual async Task<IReadOnlyList<ApiKeySummary>> ListApiKeysAsync(string userId, bool includeDeleted = false, CancellationToken cancellationToken = default)
     {
         var response = await client.ListApiKeysAsync(new ListApiKeysRequest { UserId = userId, IncludeDeleted = includeDeleted }, cancellationToken: cancellationToken);
         return response.Keys.Select(k => new ApiKeySummary(

@@ -1137,6 +1137,10 @@ code.d-block {
 .act-filter-date { max-width: 160px; }
 .act-filter-actions { display: flex; flex-direction: column; }
 
+.act-summary-table { table-layout: fixed; }
+.act-summary-table colgroup .col-text { width: 30%; }
+.act-summary-table colgroup .col-num  { width: 14%; }
+
 .act-pagination {
     padding: var(--spacing-md) var(--spacing-lg);
     display: flex;

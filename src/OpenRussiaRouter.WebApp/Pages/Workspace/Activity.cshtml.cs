@@ -57,12 +57,11 @@ public class ActivityModel : PageModelBase
             ApiKeys = await _authClient.ListApiKeysAsync(User.GetUserId(), includeDeleted: false, HttpContext.RequestAborted);
             var keyIds = ApiKeys.Select(k => k.Id).ToArray();
 
-            var modelsTask = _billingClient.ListModelsAsync(HttpContext.RequestAborted);
-
             if (Tab == "overview")
             {
                 var (fromUtc, toUtc) = ParsePeriod(Period);
                 Summary = await _billingClient.GetActivitySummaryAsync(keyIds, fromUtc, toUtc, HttpContext.RequestAborted);
+                AvailableModels = Summary.Models.Select(m => m.ModelId).OrderBy(id => id).ToList();
             }
             else
             {
@@ -76,7 +75,7 @@ public class ActivityModel : PageModelBase
                     ? null 
                     : System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(After));
 
-                var (items, hasMore, nextCursor) = await _billingClient.ListActivityByTokenAsync(
+                var activityTask = _billingClient.ListActivityByTokenAsync(
                     keyIds,
                     fromUtc: fromUtc,
                     toUtc: toUtc,
@@ -86,15 +85,20 @@ public class ActivityModel : PageModelBase
                     pageSize: PageSize,
                     cancellationToken: HttpContext.RequestAborted);
 
+                var summaryTask = _billingClient.GetActivitySummaryAsync(keyIds, fromUtc, toUtc, HttpContext.RequestAborted);
+
+                await Task.WhenAll(activityTask, summaryTask);
+
+                var (items, hasMore, nextCursor) = await activityTask;
                 Activity = items;
                 HasMore = hasMore;
                 NextCursor = nextCursor is null
                     ? null
                     : Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(nextCursor));
-            }
 
-            var models = await modelsTask;
-            AvailableModels = models.Select(m => m.Id).OrderBy(id => id).ToList();
+                var summary = await summaryTask;
+                AvailableModels = summary.Models.Select(m => m.ModelId).OrderBy(id => id).ToList();
+            }
         }
         catch (Exception ex)
         {

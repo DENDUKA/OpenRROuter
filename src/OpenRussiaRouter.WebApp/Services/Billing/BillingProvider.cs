@@ -72,7 +72,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         return response.Accepted ? null : response.ErrorCode;
     }
 
-    public async Task<(IReadOnlyList<ActivityByTokenInfo> Items, bool HasMore, string? NextCursor)> ListActivityByTokenAsync(
+    public virtual async Task<(IReadOnlyList<ActivityByTokenInfo> Items, bool HasMore, string? NextCursor)> ListActivityByTokenAsync(
         IReadOnlyCollection<string> apiKeyIds,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
@@ -196,7 +196,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             .ToDictionary(summary => summary.ApiKeyId, StringComparer.Ordinal);
     }
 
-    public async Task<ActivitySummaryInfo> GetActivitySummaryAsync(
+    public virtual async Task<ActivitySummaryInfo> GetActivitySummaryAsync(
         IReadOnlyCollection<string> apiKeyIds,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,

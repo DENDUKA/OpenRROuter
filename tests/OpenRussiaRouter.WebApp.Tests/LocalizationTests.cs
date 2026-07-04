@@ -251,8 +251,8 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
             Assert.True(ru.SetEquals(en), $"Page resources have different key sets: {resourceBase}.");
             if (content.Contains("Catalog_Category_", StringComparison.Ordinal))
             {
-                foreach (var category in OpenRussiaRouter.WebApp.Pages.ModelsModel.Categories)
-                    keys.Add($"Catalog_Category_{category}");
+                foreach (var id in new[] { "Text", "Vision", "Coding" })
+                    keys.Add($"Catalog_Category_{id}");
             }
             foreach (var key in keys)
             {

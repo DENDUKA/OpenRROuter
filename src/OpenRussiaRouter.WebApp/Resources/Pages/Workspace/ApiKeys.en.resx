@@ -110,6 +110,12 @@
   <data name="ApiKeys_Th_Prefix" xml:space="preserve">
     <value>Prefix</value>
   </data>
+  <data name="ApiKeys_Status_Active" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="ApiKeys_Status_Disabled" xml:space="preserve">
+    <value>Disabled</value>
+  </data>
   <data name="ApiKeys_Th_Status" xml:space="preserve">
     <value>Status</value>
   </data>

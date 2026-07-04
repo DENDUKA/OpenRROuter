@@ -47,8 +47,6 @@
             <section class="provider-models-section">
                 <div class="models-toolbar">
                     <div>
-                        <div class="toolbar-label">@Localizer["ProviderDetails_ModelsTitle"]</div>
-                        <div class="toolbar-count" id="model-count" data-count-singular='@Localizer.GetString("Catalog_CountOne")' data-count-plural='@Localizer.GetString("Catalog_CountMany")'>@(Model.Models.Count == 1 ? Localizer["Catalog_CountOne", Model.Models.Count] : Localizer["Catalog_CountMany", Model.Models.Count])</div>
                     </div>
                     <div class="toolbar-note">@Localizer["Catalog_PricePrefix"] @Model.CurrencySymbol</div>
                 </div>
@@ -180,13 +178,7 @@
             row.style.display = show ? '' : 'none';
             if (show) visible++;
         });
-        const countEl = document.getElementById('model-count');
-        if (countEl) {
-            const singularTpl = countEl.getAttribute('data-count-singular') || '{0} model available';
-            const pluralTpl = countEl.getAttribute('data-count-plural') || '{0} models available';
-            const tpl = visible === 1 ? singularTpl : pluralTpl;
-            countEl.textContent = tpl.replace('{0}', visible);
-        }
+
     }
 
     function copyModelId(event) {

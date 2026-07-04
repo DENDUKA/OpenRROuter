@@ -940,6 +940,51 @@ code.d-block {
 .ws-info-row:last-child { border-bottom: none; }
 .ws-info-label { width: 140px; flex-shrink: 0; color: var(--color-body); font-size: 13px; }
 
+/* ── Catalog layout (Models / Providers / Docs) ── */
+.cat-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    min-height: calc(100vh - var(--topbar-height));
+    margin: -32px;
+}
+
+.cat-sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--topbar-height);
+    width: var(--sidebar-width);
+    height: calc(100vh - var(--topbar-height));
+    overflow-y: auto;
+    border-right: 1px solid var(--color-hairline);
+    padding: 16px 12px;
+    background: var(--color-canvas);
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.cat-sidebar-header { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--color-body-mid); padding: 0 10px 8px; }
+
+.cat-nav-item {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 10px;
+    border-radius: 8px;
+    color: var(--color-body);
+    font-size: 14px;
+    text-decoration: none;
+    transition: background 100ms ease, color 100ms ease;
+}
+
+.cat-nav-item:hover, .cat-nav-item.active { background: var(--color-canvas-soft); color: var(--color-ink); text-decoration: none; }
+.cat-nav-item svg { flex-shrink: 0; opacity: 0.6; }
+.cat-nav-item:hover svg, .cat-nav-item.active svg { opacity: 1; }
+
+.cat-content { grid-column: 2; padding: 32px; min-width: 0; }
+
 /* ── Admin layout ── */
 .adm-shell {
     display: grid;
@@ -1117,6 +1162,12 @@ code.d-block {
     .ws-sidebar-header { display: none; }
     .ws-nav-item { width: auto; flex: 0 0 auto; padding: 0 12px; }
     .ws-content { grid-column: 1; padding: 20px 16px; }
+
+    .cat-shell { grid-template-columns: 1fr; margin: -20px -16px; }
+    .cat-sidebar { position: static; width: auto; height: auto; border-right: none; border-bottom: 1px solid var(--color-hairline); flex-direction: row; flex-wrap: wrap; gap: 4px; padding: 12px 8px; }
+    .cat-sidebar-header { display: none; }
+    .cat-nav-item { width: auto; flex: 0 0 auto; padding: 0 12px; }
+    .cat-content { grid-column: 1; padding: 20px 16px; }
 
     .adm-shell { grid-template-columns: 1fr; margin: -20px -16px; }
     .adm-sidebar { position: static; width: auto; height: auto; border-right: none; border-bottom: 1px solid var(--color-hairline); display: flex; flex-wrap: wrap; gap: 4px; padding: 12px 8px; }

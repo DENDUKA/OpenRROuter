@@ -33,7 +33,7 @@
     <value>Провайдер не найден.</value>
   </data>
   <data name="ProviderDetails_ViewModels" xml:space="preserve">
-    <value>Смотреть модели</value>
+    <value>Все модели</value>
   </data>
   <data name="ProviderDetails_Created" xml:space="preserve">
     <value>Создан</value>
@@ -52,5 +52,47 @@
   </data>
   <data name="Nav_Home" xml:space="preserve">
     <value>Главная</value>
+  </data>
+  <data name="Providers_Title" xml:space="preserve">
+    <value>Провайдеры</value>
+  </data>
+  <data name="Providers_LoadFailedTitle" xml:space="preserve">
+    <value>Не удалось загрузить провайдеров.</value>
+  </data>
+  <data name="Catalog_PricePrefix" xml:space="preserve">
+    <value>Цены в</value>
+  </data>
+  <data name="Catalog_SearchAria" xml:space="preserve">
+    <value>Поиск моделей</value>
+  </data>
+  <data name="Catalog_SearchPlaceholder" xml:space="preserve">
+    <value>Поиск моделей</value>
+  </data>
+  <data name="Catalog_CopyTitle" xml:space="preserve">
+    <value>Скопировать ID модели</value>
+  </data>
+  <data name="Catalog_CopyAria" xml:space="preserve">
+    <value>Скопировать ID модели</value>
+  </data>
+  <data name="Catalog_TagsAria" xml:space="preserve">
+    <value>Теги модели</value>
+  </data>
+  <data name="Catalog_Th_Model" xml:space="preserve">
+    <value>Модель</value>
+  </data>
+  <data name="Catalog_Th_Tags" xml:space="preserve">
+    <value>Теги</value>
+  </data>
+  <data name="Catalog_Th_InputPrice" xml:space="preserve">
+    <value>Вход / 1M</value>
+  </data>
+  <data name="Catalog_Th_OutputPrice" xml:space="preserve">
+    <value>Выход / 1M</value>
+  </data>
+  <data name="Catalog_Th_CachePrice" xml:space="preserve">
+    <value>Кэш / 1M</value>
+  </data>
+  <data name="Catalog_Th_Context" xml:space="preserve">
+    <value>Контекст</value>
   </data>
 </root>

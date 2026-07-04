@@ -54,7 +54,7 @@ public class ActivityModel : PageModelBase
     {
         try
         {
-            ApiKeys = await _authClient.ListApiKeysAsync(User.GetUserId(), includeDeleted: true, HttpContext.RequestAborted);
+            ApiKeys = await _authClient.ListApiKeysAsync(User.GetUserId(), includeDeleted: false, HttpContext.RequestAborted);
             var keyIds = ApiKeys.Select(k => k.Id).ToArray();
 
             var modelsTask = _billingClient.ListModelsAsync(HttpContext.RequestAborted);

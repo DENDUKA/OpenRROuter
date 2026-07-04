@@ -145,8 +145,7 @@ else
                         <select id="f-key" name="key" class="form-select">
                             <option value="">@Localizer["Activity_AllKeys"]</option>
                             @{ var activeKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc == null && !k.IsDeleted).ToList();
-                               var disabledKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc != null && !k.IsDeleted).ToList();
-                               var deletedKeys = Model.ApiKeys.Where(k => k.IsDeleted).ToList(); }
+                               var disabledKeys = Model.ApiKeys.Where(k => k.DisabledAtUtc != null && !k.IsDeleted).ToList(); }
                             @if (activeKeys.Count > 0)
                             {
                                 <optgroup label="@Localizer["Activity_OptGroupActive"]">
@@ -160,15 +159,6 @@ else
                             {
                                 <optgroup label="@Localizer["Activity_OptGroupDisabled"]">
                                     @foreach (var k in disabledKeys)
-                                    {
-                                        <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
-                                    }
-                                </optgroup>
-                            }
-                            @if (deletedKeys.Count > 0)
-                            {
-                                <optgroup label="@Localizer["Activity_OptGroupDeleted"]">
-                                    @foreach (var k in deletedKeys)
                                     {
                                         <option value="@k.Id" selected="@(Model.KeyFilter == k.Id ? "selected" : null)">@($"{k.Prefix}*** — {k.Name}")</option>
                                     }

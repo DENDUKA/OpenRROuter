@@ -33,7 +33,7 @@
     <value>Provider not found.</value>
   </data>
   <data name="ProviderDetails_ViewModels" xml:space="preserve">
-    <value>View Models</value>
+    <value>All Models</value>
   </data>
   <data name="ProviderDetails_Created" xml:space="preserve">
     <value>Created</value>
@@ -52,5 +52,47 @@
   </data>
   <data name="Nav_Home" xml:space="preserve">
     <value>Home</value>
+  </data>
+  <data name="Providers_Title" xml:space="preserve">
+    <value>Providers</value>
+  </data>
+  <data name="Providers_LoadFailedTitle" xml:space="preserve">
+    <value>Could not load providers.</value>
+  </data>
+  <data name="Catalog_PricePrefix" xml:space="preserve">
+    <value>Prices in</value>
+  </data>
+  <data name="Catalog_SearchAria" xml:space="preserve">
+    <value>Search models</value>
+  </data>
+  <data name="Catalog_SearchPlaceholder" xml:space="preserve">
+    <value>Search models</value>
+  </data>
+  <data name="Catalog_CopyTitle" xml:space="preserve">
+    <value>Copy model ID</value>
+  </data>
+  <data name="Catalog_CopyAria" xml:space="preserve">
+    <value>Copy model ID</value>
+  </data>
+  <data name="Catalog_TagsAria" xml:space="preserve">
+    <value>Model tags</value>
+  </data>
+  <data name="Catalog_Th_Model" xml:space="preserve">
+    <value>Model</value>
+  </data>
+  <data name="Catalog_Th_Tags" xml:space="preserve">
+    <value>Tags</value>
+  </data>
+  <data name="Catalog_Th_InputPrice" xml:space="preserve">
+    <value>Input / 1M</value>
+  </data>
+  <data name="Catalog_Th_OutputPrice" xml:space="preserve">
+    <value>Output / 1M</value>
+  </data>
+  <data name="Catalog_Th_CachePrice" xml:space="preserve">
+    <value>Cache / 1M</value>
+  </data>
+  <data name="Catalog_Th_Context" xml:space="preserve">
+    <value>Context</value>
   </data>
 </root>

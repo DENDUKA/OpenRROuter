@@ -1,6 +1,6 @@
 @page
 @model ModelsModel
-@{ ViewData["Title"] = Localizer["Catalog_Title"]; }
+@{ Layout = "~/Pages/Shared/_CatalogLayout.cshtml"; ViewData["Title"] = Localizer["Catalog_Title"]; }
 
 <div class="models-page">
     <section class="models-hero" aria-labelledby="models-title">
@@ -186,9 +186,12 @@
     .models-toolbar { display: flex; justify-content: space-between; gap: var(--spacing-lg); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-hairline); margin-bottom: var(--spacing-lg); }
     .toolbar-label { font-size: 18px; color: var(--color-ink); }
     .toolbar-count, .toolbar-note { color: var(--color-mute); font-size: 14px; }
-    .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 200px; }
+    .model-cell { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 260px; }
+    .model-table th:first-child, .model-table td:first-child { width: 260px; max-width: 260px; }
+    .model-table .num { width: 90px; }
     .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); object-fit: contain; }
-    .model-name { color: var(--color-ink); font-weight: 500; }
+    .model-name { color: var(--color-ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .model-table { table-layout: fixed; width: 100%; }
     .model-table tbody tr { cursor: pointer; }
     .model-table .num { text-align: left; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }

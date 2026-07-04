@@ -42,7 +42,7 @@
     <value>Get API Key</value>
   </data>
   <data name="Model_Metric_Author" xml:space="preserve">
-    <value>Author</value>
+    <value>Provider</value>
   </data>
   <data name="Model_Metric_Cache" xml:space="preserve">
     <value>Cache Price / 1M</value>

@@ -66,9 +66,7 @@
                             <tbody>
                                 @foreach (var m in Model.Models)
                                 {
-                                    var detailUrl = m.Id.Contains('/')
-                                        ? $"/models/{m.Id}"
-                                        : $"/models/model/{Uri.EscapeDataString(m.Id)}";
+                                    var detailUrl = $"/models/{Uri.EscapeDataString(Model.Id)}/{Uri.EscapeDataString(m.Id)}";
                                     <tr onclick="location.href='@detailUrl'" tabindex="0" role="link"
                                         onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                         <td>

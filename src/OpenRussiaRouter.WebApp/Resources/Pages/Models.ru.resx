@@ -75,7 +75,7 @@
     <value>Теги модели</value>
   </data>
   <data name="Catalog_Th_Author" xml:space="preserve">
-    <value>Автор</value>
+    <value>Провайдер</value>
   </data>
   <data name="Catalog_Th_CachePrice" xml:space="preserve">
     <value>Кэш / 1M</value>

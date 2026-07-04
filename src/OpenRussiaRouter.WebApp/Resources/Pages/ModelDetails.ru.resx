@@ -42,7 +42,7 @@
     <value>Получить API-ключ</value>
   </data>
   <data name="Model_Metric_Author" xml:space="preserve">
-    <value>Автор</value>
+    <value>Провайдер</value>
   </data>
   <data name="Model_Metric_Cache" xml:space="preserve">
     <value>Цена кэша / 1M</value>

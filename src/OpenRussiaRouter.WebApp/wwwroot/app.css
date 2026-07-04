@@ -1141,6 +1141,25 @@ code.d-block {
 .act-summary-table colgroup .col-text { width: 30%; }
 .act-summary-table colgroup .col-num  { width: 14%; }
 
+.act-usage-table {
+    table-layout: fixed;
+    width: 100%;
+}
+.act-usage-table th,
+.act-usage-table td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.act-usage-table th:nth-child(1) { width: 14%; }
+.act-usage-table th:nth-child(2) { width: 12%; }
+.act-usage-table th:nth-child(3) { width: 18%; }
+.act-usage-table th:nth-child(4),
+.act-usage-table th:nth-child(5),
+.act-usage-table th:nth-child(6),
+.act-usage-table th:nth-child(7) { width: 10%; }
+.act-usage-table th:nth-child(8) { width: 10%; }
+
 .act-pagination {
     padding: var(--spacing-md) var(--spacing-lg);
     display: flex;

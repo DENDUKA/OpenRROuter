@@ -86,4 +86,19 @@
   <data name="Currency_EUR" xml:space="preserve">
     <value>EUR — Евро</value>
   </data>
+  <data name="Settings_LanguageLabel" xml:space="preserve">
+    <value>Язык интерфейса</value>
+  </data>
+  <data name="Settings_LanguageHelp" xml:space="preserve">
+    <value>Язык будет изменён после перезагрузки страницы.</value>
+  </data>
+  <data name="Language_ru" xml:space="preserve">
+    <value>Русский</value>
+  </data>
+  <data name="Language_en" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="Settings_InvalidLanguage" xml:space="preserve">
+    <value>Неподдерживаемый язык.</value>
+  </data>
 </root>

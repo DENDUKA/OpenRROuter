@@ -24,10 +24,6 @@
             <span>@(Model.CurrentUser?.DisplayName ?? Localizer["Settings_Empty"].Value)</span>
         </div>
         <div class="ws-info-row">
-            <span class="ws-info-label">@Localizer["Settings_UserId"]</span>
-            <code>@(Model.CurrentUser?.UserId ?? Localizer["Settings_Empty"].Value)</code>
-        </div>
-        <div class="ws-info-row">
             <span class="ws-info-label">@Localizer["Settings_Role"]</span>
             <span>@(Model.CurrentUser?.Role ?? Localizer["Settings_Empty"].Value)</span>
         </div>
@@ -46,6 +42,23 @@
                     <option value="EUR">@Localizer["Currency_EUR"]</option>
                 </select>
                 <div class="text-muted mt-1" style="font-size: 13px;">@Localizer["Settings_CurrencyHelp"]</div>
+            </div>
+            <button type="submit" class="btn btn-primary">@Localizer["ApiKeys_Save"]</button>
+        </form>
+    </div>
+</div>
+
+<div class="ws-panel">
+    <div class="ws-panel-header">@Localizer["Settings_LanguageLabel"]</div>
+    <div class="ws-panel-body">
+        <form method="post" asp-page-handler="SaveLanguage">
+            <div class="mb-3">
+                <label class="form-label" asp-for="SelectedLanguage">@Localizer["Settings_LanguageLabel"]</label>
+                <select asp-for="SelectedLanguage" class="form-select" style="max-width: 260px;">
+                    <option value="ru">@Localizer["Language_ru"]</option>
+                    <option value="en">@Localizer["Language_en"]</option>
+                </select>
+                <div class="text-muted mt-1" style="font-size: 13px;">@Localizer["Settings_LanguageHelp"]</div>
             </div>
             <button type="submit" class="btn btn-primary">@Localizer["ApiKeys_Save"]</button>
         </form>

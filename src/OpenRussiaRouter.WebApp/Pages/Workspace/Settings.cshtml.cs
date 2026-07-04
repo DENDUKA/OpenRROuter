@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Controllers;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Localization;
 using OpenRussiaRouter.WebApp.Services.State;
 
 namespace OpenRussiaRouter.WebApp.Pages.Workspace;
@@ -17,6 +19,9 @@ public class SettingsModel(AuthProvider authProvider, IStringLocalizer<SharedRes
     public string SelectedCurrency { get; set; } = "RUB";
 
     [BindProperty]
+    public string SelectedLanguage { get; set; } = SupportedCultures.DefaultCulture;
+
+    [BindProperty]
     public PasswordInputModel PasswordInput { get; set; } = new();
 
     public string? SaveMessage { get; set; }
@@ -26,6 +31,10 @@ public class SettingsModel(AuthProvider authProvider, IStringLocalizer<SharedRes
 
     public async Task OnGetAsync()
     {
+        var requestCulture = HttpContext.Features.Get<IRequestCultureFeature>()?.RequestCulture?.Culture?.TwoLetterISOLanguageName;
+        if (SupportedCultures.IsSupported(requestCulture))
+            SelectedLanguage = requestCulture!;
+
         try
         {
             var user = await authProvider.GetUserAsync(User.GetUserId());
@@ -71,6 +80,29 @@ public class SettingsModel(AuthProvider authProvider, IStringLocalizer<SharedRes
             ErrorMessage = _localizer["Settings_SaveFailed"];
         }
 
+        return Page();
+    }
+
+    public IActionResult OnPostSaveLanguageAsync()
+    {
+        if (!SupportedCultures.IsSupported(SelectedLanguage))
+        {
+            ErrorMessage = _localizer["Settings_InvalidLanguage"];
+            return Page();
+        }
+
+        Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(SelectedLanguage)),
+            new CookieOptions
+            {
+                Path = "/",
+                MaxAge = TimeSpan.FromDays(365),
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax
+            });
+
+        SaveMessage = _localizer["Settings_Saved"];
         return Page();
     }
 

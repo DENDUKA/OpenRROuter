@@ -657,17 +657,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     }
 
     public Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default) =>
-        Task.FromResult(_modelProviders.GetValueOrDefault(id));
+        Task.FromResult(_modelProviders.GetValueOrDefault(id.ToLowerInvariant()));
 
     public Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(provider);
-        _modelProviders[provider.Id] = provider;
+        _modelProviders[provider.Id.ToLowerInvariant()] = provider;
         return Task.CompletedTask;
     }
 
     public Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default) =>
-        Task.FromResult(_modelProviders.GetValueOrDefault(id));
+        Task.FromResult(_modelProviders.GetValueOrDefault(id.ToLowerInvariant()));
 
     public Task DeleteModelProviderAsync(string id, CancellationToken ct = default)
     {

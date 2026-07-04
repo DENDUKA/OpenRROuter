@@ -45,7 +45,19 @@
             </div>
 
             <section class="provider-models-section">
-                <h2>@Localizer["ProviderDetails_ModelsTitle"] (@Model.Models.Count)</h2>
+                <div class="models-toolbar">
+                    <div>
+                        <div class="toolbar-label">@Localizer["ProviderDetails_ModelsTitle"]</div>
+                        <div class="toolbar-count" id="model-count" data-count-singular='@Localizer.GetString("Catalog_CountOne")' data-count-plural='@Localizer.GetString("Catalog_CountMany")'>@(Model.Models.Count == 1 ? Localizer["Catalog_CountOne", Model.Models.Count] : Localizer["Catalog_CountMany", Model.Models.Count])</div>
+                    </div>
+                    <div class="toolbar-note">@Localizer["Catalog_PricePrefix"] @Model.CurrencySymbol</div>
+                </div>
+
+                <div class="filter-row" style="margin-top: var(--spacing-lg);">
+                    <label class="sr-only" for="model-search">@Localizer["Catalog_SearchAria"]</label>
+                    <input id="model-search" class="search" type="search" placeholder="@Localizer["Catalog_SearchPlaceholder"]" oninput="filterModels()" />
+                </div>
+
                 @if (Model.Models.Count == 0)
                 {
                     <div class="catalog-state">
@@ -59,27 +71,56 @@
                             <thead>
                                 <tr>
                                     <th scope="col">@Localizer["Catalog_Th_Model"]</th>
-                                    <th scope="col">@Localizer["ProviderDetails_Th_Type"]</th>
-                                    <th scope="col">@Localizer["Model_Metric_Context"]</th>
+                                    <th scope="col">@Localizer["Catalog_Th_Tags"]</th>
+                                    <th scope="col" class="num">@Localizer["Catalog_Th_InputPrice"]</th>
+                                    <th scope="col" class="num">@Localizer["Catalog_Th_OutputPrice"]</th>
+                                    <th scope="col" class="num">@Localizer["Catalog_Th_CachePrice"]</th>
+                                    <th scope="col" class="num">@Localizer["Catalog_Th_Context"]</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var m in Model.Models)
                                 {
+                                    var initials = ProviderDetailsModel.GetInitials(m.DisplayName);
                                     var detailUrl = $"/models/{Uri.EscapeDataString(Model.Id)}/{Uri.EscapeDataString(m.Id)}";
-                                    <tr onclick="location.href='@detailUrl'" tabindex="0" role="link"
+                                    var tagSearch = string.Join(" ", m.Tags.Select(t => t.DisplayName));
+                                    <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
+                                        data-tags="@tagSearch.ToLower()"
+                                        onclick="location.href='@detailUrl'" tabindex="0" role="link"
                                         onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                         <td>
                                             <div class="model-cell">
                                                 <img class="model-icon" src="/providers/logo/@Uri.EscapeDataString(Model.Id)" alt="" aria-hidden="true" />
                                                 <div>
-                                                    <div class="model-name">@m.DisplayName</div>
+                                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                                        <div class="model-name">@m.DisplayName</div>
+                                                        <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="@Localizer["Catalog_CopyTitle"]" aria-label="@Localizer["Catalog_CopyAria"]">
+                                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                                        </button>
+                                                    </div>
                                                     <code class="model-slug">@m.Id</code>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td class="model-type">@m.ModelType</td>
-                                        <td>@m.Context</td>
+                                        <td>
+                                            @if (m.Tags.Count > 0)
+                                            {
+                                                <div class="tag-list" aria-label="@Localizer["Catalog_TagsAria"]">
+                                                    @foreach (var tag in m.Tags)
+                                                    {
+                                                        <span class="badge model-tag" style="background-color: @(tag.Color ?? "#6c757d"); color: @ColorContrast.TextColor(tag.Color ?? "#6c757d");">@tag.DisplayName</span>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">-</span>
+                                            }
+                                        </td>
+                                        <td class="num">@(m.ModelType == "audio" ? "—" : Model.FormatPrice(m.InputPrice))</td>
+                                        <td class="num">@Model.FormatPrice(m.OutputPrice)</td>
+                                        <td class="num">@(m.ModelType == "audio" ? "—" : Model.FormatPrice(m.CacheWritePrice))</td>
+                                        <td class="num">@m.Context</td>
                                     </tr>
                                 }
                             </tbody>
@@ -104,15 +145,79 @@
     .provider-detail-desc { max-width: 760px; margin-top: 16px; color: var(--color-body); font-size: 15px; line-height: 1.6; }
     .hero-actions { display: flex; gap: 10px; margin-top: 22px; }
     .provider-models-section { padding: 32px 0; border-top: 1px solid var(--color-hairline); }
-    .provider-models-section h2 { margin-bottom: var(--spacing-lg); }
-    .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 280px; }
+    .models-toolbar { display: flex; justify-content: space-between; gap: var(--spacing-lg); padding-bottom: var(--spacing-md); border-bottom: 1px solid var(--color-hairline); }
+    .toolbar-label { font-size: 18px; color: var(--color-ink); }
+    .toolbar-count, .toolbar-note { color: var(--color-mute); font-size: 14px; }
+    .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }
+    .search { flex: 1 1 220px; max-width: 340px; border-radius: var(--radius-pill); }
+    .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 200px; }
     .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); object-fit: contain; }
     .model-name { color: var(--color-ink); font-weight: 500; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
-    .model-type { color: var(--color-body); font-size: 14px; text-transform: capitalize; }
     .model-table tbody tr { cursor: pointer; }
+    .model-table .num { text-align: left; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-width: 120px; }
+    .model-tag { border-color: transparent; }
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
     .catalog-state strong { color: var(--color-ink); }
     .catalog-state.error { border-color: rgba(255,59,48,.45); }
-    @@media (max-width: 520px) { .provider-hero-header { flex-direction: column; align-items: flex-start; gap: var(--spacing-md); } }
+    .copy-btn { padding: 4px; border: none; background: transparent; color: var(--color-mute); cursor: pointer; border-radius: var(--radius-sm); display: inline-flex; align-items: center; justify-content: center; }
+    .copy-btn:hover { background: var(--color-canvas-soft); color: var(--color-ink); }
+    @@media (max-width: 820px) { .models-toolbar { display: grid; grid-template-columns: 1fr; } .table-scroll { overflow-x: auto; } }
+    @@media (max-width: 520px) { .toolbar-note { display: none; } .provider-hero-header { flex-direction: column; align-items: flex-start; gap: var(--spacing-md); } }
 </style>
+
+<script>
+    function filterModels() {
+        const q = (document.getElementById('model-search').value || '').toLowerCase();
+        const rows = document.querySelectorAll('.model-table tbody tr');
+        let visible = 0;
+        rows.forEach(row => {
+            const name = row.dataset.name || '';
+            const id = row.dataset.id || '';
+            const tags = row.dataset.tags || '';
+            const show = !q || name.includes(q) || id.includes(q) || tags.includes(q);
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        const countEl = document.getElementById('model-count');
+        if (countEl) {
+            const singularTpl = countEl.getAttribute('data-count-singular') || '{0} model available';
+            const pluralTpl = countEl.getAttribute('data-count-plural') || '{0} models available';
+            const tpl = visible === 1 ? singularTpl : pluralTpl;
+            countEl.textContent = tpl.replace('{0}', visible);
+        }
+    }
+
+    function copyModelId(event) {
+        event.stopPropagation();
+        event.preventDefault();
+        const btn = event.currentTarget;
+        const id = btn.getAttribute('data-model-id');
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(id).then(() => {
+                const originalSvg = btn.innerHTML;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                setTimeout(() => btn.innerHTML = originalSvg, 2000);
+            }).catch(err => console.error('Failed to copy text: ', err));
+        } else {
+            const textArea = document.createElement("textarea");
+            textArea.value = id;
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                const originalSvg = btn.innerHTML;
+                btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+                setTimeout(() => btn.innerHTML = originalSvg, 2000);
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+    }
+</script>

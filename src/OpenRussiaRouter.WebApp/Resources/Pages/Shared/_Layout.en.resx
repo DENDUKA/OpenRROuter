@@ -110,4 +110,7 @@
   <data name="Language_En" xml:space="preserve">
     <value>English</value>
   </data>
+  <data name="Sidebar_Signup" xml:space="preserve">
+    <value>Sign Up</value>
+  </data>
 </root>

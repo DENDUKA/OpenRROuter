@@ -153,18 +153,18 @@
     @if (!hideSidebar)
     {
         <aside class="sidebar">
-            <nav class="sidebar-nav" aria-label="@Localizer["Sidebar_Product"]">
-                <div class="nav-section">
-                    <div class="nav-section-title">@Localizer["Sidebar_Product"]</div>
-                    <a class="@SideNavClass("/", exact: true)" href="/">
-                        <span class="nav-icon nav-icon-home" aria-hidden="true"></span>@Localizer["Sidebar_Home"]
-                    </a>
-                    <a class="@SideNavClass("/models")" href="/models">
-                        <span class="nav-icon nav-icon-models" aria-hidden="true"></span>@Localizer["Sidebar_Models"]
-                    </a>
-                </div>
-                @if (user != null)
-                {
+            @if (user != null)
+            {
+                <nav class="sidebar-nav" aria-label="@Localizer["Sidebar_Product"]">
+                    <div class="nav-section">
+                        <div class="nav-section-title">@Localizer["Sidebar_Product"]</div>
+                        <a class="@SideNavClass("/", exact: true)" href="/">
+                            <span class="nav-icon nav-icon-home" aria-hidden="true"></span>@Localizer["Sidebar_Home"]
+                        </a>
+                        <a class="@SideNavClass("/models")" href="/models">
+                            <span class="nav-icon nav-icon-models" aria-hidden="true"></span>@Localizer["Sidebar_Models"]
+                        </a>
+                    </div>
                     <div class="nav-section">
                         <div class="nav-section-title">@Localizer["Sidebar_Account"]</div>
                         <a class="@SideNavClass("/workspace/apikeys")" href="/workspace/apikeys">
@@ -174,8 +174,15 @@
                             <span class="nav-icon nav-icon-usage" aria-hidden="true"></span>@Localizer["Sidebar_Usage"]
                         </a>
                     </div>
-                }
-            </nav>
+                </nav>
+            }
+            else
+            {
+                <div class="sidebar-auth">
+                    <a href="/login" class="btn btn-primary sidebar-auth-btn">@Localizer["Nav_Login"]</a>
+                    <a href="/signup" class="btn btn-outline-primary sidebar-auth-btn">@Localizer["Sidebar_Signup"]</a>
+                </div>
+            }
         </aside>
     }
 

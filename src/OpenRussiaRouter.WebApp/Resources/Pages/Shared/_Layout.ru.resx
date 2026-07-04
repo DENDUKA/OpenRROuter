@@ -110,4 +110,7 @@
   <data name="Language_En" xml:space="preserve">
     <value>Английский</value>
   </data>
+  <data name="Sidebar_Signup" xml:space="preserve">
+    <value>Регистрация</value>
+  </data>
 </root>

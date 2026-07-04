@@ -873,6 +873,10 @@ code.d-block {
 .nav-icon-key { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='7.5' cy='15.5' r='3.5'/%3E%3Cpath d='m10 13 9-9'/%3E%3Cpath d='m15 4 5 5'/%3E%3Cpath d='m14 9 2 2'/%3E%3C/svg%3E"); }
 .nav-icon-usage { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='m7 15 4-4 3 3 5-7'/%3E%3C/svg%3E"); }
 
+/* ── Sidebar auth (logged-out) ── */
+.sidebar-auth { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; }
+.sidebar-auth-btn { width: 100%; text-align: center; justify-content: center; }
+
 /* ── Workspace layout ── */
 .ws-shell {
     display: grid;

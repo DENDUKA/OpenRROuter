@@ -203,6 +203,9 @@
   <data name="Password_CurrentIncorrect" xml:space="preserve">
     <value>Текущий пароль неверен.</value>
   </data>
+  <data name="Providers_Title" xml:space="preserve">
+    <value>Провайдеры</value>
+  </data>
   <data name="Settings_InvalidCurrency" xml:space="preserve">
     <value>Неверная валюта.</value>
   </data>

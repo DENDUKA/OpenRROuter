@@ -5,7 +5,11 @@
 <div class="provider-detail-page">
     <section class="provider-hero">
         <div class="provider-breadcrumb">
-            <a href="/providers">@Localizer["Providers_Title"]</a> / <code>@Model.Id</code>
+            <a href="/">@Localizer["Nav_Home"]</a>
+            <span class="breadcrumb-sep">/</span>
+            <a href="/providers">@Localizer["Providers_Title"]</a>
+            <span class="breadcrumb-sep">/</span>
+            <span>@Model.Provider?.DisplayName ?? Model.Id</span>
         </div>
 
         @if (Model.ErrorMessage != null)
@@ -38,17 +42,6 @@
             <div class="hero-actions">
                 <a class="btn btn-primary" href="/workspace/apikeys">@Localizer["Model_GetApiKey"]</a>
                 <a class="btn" href="/models">@Localizer["ProviderDetails_ViewModels"]</a>
-            </div>
-
-            <div class="provider-meta">
-                <div class="meta-item">
-                    <span class="meta-label">@Localizer["ProviderDetails_Created"]</span>
-                    <span class="meta-value">@Model.Provider.CreatedAtUtc.ToString("d")</span>
-                </div>
-                <div class="meta-item">
-                    <span class="meta-label">@Localizer["ProviderDetails_Updated"]</span>
-                    <span class="meta-value">@Model.Provider.UpdatedAtUtc.ToString("d")</span>
-                </div>
             </div>
 
             <section class="provider-models-section">
@@ -101,19 +94,17 @@
 </div>
 
 <style>
-    .provider-detail-page { max-width: 1040px; }
+    .provider-detail-page { width: 100%; }
     .provider-hero { padding: 32px 0 24px; }
     .provider-breadcrumb { color: var(--color-body); font-size: 15px; margin-bottom: 20px; }
     .provider-breadcrumb a { color: var(--color-body); text-decoration: none; }
     .provider-breadcrumb a:hover { color: var(--color-ink); text-decoration: underline; }
+    .breadcrumb-sep { color: var(--color-mute); margin: 0 6px; }
     .provider-hero-header { display: flex; align-items: center; gap: var(--spacing-lg); margin-bottom: 16px; }
     .provider-detail-logo { width: 64px; height: 64px; border-radius: var(--radius-md); object-fit: contain; border: 1px solid var(--color-hairline); background: var(--color-canvas-soft); }
     .provider-detail-name { font-size: clamp(34px, 5vw, 56px); line-height: .98; margin: 0; }
     .provider-detail-desc { max-width: 760px; margin-top: 16px; color: var(--color-body); font-size: 15px; line-height: 1.6; }
     .hero-actions { display: flex; gap: 10px; margin-top: 22px; }
-    .provider-meta { display: flex; gap: var(--spacing-xl); margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--color-hairline); }
-    .meta-label { display: block; color: var(--color-body-mid); font-size: 12px; margin-bottom: 2px; }
-    .meta-value { color: var(--color-ink); font-size: 14px; }
     .provider-models-section { padding: 32px 0; border-top: 1px solid var(--color-hairline); }
     .provider-models-section h2 { margin-bottom: var(--spacing-lg); }
     .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 280px; }
@@ -125,5 +116,5 @@
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
     .catalog-state strong { color: var(--color-ink); }
     .catalog-state.error { border-color: rgba(255,59,48,.45); }
-    @@media (max-width: 520px) { .provider-hero-header { flex-direction: column; align-items: flex-start; gap: var(--spacing-md); } .provider-meta { flex-direction: column; gap: var(--spacing-md); } }
+    @@media (max-width: 520px) { .provider-hero-header { flex-direction: column; align-items: flex-start; gap: var(--spacing-md); } }
 </style>

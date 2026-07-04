@@ -50,4 +50,7 @@
   <data name="ProviderDetails_Th_Type" xml:space="preserve">
     <value>Тип</value>
   </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>Главная</value>
+  </data>
 </root>

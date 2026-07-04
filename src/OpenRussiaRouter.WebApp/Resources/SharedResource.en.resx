@@ -188,6 +188,15 @@
   <data name="Mock_NotFound" xml:space="preserve">
     <value>Payment not found.</value>
   </data>
+  <data name="Catalog_Category_Text" xml:space="preserve">
+    <value>Text</value>
+  </data>
+  <data name="Catalog_Category_Vision" xml:space="preserve">
+    <value>Vision</value>
+  </data>
+  <data name="Catalog_Category_Coding" xml:space="preserve">
+    <value>Coding</value>
+  </data>
   <data name="Model_ContextUnknown" xml:space="preserve">
     <value>Unknown</value>
   </data>

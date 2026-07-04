@@ -188,6 +188,15 @@
   <data name="Mock_NotFound" xml:space="preserve">
     <value>Платёж не найден.</value>
   </data>
+  <data name="Catalog_Category_Text" xml:space="preserve">
+    <value>Текст</value>
+  </data>
+  <data name="Catalog_Category_Vision" xml:space="preserve">
+    <value>Изображения</value>
+  </data>
+  <data name="Catalog_Category_Coding" xml:space="preserve">
+    <value>Код</value>
+  </data>
   <data name="Model_ContextUnknown" xml:space="preserve">
     <value>Неизвестно</value>
   </data>

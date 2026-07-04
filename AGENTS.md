@@ -18,7 +18,7 @@ dotnet test   OpenRussiaRouter.sln --no-build   -nr:false -m:1
 dotnet test tests/OpenRussiaRouter.BillingService.Tests --no-build -nr:false -m:1
 
 # Single test by name
-dotnet tests/OpenRussiaRouter.BillingService.Tests --no-build -filter "FullyQualifiedName~MyTest"
+dotnet test tests/OpenRussiaRouter.BillingService.Tests --no-build -filter "FullyQualifiedName~MyTest"
 ```
 
 Run services locally: `dotnet run --project src/OpenRussiaRouter.<Service>`.
@@ -103,9 +103,9 @@ stream alias), `/v1/models`, `/health`, `/ready`.
   (in-memory is used in unit tests).
 - **DI registration**: `Add{Service}Infrastructure()` /
   `Add{Service}Application()` extension methods in `Infrastructure/Startup/`.
-- **SQL migrations**: raw `.sql` files in `db/migrations/{auth|billing|control}/`,
+- **SQL migrations**: raw `.sql` files in `db/migrations/{auth|billing|control|gateway}/`,
   auto-applied on startup via `PostgresSqlMigrationRunner`. Add a new file with
-  the next numeric prefix (e.g. `017_*.sql`).
+  the next numeric prefix (e.g. `021_*.sql` in billing).
 - **gRPC contracts**: `.proto` in `src/OpenRussiaRouter.Contracts/Protos/`
   (`auth.proto`, `billing.proto`, `control-plane.proto`).
 - **Correlation IDs**: `X-Correlation-Id` header flows through

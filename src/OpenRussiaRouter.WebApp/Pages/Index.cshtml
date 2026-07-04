@@ -6,21 +6,12 @@
     <section class="home-hero" aria-labelledby="home-title">
         <div class="home-hero-copy">
             <div class="provider-strip" aria-hidden="true">
-                <span class="provider-icon provider-icon-openai">
-                    <img src="/icons/openai.png" alt="OpenAI" width="24" height="24" />
-                </span>
-                <span class="provider-icon provider-icon-gpt">
-                    <img src="/icons/openai.png" alt="ChatGPT" width="24" height="24" />
-                </span>
-                <span class="provider-icon provider-icon-claude">
-                    <img src="/icons/claude.png" alt="Claude" width="24" height="24" />
-                </span>
-                <span class="provider-icon provider-icon-gemini">
-                    <img src="/icons/gemini.png" alt="Gemini" width="24" height="24" />
-                </span>
-                <span class="provider-icon provider-icon-llama">
-                    <img src="/icons/llama.png" alt="Llama" width="24" height="24" />
-                </span>
+                @foreach (var p in Model.Providers)
+                {
+                    <span class="provider-icon provider-icon-dynamic">
+                        <img src="/providers/logo/@Uri.EscapeDataString(p.Id)" alt="@p.DisplayName" width="24" height="24" />
+                    </span>
+                }
                 <span class="provider-icon provider-icon-router">
                     <img src="/favicon.png" alt="Router" width="24" height="24" />
                 </span>
@@ -213,30 +204,10 @@
         display: block;
         object-fit: contain;
     }
-    .provider-icon-openai {
-        --provider-color: #10a37f;
-        --provider-bg: rgba(16, 163, 127, .12);
-        --provider-border: rgba(16, 163, 127, .3);
-    }
-    .provider-icon-gpt {
-        --provider-color: #f5f5f5;
-        --provider-bg: linear-gradient(135deg, #111827, #3f3f46);
-        --provider-border: rgba(255, 255, 255, .16);
-    }
-    .provider-icon-claude {
-        --provider-color: #d97757;
-        --provider-bg: rgba(217, 119, 87, .13);
-        --provider-border: rgba(217, 119, 87, .32);
-    }
-    .provider-icon-gemini {
-        --provider-color: #4285f4;
-        --provider-bg: rgba(66, 133, 244, .12);
-        --provider-border: rgba(142, 90, 247, .34);
-    }
-    .provider-icon-llama {
-        --provider-color: #1f6feb;
-        --provider-bg: rgba(31, 111, 235, .12);
-        --provider-border: rgba(31, 111, 235, .32);
+    .provider-icon-dynamic {
+        --provider-color: var(--color-body);
+        --provider-bg: var(--color-canvas-soft);
+        --provider-border: var(--color-hairline);
     }
     .provider-icon-router {
         --provider-color: #f97316;

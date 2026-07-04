@@ -12,6 +12,7 @@ public class IndexModel : PageModelBase
 
     public bool HasBalance { get; set; }
     public bool HasApiKey { get; set; }
+    public IReadOnlyList<ProviderInfo> Providers { get; private set; } = [];
 
     public IndexModel(BillingProvider billingProvider, AuthProvider authProvider)
     {
@@ -21,6 +22,15 @@ public class IndexModel : PageModelBase
 
     public async Task OnGetAsync()
     {
+        try
+        {
+            Providers = await _billingProvider.ListModelProvidersAsync(HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Ignore — fallback to empty strip
+        }
+
         var user = CurrentUser;
         if (user != null)
         {

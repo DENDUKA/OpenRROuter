@@ -987,7 +987,7 @@ code.d-block {
 .sidenav-item svg { flex-shrink: 0; opacity: 0.6; }
 .sidenav-item:hover svg, .sidenav-item.active svg { opacity: 1; }
 
-.sidenav-content { grid-column: 1 / -1; margin-left: var(--sidebar-width); padding: 32px; min-width: 0; }
+.sidenav-content { grid-column: 2; padding: 32px; min-width: 0; }
 
 .adm-section-head { margin-bottom: 24px; }
 .adm-section-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 500; }

@@ -8,7 +8,7 @@
         <span class="breadcrumb-sep">/</span>
         <a href="/models">@Localizer["Nav_Models"]</a>
         <span class="breadcrumb-sep">/</span>
-        <span>@Model.ProviderTitle</span>
+        <a href="/providers/@Model.Provider">@Model.ProviderTitle</a>
         <span class="breadcrumb-sep">/</span>
         <span>@Model.DisplayName</span>
     </div>
@@ -110,7 +110,7 @@
     pre { overflow-x: auto; margin: 0; padding: 18px; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); background: var(--color-canvas-card); }
     pre code { padding: 0; background: transparent; color: var(--color-body); font-size: 13px; }
     .model-overview-desc { max-width: 760px; margin-bottom: 16px; color: var(--color-ink); font-size: 15px; line-height: 1.6; }
-    .metric-modalities { grid-column: span 2; }
+    .metric-modalities { grid-column: span 1; }
     .modality-icons { display: flex; align-items: center; gap: 6px; }
     .modality-row { display: flex; align-items: center; gap: 8px; }
     .modality-icons-set { display: flex; gap: 4px; }

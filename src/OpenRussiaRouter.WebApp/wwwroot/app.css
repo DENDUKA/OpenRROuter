@@ -697,7 +697,7 @@ code.d-block {
 
 .topbar-brand:hover { text-decoration: none; color: var(--color-ink); }
 
-.app-shell--no-sidebar .topbar-brand { width: auto; padding-left: 24px; }
+.app-shell--no-sidebar .topbar-brand { padding-left: 24px; }
 
 .logo-mark {
     width: 26px;

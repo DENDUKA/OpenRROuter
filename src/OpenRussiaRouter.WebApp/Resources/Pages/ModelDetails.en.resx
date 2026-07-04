@@ -83,6 +83,9 @@
   <data name="Model_Tab_Pricing" xml:space="preserve">
     <value>Pricing</value>
   </data>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>Home</value>
+  </data>
   <data name="Nav_Models" xml:space="preserve">
     <value>Models</value>
   </data>

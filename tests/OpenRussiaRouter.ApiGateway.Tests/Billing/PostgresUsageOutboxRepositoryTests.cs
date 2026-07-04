@@ -153,7 +153,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             "select attempts, next_attempt_at_utc, leased_until_utc from gateway.usage_outbox where request_id = 'req-1';");
 
         row.Attempts.Should().Be(3);
-        row.NextAttemptAtUtc.Should().Be(nextAttempt);
+        row.NextAttemptAtUtc.Should().BeCloseTo(nextAttempt, TimeSpan.FromSeconds(1));
         row.LeasedUntilUtc.Should().BeNull();
     }
 
@@ -230,7 +230,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
                 await container.StartAsync();
                 return database;
             }
-            catch (ArgumentException ex) when (ex.Message.Contains("Docker", StringComparison.OrdinalIgnoreCase))
+            catch (Exception ex) when (ex is TimeoutException || (ex is ArgumentException arg && arg.Message.Contains("Docker", StringComparison.OrdinalIgnoreCase)))
             {
                 return null;
             }

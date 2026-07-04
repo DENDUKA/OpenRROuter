@@ -41,4 +41,19 @@
   <data name="Nav_SetupGuide" xml:space="preserve">
     <value>Setup guide</value>
   </data>
+  <data name="Sidebar_Account" xml:space="preserve">
+    <value>Account</value>
+  </data>
+  <data name="Nav_Activity" xml:space="preserve">
+    <value>Activity</value>
+  </data>
+  <data name="Nav_ApiKeys" xml:space="preserve">
+    <value>API Keys</value>
+  </data>
+  <data name="Nav_Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="WsNav_Credits" xml:space="preserve">
+    <value>Balance</value>
+  </data>
 </root>

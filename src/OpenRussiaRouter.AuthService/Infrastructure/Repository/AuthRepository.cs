@@ -269,8 +269,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             """
             select prefix as Prefix, secret_hash as SecretHash
             from auth.api_keys
-            where disabled_at_utc is null
-            limit 10000;
+            where disabled_at_utc is null;
             """,
             cancellationToken: ct)).ConfigureAwait(false)).ToArray();
     }

@@ -95,4 +95,7 @@
   <data name="Catalog_Th_Context" xml:space="preserve">
     <value>Context</value>
   </data>
+  <data name="Model_GetApiKey" xml:space="preserve">
+    <value>Get API Key</value>
+  </data>
 </root>

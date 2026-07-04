@@ -68,4 +68,7 @@
   <data name="Login_Title" xml:space="preserve">
     <value>Login</value>
   </data>
+  <data name="A11y_ShowPassword" xml:space="preserve">
+    <value>Show password</value>
+  </data>
 </root>

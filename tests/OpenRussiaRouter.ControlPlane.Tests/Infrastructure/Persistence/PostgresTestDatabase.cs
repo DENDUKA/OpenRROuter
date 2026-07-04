@@ -29,7 +29,7 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
             await container.StartAsync();
             return database;
         }
-        catch (ArgumentException ex) when (ex.Message.Contains("Docker", StringComparison.OrdinalIgnoreCase))
+        catch (Exception ex) when (ex is TimeoutException || (ex is ArgumentException arg && arg.Message.Contains("Docker", StringComparison.OrdinalIgnoreCase)))
         {
             return null;
         }

@@ -55,8 +55,9 @@ public sealed class PostgresUsageOutboxRepository(IGatewayDbConnectionFactory co
         var leasedUntil = nowUtc.Add(lease);
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
         var rows = (await connection.QueryAsync<UsageOutboxRow>(new CommandDefinition(
             """
@@ -107,7 +108,7 @@ public sealed class PostgresUsageOutboxRepository(IGatewayDbConnectionFactory co
             .Select(static row => row.ToRecord())
             .ToArray();
 
-        transaction.Commit();
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
         return rows;
     }
 

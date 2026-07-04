@@ -1,16 +1,24 @@
-using Npgsql;
+using System.Data;
 
 namespace OpenRussiaRouter.ApiGateway.Billing;
 
 public interface IGatewayDbConnectionFactory
 {
-    NpgsqlConnection CreateConnection();
+    IDbConnection CreateConnection();
 }
 
-public sealed class GatewayDbConnectionFactory(string connectionString) : IGatewayDbConnectionFactory
+public sealed class GatewayDbConnectionFactory : IGatewayDbConnectionFactory, IAsyncDisposable
 {
-    public NpgsqlConnection CreateConnection()
+    private readonly Npgsql.NpgsqlDataSource _dataSource;
+
+    public GatewayDbConnectionFactory(string connectionString)
     {
-        return new NpgsqlConnection(connectionString);
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+        _dataSource = dataSourceBuilder.Build();
     }
+
+    public IDbConnection CreateConnection() => _dataSource.CreateConnection();
+
+    public ValueTask DisposeAsync() => _dataSource.DisposeAsync();
 }

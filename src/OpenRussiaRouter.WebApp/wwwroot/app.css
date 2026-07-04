@@ -983,7 +983,7 @@ code.d-block {
 .cat-nav-item svg { flex-shrink: 0; opacity: 0.6; }
 .cat-nav-item:hover svg, .cat-nav-item.active svg { opacity: 1; }
 
-.cat-content { grid-column: 1 / -1; margin-left: var(--sidebar-width); padding: 32px; min-width: 0; }
+.cat-content { grid-column: 1 / -1; padding: 32px; min-width: 0; }
 
 /* ── Admin layout ── */
 .adm-shell {

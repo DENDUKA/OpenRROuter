@@ -301,7 +301,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         using var connection = connectionFactory.CreateConnection();
         return await connection.QuerySingleOrDefaultAsync<ModelPriceEntity>(new CommandDefinition(
-            ModelPriceSelectSql + "where model_id = @ModelId or router_model_id = @ModelId limit 1;",
+            ModelPriceSelectSql + "where model_id = @ModelId\n" +
+            "union all\n" +
+            ModelPriceSelectSql + "where router_model_id = @ModelId and not exists (\n" +
+            "    select 1 from billing.model_prices where model_id = @ModelId\n" +
+            ")\n" +
+            "limit 1;",
             new { ModelId = modelId },
             cancellationToken: ct)).ConfigureAwait(false) is { } entity
                 ? BillingPersistenceMapper.ToDomain(entity)
@@ -466,110 +471,103 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         ArgumentNullException.ThrowIfNull(activity);
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
-        try
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            insert into billing.activity_by_token
+                (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
+                 input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc,
+                 provider_name, provider_account)
+            values
+                (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
+                 @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc,
+                 @ProviderName, @ProviderAccount)
+            on conflict (request_id) do nothing;
+            """,
+            new
+            {
+                activity.RequestId,
+                activity.ApiKeyId,
+                activity.ApiKeyPrefix,
+                activity.ModelId,
+                activity.RouterNodeId,
+                activity.Usage.InputTokens,
+                activity.Usage.OutputTokens,
+                activity.Usage.CacheTokens,
+                activity.Status,
+                activity.CreatedAtUtc,
+                activity.CompletedAtUtc,
+                ProviderName = activity.ProviderName ?? (object)DBNull.Value,
+                ProviderAccount = activity.ProviderAccount ?? (object)DBNull.Value
+            },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        if (usage is not null)
         {
             await connection.ExecuteAsync(new CommandDefinition(
                 """
-                insert into billing.activity_by_token
-                    (request_id, api_key_id, api_key_prefix, model_id, router_node_id,
-                     input_tokens, output_tokens, cache_tokens, status, created_at_utc, completed_at_utc,
+                insert into billing.usage_records
+                    (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
+                     input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc,
                      provider_name, provider_account)
                 values
-                    (@RequestId, @ApiKeyId, @ApiKeyPrefix, @ModelId, @RouterNodeId,
-                     @InputTokens, @OutputTokens, @CacheTokens, @Status, @CreatedAtUtc, @CompletedAtUtc,
+                    (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
+                     @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
                      @ProviderName, @ProviderAccount)
                 on conflict (request_id) do nothing;
                 """,
                 new
                 {
-                    activity.RequestId,
-                    activity.ApiKeyId,
-                    activity.ApiKeyPrefix,
-                    activity.ModelId,
-                    activity.RouterNodeId,
-                    activity.Usage.InputTokens,
-                    activity.Usage.OutputTokens,
-                    activity.Usage.CacheTokens,
-                    activity.Status,
-                    activity.CreatedAtUtc,
-                    activity.CompletedAtUtc,
-                    ProviderName = activity.ProviderName ?? (object)DBNull.Value,
-                    ProviderAccount = activity.ProviderAccount ?? (object)DBNull.Value
+                    usage.RequestId,
+                    usage.UserId,
+                    usage.ApiKeyId,
+                    usage.ModelId,
+                    usage.PriceVersion,
+                    usage.RouterNodeId,
+                    usage.Usage.InputTokens,
+                    usage.Usage.OutputTokens,
+                    usage.Usage.CacheTokens,
+                    CostAmount = usage.Cost.Amount,
+                    CostCurrency = usage.Cost.Currency.ToString(),
+                    usage.Status,
+                    usage.CreatedAtUtc,
+                    ProviderName = usage.ProviderName ?? (object)DBNull.Value,
+                    ProviderAccount = usage.ProviderAccount ?? (object)DBNull.Value
                 },
                 transaction,
                 cancellationToken: ct)).ConfigureAwait(false);
-
-            if (usage is not null)
-            {
-                await connection.ExecuteAsync(new CommandDefinition(
-                    """
-                    insert into billing.usage_records
-                        (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
-                         input_tokens, output_tokens, cache_tokens, cost_amount, cost_currency, status, created_at_utc,
-                         provider_name, provider_account)
-                    values
-                        (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
-                         @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
-                         @ProviderName, @ProviderAccount)
-                    on conflict (request_id) do nothing;
-                    """,
-                    new
-                    {
-                        usage.RequestId,
-                        usage.UserId,
-                        usage.ApiKeyId,
-                        usage.ModelId,
-                        usage.PriceVersion,
-                        usage.RouterNodeId,
-                        usage.Usage.InputTokens,
-                        usage.Usage.OutputTokens,
-                        usage.Usage.CacheTokens,
-                        CostAmount = usage.Cost.Amount,
-                        CostCurrency = usage.Cost.Currency.ToString(),
-                        usage.Status,
-                        usage.CreatedAtUtc,
-                        ProviderName = usage.ProviderName ?? (object)DBNull.Value,
-                        ProviderAccount = usage.ProviderAccount ?? (object)DBNull.Value
-                    },
-                    transaction,
-                    cancellationToken: ct)).ConfigureAwait(false);
-            }
-
-            if (ledgerEntry is not null)
-            {
-                await connection.ExecuteAsync(new CommandDefinition(
-                    """
-                    insert into billing.ledger_entries
-                        (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
-                    values
-                        (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
-                    on conflict (idempotency_key) do nothing;
-                    """,
-                    new
-                    {
-                        ledgerEntry.Id,
-                        ledgerEntry.UserId,
-                        Type = ledgerEntry.Type.ToString(),
-                        ledgerEntry.Amount.Amount,
-                        Currency = ledgerEntry.Amount.Currency.ToString(),
-                        ledgerEntry.IdempotencyKey,
-                        ledgerEntry.Reason,
-                        ledgerEntry.CreatedAtUtc
-                    },
-                    transaction,
-                    cancellationToken: ct)).ConfigureAwait(false);
-            }
-
-            transaction.Commit();
         }
-        catch
+
+        if (ledgerEntry is not null)
         {
-            transaction.Rollback();
-            throw;
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                insert into billing.ledger_entries
+                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
+                values
+                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
+                on conflict (idempotency_key) do nothing;
+                """,
+                new
+                {
+                    ledgerEntry.Id,
+                    ledgerEntry.UserId,
+                    Type = ledgerEntry.Type.ToString(),
+                    ledgerEntry.Amount.Amount,
+                    Currency = ledgerEntry.Amount.Currency.ToString(),
+                    ledgerEntry.IdempotencyKey,
+                    ledgerEntry.Reason,
+                    ledgerEntry.CreatedAtUtc
+                },
+                transaction,
+                cancellationToken: ct)).ConfigureAwait(false);
         }
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
@@ -869,16 +867,27 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public async Task DeleteTagAsync(string id, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
         await connection.ExecuteAsync(new CommandDefinition(
             """
             update billing.model_prices
             set tag_ids = array_remove(tag_ids, @Id)
             where tag_ids @> array[@Id]::text[];
-
-            delete from billing.tags where id = @Id;
             """,
             new { Id = id },
+            transaction,
             cancellationToken: ct)).ConfigureAwait(false);
+
+        await connection.ExecuteAsync(new CommandDefinition(
+            "delete from billing.tags where id = @Id;",
+            new { Id = id },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
     }
 
     public async Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
@@ -970,19 +979,12 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             return new ConfirmOutcome(false, null, null, 0, ErrorCodes.PaymentNotFound);
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-        try
-        {
-            var outcome = await ConfirmPaymentAtomicAsync(connection, transaction, eventRow, evt, nowUtc, ct).ConfigureAwait(false);
-            transaction.Commit();
-            return outcome;
-        }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var outcome = await ConfirmPaymentAtomicAsync(connection, transaction, eventRow, evt, nowUtc, ct).ConfigureAwait(false);
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return outcome;
     }
 
     public async Task<ApplyOutcome> ApplyPaymentEventAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default)
@@ -1002,20 +1004,13 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             return new ApplyOutcome(false, null, null, ErrorCodes.PaymentInvalidTransition);
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-        try
-        {
-            var outcome = await ApplyPaymentEventAtomicAsync(
-                connection, transaction, eventRow, evt, target.Value, nowUtc, autoReverseChargeback, ct).ConfigureAwait(false);
-            transaction.Commit();
-            return outcome;
-        }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+        var outcome = await ApplyPaymentEventAtomicAsync(
+            connection, transaction, eventRow, evt, target.Value, nowUtc, autoReverseChargeback, ct).ConfigureAwait(false);
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return outcome;
     }
 
     public async Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default)
@@ -1031,8 +1026,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     {
         var now = DateTimeOffset.UtcNow;
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
         var payments = (await connection.QueryAsync<PaymentEntity>(new CommandDefinition(
             """
             with updated as (
@@ -1061,49 +1057,43 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             new { WorkerId = workerId, LeaseUntil = now.Add(lease), Now = now, OlderThanUtc = olderThanUtc, Limit = limit },
             transaction, cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain).ToArray();
-        transaction.Commit();
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
         return payments;
     }
 
     public async Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
-        try
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        var events = (await connection.QueryAsync<PaymentEventEntity>(new CommandDefinition(
+            PaymentEventSelectSql + "where processed=false order by received_at_utc for update skip locked limit @Limit;",
+            new { Limit = limit }, transaction, cancellationToken: ct)).ConfigureAwait(false)).ToArray();
+
+        foreach (var eventRow in events)
         {
-            var events = (await connection.QueryAsync<PaymentEventEntity>(new CommandDefinition(
-                PaymentEventSelectSql + "where processed=false order by received_at_utc for update skip locked limit @Limit;",
-                new { Limit = limit }, transaction, cancellationToken: ct)).ConfigureAwait(false)).ToArray();
-
-            foreach (var eventRow in events)
+            var evt = ToRecoveryInput(eventRow);
+            if (string.Equals(eventRow.EventType, "paid", StringComparison.OrdinalIgnoreCase))
             {
-                var evt = ToRecoveryInput(eventRow);
-                if (string.Equals(eventRow.EventType, "paid", StringComparison.OrdinalIgnoreCase))
-                {
-                    await ConfirmPaymentAtomicAsync(connection, transaction, eventRow, evt, nowUtc, ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                var target = ParseTargetStatus(eventRow.EventType);
-                if (target is null)
-                {
-                    await MarkEventProcessedAsync(connection, transaction, eventRow.Id, nowUtc, ct).ConfigureAwait(false);
-                    continue;
-                }
-
-                await ApplyPaymentEventAtomicAsync(
-                    connection, transaction, eventRow, evt, target.Value, nowUtc, autoReverseChargeback, ct).ConfigureAwait(false);
+                await ConfirmPaymentAtomicAsync(connection, transaction, eventRow, evt, nowUtc, ct).ConfigureAwait(false);
+                continue;
             }
 
-            transaction.Commit();
-            return events.Length;
+            var target = ParseTargetStatus(eventRow.EventType);
+            if (target is null)
+            {
+                await MarkEventProcessedAsync(connection, transaction, eventRow.Id, nowUtc, ct).ConfigureAwait(false);
+                continue;
+            }
+
+            await ApplyPaymentEventAtomicAsync(
+                connection, transaction, eventRow, evt, target.Value, nowUtc, autoReverseChargeback, ct).ConfigureAwait(false);
         }
-        catch
-        {
-            transaction.Rollback();
-            throw;
-        }
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return events.Length;
     }
 
     private static async Task<ConfirmOutcome> ConfirmPaymentAtomicAsync(

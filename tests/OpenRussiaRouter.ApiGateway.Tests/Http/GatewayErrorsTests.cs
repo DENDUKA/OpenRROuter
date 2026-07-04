@@ -103,7 +103,7 @@ public sealed class GatewayErrorsTests
     public async Task WriteAsync_HasStarted_DoesNotThrow()
     {
         var context = CreateContext("corr-8");
-        context.Features.Get<IHttpResponseFeature>()!.HasStarted = true;
+        context.Features.Set<IHttpResponseFeature>(new FakeStartedResponseFeature());
 
         await GatewayErrors.WriteAsync(context, "internal_error", "test_code", "test message", "corr-8");
 
@@ -126,5 +126,16 @@ public sealed class GatewayErrorsTests
     {
         context.Response.Body.Position = 0;
         return await JsonDocument.ParseAsync(context.Response.Body);
+    }
+
+    private sealed class FakeStartedResponseFeature : IHttpResponseFeature
+    {
+        public int StatusCode { get; set; } = 200;
+        public IHeaderDictionary Headers { get; set; } = new HeaderDictionary();
+        public Stream Body { get; set; } = Stream.Null;
+        public string? ReasonPhrase { get; set; }
+        public bool HasStarted => true;
+        public void OnStarting(Func<object, Task> callback, object state) { }
+        public void OnCompleted(Func<object, Task> callback, object state) { }
     }
 }

@@ -55,6 +55,7 @@ public static class ProductAnalyticsServiceCollectionExtensions
             services.AddSingleton<NpgsqlDataSource>(_ => NpgsqlDataSource.Create(options.ConnectionString));
             services.AddSingleton<IProductAnalytics, PostgresProductAnalytics>();
             services.AddSingleton<IProductAnalyticsErasure, PostgresProductAnalyticsErasure>();
+            services.AddSingleton<ProductAnalyticsFlushWorker>();
             services.AddHostedService<ProductAnalyticsFlushWorker>();
         }
         else

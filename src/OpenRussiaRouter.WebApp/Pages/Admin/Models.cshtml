@@ -255,8 +255,14 @@
                 <h5 class="adm-form-group-title">Enrichment & Metadata</h5>
                 <div class="adm-form-row">
                     <div class="form-group" style="grid-column: span 3">
-                        <label asp-for="Form.Description" class="form-label">Description <small class="text-muted">(optional)</small></label>
-                        <textarea asp-for="Form.Description" class="form-control" rows="3" placeholder="Model description (auto-filled by Enrich from OpenRouter or enter manually)"></textarea>
+                        <label asp-for="Form.DescriptionRu" class="form-label">Описание (RU) <small class="text-muted">(необязательно, Markdown)</small></label>
+                        <textarea asp-for="Form.DescriptionRu" class="form-control" rows="5"
+                                  placeholder="Полное описание модели на русском — поддерживается Markdown (заголовки, ссылки, списки, **жирный**, _курсив_, `код`, таблицы)."></textarea>
+                    </div>
+                    <div class="form-group" style="grid-column: span 3">
+                        <label asp-for="Form.DescriptionEn" class="form-label">Description (EN) <small class="text-muted">(optional, Markdown)</small></label>
+                        <textarea asp-for="Form.DescriptionEn" class="form-control" rows="5"
+                                  placeholder="Full model description in English — Markdown supported (headings, links, lists, **bold**, _italic_, `code`, tables)."></textarea>
                     </div>
                 </div>
                 <div class="adm-form-row">

@@ -101,7 +101,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         {
             model = model with
             {
-                Description = model.Description ?? existing.Description,
+                DescriptionRu = model.DescriptionRu ?? existing.DescriptionRu,
+                DescriptionEn = model.DescriptionEn ?? existing.DescriptionEn,
                 ContextLength = model.ContextLength ?? existing.ContextLength,
                 Modalities = model.Modalities ?? existing.Modalities,
                 InputModalities = model.InputModalities ?? existing.InputModalities,

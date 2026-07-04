@@ -195,7 +195,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 model_id, display_name, router_model_id, price_version,
                 input_per_million_amount, output_per_million_amount, cache_per_million_amount,
                 currency, enabled,
-                description, context_length, modalities, input_modalities, output_modalities, description_source,
+                description_ru, description_en, context_length, modalities, input_modalities, output_modalities, description_source,
                 tag_ids, provider, provider_id,
                 supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, model_type,
                 priority
@@ -204,7 +204,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
                 @InputPerMillionAmount, @OutputPerMillionAmount, @CachePerMillionAmount,
                 @Currency, @Enabled,
-                @Description, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
+                @DescriptionRu, @DescriptionEn, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider, @ProviderId,
                 @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @ModelType,
                 @Priority
@@ -226,10 +226,15 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 default_reasoning_effort = excluded.default_reasoning_effort,
                 model_type = excluded.model_type,
                 priority = excluded.priority,
-                description = CASE
+                description_ru = CASE
                     WHEN excluded.description_source IS NOT NULL
-                    THEN excluded.description
-                    ELSE COALESCE(excluded.description, billing.model_prices.description)
+                    THEN excluded.description_ru
+                    ELSE COALESCE(excluded.description_ru, billing.model_prices.description_ru)
+                END,
+                description_en = CASE
+                    WHEN excluded.description_source IS NOT NULL
+                    THEN excluded.description_en
+                    ELSE COALESCE(excluded.description_en, billing.model_prices.description_en)
                 END,
                 context_length = CASE
                     WHEN excluded.description_source IS NOT NULL
@@ -268,7 +273,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 CachePerMillionAmount = model.Price.CachePerMillion.Amount,
                 Currency = model.Price.InputPerMillion.Currency.ToString(),
                 model.Enabled,
-                model.Description,
+                model.DescriptionRu,
+                model.DescriptionEn,
                 model.ContextLength,
                 model.Modalities,
                 model.InputModalities,
@@ -1337,20 +1343,21 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cache_per_million_amount as CachePerMillionAmount,
             currency as Currency,
             enabled as Enabled,
-            description as Description,
-            context_length as ContextLength,
-            modalities as Modalities,
-            input_modalities as InputModalities,
-            output_modalities as OutputModalities,
-            description_source as DescriptionSource,
-            tag_ids as TagIds,
+            billing.model_prices.description_ru as DescriptionRu,
+            billing.model_prices.description_en as DescriptionEn,
+            billing.model_prices.context_length as ContextLength,
+            billing.model_prices.modalities as Modalities,
+            billing.model_prices.input_modalities as InputModalities,
+            billing.model_prices.output_modalities as OutputModalities,
+            billing.model_prices.description_source as DescriptionSource,
+            billing.model_prices.tag_ids as TagIds,
             coalesce(model_provider.display_name, billing.model_prices.provider) as Provider,
-            provider_id as ProviderId,
-            supports_reasoning as SupportsReasoning,
-            allowed_reasoning_efforts as AllowedReasoningEfforts,
-            default_reasoning_effort as DefaultReasoningEffort,
-            model_type as ModelType,
-            priority as Priority
+            billing.model_prices.provider_id as ProviderId,
+            billing.model_prices.supports_reasoning as SupportsReasoning,
+            billing.model_prices.allowed_reasoning_efforts as AllowedReasoningEfforts,
+            billing.model_prices.default_reasoning_effort as DefaultReasoningEffort,
+            billing.model_prices.model_type as ModelType,
+            billing.model_prices.priority as Priority
         from billing.model_prices
         left join billing.model_providers model_provider
             on model_provider.id = billing.model_prices.provider_id

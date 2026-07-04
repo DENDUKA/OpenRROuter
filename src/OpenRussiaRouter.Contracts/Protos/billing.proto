@@ -167,18 +167,19 @@ message PublicModel {
   string output_price_per_1m_usd = 5;
   int32  context_length = 6;
   string modalities = 7;
-  string description = 8;
-  repeated string tag_ids = 9;
-  string provider = 10;
-  string cache_price_per_1m_usd = 11;
-  bool supports_reasoning = 12;
-  repeated string allowed_reasoning_efforts = 13;
-  string input_modalities = 14;
-  string output_modalities = 15;
-  string model_type = 16;
-  int32 priority = 17;
-  string default_reasoning_effort = 18;
-  string provider_id = 19;
+  string description_ru = 8;
+  string description_en = 9;
+  repeated string tag_ids = 10;
+  string provider = 11;
+  string cache_price_per_1m_usd = 12;
+  bool supports_reasoning = 13;
+  repeated string allowed_reasoning_efforts = 14;
+  string input_modalities = 15;
+  string output_modalities = 16;
+  string model_type = 17;
+  int32 priority = 18;
+  string default_reasoning_effort = 19;
+  string provider_id = 20;
 }
 
 message ListPublicModelsResponse {
@@ -221,20 +222,21 @@ message UpsertModelPriceRequest {
   string output_price_per_1m_usd = 6;
   string cache_price_per_1m_usd = 7;
   bool enabled = 8;
-  string description = 9;
-  int32 context_length = 10;
-  string modalities = 11;
-  string description_source = 12;
-  repeated string tag_ids = 13;
-  string provider = 14;
-  bool supports_reasoning = 15;
-  repeated string allowed_reasoning_efforts = 16;
-  string default_reasoning_effort = 17;
-  string input_modalities = 18;
-  string output_modalities = 19;
-  string model_type = 20;
-  int32 priority = 21;
-  string provider_id = 22;
+  string description_ru = 9;
+  string description_en = 10;
+  int32 context_length = 11;
+  string modalities = 12;
+  string description_source = 13;
+  repeated string tag_ids = 14;
+  string provider = 15;
+  bool supports_reasoning = 16;
+  repeated string allowed_reasoning_efforts = 17;
+  string default_reasoning_effort = 18;
+  string input_modalities = 19;
+  string output_modalities = 20;
+  string model_type = 21;
+  int32 priority = 22;
+  string provider_id = 23;
 }
 
 message UpsertModelPriceResponse {
@@ -259,20 +261,21 @@ message ModelDetail {
   string output_price_per_1m_usd = 6;
   string cache_price_per_1m_usd = 7;
   bool   enabled = 8;
-  string description = 9;
-  int32  context_length = 10;
-  string modalities = 11;
-  string description_source = 12;
-  repeated string tag_ids = 13;
-  string provider = 14;
-  bool supports_reasoning = 15;
-  repeated string allowed_reasoning_efforts = 16;
-  string default_reasoning_effort = 17;
-  string input_modalities = 18;
-  string output_modalities = 19;
-  string model_type = 20;
-  int32  priority = 21;
-  string provider_id = 22;
+  string description_ru = 9;
+  string description_en = 10;
+  int32  context_length = 11;
+  string modalities = 12;
+  string description_source = 13;
+  repeated string tag_ids = 14;
+  string provider = 15;
+  bool supports_reasoning = 16;
+  repeated string allowed_reasoning_efforts = 17;
+  string default_reasoning_effort = 18;
+  string input_modalities = 19;
+  string output_modalities = 20;
+  string model_type = 21;
+  int32  priority = 22;
+  string provider_id = 23;
 }
 
 message ListModelsResponse {

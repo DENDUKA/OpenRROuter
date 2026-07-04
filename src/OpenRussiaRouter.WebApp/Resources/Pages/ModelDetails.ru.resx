@@ -38,6 +38,9 @@
   <data name="Model_Desc" xml:space="preserve">
     <value>Используйте эту модель через OpenAI-совместимый API OpenRussiaRouter. Запросы маршрутизируются по доступным нодам с учётом биллинга аккаунта.</value>
   </data>
+  <data name="Model_DescriptionEmpty" xml:space="preserve">
+    <value>Описание для этой модели пока не добавлено.</value>
+  </data>
   <data name="Model_GetApiKey" xml:space="preserve">
     <value>Получить API-ключ</value>
   </data>
@@ -62,27 +65,6 @@
   <data name="Model_Metric_Status" xml:space="preserve">
     <value>Статус</value>
   </data>
-  <data name="Model_OverviewText" xml:space="preserve">
-    <value>{0} доступна через OpenRussiaRouter с идентификатором модели {1}.</value>
-  </data>
-  <data name="Model_OverviewTitle" xml:space="preserve">
-    <value>Обзор</value>
-  </data>
-  <data name="Model_PricingLead" xml:space="preserve">
-    <value>Финальная стоимость рассчитывается активным маршрутом и правилами биллинга аккаунта.</value>
-  </data>
-  <data name="Model_PricingTitle" xml:space="preserve">
-    <value>Цены</value>
-  </data>
-  <data name="Model_Tab_Api" xml:space="preserve">
-    <value>API</value>
-  </data>
-  <data name="Model_Tab_Overview" xml:space="preserve">
-    <value>Обзор</value>
-  </data>
-  <data name="Model_Tab_Pricing" xml:space="preserve">
-    <value>Цены</value>
-  </data>
   <data name="Nav_Home" xml:space="preserve">
     <value>Главная</value>
   </data>
@@ -91,8 +73,5 @@
   </data>
   <data name="Model_MetricsAria" xml:space="preserve">
     <value>Характеристики модели</value>
-  </data>
-  <data name="Model_SectionsAria" xml:space="preserve">
-    <value>Разделы модели</value>
   </data>
 </root>

@@ -14,7 +14,8 @@ public sealed class ModelPriceEntity
     public decimal CachePerMillionAmount { get; set; }
     public string Currency { get; set; } = "USD";
     public bool Enabled { get; set; }
-    public string? Description { get; set; }
+    public string? DescriptionRu { get; set; }
+    public string? DescriptionEn { get; set; }
     public int? ContextLength { get; set; }
     public string? Modalities { get; set; }
     public string? InputModalities { get; set; }

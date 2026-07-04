@@ -2,20 +2,20 @@
     Layout = "~/Pages/Shared/_Layout.cshtml";
     var path = Context.Request.Path.Value ?? "";
 
-    string AdmNavClass(string href, bool exact = false)
+    string SidenavClass(string href, bool exact = false)
     {
         var match = exact
             ? path.Equals(href, StringComparison.OrdinalIgnoreCase)
             : path.StartsWith(href, StringComparison.OrdinalIgnoreCase);
-        return match ? "adm-link active" : "adm-link";
+        return match ? "sidenav-item active" : "sidenav-item";
     }
 }
 
-<div class="adm-shell">
-    <nav class="adm-sidebar" aria-label="Admin sections">
-        <div class="adm-sidebar-title">Admin</div>
+<div class="sidenav-shell">
+    <nav class="sidenav" aria-label="Admin sections">
+        <div class="sidenav-title">Admin</div>
 
-        <a class="@AdmNavClass("/admin", exact: true)" href="/admin">
+        <a class="@SidenavClass("/admin", exact: true)" href="/admin">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
                 <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
@@ -23,7 +23,7 @@
             Dashboard
         </a>
 
-        <a class="@AdmNavClass("/admin/users")" href="/admin/users">
+        <a class="@SidenavClass("/admin/users")" href="/admin/users">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                 <circle cx="9" cy="7" r="4"/>
@@ -32,14 +32,14 @@
             Users
         </a>
 
-        <a class="@AdmNavClass("/admin/broadcast")" href="/admin/broadcast">
+        <a class="@SidenavClass("/admin/broadcast")" href="/admin/broadcast">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/>
             </svg>
             Broadcast
         </a>
 
-        <a class="@AdmNavClass("/admin/nodes")" href="/admin/nodes">
+        <a class="@SidenavClass("/admin/nodes")" href="/admin/nodes">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/>
                 <path d="M12 8v3M5 16V12l7-1.5L19 12v4"/>
@@ -47,7 +47,7 @@
             Nodes
         </a>
 
-        <a class="@AdmNavClass("/admin/models")" href="/admin/models">
+        <a class="@SidenavClass("/admin/models")" href="/admin/models">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"/>
                 <path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
@@ -55,21 +55,21 @@
             Models
         </a>
 
-        <a class="@AdmNavClass("/admin/tags")" href="/admin/tags">
+        <a class="@SidenavClass("/admin/tags")" href="/admin/tags">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line>
             </svg>
             Tags
         </a>
 
-        <a class="@AdmNavClass("/admin/providers")" href="/admin/providers">
+        <a class="@SidenavClass("/admin/providers")" href="/admin/providers">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
             </svg>
             Providers
         </a>
 
-        <a class="@AdmNavClass("/admin/anomalies")" href="/admin/anomalies">
+        <a class="@SidenavClass("/admin/anomalies")" href="/admin/anomalies">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                 <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -77,14 +77,14 @@
             Anomalies
         </a>
 
-        <a class="@AdmNavClass("/admin/requests")" href="/admin/requests">
+        <a class="@SidenavClass("/admin/requests")" href="/admin/requests">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
             Requests
         </a>
 
-        <a class="@AdmNavClass("/admin/gatewaytest")" href="/admin/gatewaytest">
+        <a class="@SidenavClass("/admin/gatewaytest")" href="/admin/gatewaytest">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
                 <polyline points="22 4 12 14.01 9 11.01"/>
@@ -93,7 +93,7 @@
         </a>
     </nav>
 
-    <div class="adm-content">
+    <div class="sidenav-content">
         <h1 class="sr-only">@(ViewData["Title"] ?? "Admin")</h1>
         @RenderBody()
     </div>

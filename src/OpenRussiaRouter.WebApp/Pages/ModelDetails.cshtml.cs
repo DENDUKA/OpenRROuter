@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Pages.Shared;
@@ -6,6 +7,7 @@ using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
+using OpenRussiaRouter.WebApp.Services.Markup;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
@@ -56,7 +58,27 @@ public class ModelDetailsModel : PageModelBase
                      .Take(2)
                      .Select(p => char.ToUpperInvariant(p[0])));
 
-    public string? Description => ModelData?.Description;
+    public string? DescriptionRu => ModelData?.DescriptionRu;
+    public string? DescriptionEn => ModelData?.DescriptionEn;
+
+    /// <summary>
+    /// Markdown rendered to sanitized HTML for the current UI culture, with fallback to the other
+    /// language if the preferred one is empty.
+    /// </summary>
+    public string DescriptionHtml
+    {
+        get
+        {
+            var preferred = IsRussianCulture() ? ModelData?.DescriptionRu : ModelData?.DescriptionEn;
+            var fallback = IsRussianCulture() ? ModelData?.DescriptionEn : ModelData?.DescriptionRu;
+            var markdown = !string.IsNullOrWhiteSpace(preferred) ? preferred : fallback;
+            return MarkdownRenderer.Render(markdown);
+        }
+    }
+
+    private static bool IsRussianCulture() =>
+        string.Equals(CultureInfo.CurrentUICulture.TwoLetterISOLanguageName, "ru", StringComparison.OrdinalIgnoreCase);
+
     public string ContextDisplay => ModelData?.ContextLength is > 0
         ? FormatContext(ModelData.ContextLength.Value)
         : _localizer["Model_ContextUnknown"];

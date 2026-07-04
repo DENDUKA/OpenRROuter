@@ -120,7 +120,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         OutputPrice = m.OutputPrice,
                         CachePrice = m.CachePrice,
                         Enabled = m.Enabled,
-                        Description = m.Description,
+                        DescriptionRu = m.DescriptionRu,
+                        DescriptionEn = m.DescriptionEn,
                         ContextLength = m.ContextLength,
                         Modalities = m.Modalities,
                         InputModalities = m.InputModalities,
@@ -206,7 +207,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     Form.OutputPrice,
                     Form.CachePrice,
                     Form.Enabled,
-                    Description: string.IsNullOrWhiteSpace(Form.Description) ? null : Form.Description.Trim(),
+                    DescriptionRu: string.IsNullOrWhiteSpace(Form.DescriptionRu) ? null : Form.DescriptionRu.Trim(),
+                    DescriptionEn: string.IsNullOrWhiteSpace(Form.DescriptionEn) ? null : Form.DescriptionEn.Trim(),
                     ContextLength: Form.ContextLength is > 0 ? Form.ContextLength : null,
                     Modalities: string.IsNullOrWhiteSpace(Form.Modalities) ? null : Form.Modalities.Trim(),
                     InputModalities: string.IsNullOrWhiteSpace(Form.InputModalities) ? null : Form.InputModalities.Trim(),
@@ -294,7 +296,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 {
                     enrichedModel = model with
                     {
-                        Description = match.Description,
+                        DescriptionEn = match.Description,
                         ContextLength = match.ContextLength,
                         Modalities = match.Modalities,
                         InputModalities = match.InputModalities,
@@ -418,7 +420,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                 return Page();
             }
 
-            Form.Description = match.Description;
+            Form.DescriptionEn = match.Description;
+            Form.DescriptionRu = null;
             Form.ContextLength = match.ContextLength;
             Form.Modalities = match.Modalities;
             Form.InputModalities = match.InputModalities;
@@ -537,13 +540,14 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
     private static string? DetermineSource(ModelInfo? orig, ModelFormInput form)
     {
-        var descChanged = (form.Description?.Trim() ?? string.Empty) != (orig?.Description ?? string.Empty);
+        var descRuChanged = (form.DescriptionRu?.Trim() ?? string.Empty) != (orig?.DescriptionRu ?? string.Empty);
+        var descEnChanged = (form.DescriptionEn?.Trim() ?? string.Empty) != (orig?.DescriptionEn ?? string.Empty);
         var contextChanged = (form.ContextLength ?? 0) != (orig?.ContextLength ?? 0);
         var modalChanged = (form.Modalities?.Trim() ?? string.Empty) != (orig?.Modalities ?? string.Empty);
         var inputModalChanged = (form.InputModalities?.Trim() ?? string.Empty) != (orig?.InputModalities ?? string.Empty);
         var outputModalChanged = (form.OutputModalities?.Trim() ?? string.Empty) != (orig?.OutputModalities ?? string.Empty);
 
-        return descChanged || contextChanged || modalChanged || inputModalChanged || outputModalChanged
+        return descRuChanged || descEnChanged || contextChanged || modalChanged || inputModalChanged || outputModalChanged
             ? "manual"
             : orig?.DescriptionSource;
     }
@@ -627,7 +631,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         public bool Enabled { get; set; } = true;
 
-        public string? Description { get; set; }
+        public string? DescriptionRu { get; set; }
+        public string? DescriptionEn { get; set; }
         public int? ContextLength { get; set; }
         public string? Modalities { get; set; }
         public string? InputModalities { get; set; }

@@ -12,9 +12,9 @@
     <div class="alert alert-danger">@Model.ErrorMessage</div>
 }
 
-<div class="act-tabs">
-    <a class="act-tab @(Model.Tab == "details" ? "act-tab--active" : "")" href="/workspace/activity?tab=details">@Localizer["Activity_TabDetails"]</a>
-    <a class="act-tab @(Model.Tab == "overview" ? "act-tab--active" : "")" href="/workspace/activity?tab=overview">@Localizer["Activity_TabOverview"]</a>
+<div class="tabs">
+    <a class="tab @(Model.Tab == "details" ? "active" : "")" href="/workspace/activity?tab=details">@Localizer["Activity_TabDetails"]</a>
+    <a class="tab @(Model.Tab == "overview" ? "active" : "")" href="/workspace/activity?tab=overview">@Localizer["Activity_TabOverview"]</a>
 </div>
 
 @if (Model.Tab == "overview")

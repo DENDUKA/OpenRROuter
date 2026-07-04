@@ -9,7 +9,7 @@
             <span class="breadcrumb-sep">/</span>
             <a href="/providers">@Localizer["Providers_Title"]</a>
             <span class="breadcrumb-sep">/</span>
-            <span>@Model.Provider?.DisplayName ?? Model.Id</span>
+            <span>@(Model.Provider?.DisplayName ?? Model.Id)</span>
         </div>
 
         @if (Model.ErrorMessage != null)

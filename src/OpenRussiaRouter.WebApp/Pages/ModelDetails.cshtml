@@ -3,6 +3,15 @@
 @{ ViewData["Title"] = Model.DisplayName; }
 
 <div class="model-detail-page">
+    <div class="model-breadcrumb">
+        <a href="/">@Localizer["Nav_Home"]</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="/models">@Localizer["Nav_Models"]</a>
+        <span class="breadcrumb-sep">/</span>
+        <span>@Model.ProviderTitle</span>
+        <span class="breadcrumb-sep">/</span>
+        <span>@Model.DisplayName</span>
+    </div>
     <section class="model-hero">
         <h1 class="model-title">
             @if (!string.IsNullOrEmpty(Model.ModelData?.ProviderId))
@@ -19,7 +28,6 @@
             }
             @Model.DisplayName
         </h1>
-        <div class="model-slug-line"><a href="/models">@Localizer["Nav_Models"]</a> / <code>@Model.ModelId</code></div>
         <p class="model-desc">@Localizer["Model_Desc"]</p>
 
         <div class="hero-actions">
@@ -50,8 +58,8 @@
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Input"]</div><div class="metric-value">@(Model.IsAudioModel ? "—" : (Model.HasPricing ? Model.FormatPrice(Model.InputPrice) : Localizer["Model_PriceRoute"]))</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Output"]</div><div class="metric-value">@(Model.HasPricing ? Model.FormatPrice(Model.OutputPrice) : Localizer["Model_PriceRoute"])</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Cache"]</div><div class="metric-value">@(Model.IsAudioModel ? "—" : (Model.HasPricing ? Model.FormatPrice(Model.CachePrice) : Localizer["Model_PriceRoute"]))</div></div>
-            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Context"]</div><div class="metric-value">@Model.ContextDisplay</div></div>
             <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Author"]</div><div class="metric-value">@Model.ProviderTitle</div></div>
+            <div class="metric"><div class="metric-label">@Localizer["Model_Metric_Context"]</div><div class="metric-value">@Model.ContextDisplay</div></div>
         </div>
     </section>
 

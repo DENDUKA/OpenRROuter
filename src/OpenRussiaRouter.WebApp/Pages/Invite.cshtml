@@ -27,12 +27,12 @@
             <div class="form-group">
                 <label asp-for="Input.Password" class="form-label">@Localizer["Invite_Password"]</label>
                 <input asp-for="Input.Password" class="form-control" type="password" autocomplete="new-password" />
-                <span asp-validation-for="Input.Password" class="validation-message"></span>
+                <span asp-validation-for="Input.Password" class="validation-message" aria-live="polite"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Input.ConfirmPassword" class="form-label">@Localizer["Invite_ConfirmPassword"]</label>
                 <input asp-for="Input.ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
-                <span asp-validation-for="Input.ConfirmPassword" class="validation-message"></span>
+                <span asp-validation-for="Input.ConfirmPassword" class="validation-message" aria-live="polite"></span>
             </div>
             <div class="form-group legal-consent">
                 <div class="form-check">
@@ -41,7 +41,7 @@
                         @Localizer["Consent_Prefix"] <a href="/legal/offer" target="_blank" rel="noopener noreferrer">@Localizer["Consent_OfferLink"]</a> @Localizer["Consent_And"] <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">@Localizer["Consent_PrivacyLink"]</a>.
                     </label>
                 </div>
-                <span asp-validation-for="Input.AcceptLegal" class="validation-message"></span>
+                <span asp-validation-for="Input.AcceptLegal" class="validation-message" aria-live="polite"></span>
             </div>
             <button type="submit" class="btn btn-primary w-100">@Localizer["Invite_Submit"]</button>
         </form>

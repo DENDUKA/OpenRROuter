@@ -14,21 +14,27 @@
     }
 
     <form method="post">
-        <div asp-validation-summary="ModelOnly" class="validation-message"></div>
+        <div asp-validation-summary="ModelOnly" class="validation-message" aria-live="polite"></div>
         <div class="form-group">
             <label asp-for="Input.Email" class="form-label">@Localizer["Signup_Email"]</label>
             <input asp-for="Input.Email" class="form-control" type="email" autocomplete="email" />
-            <span asp-validation-for="Input.Email" class="validation-message"></span>
+            <span asp-validation-for="Input.Email" class="validation-message" aria-live="polite"></span>
         </div>
         <div class="form-group">
             <label asp-for="Input.Password" class="form-label">@Localizer["Signup_Password"]</label>
-            <input asp-for="Input.Password" class="form-control" type="password" autocomplete="new-password" />
-            <span asp-validation-for="Input.Password" class="validation-message"></span>
+            <div class="input-with-toggle">
+                <input asp-for="Input.Password" class="form-control" type="password" autocomplete="new-password" id="signup-password" />
+                <button type="button" class="password-toggle" onclick="togglePassword('signup-password', this)" aria-label="@Localizer["A11y_ShowPassword"]">
+                    <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <svg class="eye-closed" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+                </button>
+            </div>
+            <span asp-validation-for="Input.Password" class="validation-message" aria-live="polite"></span>
         </div>
         <div class="form-group">
             <label asp-for="Input.ConfirmPassword" class="form-label">@Localizer["Signup_ConfirmPassword"]</label>
             <input asp-for="Input.ConfirmPassword" class="form-control" type="password" autocomplete="new-password" />
-            <span asp-validation-for="Input.ConfirmPassword" class="validation-message"></span>
+            <span asp-validation-for="Input.ConfirmPassword" class="validation-message" aria-live="polite"></span>
         </div>
         <div class="form-group legal-consent">
             <div class="form-check">
@@ -37,7 +43,7 @@
                     @Localizer["Consent_Prefix"] <a href="/legal/offer" target="_blank" rel="noopener noreferrer">@Localizer["Consent_OfferLink"]</a> @Localizer["Consent_And"] <a href="/legal/privacy" target="_blank" rel="noopener noreferrer">@Localizer["Consent_PrivacyLink"]</a>.
                 </label>
             </div>
-            <span asp-validation-for="Input.AcceptLegal" class="validation-message"></span>
+            <span asp-validation-for="Input.AcceptLegal" class="validation-message" aria-live="polite"></span>
         </div>
         <button type="submit" id="signup-submit" class="btn btn-primary w-100">@Localizer["Signup_Submit"]</button>
     </form>
@@ -52,6 +58,15 @@
     .form-group { margin-bottom: var(--spacing-lg); }
     .auth-alt { text-align: center; margin-top: var(--spacing-lg); color: var(--color-body-mid); font-size: 13px; }
     .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .input-with-toggle { position: relative; }
+    .input-with-toggle .form-control { padding-right: 44px; }
+    .password-toggle {
+        position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+        width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+        border: none; background: transparent; color: var(--color-body); cursor: pointer;
+        border-radius: var(--radius-sm);
+    }
+    .password-toggle:hover { color: var(--color-ink); background: var(--color-canvas-mid); }
 </style>
 
 @section Scripts {
@@ -66,5 +81,16 @@
         consent.addEventListener('change', sync);
         sync();
     })();
+
+    function togglePassword(inputId, btn) {
+        var input = document.getElementById(inputId);
+        var open = btn.querySelector('.eye-open');
+        var closed = btn.querySelector('.eye-closed');
+        if (input.type === 'password') {
+            input.type = 'text'; open.style.display = 'none'; closed.style.display = '';
+        } else {
+            input.type = 'password'; open.style.display = ''; closed.style.display = 'none';
+        }
+    }
 </script>
 }

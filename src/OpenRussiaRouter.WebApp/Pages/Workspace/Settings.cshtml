@@ -67,18 +67,18 @@
             <div class="mb-3">
                 <label class="form-label" asp-for="PasswordInput.CurrentPassword">@Localizer["Settings_CurrentPassword"]</label>
                 <input asp-for="PasswordInput.CurrentPassword" class="form-control" type="password" autocomplete="current-password" />
-                <span asp-validation-for="PasswordInput.CurrentPassword" class="validation-message"></span>
+                <span asp-validation-for="PasswordInput.CurrentPassword" class="validation-message" aria-live="polite"></span>
             </div>
             <div class="mb-3">
                 <label class="form-label" asp-for="PasswordInput.NewPassword">@Localizer["Settings_NewPassword"]</label>
                 <input asp-for="PasswordInput.NewPassword" class="form-control" type="password" autocomplete="new-password" />
-                <span asp-validation-for="PasswordInput.NewPassword" class="validation-message"></span>
+                <span asp-validation-for="PasswordInput.NewPassword" class="validation-message" aria-live="polite"></span>
                 <div class="text-muted mt-1" style="font-size: 13px;">@Localizer["Settings_PasswordHelp"]</div>
             </div>
             <div class="mb-3">
                 <label class="form-label" asp-for="PasswordInput.ConfirmNewPassword">@Localizer["Settings_ConfirmNewPassword"]</label>
                 <input asp-for="PasswordInput.ConfirmNewPassword" class="form-control" type="password" autocomplete="new-password" />
-                <span asp-validation-for="PasswordInput.ConfirmNewPassword" class="validation-message"></span>
+                <span asp-validation-for="PasswordInput.ConfirmNewPassword" class="validation-message" aria-live="polite"></span>
             </div>
             <button type="submit" class="btn btn-primary">@Localizer["Settings_ChangePasswordSubmit"]</button>
         </form>

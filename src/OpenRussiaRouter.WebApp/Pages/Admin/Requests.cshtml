@@ -166,9 +166,10 @@
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Clickable filter cells
-    document.querySelector('tbody').addEventListener('click', function(e) {
-        var link = e.target.closest('.filter-clickable');
+    // Clickable filter cells — delegate to document so it survives
+    // pages with an empty results table (no <tbody> rendered).
+    document.addEventListener('click', function(e) {
+        var link = e.target.closest && e.target.closest('.filter-clickable');
         if (!link) return;
         e.preventDefault();
 
@@ -176,8 +177,10 @@ document.addEventListener('DOMContentLoaded', function() {
         var value = link.dataset.filterValue;
         if (!type || !value) return;
 
-        // Check if already in hidden inputs
         var form = document.getElementById('filterForm');
+        if (!form) return;
+
+        // Check if already in hidden inputs
         var existing = form.querySelectorAll('input[name="' + type + '"]');
         for (var i = 0; i < existing.length; i++) {
             if (existing[i].value === value) return; // already added
@@ -189,6 +192,9 @@ document.addEventListener('DOMContentLoaded', function() {
         input.name = type;
         input.value = value;
         form.appendChild(input);
+
+        // Auto-submit so the user sees the filter applied immediately.
+        form.submit();
     });
 
     // Calculate button

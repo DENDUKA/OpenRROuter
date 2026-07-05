@@ -396,13 +396,29 @@ public sealed partial class BillingApplicationService(
     public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
         int limit,
         string? afterCursor = null,
-        string? modelFilter = null,
-        string? providerFilter = null,
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default)
     {
-        return await repository.GetAdminUsageRecordsAsync(limit, afterCursor, modelFilter, providerFilter, fromUtc, toUtc, ct).ConfigureAwait(false);
+        return await repository.GetAdminUsageRecordsAsync(limit, afterCursor, modelFilters, providerFilters, apiKeyFilters, nodeFilters, accountFilters, fromUtc, toUtc, ct).ConfigureAwait(false);
+    }
+
+    public async Task<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)> GetAdminUsageSummaryAsync(
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        return await repository.GetAdminUsageSummaryAsync(modelFilters, providerFilters, apiKeyFilters, nodeFilters, accountFilters, fromUtc, toUtc, ct).ConfigureAwait(false);
     }
 
     public Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default)

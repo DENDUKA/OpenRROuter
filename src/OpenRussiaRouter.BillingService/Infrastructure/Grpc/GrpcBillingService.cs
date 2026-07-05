@@ -580,11 +580,27 @@ public sealed class GrpcBillingService(
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
         var pageSize = request.PageSize > 0 ? request.PageSize : 50;
+
+        IReadOnlyList<string>? modelFilters = request.ModelFilters.Count > 0 ? request.ModelFilters.ToArray() : null;
+        IReadOnlyList<string>? providerFilters = request.ProviderFilters.Count > 0 ? request.ProviderFilters.ToArray() : null;
+        IReadOnlyList<string>? apiKeyFilters = request.ApiKeyFilters.Count > 0 ? request.ApiKeyFilters.ToArray() : null;
+        IReadOnlyList<string>? nodeFilters = request.NodeFilters.Count > 0 ? request.NodeFilters.ToArray() : null;
+        IReadOnlyList<string>? accountFilters = request.AccountFilters.Count > 0 ? request.AccountFilters.ToArray() : null;
+
+        // Fall back to legacy single-value fields if repeated fields are empty
+        if (modelFilters == null && !string.IsNullOrEmpty(request.ModelFilter))
+            modelFilters = new[] { request.ModelFilter };
+        if (providerFilters == null && !string.IsNullOrEmpty(request.ProviderFilter))
+            providerFilters = new[] { request.ProviderFilter };
+
         var (items, hasMore) = await billing.GetAdminUsageRecordsAsync(
             pageSize,
             afterCursor: string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
-            modelFilter: string.IsNullOrEmpty(request.ModelFilter) ? null : request.ModelFilter,
-            providerFilter: string.IsNullOrEmpty(request.ProviderFilter) ? null : request.ProviderFilter,
+            modelFilters: modelFilters,
+            providerFilters: providerFilters,
+            apiKeyFilters: apiKeyFilters,
+            nodeFilters: nodeFilters,
+            accountFilters: accountFilters,
             fromUtc: ParseOptionalTimestamp(request.FromUtc),
             toUtc: ParseOptionalTimestamp(request.ToUtc),
             ct: ct).ConfigureAwait(false);
@@ -614,6 +630,38 @@ public sealed class GrpcBillingService(
             CompletedAtUtc = r.CompletedAtUtc.ToString("O", CultureInfo.InvariantCulture)
         }));
         return response;
+    }
+
+    public override async Task<GetAdminRequestsSummaryResponse> GetAdminRequestsSummary(
+        GetAdminRequestsSummaryRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+
+        IReadOnlyList<string>? modelFilters = request.ModelFilters.Count > 0 ? request.ModelFilters.ToArray() : null;
+        IReadOnlyList<string>? providerFilters = request.ProviderFilters.Count > 0 ? request.ProviderFilters.ToArray() : null;
+        IReadOnlyList<string>? apiKeyFilters = request.ApiKeyFilters.Count > 0 ? request.ApiKeyFilters.ToArray() : null;
+        IReadOnlyList<string>? nodeFilters = request.NodeFilters.Count > 0 ? request.NodeFilters.ToArray() : null;
+        IReadOnlyList<string>? accountFilters = request.AccountFilters.Count > 0 ? request.AccountFilters.ToArray() : null;
+
+        var summary = await billing.GetAdminUsageSummaryAsync(
+            modelFilters: modelFilters,
+            providerFilters: providerFilters,
+            apiKeyFilters: apiKeyFilters,
+            nodeFilters: nodeFilters,
+            accountFilters: accountFilters,
+            fromUtc: ParseOptionalTimestamp(request.FromUtc),
+            toUtc: ParseOptionalTimestamp(request.ToUtc),
+            ct: ct).ConfigureAwait(false);
+
+        return new GetAdminRequestsSummaryResponse
+        {
+            TotalRequests = summary.TotalRequests,
+            TotalInputTokens = summary.InputTokens,
+            TotalOutputTokens = summary.OutputTokens,
+            TotalCacheTokens = summary.CacheTokens,
+            TotalCostUsd = summary.CostUsd.ToString(CultureInfo.InvariantCulture)
+        };
     }
 
     public override async Task<ListTagsResponse> ListTags(

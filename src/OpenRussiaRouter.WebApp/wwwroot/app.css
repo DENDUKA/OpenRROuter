@@ -1223,3 +1223,25 @@ input[type=number] { -moz-appearance: textfield; }
 .tab { height: 42px; display: inline-flex; align-items: center; padding: 0 14px; border-bottom: 1px solid transparent; color: var(--color-body); font-size: 14px; white-space: nowrap; text-decoration: none; transition: color .15s ease, border-color .15s ease; }
 .tab:hover { color: var(--color-ink); text-decoration: none; }
 .tab.active { color: var(--color-ink); border-bottom-color: var(--color-ink); }
+
+/* ── Admin filter chips ── */
+.filter-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.filter-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 999px; font-size: 12px;
+    background: var(--color-canvas-soft); border: 1px solid var(--color-border);
+    color: var(--color-body);
+}
+.filter-chip-remove {
+    background: none; border: none; cursor: pointer; font-size: 14px; line-height: 1;
+    color: var(--color-body-mid); text-decoration: none; padding: 0 2px;
+}
+.filter-chip-remove:hover { color: var(--color-danger); }
+.filter-clickable { cursor: pointer; text-decoration: underline dotted; text-underline-offset: 2px; }
+.filter-clickable:hover { color: var(--color-primary); }
+.filter-summary {
+    display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 14px; margin-bottom: 14px;
+    background: var(--color-canvas-soft); border: 1px solid var(--color-hairline); border-radius: var(--radius-lg);
+    font-size: 13px;
+}
+.filter-summary-item { white-space: nowrap; }

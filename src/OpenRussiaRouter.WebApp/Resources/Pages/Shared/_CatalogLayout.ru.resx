@@ -56,4 +56,10 @@
   <data name="WsNav_Credits" xml:space="preserve">
     <value>Баланс</value>
   </data>
+  <data name="Nav_Login" xml:space="preserve">
+    <value>Войти</value>
+  </data>
+  <data name="Sidebar_Signup" xml:space="preserve">
+    <value>Регистрация</value>
+  </data>
 </root>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 
@@ -15,21 +16,37 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
     public string? NextCursor { get; set; }
     public string? ErrorMessage { get; set; }
 
-    public string? ModelFilter { get; set; }
-    public string? ProviderFilter { get; set; }
+    public IReadOnlyList<string> ModelFilters { get; set; } = [];
+    public IReadOnlyList<string> ProviderFilters { get; set; } = [];
+    public IReadOnlyList<string> ApiKeyFilters { get; set; } = [];
+    public IReadOnlyList<string> NodeFilters { get; set; } = [];
+    public IReadOnlyList<string> AccountFilters { get; set; } = [];
     public string? FromUtc { get; set; }
     public string? ToUtc { get; set; }
     public string? Cursor { get; set; }
 
+    public long SummaryTotalRequests { get; set; }
+    public long SummaryInputTokens { get; set; }
+    public long SummaryOutputTokens { get; set; }
+    public long SummaryCacheTokens { get; set; }
+    public decimal SummaryCostUsd { get; set; }
+    public bool ShowSummary { get; set; }
+
     public async Task OnGetAsync(
-        string? model = null,
-        string? provider = null,
+        string[]? model = null,
+        string[]? provider = null,
+        string[]? apiKey = null,
+        string[]? node = null,
+        string[]? account = null,
         string? from = null,
         string? to = null,
         string? cursor = null)
     {
-        ModelFilter = model;
-        ProviderFilter = provider;
+        ModelFilters = ParseFilterArray(model);
+        ProviderFilters = ParseFilterArray(provider);
+        ApiKeyFilters = ParseFilterArray(apiKey);
+        NodeFilters = ParseFilterArray(node);
+        AccountFilters = ParseFilterArray(account);
         FromUtc = from;
         ToUtc = to;
         Cursor = cursor;
@@ -43,8 +60,11 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
                 _billingProvider.ListAdminRequestsAsync(
                     afterCursor: cursor,
                     pageSize: 50,
-                    modelFilter: model,
-                    providerFilter: provider,
+                    modelFilters: ModelFilters,
+                    providerFilters: ProviderFilters,
+                    apiKeyFilters: ApiKeyFilters,
+                    nodeFilters: NodeFilters,
+                    accountFilters: AccountFilters,
                     fromUtc: fromParsed,
                     toUtc: toParsed),
                 _controlPlaneProvider.ListRouterNodesAsync());
@@ -66,6 +86,51 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
         }
     }
 
+    public async Task<IActionResult> OnGetCalculateAsync(
+        string[]? model = null,
+        string[]? provider = null,
+        string[]? apiKey = null,
+        string[]? node = null,
+        string[]? account = null,
+        string? from = null,
+        string? to = null)
+    {
+        var modelFilters = ParseFilterArray(model);
+        var providerFilters = ParseFilterArray(provider);
+        var apiKeyFilters = ParseFilterArray(apiKey);
+        var nodeFilters = ParseFilterArray(node);
+        var accountFilters = ParseFilterArray(account);
+
+        DateTimeOffset? fromParsed = DateTimeOffset.TryParse(from, out var fp) ? fp : null;
+        DateTimeOffset? toParsed = DateTimeOffset.TryParse(to, out var tp) ? tp : null;
+
+        try
+        {
+            var summary = await _billingProvider.GetAdminRequestsSummaryAsync(
+                modelFilters: modelFilters,
+                providerFilters: providerFilters,
+                apiKeyFilters: apiKeyFilters,
+                nodeFilters: nodeFilters,
+                accountFilters: accountFilters,
+                fromUtc: fromParsed,
+                toUtc: toParsed);
+
+            return new JsonResult(new
+            {
+                totalRequests = summary.TotalRequests,
+                inputTokens = summary.InputTokens,
+                outputTokens = summary.OutputTokens,
+                cacheTokens = summary.CacheTokens,
+                costUsd = summary.CostUsd
+            });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogError(ex, "Failed to calculate admin requests summary.");
+            return new JsonResult(new { error = "Failed to calculate summary." }) { StatusCode = 500 };
+        }
+    }
+
     public string GetNodeName(string nodeId) =>
         NodeNames.TryGetValue(nodeId, out var name) ? name : nodeId;
 
@@ -76,4 +141,47 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
         "usage_missing" => ("badge-warning", "usage_missing"),
         _ => ("badge-secondary", status)
     };
+
+    public bool HasActiveFilters() =>
+        ModelFilters.Count > 0 || ProviderFilters.Count > 0 || ApiKeyFilters.Count > 0 ||
+        NodeFilters.Count > 0 || AccountFilters.Count > 0 || FromUtc != null || ToUtc != null;
+
+    public string BuildFilterUrl(string? overrideCursor = null) =>
+        BuildUrl(ModelFilters, ProviderFilters, ApiKeyFilters, NodeFilters, AccountFilters, FromUtc, ToUtc, overrideCursor);
+
+    public string BuildRemoveFilterUrl(string filterType, string filterValue)
+    {
+        return filterType switch
+        {
+            "model" => BuildUrl(ModelFilters.Where(f => f != filterValue).ToList(), ProviderFilters, ApiKeyFilters, NodeFilters, AccountFilters, FromUtc, ToUtc, null),
+            "provider" => BuildUrl(ModelFilters, ProviderFilters.Where(f => f != filterValue).ToList(), ApiKeyFilters, NodeFilters, AccountFilters, FromUtc, ToUtc, null),
+            "apiKey" => BuildUrl(ModelFilters, ProviderFilters, ApiKeyFilters.Where(f => f != filterValue).ToList(), NodeFilters, AccountFilters, FromUtc, ToUtc, null),
+            "node" => BuildUrl(ModelFilters, ProviderFilters, ApiKeyFilters, NodeFilters.Where(f => f != filterValue).ToList(), AccountFilters, FromUtc, ToUtc, null),
+            "account" => BuildUrl(ModelFilters, ProviderFilters, ApiKeyFilters, NodeFilters, AccountFilters.Where(f => f != filterValue).ToList(), FromUtc, ToUtc, null),
+            _ => BuildUrl(ModelFilters, ProviderFilters, ApiKeyFilters, NodeFilters, AccountFilters, FromUtc, ToUtc, null)
+        };
+    }
+
+    private static string BuildUrl(
+        IReadOnlyList<string> models, IReadOnlyList<string> providers, IReadOnlyList<string> apiKeys,
+        IReadOnlyList<string> nodes, IReadOnlyList<string> accounts,
+        string? from, string? to, string? cursor)
+    {
+        var parts = new List<string>();
+        foreach (var m in models) parts.Add($"model={Uri.EscapeDataString(m)}");
+        foreach (var p in providers) parts.Add($"provider={Uri.EscapeDataString(p)}");
+        foreach (var k in apiKeys) parts.Add($"apiKey={Uri.EscapeDataString(k)}");
+        foreach (var n in nodes) parts.Add($"node={Uri.EscapeDataString(n)}");
+        foreach (var a in accounts) parts.Add($"account={Uri.EscapeDataString(a)}");
+        if (!string.IsNullOrEmpty(from)) parts.Add($"from={Uri.EscapeDataString(from)}");
+        if (!string.IsNullOrEmpty(to)) parts.Add($"to={Uri.EscapeDataString(to)}");
+        if (!string.IsNullOrEmpty(cursor)) parts.Add($"cursor={Uri.EscapeDataString(cursor)}");
+        return "/admin/requests" + (parts.Count > 0 ? "?" + string.Join("&", parts) : "");
+    }
+
+    private static IReadOnlyList<string> ParseFilterArray(string[]? values)
+    {
+        if (values == null) return [];
+        return values.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
 }

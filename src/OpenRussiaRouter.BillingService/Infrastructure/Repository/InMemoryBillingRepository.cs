@@ -341,18 +341,27 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
         int limit,
         string? afterCursor = null,
-        string? modelFilter = null,
-        string? providerFilter = null,
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default)
     {
         var query = _activityByRequestId.Values.AsEnumerable();
 
-        if (!string.IsNullOrEmpty(modelFilter))
-            query = query.Where(a => a.ModelId == modelFilter);
-        if (!string.IsNullOrEmpty(providerFilter))
-            query = query.Where(a => a.ProviderName == providerFilter);
+        if (modelFilters is { Count: > 0 })
+            query = query.Where(a => modelFilters.Contains(a.ModelId));
+        if (providerFilters is { Count: > 0 })
+            query = query.Where(a => a.ProviderName != null && providerFilters.Contains(a.ProviderName));
+        if (apiKeyFilters is { Count: > 0 })
+            query = query.Where(a => apiKeyFilters.Contains(a.ApiKeyPrefix));
+        if (nodeFilters is { Count: > 0 })
+            query = query.Where(a => nodeFilters.Contains(a.RouterNodeId));
+        if (accountFilters is { Count: > 0 })
+            query = query.Where(a => a.ProviderAccount != null && accountFilters.Contains(a.ProviderAccount));
         if (fromUtc.HasValue)
             query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
         if (toUtc.HasValue)
@@ -389,6 +398,48 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         }).ToArray();
 
         return Task.FromResult(((IReadOnlyCollection<AdminRequestRecord>)adminRecords, hasMore));
+    }
+
+    public Task<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)> GetAdminUsageSummaryAsync(
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        var query = _activityByRequestId.Values.AsEnumerable();
+
+        if (modelFilters is { Count: > 0 })
+            query = query.Where(a => modelFilters.Contains(a.ModelId));
+        if (providerFilters is { Count: > 0 })
+            query = query.Where(a => a.ProviderName != null && providerFilters.Contains(a.ProviderName));
+        if (apiKeyFilters is { Count: > 0 })
+            query = query.Where(a => apiKeyFilters.Contains(a.ApiKeyPrefix));
+        if (nodeFilters is { Count: > 0 })
+            query = query.Where(a => nodeFilters.Contains(a.RouterNodeId));
+        if (accountFilters is { Count: > 0 })
+            query = query.Where(a => a.ProviderAccount != null && accountFilters.Contains(a.ProviderAccount));
+        if (fromUtc.HasValue)
+            query = query.Where(a => a.CreatedAtUtc >= fromUtc.Value);
+        if (toUtc.HasValue)
+            query = query.Where(a => a.CreatedAtUtc <= toUtc.Value);
+
+        var items = query.ToArray();
+        long totalRequests = items.Length;
+        long inputTokens = items.Sum(a => a.Usage.InputTokens);
+        long outputTokens = items.Sum(a => a.Usage.OutputTokens);
+        long cacheTokens = items.Sum(a => a.Usage.CacheTokens);
+        decimal costUsd = 0;
+        foreach (var a in items)
+        {
+            if (_usageByRequestId.TryGetValue(a.RequestId, out var usage))
+                costUsd += usage.Cost.Amount;
+        }
+
+        return Task.FromResult((totalRequests, inputTokens, outputTokens, cacheTokens, costUsd));
     }
 
     private readonly Dictionary<string, Tag> _tags = new(StringComparer.Ordinal);

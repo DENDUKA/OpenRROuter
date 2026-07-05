@@ -21,6 +21,7 @@ service BillingService {
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
   rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
+  rpc GetAdminRequestsSummary (GetAdminRequestsSummaryRequest) returns (GetAdminRequestsSummaryResponse);
   rpc GetModel (GetModelRequest) returns (GetModelResponse);
   rpc ListTags (ListTagsRequest) returns (ListTagsResponse);
   rpc UpsertTag (UpsertTagRequest) returns (UpsertTagResponse);
@@ -419,6 +420,11 @@ message ListAdminRequestsRequest {
   string provider_filter = 4;
   string from_utc = 5;
   string to_utc = 6;
+  repeated string model_filters = 7;
+  repeated string provider_filters = 8;
+  repeated string api_key_filters = 9;
+  repeated string node_filters = 10;
+  repeated string account_filters = 11;
 }
 
 message AdminRequestRecord {
@@ -441,6 +447,24 @@ message AdminRequestRecord {
 message ListAdminRequestsResponse {
   repeated AdminRequestRecord records = 1;
   string next_cursor = 2;
+}
+
+message GetAdminRequestsSummaryRequest {
+  repeated string model_filters = 1;
+  repeated string provider_filters = 2;
+  repeated string api_key_filters = 3;
+  repeated string node_filters = 4;
+  repeated string account_filters = 5;
+  string from_utc = 6;
+  string to_utc = 7;
+}
+
+message GetAdminRequestsSummaryResponse {
+  int64 total_requests = 1;
+  int64 total_input_tokens = 2;
+  int64 total_output_tokens = 3;
+  int64 total_cache_tokens = 4;
+  string total_cost_usd = 5;
 }
 
 message Tag {

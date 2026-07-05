@@ -772,8 +772,11 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     public async Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
         int limit,
         string? afterCursor = null,
-        string? modelFilter = null,
-        string? providerFilter = null,
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default)
@@ -782,27 +785,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var parameters = new DynamicParameters();
         parameters.Add("Limit", limit + 1);
 
-        var conditions = new List<string>();
-        if (!string.IsNullOrEmpty(afterCursor))
-        {
-            var parts = afterCursor.Split('|', 2);
-            if (parts.Length == 2)
-            {
-                conditions.Add("(a.created_at_utc, a.request_id) < (@AfterCursorDate, @AfterCursorId)");
-                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind));
-                parameters.Add("AfterCursorId", parts[1]);
-            }
-            else
-            {
-                conditions.Add("a.created_at_utc < @AfterCursorDate");
-                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
-            }
-        }
-        if (!string.IsNullOrEmpty(modelFilter)) { conditions.Add("a.model_id = @ModelFilter"); parameters.Add("ModelFilter", modelFilter); }
-        if (!string.IsNullOrEmpty(providerFilter)) { conditions.Add("a.provider_name = @ProviderFilter"); parameters.Add("ProviderFilter", providerFilter); }
-        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
-        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
-
+        var conditions = BuildAdminRequestConditions(parameters, afterCursor, modelFilters, providerFilters, apiKeyFilters, nodeFilters, accountFilters, fromUtc, toUtc);
         var whereClause = conditions.Count > 0 ? "where " + string.Join(" and ", conditions) + "\n" : "";
 
         var items = (await connection.QueryAsync<AdminRequestEntity>(new CommandDefinition(
@@ -835,6 +818,77 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var hasMore = items.Length > limit;
         if (hasMore) items = items.Take(limit).ToArray();
         return (items, hasMore);
+    }
+
+    public async Task<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)> GetAdminUsageSummaryAsync(
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var parameters = new DynamicParameters();
+
+        var conditions = BuildAdminRequestConditions(parameters, afterCursor: null, modelFilters, providerFilters, apiKeyFilters, nodeFilters, accountFilters, fromUtc, toUtc);
+        var whereClause = conditions.Count > 0 ? "where " + string.Join(" and ", conditions) + "\n" : "";
+
+        var result = await connection.QuerySingleAsync<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)>(new CommandDefinition(
+            $"""
+            select
+                count(*) as TotalRequests,
+                coalesce(sum(a.input_tokens), 0) as InputTokens,
+                coalesce(sum(a.output_tokens), 0) as OutputTokens,
+                coalesce(sum(a.cache_tokens), 0) as CacheTokens,
+                coalesce(sum(u.cost_amount), 0) as CostUsd
+            from billing.activity_by_token a
+            left join billing.usage_records u on u.request_id = a.request_id
+            {whereClause};
+            """,
+            parameters,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        return result;
+    }
+
+    private static List<string> BuildAdminRequestConditions(
+        DynamicParameters parameters,
+        string? afterCursor,
+        IReadOnlyList<string>? modelFilters,
+        IReadOnlyList<string>? providerFilters,
+        IReadOnlyList<string>? apiKeyFilters,
+        IReadOnlyList<string>? nodeFilters,
+        IReadOnlyList<string>? accountFilters,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc)
+    {
+        var conditions = new List<string>();
+        if (!string.IsNullOrEmpty(afterCursor))
+        {
+            var parts = afterCursor.Split('|', 2);
+            if (parts.Length == 2)
+            {
+                conditions.Add("(a.created_at_utc, a.request_id) < (@AfterCursorDate, @AfterCursorId)");
+                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(parts[0], null, System.Globalization.DateTimeStyles.RoundtripKind));
+                parameters.Add("AfterCursorId", parts[1]);
+            }
+            else
+            {
+                conditions.Add("a.created_at_utc < @AfterCursorDate");
+                parameters.Add("AfterCursorDate", DateTimeOffset.Parse(afterCursor, null, System.Globalization.DateTimeStyles.RoundtripKind));
+            }
+        }
+        if (modelFilters is { Count: > 0 }) { conditions.Add("a.model_id = ANY(@ModelFilters)"); parameters.Add("ModelFilters", modelFilters.ToArray()); }
+        if (providerFilters is { Count: > 0 }) { conditions.Add("a.provider_name = ANY(@ProviderFilters)"); parameters.Add("ProviderFilters", providerFilters.ToArray()); }
+        if (apiKeyFilters is { Count: > 0 }) { conditions.Add("a.api_key_prefix = ANY(@ApiKeyFilters)"); parameters.Add("ApiKeyFilters", apiKeyFilters.ToArray()); }
+        if (nodeFilters is { Count: > 0 }) { conditions.Add("a.router_node_id = ANY(@NodeFilters)"); parameters.Add("NodeFilters", nodeFilters.ToArray()); }
+        if (accountFilters is { Count: > 0 }) { conditions.Add("a.provider_account = ANY(@AccountFilters)"); parameters.Add("AccountFilters", accountFilters.ToArray()); }
+        if (fromUtc.HasValue) { conditions.Add("a.created_at_utc >= @FromUtc"); parameters.Add("FromUtc", fromUtc.Value); }
+        if (toUtc.HasValue) { conditions.Add("a.created_at_utc <= @ToUtc"); parameters.Add("ToUtc", toUtc.Value); }
+        return conditions;
     }
 
     public async Task<IReadOnlyCollection<Tag>> ListTagsAsync(CancellationToken ct = default)

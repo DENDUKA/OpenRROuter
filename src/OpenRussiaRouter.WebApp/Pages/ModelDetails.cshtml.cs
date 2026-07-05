@@ -36,8 +36,8 @@ public class ModelDetailsModel : PageModelBase
         _logger = logger;
     }
 
-    /// <summary>Display currency: profile choice for signed-in users, RUB for anonymous.</summary>
-    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Rub;
+    /// <summary>Display currency: profile choice for signed-in users, USD for anonymous.</summary>
+    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
 
     public string FormatPrice(decimal usdPrice) => _currencyFormatter.Format(usdPrice, Currency);
 
@@ -119,7 +119,7 @@ public class ModelDetailsModel : PageModelBase
     private async Task<DisplayCurrency> ResolveCurrencyAsync()
     {
         var userId = CurrentUser?.UserId;
-        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Rub;
+        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Usd;
         try
         {
             var user = await _authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
@@ -128,7 +128,7 @@ public class ModelDetailsModel : PageModelBase
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load currency for model details. UserId={UserId}", userId);
-            return DisplayCurrency.Rub;
+            return DisplayCurrency.Usd;
         }
     }
 

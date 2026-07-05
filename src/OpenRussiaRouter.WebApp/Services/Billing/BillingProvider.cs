@@ -399,8 +399,11 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
     public async Task<(IReadOnlyList<AdminRequestInfo> Items, bool HasMore, string? NextCursor)> ListAdminRequestsAsync(
         string? afterCursor = null,
         int pageSize = 50,
-        string? modelFilter = null,
-        string? providerFilter = null,
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken cancellationToken = default)
@@ -409,11 +412,15 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         {
             AfterCursor = afterCursor ?? string.Empty,
             PageSize = pageSize,
-            ModelFilter = modelFilter ?? string.Empty,
-            ProviderFilter = providerFilter ?? string.Empty,
             FromUtc = fromUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
             ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
         };
+        if (modelFilters is { Count: > 0 }) request.ModelFilters.AddRange(modelFilters);
+        if (providerFilters is { Count: > 0 }) request.ProviderFilters.AddRange(providerFilters);
+        if (apiKeyFilters is { Count: > 0 }) request.ApiKeyFilters.AddRange(apiKeyFilters);
+        if (nodeFilters is { Count: > 0 }) request.NodeFilters.AddRange(nodeFilters);
+        if (accountFilters is { Count: > 0 }) request.AccountFilters.AddRange(accountFilters);
+
         var response = await client.ListAdminRequestsAsync(request, cancellationToken: cancellationToken);
 
         var items = response.Records.Select(r => new AdminRequestInfo(
@@ -434,6 +441,36 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
 
         return (items, response.Records.Count >= pageSize && !string.IsNullOrEmpty(response.NextCursor),
             string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+    }
+
+    public async Task<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)> GetAdminRequestsSummaryAsync(
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetAdminRequestsSummaryRequest
+        {
+            FromUtc = fromUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty,
+            ToUtc = toUtc?.ToString("O", CultureInfo.InvariantCulture) ?? string.Empty
+        };
+        if (modelFilters is { Count: > 0 }) request.ModelFilters.AddRange(modelFilters);
+        if (providerFilters is { Count: > 0 }) request.ProviderFilters.AddRange(providerFilters);
+        if (apiKeyFilters is { Count: > 0 }) request.ApiKeyFilters.AddRange(apiKeyFilters);
+        if (nodeFilters is { Count: > 0 }) request.NodeFilters.AddRange(nodeFilters);
+        if (accountFilters is { Count: > 0 }) request.AccountFilters.AddRange(accountFilters);
+
+        var response = await client.GetAdminRequestsSummaryAsync(request, cancellationToken: cancellationToken);
+        return (
+            response.TotalRequests,
+            response.TotalInputTokens,
+            response.TotalOutputTokens,
+            response.TotalCacheTokens,
+            string.IsNullOrEmpty(response.TotalCostUsd) ? 0m : decimal.Parse(response.TotalCostUsd, CultureInfo.InvariantCulture));
     }
 
     public async Task<IReadOnlyList<TagInfo>> ListTagsAsync(CancellationToken cancellationToken = default)

@@ -15,19 +15,61 @@
 <div class="adm-card">
     <div class="adm-card-header">
         <span>Requests</span>
-        <form method="get" class="d-flex gap-2 align-items-center flex-wrap" style="font-weight:normal">
-            <input type="text" name="model" value="@Model.ModelFilter" placeholder="Model filter" class="form-control form-control-sm" style="width:180px" aria-label="Model filter" />
-            <input type="text" name="provider" value="@Model.ProviderFilter" placeholder="Provider filter" class="form-control form-control-sm" style="width:150px" aria-label="Provider filter" />
+    </div>
+    <div class="adm-card-body">
+        @* Active filter chips *@
+        @if (Model.HasActiveFilters())
+        {
+            <div class="filter-chips">
+                @foreach (var m in Model.ModelFilters)
+                {
+                    <span class="filter-chip">Model: @m <a href="@Model.BuildRemoveFilterUrl("model", m)" class="filter-chip-remove" title="Remove">&times;</a></span>
+                }
+                @foreach (var p in Model.ProviderFilters)
+                {
+                    <span class="filter-chip">Provider: @p <a href="@Model.BuildRemoveFilterUrl("provider", p)" class="filter-chip-remove" title="Remove">&times;</a></span>
+                }
+                @foreach (var k in Model.ApiKeyFilters)
+                {
+                    <span class="filter-chip">API Key: @k <a href="@Model.BuildRemoveFilterUrl("apiKey", k)" class="filter-chip-remove" title="Remove">&times;</a></span>
+                }
+                @foreach (var n in Model.NodeFilters)
+                {
+                    <span class="filter-chip">Node: @Model.GetNodeName(n) <a href="@Model.BuildRemoveFilterUrl("node", n)" class="filter-chip-remove" title="Remove">&times;</a></span>
+                }
+                @foreach (var a in Model.AccountFilters)
+                {
+                    <span class="filter-chip">Account: @a <a href="@Model.BuildRemoveFilterUrl("account", a)" class="filter-chip-remove" title="Remove">&times;</a></span>
+                }
+            </div>
+        }
+
+        @* Filter controls *@
+        <form method="get" class="d-flex gap-2 align-items-center flex-wrap mb-3" id="filterForm" style="font-weight:normal">
+            @foreach (var m in Model.ModelFilters) { <input type="hidden" name="model" value="@m" /> }
+            @foreach (var p in Model.ProviderFilters) { <input type="hidden" name="provider" value="@p" /> }
+            @foreach (var k in Model.ApiKeyFilters) { <input type="hidden" name="apiKey" value="@k" /> }
+            @foreach (var n in Model.NodeFilters) { <input type="hidden" name="node" value="@n" /> }
+            @foreach (var a in Model.AccountFilters) { <input type="hidden" name="account" value="@a" /> }
             <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" aria-label="From (UTC)" />
             <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" aria-label="To (UTC)" />
             <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-            @if (Model.ModelFilter != null || Model.ProviderFilter != null || Model.FromUtc != null || Model.ToUtc != null)
+            <button type="button" class="btn btn-sm btn-info" id="calculateBtn">Calculate</button>
+            @if (Model.HasActiveFilters())
             {
                 <a href="/admin/requests" class="btn btn-sm btn-secondary">Clear</a>
             }
         </form>
-    </div>
-    <div class="adm-card-body" style="overflow-x:auto">
+
+        @* Calculate results *@
+        <div id="calculateResults" class="filter-summary" style="display:none">
+            <span class="filter-summary-item"><strong>Requests:</strong> <span id="sumRequests">0</span></span>
+            <span class="filter-summary-item"><strong>Input tokens:</strong> <span id="sumInput">0</span></span>
+            <span class="filter-summary-item"><strong>Output tokens:</strong> <span id="sumOutput">0</span></span>
+            <span class="filter-summary-item"><strong>Cache tokens:</strong> <span id="sumCache">0</span></span>
+            <span class="filter-summary-item"><strong>Cost:</strong> <span id="sumCost">0</span> $</span>
+        </div>
+
         @if (Model.Records.Count == 0)
         {
             <p class="text-muted">No requests found.</p>
@@ -56,11 +98,45 @@
                             <td style="white-space:nowrap">
                                 <small title="@r.CreatedAt.ToString("O")">@r.CreatedAt.ToLocalTime().ToString("g")</small>
                             </td>
-                            <td><small>@r.ApiKeyPrefix…</small></td>
-                            <td><small>@r.ModelId</small></td>
-                            <td><small title="@r.RouterNodeId">@Model.GetNodeName(r.RouterNodeId)</small></td>
-                            <td><small>@(r.ProviderName ?? "—")</small></td>
-                            <td><small>@(r.ProviderAccount ?? "—")</small></td>
+                            <td>
+                                <a href="#" class="filter-clickable" data-filter-type="apiKey" data-filter-value="@r.ApiKeyPrefix" title="Click to filter by this API key">
+                                    <small>@r.ApiKeyPrefix…</small>
+                                </a>
+                            </td>
+                            <td>
+                                <a href="#" class="filter-clickable" data-filter-type="model" data-filter-value="@r.ModelId" title="Click to filter by this model">
+                                    <small>@r.ModelId</small>
+                                </a>
+                            </td>
+                            <td>
+                                <a href="#" class="filter-clickable" data-filter-type="node" data-filter-value="@r.RouterNodeId" title="Click to filter by this node">
+                                    <small title="@r.RouterNodeId">@Model.GetNodeName(r.RouterNodeId)</small>
+                                </a>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.ProviderName))
+                                {
+                                    <a href="#" class="filter-clickable" data-filter-type="provider" data-filter-value="@r.ProviderName" title="Click to filter by this provider">
+                                        <small>@r.ProviderName</small>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <small>—</small>
+                                }
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.ProviderAccount))
+                                {
+                                    <a href="#" class="filter-clickable" data-filter-type="account" data-filter-value="@r.ProviderAccount" title="Click to filter by this account">
+                                        <small>@r.ProviderAccount</small>
+                                    </a>
+                                }
+                                else
+                                {
+                                    <small>—</small>
+                                }
+                            </td>
                             <td style="white-space:nowrap">
                                 <small>@r.InputTokens / @r.OutputTokens / @r.CacheTokens</small>
                             </td>
@@ -75,19 +151,76 @@
 
             @if (Model.HasMore && Model.NextCursor != null)
             {
-                var nextUrl = $"/admin/requests?cursor={Uri.EscapeDataString(Model.NextCursor)}";
-                if (Model.ModelFilter != null) nextUrl += $"&model={Uri.EscapeDataString(Model.ModelFilter)}";
-                if (Model.ProviderFilter != null) nextUrl += $"&provider={Uri.EscapeDataString(Model.ProviderFilter)}";
-                if (Model.FromUtc != null) nextUrl += $"&from={Uri.EscapeDataString(Model.FromUtc)}";
-                if (Model.ToUtc != null) nextUrl += $"&to={Uri.EscapeDataString(Model.ToUtc)}";
                 <div class="mt-3 mb-2 d-flex gap-2">
                     @if (Model.Cursor != null)
                     {
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="history.back()">← Previous page</button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="history.back()">&larr; Previous page</button>
                     }
-                    <a href="@nextUrl" class="btn btn-sm btn-primary">Next page →</a>
+                    <a href="@Model.BuildFilterUrl(Model.NextCursor)" class="btn btn-sm btn-primary">Next page &rarr;</a>
                 </div>
             }
         }
     </div>
 </div>
+
+@section Scripts {
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Clickable filter cells
+    document.querySelector('tbody').addEventListener('click', function(e) {
+        var link = e.target.closest('.filter-clickable');
+        if (!link) return;
+        e.preventDefault();
+
+        var type = link.dataset.filterType;
+        var value = link.dataset.filterValue;
+        if (!type || !value) return;
+
+        // Check if already in hidden inputs
+        var form = document.getElementById('filterForm');
+        var existing = form.querySelectorAll('input[name="' + type + '"]');
+        for (var i = 0; i < existing.length; i++) {
+            if (existing[i].value === value) return; // already added
+        }
+
+        // Add hidden input
+        var input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = type;
+        input.value = value;
+        form.appendChild(input);
+    });
+
+    // Calculate button
+    document.getElementById('calculateBtn').addEventListener('click', function() {
+        var form = document.getElementById('filterForm');
+        var params = new URLSearchParams();
+
+        // Collect all hidden inputs
+        var inputs = form.querySelectorAll('input[type="hidden"]');
+        for (var i = 0; i < inputs.length; i++) {
+            params.append(inputs[i].name, inputs[i].value);
+        }
+
+        // Include date filters
+        var fromInput = form.querySelector('input[name="from"]');
+        var toInput = form.querySelector('input[name="to"]');
+        if (fromInput && fromInput.value) params.append('from', fromInput.value);
+        if (toInput && toInput.value) params.append('to', toInput.value);
+
+        fetch('/admin/requests?handler=Calculate&' + params.toString())
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.error) { alert(data.error); return; }
+                document.getElementById('sumRequests').textContent = data.totalRequests.toLocaleString();
+                document.getElementById('sumInput').textContent = data.inputTokens.toLocaleString();
+                document.getElementById('sumOutput').textContent = data.outputTokens.toLocaleString();
+                document.getElementById('sumCache').textContent = data.cacheTokens.toLocaleString();
+                document.getElementById('sumCost').textContent = data.costUsd.toFixed(4);
+                document.getElementById('calculateResults').style.display = 'flex';
+            })
+            .catch(function(err) { alert('Failed to calculate: ' + err); });
+    });
+});
+</script>
+}

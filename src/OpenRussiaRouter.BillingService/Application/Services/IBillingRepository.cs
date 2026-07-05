@@ -67,8 +67,21 @@ public interface IBillingRepository
     Task<(IReadOnlyCollection<AdminRequestRecord> Items, bool HasMore)> GetAdminUsageRecordsAsync(
         int limit,
         string? afterCursor = null,
-        string? modelFilter = null,
-        string? providerFilter = null,
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
+        DateTimeOffset? fromUtc = null,
+        DateTimeOffset? toUtc = null,
+        CancellationToken ct = default);
+
+    Task<(long TotalRequests, long InputTokens, long OutputTokens, long CacheTokens, decimal CostUsd)> GetAdminUsageSummaryAsync(
+        IReadOnlyList<string>? modelFilters = null,
+        IReadOnlyList<string>? providerFilters = null,
+        IReadOnlyList<string>? apiKeyFilters = null,
+        IReadOnlyList<string>? nodeFilters = null,
+        IReadOnlyList<string>? accountFilters = null,
         DateTimeOffset? fromUtc = null,
         DateTimeOffset? toUtc = null,
         CancellationToken ct = default);

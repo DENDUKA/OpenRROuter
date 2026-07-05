@@ -988,6 +988,7 @@ code.d-block {
 .sidenav-item:hover svg, .sidenav-item.active svg { opacity: 1; }
 
 .sidenav-content { grid-column: 1 / -1; padding: 32px; min-width: 0; }
+.app-shell--no-sidebar .sidenav-content { margin-left: var(--sidebar-width); }
 
 .adm-section-head { margin-bottom: 24px; }
 .adm-section-head h2 { margin: 0 0 4px; font-size: 18px; font-weight: 500; }

@@ -32,6 +32,22 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
     public decimal SummaryCostUsd { get; set; }
     public bool ShowSummary { get; set; }
 
+    /// <summary>Distinct values available for the multi-select filter dropdowns,
+    /// built from the current page of records merged with the currently active
+    /// filters (so active filters stay visible even when not on this page).</summary>
+    public IReadOnlyCollection<FilterOption> ModelOptions { get; private set; } = [];
+    public IReadOnlyCollection<FilterOption> ProviderOptions { get; private set; } = [];
+    public IReadOnlyCollection<FilterOption> ApiKeyOptions { get; private set; } = [];
+    public IReadOnlyCollection<FilterOption> NodeOptions { get; private set; } = [];
+    public IReadOnlyCollection<FilterOption> AccountOptions { get; private set; } = [];
+
+    public sealed class FilterOption
+    {
+        public string Value { get; init; } = "";
+        public string Display { get; init; } = "";
+        public bool Active { get; init; }
+    }
+
     public async Task OnGetAsync(
         string[]? model = null,
         string[]? provider = null,
@@ -84,6 +100,27 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
             logger.LogError(ex, "Failed to load admin requests.");
             ErrorMessage = "Failed to load requests.";
         }
+
+        ModelOptions = BuildOptions(
+            Records.Select(r => r.ModelId),
+            ModelFilters,
+            v => v);
+        ProviderOptions = BuildOptions(
+            Records.Select(r => r.ProviderName).Where(v => !string.IsNullOrEmpty(v))!,
+            ProviderFilters,
+            v => v);
+        ApiKeyOptions = BuildOptions(
+            Records.Select(r => r.ApiKeyPrefix).Where(v => !string.IsNullOrEmpty(v))!,
+            ApiKeyFilters,
+            v => v + "…");
+        NodeOptions = BuildOptions(
+            Records.Select(r => r.RouterNodeId),
+            NodeFilters,
+            v => NodeNames.TryGetValue(v, out var name) ? name : v);
+        AccountOptions = BuildOptions(
+            Records.Select(r => r.ProviderAccount).Where(v => !string.IsNullOrEmpty(v))!,
+            AccountFilters,
+            v => v);
     }
 
     public async Task<IActionResult> OnGetCalculateAsync(
@@ -183,5 +220,31 @@ public class RequestsModel(BillingProvider billingProvider, ControlPlaneProvider
     {
         if (values == null) return [];
         return values.Where(v => !string.IsNullOrWhiteSpace(v)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
+    private static IReadOnlyCollection<FilterOption> BuildOptions(
+        IEnumerable<string> fromRecords,
+        IReadOnlyList<string> activeFilters,
+        Func<string, string> display)
+    {
+        var activeSet = new HashSet<string>(activeFilters, StringComparer.OrdinalIgnoreCase);
+        var values = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var v in fromRecords)
+        {
+            if (!string.IsNullOrEmpty(v)) values.Add(v);
+        }
+        foreach (var v in activeFilters)
+        {
+            if (!string.IsNullOrEmpty(v)) values.Add(v);
+        }
+        return values
+            .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+            .Select(v => new FilterOption
+            {
+                Value = v,
+                Display = display(v),
+                Active = activeSet.Contains(v)
+            })
+            .ToArray();
     }
 }

@@ -45,15 +45,53 @@
         }
 
         @* Filter controls *@
-        <form method="get" class="d-flex gap-2 align-items-center flex-wrap mb-3" id="filterForm" style="font-weight:normal">
-            @foreach (var m in Model.ModelFilters) { <input type="hidden" name="model" value="@m" /> }
-            @foreach (var p in Model.ProviderFilters) { <input type="hidden" name="provider" value="@p" /> }
-            @foreach (var k in Model.ApiKeyFilters) { <input type="hidden" name="apiKey" value="@k" /> }
-            @foreach (var n in Model.NodeFilters) { <input type="hidden" name="node" value="@n" /> }
-            @foreach (var a in Model.AccountFilters) { <input type="hidden" name="account" value="@a" /> }
+        <form method="get" class="d-flex gap-2 align-items-start flex-wrap mb-3" id="filterForm" style="font-weight:normal">
+            @{
+                var dropdowns = new[]
+                {
+                    new { Type = "model",    Label = "Model",    Options = Model.ModelOptions },
+                    new { Type = "provider", Label = "Provider", Options = Model.ProviderOptions },
+                    new { Type = "apiKey",   Label = "API Key",  Options = Model.ApiKeyOptions },
+                    new { Type = "node",     Label = "Node",     Options = Model.NodeOptions },
+                    new { Type = "account",  Label = "Account",  Options = Model.AccountOptions }
+                };
+            }
+            @foreach (var d in dropdowns)
+            {
+                var activeCount = d.Options.Count(o => o.Active);
+                <div class="filter-multiselect" data-ms-type="@d.Type">
+                    <button type="button" class="btn btn-sm btn-outline-secondary ms-toggle" aria-expanded="false">
+                        @d.Label
+                        @if (activeCount > 0)
+                        {
+                            <span class="ms-count">@activeCount</span>
+                        }
+                        <span class="ms-caret">&nbsp;&#9662;</span>
+                    </button>
+                    <div class="ms-panel" role="menu" aria-label="@d.Label filter">
+                        <input type="text" class="form-control form-control-sm ms-search" placeholder="Search @d.Label.ToLowerInvariant()..." autocomplete="off" />
+                        <div class="ms-options">
+                            @if (d.Options.Count == 0)
+                            {
+                                <div class="ms-empty">No values available</div>
+                            }
+                            else
+                            {
+                                foreach (var opt in d.Options)
+                                {
+                                    <label class="ms-option" data-value="@opt.Value">
+                                        <input type="checkbox" name="@d.Type" value="@opt.Value" checked="@opt.Active" />
+                                        <span class="ms-option-label" title="@opt.Value">@opt.Display</span>
+                                    </label>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
             <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" aria-label="From (UTC)" />
             <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" aria-label="To (UTC)" />
-            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
             <button type="button" class="btn btn-sm btn-info" id="calculateBtn">Calculate</button>
             @if (Model.HasActiveFilters())
             {
@@ -166,8 +204,52 @@
 @section Scripts {
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Clickable filter cells — delegate to document so it survives
-    // pages with an empty results table (no <tbody> rendered).
+    var form = document.getElementById('filterForm');
+
+    // ── Multi-select dropdowns: toggle / close / search ───────────────────────
+    function closeAllPanels(except) {
+        document.querySelectorAll('.ms-panel.open').forEach(function(p) {
+            if (p !== except) p.classList.remove('open');
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        var toggle = e.target.closest && e.target.closest('.ms-toggle');
+        if (toggle) {
+            e.preventDefault();
+            var panel = toggle.parentElement.querySelector('.ms-panel');
+            var willOpen = !panel.classList.contains('open');
+            closeAllPanels(willOpen ? panel : null);
+            panel.classList.toggle('open', willOpen);
+            toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen) {
+                var search = panel.querySelector('.ms-search');
+                if (search) { search.value = ''; search.focus(); }
+                panel.querySelectorAll('.ms-option').forEach(function(o) { o.style.display = ''; });
+            }
+            return;
+        }
+        if (!e.target.closest || !e.target.closest('.filter-multiselect')) {
+            closeAllPanels(null);
+        }
+    });
+
+    document.querySelectorAll('.ms-search').forEach(function(search) {
+        search.addEventListener('input', function() {
+            var q = this.value.toLowerCase();
+            this.closest('.ms-panel').querySelectorAll('.ms-option').forEach(function(opt) {
+                var text = opt.querySelector('.ms-option-label').textContent.toLowerCase();
+                opt.style.display = text.indexOf(q) !== -1 ? '' : 'none';
+            });
+        });
+    });
+
+    // Keep dropdown open after checking a box (user may select multiple).
+    document.querySelectorAll('.ms-option input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('click', function(e) { e.stopPropagation(); });
+    });
+
+    // ── Clickable table cells → check the matching checkbox and submit ───────
     document.addEventListener('click', function(e) {
         var link = e.target.closest && e.target.closest('.filter-clickable');
         if (!link) return;
@@ -175,40 +257,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
         var type = link.dataset.filterType;
         var value = link.dataset.filterValue;
-        if (!type || !value) return;
+        if (!type || !value || !form) return;
 
-        var form = document.getElementById('filterForm');
-        if (!form) return;
-
-        // Check if already in hidden inputs
-        var existing = form.querySelectorAll('input[name="' + type + '"]');
-        for (var i = 0; i < existing.length; i++) {
-            if (existing[i].value === value) return; // already added
+        var cbs = form.querySelectorAll('input[type="checkbox"][name="' + type + '"]');
+        var found = false;
+        for (var i = 0; i < cbs.length; i++) {
+            if (cbs[i].value === value) {
+                if (!cbs[i].checked) cbs[i].checked = true;
+                found = true;
+                break;
+            }
         }
-
-        // Add hidden input
-        var input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = type;
-        input.value = value;
-        form.appendChild(input);
-
-        // Auto-submit so the user sees the filter applied immediately.
+        // Value not in current dropdown options (e.g. on a page without that row)
+        // → create a hidden input so it still submits.
+        if (!found) {
+            var existing = form.querySelectorAll('input[type="hidden"][name="' + type + '"]');
+            for (var j = 0; j < existing.length; j++) {
+                if (existing[j].value === value) { found = true; break; }
+            }
+            if (!found) {
+                var inp = document.createElement('input');
+                inp.type = 'hidden';
+                inp.name = type;
+                inp.value = value;
+                form.appendChild(inp);
+            }
+        }
         form.submit();
     });
 
-    // Calculate button
+    // ── Calculate button → POST current checkbox selection as query ──────────
     document.getElementById('calculateBtn').addEventListener('click', function() {
-        var form = document.getElementById('filterForm');
+        if (!form) return;
         var params = new URLSearchParams();
 
-        // Collect all hidden inputs
-        var inputs = form.querySelectorAll('input[type="hidden"]');
-        for (var i = 0; i < inputs.length; i++) {
-            params.append(inputs[i].name, inputs[i].value);
-        }
+        form.querySelectorAll('input[type="checkbox"]:checked').forEach(function(cb) {
+            if (cb.name) params.append(cb.name, cb.value);
+        });
+        // Hidden inputs may carry values not present in dropdowns.
+        form.querySelectorAll('input[type="hidden"]').forEach(function(inp) {
+            if (inp.name && inp.value) params.append(inp.name, inp.value);
+        });
 
-        // Include date filters
         var fromInput = form.querySelector('input[name="from"]');
         var toInput = form.querySelector('input[name="to"]');
         if (fromInput && fromInput.value) params.append('from', fromInput.value);

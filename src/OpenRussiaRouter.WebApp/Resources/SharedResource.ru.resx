@@ -257,4 +257,7 @@
   <data name="Validation_Required" xml:space="preserve">
     <value>Поле обязательно для заполнения.</value>
   </data>
+  <data name="Support_Error" xml:space="preserve">
+    <value>Не удалось отправить сообщение. Попробуйте ещё раз позже.</value>
+  </data>
 </root>

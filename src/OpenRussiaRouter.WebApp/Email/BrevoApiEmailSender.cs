@@ -48,6 +48,9 @@ public sealed class BrevoApiEmailSender : IEmailSender
             To = new[] { new Contact { Email = message.To } },
             Subject = message.Subject,
             TextContent = message.TextBody,
+            ReplyTo = string.IsNullOrWhiteSpace(message.ReplyTo)
+                ? null
+                : new Contact { Email = message.ReplyTo },
             Attachment = message.Attachments is { Count: > 0 }
                 ? message.Attachments
                     .Select(a => new Attachment { Name = a.FileName, Content = Convert.ToBase64String(a.Content) })
@@ -90,6 +93,10 @@ public sealed class BrevoApiEmailSender : IEmailSender
         [JsonPropertyName("to")] public Contact[] To { get; set; } = null!;
         [JsonPropertyName("subject")] public string Subject { get; set; } = null!;
         [JsonPropertyName("textContent")] public string TextContent { get; set; } = null!;
+
+        [JsonPropertyName("replyTo")]
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public Contact? ReplyTo { get; set; }
 
         [JsonPropertyName("attachment")]
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

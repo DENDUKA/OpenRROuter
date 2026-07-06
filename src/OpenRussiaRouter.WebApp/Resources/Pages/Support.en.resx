@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <data name="Support_Title" xml:space="preserve">
+    <value>Support</value>
+  </data>
+  <data name="Support_Intro" xml:space="preserve">
+    <value>Describe your question or problem — we'll reply to the e-mail you provide, usually within one business day.</value>
+  </data>
+  <data name="Support_Email" xml:space="preserve">
+    <value>Your e-mail</value>
+  </data>
+  <data name="Support_Subject" xml:space="preserve">
+    <value>Subject</value>
+  </data>
+  <data name="Support_Message" xml:space="preserve">
+    <value>Message</value>
+  </data>
+  <data name="Support_Submit" xml:space="preserve">
+    <value>Send</value>
+  </data>
+  <data name="Support_SentTitle" xml:space="preserve">
+    <value>Message sent</value>
+  </data>
+  <data name="Support_Sent" xml:space="preserve">
+    <value>Thanks! We've received your message and will reply to the e-mail you provided.</value>
+  </data>
+  <data name="Support_SendAnother" xml:space="preserve">
+    <value>Send another message</value>
+  </data>
+  <data name="Support_TelegramHint" xml:space="preserve">
+    <value>Need a quick answer? Message us on Telegram.</value>
+  </data>
+  <data name="Support_Telegram" xml:space="preserve">
+    <value>Message us on Telegram</value>
+  </data>
+</root>

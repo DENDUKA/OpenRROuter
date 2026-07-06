@@ -113,4 +113,7 @@
   <data name="Sidebar_Signup" xml:space="preserve">
     <value>Регистрация</value>
   </data>
+  <data name="Nav_Support" xml:space="preserve">
+    <value>Поддержка</value>
+  </data>
 </root>

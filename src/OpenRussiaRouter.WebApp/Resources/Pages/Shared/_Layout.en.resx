@@ -113,4 +113,7 @@
   <data name="Sidebar_Signup" xml:space="preserve">
     <value>Sign Up</value>
   </data>
+  <data name="Nav_Support" xml:space="preserve">
+    <value>Support</value>
+  </data>
 </root>

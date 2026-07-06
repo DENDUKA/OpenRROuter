@@ -29,6 +29,24 @@ public class EmailTemplatesTests
         msg.TextBody.Should().Contain("123456");
         msg.Attachments.Should().BeNull();
     }
+
+    [Fact]
+    public void SupportRequestEmail_goes_to_inbox_and_replies_to_submitter()
+    {
+        var msg = EmailTemplates.SupportRequestEmail(
+            inbox: "support@orr.com",
+            fromEmail: "user@example.com",
+            subject: "Cannot top up",
+            message: "My card was declined.",
+            meta: "Account: userId=u1, role=User");
+
+        msg.To.Should().Be("support@orr.com");
+        msg.ReplyTo.Should().Be("user@example.com");
+        msg.Subject.Should().Contain("Cannot top up");
+        msg.TextBody.Should().Contain("user@example.com");
+        msg.TextBody.Should().Contain("My card was declined.");
+        msg.TextBody.Should().Contain("userId=u1");
+    }
 }
 
 public class EmailBroadcastBuildMessagesTests

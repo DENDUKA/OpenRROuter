@@ -27,6 +27,8 @@ public class SmtpEmailSender : IEmailSender
         var mimeMessage = new MimeMessage();
         mimeMessage.From.Add(new MailboxAddress(_settings.SenderName, _settings.SenderAddress));
         mimeMessage.To.Add(MailboxAddress.Parse(message.To));
+        if (!string.IsNullOrWhiteSpace(message.ReplyTo))
+            mimeMessage.ReplyTo.Add(MailboxAddress.Parse(message.ReplyTo));
         mimeMessage.Subject = message.Subject;
 
         var bodyPart = new TextPart(TextFormat.Plain) { Text = message.TextBody };

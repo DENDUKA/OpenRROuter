@@ -210,6 +210,11 @@ builder.Services.AddScoped<IOpenRouterCatalogClient, OpenRouterCatalogClient>();
 
 builder.Services.AddEmailInfrastructure(builder.Configuration);
 
+// Customer support: contact form relays to a staff inbox via the email queue; optional
+// Telegram link is surfaced as an alternative channel.
+builder.Services.Configure<OpenRussiaRouter.WebApp.Support.SupportSettings>(
+    builder.Configuration.GetSection(OpenRussiaRouter.WebApp.Support.SupportSettings.SectionName));
+
 builder.Services.AddSingleton<OpenRussiaRouter.WebApp.Services.Legal.LegalDocumentService>();
 
 // TS-005: display-only currency layer (CBR rates, RUB/USD/EUR)

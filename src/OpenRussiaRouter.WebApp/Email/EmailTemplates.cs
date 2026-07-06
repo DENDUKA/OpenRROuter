@@ -57,4 +57,24 @@ public static class EmailTemplates
             "you can ignore this message — your password will stay unchanged.\n";
         return new EmailMessage(recipient, subject, body);
     }
+
+    /// <summary>
+    /// A support request submitted through the website contact form. Delivered to the
+    /// staff <paramref name="inbox"/>; <see cref="EmailMessage.ReplyTo"/> is set to the
+    /// submitter's address so a plain "Reply" from the mailbox reaches the user directly.
+    /// <paramref name="meta"/> is a pre-built block of triage context (account id/role,
+    /// user agent) that the caller assembles.
+    /// </summary>
+    public static EmailMessage SupportRequestEmail(
+        string inbox, string fromEmail, string subject, string message, string meta)
+    {
+        var fullSubject = $"[Support] {subject}";
+        var body =
+            "New support request via the OpenRussiaRouter website.\n\n" +
+            $"From:    {fromEmail}\n" +
+            $"{meta}\n" +
+            "----------------------------------------\n\n" +
+            $"{message}\n";
+        return new EmailMessage(inbox, fullSubject, body) { ReplyTo = fromEmail };
+    }
 }

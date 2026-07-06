@@ -44,4 +44,7 @@
   <data name="WsNav_Credits" xml:space="preserve">
     <value>Баланс</value>
   </data>
+  <data name="Nav_Support" xml:space="preserve">
+    <value>Поддержка</value>
+  </data>
 </root>

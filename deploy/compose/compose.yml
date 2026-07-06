@@ -122,6 +122,8 @@ services:
       dockerfile: src/OpenRussiaRouter.ApiGateway/Dockerfile
     restart: unless-stopped
     depends_on:
+      postgres:
+        condition: service_healthy
       auth-service:
         condition: service_started
       billing-service:
@@ -137,6 +139,9 @@ services:
       GrpcServices__ControlPlane: "http://control-plane:8080"
       ServiceAuth__BillingCaller: "apigateway"
       ServiceAuth__BillingToken: "${S2S_API_GATEWAY_TOKEN}"
+      # ApiGateway runs the gateway (usage_outbox) SQL migration on startup — it needs Postgres,
+      # else it falls back to appsettings' Host=localhost and crash-loops. Mirrors the live dev box.
+      ConnectionStrings__GatewayDb: "Host=postgres;Port=5432;Database=orr_gateway;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
       Seq__Url: "http://seq:80"
     mem_limit: 512m
     cpus: 0.75

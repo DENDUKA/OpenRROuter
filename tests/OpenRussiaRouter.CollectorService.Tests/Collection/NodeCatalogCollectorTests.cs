@@ -32,6 +32,8 @@ public class NodeCatalogCollectorTests
                     }
                 ]
             });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
 
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
@@ -49,12 +51,71 @@ public class NodeCatalogCollectorTests
             .ThrowsAsync(new NodeAdminException(HttpStatusCode.NotFound, "404"));
         client.Setup(c => c.ListModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NodeModelsResponse { Data = [new NodeModelInfo { Id = "fallback" }] });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
         client.Setup(c => c.DescribeListModelsRequest(It.IsAny<Uri>())).Returns("GET http://node/v1/models");
 
         var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
 
         result.Unreachable.Should().BeFalse();
         result.Observations.Should().ContainSingle(o => o.UpstreamId == "fallback" && o.Rank == 1);
+    }
+
+    [Fact]
+    public async Task CollectAsync_AddsComboAlias_AsRoutableObservation()
+    {
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProvidersWithModelsResponse
+            {
+                Connections =
+                [
+                    new NodeProviderWithModels
+                    {
+                        Id = "c1", IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "deepseek", PublicId = "ocg/deepseek-v4-flash", Enabled = true }]
+                    }
+                ]
+            });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse
+            {
+                Combos = [new NodeComboInfo { Name = "deepseek-v4-flash", Models = ["ocg/deepseek-v4-flash"] }]
+            });
+
+        var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
+
+        result.Unreachable.Should().BeFalse();
+        result.Observations.Should().Contain(o =>
+            o.UpstreamId == "deepseek-v4-flash" &&
+            o.PublicId == "deepseek-v4-flash" &&
+            o.DisplayName == "deepseek-v4-flash" &&
+            o.Rank == 3);
+    }
+
+    [Fact]
+    public async Task CollectAsync_KeepsProviderCatalog_WhenComboEndpointFails()
+    {
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProvidersWithModelsResponse
+            {
+                Connections =
+                [
+                    new NodeProviderWithModels
+                    {
+                        Id = "c1", IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "deepseek", PublicId = "ocg/deepseek-v4-flash", Enabled = true }]
+                    }
+                ]
+            });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NodeAdminException(HttpStatusCode.NotFound, "missing"));
+
+        var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
+
+        result.Unreachable.Should().BeFalse();
+        result.Observations.Should().ContainSingle(o => o.PublicId == "ocg/deepseek-v4-flash");
     }
 
     [Fact]

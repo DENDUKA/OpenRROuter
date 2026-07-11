@@ -33,6 +33,8 @@ public class NodePollingWorkerTests
             {
                 Connections = [new NodeProviderWithModels { Id = "c1", IsActive = true, Models = [new NodeProviderModelInfo { Id = "m", PublicId = "m", Enabled = true }] }]
             });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
         client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NodeProviderQuotaResponse());
 
@@ -150,6 +152,8 @@ public class NodePollingWorkerTests
             {
                 Connections = [new NodeProviderWithModels { Id = "c1", IsActive = true, Models = [new NodeProviderModelInfo { Id = "m", PublicId = "m", Enabled = true }] }]
             });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
         client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new NodeProviderQuotaResponse());
         return client;

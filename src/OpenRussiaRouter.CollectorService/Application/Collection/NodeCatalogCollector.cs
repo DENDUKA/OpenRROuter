@@ -64,7 +64,7 @@ public sealed class NodeCatalogCollector(
             }
         }
 
-        return new NodeCatalogResult(node.NodeId, Unreachable: false, observations, null, null);
+        return await AddCombosAsync(node, observations, nodeToken, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<NodeCatalogResult> CollectFallbackModelsAsync(
@@ -82,7 +82,7 @@ public sealed class NodeCatalogCollector(
                     Rank = 1
                 })
                 .ToList();
-            return new NodeCatalogResult(node.NodeId, Unreachable: false, observations, null, null);
+            return await AddCombosAsync(node, observations, nodeToken, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception ex) when (IsTransient(ex, cancellationToken))
         {
@@ -92,6 +92,42 @@ public sealed class NodeCatalogCollector(
                 FormatRequest(ex, client.DescribeListModelsRequest(node.EndpointUrl)),
                 FormatResponse(ex));
         }
+    }
+
+    private async Task<NodeCatalogResult> AddCombosAsync(
+        CollectorNode node,
+        List<ModelObservation> observations,
+        CancellationToken nodeToken,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var combos = await client.ListCombosAsync(node.EndpointUrl, node.ControlToken, nodeToken).ConfigureAwait(false);
+            var knownIds = new HashSet<string>(
+                observations.Select(o => string.IsNullOrWhiteSpace(o.PublicId) ? o.UpstreamId : o.PublicId),
+                StringComparer.Ordinal);
+
+            foreach (var combo in combos.Combos)
+            {
+                var comboName = combo.Name.Trim();
+                if (string.IsNullOrWhiteSpace(comboName) || !knownIds.Add(comboName))
+                    continue;
+
+                observations.Add(new ModelObservation
+                {
+                    UpstreamId = comboName,
+                    PublicId = comboName,
+                    DisplayName = comboName,
+                    Rank = 3
+                });
+            }
+        }
+        catch (Exception ex) when (IsTransient(ex, cancellationToken))
+        {
+            logger.LogWarning(ex, "ListCombos failed for node {NodeId}; continuing with provider models", node.NodeId);
+        }
+
+        return new NodeCatalogResult(node.NodeId, Unreachable: false, observations, null, null);
     }
 
     private static bool IsTransient(Exception ex, CancellationToken cancellationToken) =>

@@ -42,6 +42,17 @@ public sealed record NodeModelsResponse
     public IReadOnlyList<NodeModelInfo> Data { get; init; } = [];
 }
 
+public sealed record NodeCombosResponse
+{
+    public IReadOnlyList<NodeComboInfo> Combos { get; init; } = [];
+}
+
+public sealed record NodeComboInfo
+{
+    public string Name { get; init; } = string.Empty;
+    public IReadOnlyList<string> Models { get; init; } = [];
+}
+
 public sealed record NodeModelInfo
 {
     public string Id { get; init; } = string.Empty;

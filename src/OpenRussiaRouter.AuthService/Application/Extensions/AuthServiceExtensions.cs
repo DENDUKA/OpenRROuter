@@ -38,7 +38,7 @@ public static class AuthServiceExtensions
         services.AddSingleton<EmailVerificationService>();
         services.AddSingleton<ApiKeyFactory>();
         services.AddSingleton<LoginService>();
-        services.AddSingleton<GoogleAuthService>();
+        services.AddSingleton<ExternalLoginService>();
         services.AddSingleton<AuthAccountApplicationService>();
 
         return services;

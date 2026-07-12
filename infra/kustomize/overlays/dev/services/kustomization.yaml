@@ -12,6 +12,7 @@ resources:
 
 patches:
 - path: webapp-google-patch.yaml
+- path: webapp-yandex-patch.yaml
 - path: f9router-env-patch.yaml
 - path: f9router-2-env-patch.yaml
 - path: f9router-nodeport.yaml

@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapp
+  namespace: orr-dev
+spec:
+  template:
+    spec:
+      containers:
+        - name: webapp
+          env:
+            - name: Yandex__ClientId
+              value: "6ebafd3a0e7741c1aa0b8dee535a16fc"
+            - name: Yandex__ClientSecret
+              value: "e589d64f5f8f41f6b3131c003ada1a3f"

@@ -25,11 +25,18 @@ public class LoginModel : PageModelBase
 
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer, ILogger<LoginModel> logger)
+    public bool GoogleEnabled { get; }
+    public bool YandexEnabled { get; }
+
+    public LoginModel(AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer, ILogger<LoginModel> logger, IConfiguration configuration)
     {
         _authClient = AuthProvider;
         _localizer = localizer;
         _logger = logger;
+        GoogleEnabled = !string.IsNullOrWhiteSpace(configuration["Google:ClientId"])
+                     && !string.IsNullOrWhiteSpace(configuration["Google:ClientSecret"]);
+        YandexEnabled = !string.IsNullOrWhiteSpace(configuration["Yandex:ClientId"])
+                     && !string.IsNullOrWhiteSpace(configuration["Yandex:ClientSecret"]);
     }
 
     public IActionResult OnGet(string? returnUrl = null)

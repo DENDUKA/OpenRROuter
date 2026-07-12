@@ -16,6 +16,7 @@
     <PackageVersion Include="Grpc.Tools" Version="2.80.0" />
     <!-- Web/API/Auth -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.Google" Version="8.0.0" />
+    <PackageVersion Include="AspNet.Security.OAuth.Yandex" Version="8.1.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.15.1-beta.1" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
     <!-- Markdown -->

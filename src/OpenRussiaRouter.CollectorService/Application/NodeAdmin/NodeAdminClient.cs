@@ -6,7 +6,7 @@ namespace OpenRussiaRouter.CollectorService.Application.NodeAdmin;
 public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
 {
     private const string ModelsPath = "/v1/models";
-    private const string CombosPath = "/api/combos";
+    private const string CombosPath = "/api/integrations/combos";
     private const string ProvidersWithModelsPath = "/api/integrations/providers/with-models";
     private const string ProviderQuotaPath = "/api/integrations/providers/quota";
 

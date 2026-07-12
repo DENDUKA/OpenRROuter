@@ -22,7 +22,7 @@
 
 Ключевые операции и инварианты:
 
-- **Self-serve signup** (`RegisterUserAsync`): пароль ≥ `MinPasswordLength` (12) иначе `WeakPassword`; email нормализуется (`EmailValidator.Normalize`); дубль email → `EmailAlreadyRegistered`; создаётся `UserAccount.CreateForEmailSignup` в статусе **`PendingVerification`**, плюс `EmailVerification`. Возвращает **сырой 6-значный код** (`RawCode`) — его рассылает WebApp; в БД только хеш.
+- **Self-serve signup** (`RegisterUserAsync`): пароль ≥ `MinPasswordLength` (8) иначе `WeakPassword`; email нормализуется (`EmailValidator.Normalize`); дубль email → `EmailAlreadyRegistered`; создаётся `UserAccount.CreateForEmailSignup` в статусе **`PendingVerification`**, плюс `EmailVerification`. Возвращает **сырой 6-значный код** (`RawCode`) — его рассылает WebApp; в БД только хеш.
 - **VerifyEmailAsync**: проверяет код через `EmailVerificationService.Check`; на `Confirmed` → `ActivateUserAndDeleteVerificationAsync` + `user.Activate()`. Коды ошибок: `CodeExpired`, `TooManyAttempts`, `InvalidCode`, `NoPendingVerification`.
 - **ResendVerificationAsync**: `Reissue` с кулдауном → `ResendCooldown` если рано.
 - **Инвайты** (admin-путь): `CreateInviteAsync` (хеш токена в БД), `CompleteInviteAsync` (резолв по `tokenHash`, создание пользователя + пометка инвайта использованным одной операцией).

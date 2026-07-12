@@ -18,7 +18,7 @@ public sealed class AuthAccountApplicationService(
     ILogger<AuthAccountApplicationService>? logger = null)
 {
     private const int DefaultPageSize = 1000;
-    private const int MinPasswordLength = 12;
+    private const int MinPasswordLength = 8;
 
     public async Task<CreatedInvite> CreateInviteAsync(
         string email,

@@ -20,7 +20,7 @@ public sealed class GrpcAuthServiceTests
             repo,
             CreateAccounts(),
             CreateLoginService(),
-            new GoogleAuthService(repo, new SecretGenerator()),
+            new ExternalLoginService(repo, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_test" }, context: null!);
@@ -41,7 +41,7 @@ public sealed class GrpcAuthServiceTests
             repo2,
             CreateAccounts(),
             CreateLoginService(),
-            new GoogleAuthService(repo2, new SecretGenerator()),
+            new ExternalLoginService(repo2, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_bad" }, context: null!);
@@ -58,7 +58,7 @@ public sealed class GrpcAuthServiceTests
     {
         var accounts = CreateAccounts();
         var sharedRepo = new InMemoryAuthRepository();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), sharedRepo, accounts, CreateLoginService(), new GoogleAuthService(sharedRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), sharedRepo, accounts, CreateLoginService(), new ExternalLoginService(sharedRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
 
         var invite = await service.CreateInvite(new CreateInviteRequest
         {
@@ -101,7 +101,7 @@ public sealed class GrpcAuthServiceTests
     {
         var accounts = CreateAccounts();
         var invalidRoleRepo = new InMemoryAuthRepository();
-        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), invalidRoleRepo, accounts, CreateLoginService(), new GoogleAuthService(invalidRoleRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
+        var service = new GrpcAuthService(new StubValidator(new ValidateApiKeyResult(false, null, null, null, "unused")), invalidRoleRepo, accounts, CreateLoginService(), new ExternalLoginService(invalidRoleRepo, new SecretGenerator()), NullLogger<GrpcAuthService>.Instance);
 
         var response = await service.CreateInvite(new CreateInviteRequest
         {
@@ -292,7 +292,7 @@ public sealed class GrpcAuthServiceTests
             repo,
             accounts,
             new LoginService(new Pbkdf2PasswordHasher(), secretGenerator),
-            new GoogleAuthService(repo, secretGenerator),
+            new ExternalLoginService(repo, secretGenerator),
             NullLogger<GrpcAuthService>.Instance);
         return (service, repo);
     }

@@ -120,7 +120,7 @@ public sealed class DisplayCurrencyTests
             repo,
             accounts,
             new LoginService(new Pbkdf2PasswordHasher(), secretGenerator),
-            new GoogleAuthService(repo, secretGenerator),
+            new ExternalLoginService(repo, secretGenerator),
             NullLogger<GrpcAuthService>.Instance);
         return (service, repo);
     }

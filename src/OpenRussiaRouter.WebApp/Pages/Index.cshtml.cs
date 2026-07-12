@@ -14,6 +14,13 @@ public class IndexModel : PageModelBase
     public bool HasApiKey { get; set; }
     public IReadOnlyList<ProviderInfo> Providers { get; private set; } = [];
 
+    public bool StartBalanceEnabled { get; set; }
+    public decimal StartBalanceAmountUsd { get; set; }
+    public bool FirstTopUpEnabled { get; set; }
+    public decimal FirstTopUpPercent { get; set; }
+    public bool HasPaidTopUp { get; set; }
+    public bool FirstTopUpBonusAvailable { get; set; }
+
     public IndexModel(BillingProvider billingProvider, AuthProvider authProvider)
     {
         _billingProvider = billingProvider;
@@ -31,6 +38,16 @@ public class IndexModel : PageModelBase
             // Ignore — fallback to empty strip
         }
 
+        try
+        {
+            (StartBalanceEnabled, StartBalanceAmountUsd, FirstTopUpEnabled, FirstTopUpPercent) =
+                await _billingProvider.GetPromotionSettingsAsync(HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Ignore — promo blocks hidden on error
+        }
+
         var user = CurrentUser;
         if (user != null)
         {
@@ -41,6 +58,9 @@ public class IndexModel : PageModelBase
 
                 var keys = await _authProvider.ListApiKeysAsync(user.UserId);
                 HasApiKey = keys.Count > 0;
+
+                HasPaidTopUp = await _billingProvider.HasUserHadPaidTopUpAsync(user.UserId, HttpContext.RequestAborted);
+                FirstTopUpBonusAvailable = FirstTopUpEnabled && !HasPaidTopUp;
             }
             catch 
             {

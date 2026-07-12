@@ -90,6 +90,7 @@ public sealed class PaymentFlowIntegrationTests
             decimal displayAmount,
             string displayCurrency,
             string clientToken,
+            decimal? bonusPercent = null,
             CancellationToken cancellationToken = default)
         {
             _paymentId ??= "pay-integration-1";

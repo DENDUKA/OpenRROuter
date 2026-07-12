@@ -47,3 +47,35 @@
         </form>
     </div>
 </div>
+
+<div class="adm-card">
+    <div class="adm-card-header">Promotions</div>
+    <div class="adm-card-body">
+        <form method="post" asp-page-handler="SavePromo">
+            <h5>Start Balance (after email verification)</h5>
+            <div class="form-group form-check">
+                <input asp-for="StartBalanceEnabled" class="form-check-input" />
+                <label asp-for="StartBalanceEnabled" class="form-check-label">Enabled</label>
+            </div>
+            <div class="form-group">
+                <label asp-for="StartBalanceAmountUsd" class="form-label">Amount (USD)</label>
+                <input asp-for="StartBalanceAmountUsd" class="form-control" type="number" step="0.01" min="0.01" max="100" />
+            </div>
+
+            <hr />
+            <h5>First Top-Up Bonus</h5>
+            <div class="form-group form-check">
+                <input asp-for="FirstTopUpEnabled" class="form-check-input" />
+                <label asp-for="FirstTopUpEnabled" class="form-check-label">Enabled</label>
+            </div>
+            <div class="form-group">
+                <label asp-for="FirstTopUpPercent" class="form-label">Bonus Percent (%)</label>
+                <input asp-for="FirstTopUpPercent" class="form-control" type="number" step="0.01" min="0.01" max="100" />
+            </div>
+
+            <div class="adm-btn-row">
+                <button type="submit" class="btn btn-primary">Save Promotions</button>
+            </div>
+        </form>
+    </div>
+</div>

@@ -45,6 +45,8 @@ public class CreditsModel(
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public decimal MinTopUpUsd => paymentSettings.Value.MinTopUpUsd;
+    public bool FirstTopUpBonusAvailable { get; set; }
+    public decimal FirstTopUpBonusPercent { get; set; }
 
     public string FormatAmount(decimal usdAmount)
     {
@@ -134,6 +136,18 @@ public class CreditsModel(
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to load top-ups. UserId={UserId}", userId);
+        }
+
+        try
+        {
+            var (_, _, ftEnabled, ftPercent) = await billingProvider.GetPromotionSettingsAsync();
+            var hasPaidTopUp = await billingProvider.HasUserHadPaidTopUpAsync(userId);
+            FirstTopUpBonusAvailable = ftEnabled && !hasPaidTopUp;
+            FirstTopUpBonusPercent = ftPercent;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load promo settings for credits page. UserId={UserId}", userId);
         }
     }
 }

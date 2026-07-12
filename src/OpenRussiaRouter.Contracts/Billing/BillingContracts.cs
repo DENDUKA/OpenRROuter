@@ -38,3 +38,13 @@ public sealed record UsageEvent(
     string? Endpoint = null,
     bool? Stream = null);
 
+public sealed record GrantStartBalanceResult(bool Granted, string? LedgerEntryId, string? ErrorCode);
+
+public sealed record PromotionSettings(
+    bool StartBalanceEnabled,
+    decimal StartBalanceAmountUsd,
+    bool FirstTopUpEnabled,
+    decimal FirstTopUpPercent);
+
+public sealed record GrantFirstTopUpBonusResult(bool Granted, string? LedgerEntryId, string? ErrorCode);
+

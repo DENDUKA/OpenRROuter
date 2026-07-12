@@ -974,6 +974,58 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
+    public async Task<string?> HasPromo1EntryAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        return await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "select id from billing.ledger_entries where user_id = @UserId and idempotency_key = @Key limit 1;",
+            new { UserId = userId, Key = $"promo1:{userId}" },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var count = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            select count(*) from billing.ledger_entries
+            where user_id = @UserId and type = 'ExternalTopUp'
+                and idempotency_key not like 'promo1:%';
+            """,
+            new { UserId = userId },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return count > 0;
+    }
+
+    public async Task<bool> HasFirstTopUpBonusEntryAsync(string paymentId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var id = await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+            "select id from billing.ledger_entries where idempotency_key = @Key limit 1;",
+            new { Key = $"first_top_up_bonus:{paymentId}" },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return id is not null;
+    }
+
+    public async Task UpdatePaymentBonusAsync(string paymentId, decimal bonusPercent, decimal bonusUsd, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            "update billing.payments set bonus_percent = @Percent, bonus_usd = @Usd, updated_at_utc = now() where id = @Id;",
+            new { Id = paymentId, Percent = bonusPercent, Usd = bonusUsd },
+            cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<(string? LedgerEntryId, decimal Amount)?> GetFirstTopUpBonusForPaymentAsync(string paymentId, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var row = await connection.QuerySingleOrDefaultAsync<(string Id, decimal Amount)?>(new CommandDefinition(
+            "select id, amount from billing.ledger_entries where idempotency_key = @Key limit 1;",
+            new { Key = $"first_top_up_bonus:{paymentId}" },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return row.HasValue ? (row.Value.Id, row.Value.Amount) : null;
+    }
+
     public async Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -984,13 +1036,13 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 display_amount, display_currency, provider_amount, provider_currency,
                 credited_usd_amount, fx_rate, fx_source, fx_at_utc, status, cancel_reason,
                 lease_owner, lease_until_utc, created_at_utc, updated_at_utc, expires_at_utc,
-                confirmed_at_utc, canceled_at_utc)
+                confirmed_at_utc, canceled_at_utc, bonus_percent, bonus_usd)
             values (
                 @Id, @UserId, @ClientToken, @Provider, @ProviderPaymentId, @OrderId,
                 @DisplayAmount, @DisplayCurrency, @ProviderAmount, @ProviderCurrency,
                 @CreditedUsdAmount, @FxRate, @FxSource, @FxAtUtc, @Status, @CancelReason,
                 @LeaseOwner, @LeaseUntilUtc, @CreatedAtUtc, @UpdatedAtUtc, @ExpiresAtUtc,
-                @ConfirmedAtUtc, @CanceledAtUtc)
+                @ConfirmedAtUtc, @CanceledAtUtc, @BonusPercent, @BonusUsd)
             on conflict (user_id, client_token) do nothing;
             """,
             PaymentParameters(payment), cancellationToken: ct)).ConfigureAwait(false);
@@ -1251,6 +1303,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
             ledgerId = await InsertLedgerAsync(connection, transaction, updated, prefix, LedgerEntryType.Correction,
                 -updated.CreditedUsdAmount, nowUtc, ct).ConfigureAwait(false);
+
+            // Reverse first top-up bonus if it exists
+            var bonusKey = $"first_top_up_bonus:{eventRow.PaymentId}";
+            var bonusAmount = await connection.ExecuteScalarAsync<decimal?>(new CommandDefinition(
+                "select amount from billing.ledger_entries where idempotency_key=@Key limit 1;",
+                new { Key = bonusKey }, transaction, cancellationToken: ct)).ConfigureAwait(false);
+            if (bonusAmount.HasValue && bonusAmount.Value != 0)
+            {
+                await InsertLedgerAsync(connection, transaction, updated, "refund_bonus",
+                    LedgerEntryType.Correction, -bonusAmount.Value, nowUtc, ct).ConfigureAwait(false);
+            }
         }
 
         await MarkEventProcessedAsync(connection, transaction, eventRow.Id, nowUtc, ct).ConfigureAwait(false);
@@ -1369,7 +1432,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         CreditedUsdAmount = payment.CreditedUsd.Amount, payment.FxRate, payment.FxSource, payment.FxAtUtc,
         Status = payment.Status.ToString(), payment.CancelReason, payment.LeaseOwner, payment.LeaseUntilUtc,
         payment.CreatedAtUtc, payment.UpdatedAtUtc, payment.ExpiresAtUtc, payment.ConfirmedAtUtc, payment.CanceledAtUtc,
-        payment.PayUrl
+        payment.PayUrl, payment.BonusPercent, payment.BonusUsd
     };
 
     private const string LedgerEntrySelectSql = """
@@ -1471,7 +1534,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             credited_usd_amount as CreditedUsdAmount, fx_rate as FxRate, fx_source as FxSource, fx_at_utc as FxAtUtc,
             status as Status, cancel_reason as CancelReason, pay_url as PayUrl, lease_owner as LeaseOwner, lease_until_utc as LeaseUntilUtc,
             created_at_utc as CreatedAtUtc, updated_at_utc as UpdatedAtUtc, expires_at_utc as ExpiresAtUtc,
-            confirmed_at_utc as ConfirmedAtUtc, canceled_at_utc as CanceledAtUtc
+            confirmed_at_utc as ConfirmedAtUtc, canceled_at_utc as CanceledAtUtc,
+            bonus_percent as BonusPercent, bonus_usd as BonusUsd
         from billing.payments
 
         """;

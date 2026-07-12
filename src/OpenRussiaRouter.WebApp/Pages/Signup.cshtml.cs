@@ -4,12 +4,14 @@ using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Billing;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class SignupModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
+    private readonly BillingProvider _billingProvider;
     private readonly IEmailDispatchQueue _emailQueue;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<SignupModel> _logger;
@@ -18,19 +20,32 @@ public class SignupModel : PageModelBase
     public InputModel Input { get; set; } = new();
 
     public string? ErrorMessage { get; set; }
+    public bool StartBalanceEnabled { get; set; }
+    public decimal StartBalanceAmountUsd { get; set; }
 
-    public SignupModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<SignupModel> logger)
+    public SignupModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<SignupModel> logger)
     {
         _authClient = authProvider;
+        _billingProvider = billingProvider;
         _emailQueue = emailQueue;
         _localizer = localizer;
         _logger = logger;
     }
 
-    public IActionResult OnGet()
+    public async Task<IActionResult> OnGetAsync()
     {
         if (User.Identity?.IsAuthenticated == true)
             return RedirectToPage("/Workspace/ApiKeys");
+
+        try
+        {
+            (StartBalanceEnabled, StartBalanceAmountUsd, _, _) =
+                await _billingProvider.GetPromotionSettingsAsync(HttpContext.RequestAborted);
+        }
+        catch
+        {
+            // Promo display is best-effort
+        }
 
         return Page();
     }

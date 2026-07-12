@@ -31,6 +31,12 @@
 <div class="ws-panel">
     <div class="ws-panel-header">@Localizer["Credits_TopUpHeader"]</div>
     <div class="ws-panel-body">
+        @if (Model.FirstTopUpBonusAvailable)
+        {
+            <div class="alert alert-info" style="font-size: 13px; margin-bottom: var(--spacing-md);">
+                Первое пополнение получает бонус <strong>+@Model.FirstTopUpBonusPercent%</strong> к сумме.
+            </div>
+        }
         <form method="post" asp-page-handler="TopUp">
             <div class="mb-3 d-flex gap-2 align-items-end">
                 <div>

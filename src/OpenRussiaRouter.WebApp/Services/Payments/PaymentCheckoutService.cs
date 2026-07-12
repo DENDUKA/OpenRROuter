@@ -98,6 +98,32 @@ public sealed class PaymentCheckoutService
         var providerCurrency = displayCurrency;
         var providerAmount = displayAmount;
 
+        // Determine if first top-up bonus applies
+        decimal? bonusPercent = null;
+        try
+        {
+            var bonusEnabledRaw = await _billing.GetPlatformSettingAsync(
+                PlatformSettingKeys.PromotionsFirstTopUpEnabled, ct);
+            if (bool.TryParse(bonusEnabledRaw, out var bonusEnabled) && bonusEnabled)
+            {
+                var hasPaidBefore = await _billing.HasUserHadPaidTopUpAsync(userId, ct);
+                if (!hasPaidBefore)
+                {
+                    var percentRaw = await _billing.GetPlatformSettingAsync(
+                        PlatformSettingKeys.PromotionsFirstTopUpPercent, ct);
+                    if (decimal.TryParse(percentRaw, System.Globalization.NumberStyles.Number,
+                        System.Globalization.CultureInfo.InvariantCulture, out var pct) && pct > 0)
+                    {
+                        bonusPercent = pct;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load first top-up bonus setting. UserId={UserId}", userId);
+        }
+
         // 1) Create the payment row in Billing. Billing computes credited_usd from its trusted
         //    FX quote — WebApp never sends a USD amount.
         var created = await _billing.CreatePaymentAsync(
@@ -108,6 +134,7 @@ public sealed class PaymentCheckoutService
             displayAmount,
             displayCurrency,
             clientToken,
+            bonusPercent,
             ct);
 
         // 2) Create the payment at the provider. Pass the internal payment_id as order_id so

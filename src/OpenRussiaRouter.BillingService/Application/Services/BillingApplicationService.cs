@@ -21,6 +21,7 @@ public sealed partial class BillingApplicationService(
     IOptions<PaymentOptions>? paymentOptions = null,
     IProductAnalytics? productAnalytics = null)
 {
+    public IBillingRepository Repository => repository;
     public async Task<LedgerEntry> CreateVirtualTopUpAsync(
         string adminId,
         string userId,
@@ -516,6 +517,7 @@ public sealed partial class BillingApplicationService(
         string displayCurrency,
         string clientToken,
         DateTimeOffset nowUtc,
+        decimal? bonusPercent = null,
         CancellationToken ct = default)
     {
         if (providerAmount <= 0 || displayAmount <= 0)
@@ -551,7 +553,9 @@ public sealed partial class BillingApplicationService(
             nowUtc,
             null,
             null,
-            null), ct).ConfigureAwait(false);
+            null,
+            null,
+            bonusPercent), ct).ConfigureAwait(false);
     }
 
     public async Task AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default)
@@ -699,6 +703,67 @@ public sealed partial class BillingApplicationService(
                     usageEvent.RequestId,
                     endpoint,
                     usageEvent.Stream)));
+    }
+
+    public async Task<GrantStartBalanceResult> GrantStartBalanceAsync(
+        string userId, decimal amountUsd, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        _ = Preconditions.RequireValue(userId, nameof(userId));
+        if (amountUsd <= 0 || amountUsd > 100)
+            return new GrantStartBalanceResult(false, null, "invalid_amount");
+
+        var existing = await repository.HasPromo1EntryAsync(userId, ct).ConfigureAwait(false);
+        if (existing is not null)
+            return new GrantStartBalanceResult(false, existing, null);
+
+        var entry = await repository.AddLedgerEntryAsync(new LedgerEntry(
+            Guid.NewGuid().ToString("N"),
+            userId,
+            LedgerEntryType.Promo1,
+            MoneyAmount.Usd(amountUsd),
+            $"promo1:{userId}",
+            $"Start balance promo ${amountUsd:F2}",
+            nowUtc), ct).ConfigureAwait(false);
+
+        return new GrantStartBalanceResult(true, entry.Id, null);
+    }
+
+    public async Task<GrantFirstTopUpBonusResult> GrantFirstTopUpBonusAsync(
+        string paymentId, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        _ = Preconditions.RequireValue(paymentId, nameof(paymentId));
+
+        var payment = await repository.GetPaymentAsync(paymentId, ct).ConfigureAwait(false);
+        if (payment is null)
+            return new GrantFirstTopUpBonusResult(false, null, "payment_not_found");
+
+        if (payment.Status != PaymentStatus.Paid)
+            return new GrantFirstTopUpBonusResult(false, null, "payment_not_paid");
+
+        if (payment.BonusPercent is null || payment.BonusPercent <= 0)
+            return new GrantFirstTopUpBonusResult(false, null, "no_bonus_snapshot");
+
+        var existing = await repository.HasFirstTopUpBonusEntryAsync(paymentId, ct).ConfigureAwait(false);
+        if (existing)
+            return new GrantFirstTopUpBonusResult(false, null, null);
+
+        var hasPaidBefore = await repository.HasUserHadPaidTopUpAsync(payment.UserId, ct).ConfigureAwait(false);
+        if (hasPaidBefore)
+            return new GrantFirstTopUpBonusResult(false, null, "not_first_paid_top_up");
+
+        var bonusUsd = payment.CreditedUsd.Amount * payment.BonusPercent.Value / 100m;
+        var entry = await repository.AddLedgerEntryAsync(new LedgerEntry(
+            Guid.NewGuid().ToString("N"),
+            payment.UserId,
+            LedgerEntryType.FirstTopUpBonus,
+            MoneyAmount.Usd(bonusUsd),
+            $"first_top_up_bonus:{paymentId}",
+            $"First top-up bonus {payment.BonusPercent}% on payment {paymentId}",
+            nowUtc), ct).ConfigureAwait(false);
+
+        await repository.UpdatePaymentBonusAsync(paymentId, payment.BonusPercent.Value, bonusUsd, ct).ConfigureAwait(false);
+
+        return new GrantFirstTopUpBonusResult(true, entry.Id, null);
     }
 
     private static int MapStatusToStatusCode(string? status)

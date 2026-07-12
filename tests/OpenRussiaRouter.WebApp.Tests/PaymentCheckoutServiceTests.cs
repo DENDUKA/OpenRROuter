@@ -31,6 +31,7 @@ internal sealed class CheckoutFakeBilling : BillingProvider
         decimal providerAmount, string providerCurrency,
         decimal displayAmount, string displayCurrency,
         string clientToken,
+        decimal? bonusPercent = null,
         CancellationToken cancellationToken = default)
     {
         CreateCalls++;

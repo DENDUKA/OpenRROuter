@@ -94,21 +94,20 @@
                 {
                     <table class="table act-summary-table">
                         <colgroup>
-                            <col class="col-text" /><col class="col-text" /><col class="col-num" /><col class="col-num" /><col class="col-num" /><col class="col-num" /><col class="col-num" />
+                            <col class="col-text" /><col class="col-num" /><col class="col-num" /><col class="col-num" /><col class="col-num" /><col class="col-num" />
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>@Localizer["Activity_Th_KeyName"]</th><th>@Localizer["Activity_Th_Key"]</th><th class="num">@Localizer["Activity_Th_Requests"]</th><th class="num">@Localizer["Activity_Th_Input"]</th><th class="num">@Localizer["Activity_Th_Output"]</th><th class="num">@Localizer["Activity_Th_Cache"]</th><th class="num">@Localizer["Activity_Th_Cost"]</th>
+                                <th>@Localizer["Activity_Th_Key"]</th><th class="num">@Localizer["Activity_Th_Requests"]</th><th class="num">@Localizer["Activity_Th_Input"]</th><th class="num">@Localizer["Activity_Th_Output"]</th><th class="num">@Localizer["Activity_Th_Cache"]</th><th class="num">@Localizer["Activity_Th_Cost"]</th>
                             </tr>
                         </thead>
                         <tbody>
                             @{ var keyNames = Model.ApiKeys.ToDictionary(a => a.Id, a => a.Name); }
                             @foreach (var k in Model.Summary.Keys)
                             {
-                                var keyName = keyNames.TryGetValue(k.ApiKeyId, out var name) ? name : k.ApiKeyPrefix;
+                                var keyName = keyNames.TryGetValue(k.ApiKeyId, out var name) ? name : null;
                                 <tr>
-                                    <td>@keyName</td>
-                                    <td><code>@($"{k.ApiKeyPrefix}***")</code></td>
+                                    <td><code>@($"{k.ApiKeyPrefix}***")</code>@if (keyName != null){<text> (@keyName)</text>}</td>
                                     <td class="num">@k.Requests.ToString("N0")</td>
                                     <td class="num">@k.InputTokens.ToString("N0")</td>
                                     <td class="num">@k.OutputTokens.ToString("N0")</td>
@@ -206,11 +205,13 @@ else
                         </tr>
                     </thead>
                     <tbody>
+                        @{ var keyNames = Model.ApiKeys.ToDictionary(a => a.Id, a => a.Name); }
                         @foreach (var r in Model.Activity)
                         {
+                            var keyName = keyNames.TryGetValue(r.ApiKeyId, out var name) ? name : null;
                             <tr>
                                 <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
-                                <td><code>@($"{r.ApiKeyPrefix}***")</code></td>
+                                <td><code>@($"{r.ApiKeyPrefix}***")</code>@if (keyName != null){<text> (@keyName)</text>}</td>
                                 <td><code>@r.ModelId</code></td>
                                 <td class="num">@r.InputTokens.ToString("N0")</td>
                                 <td class="num">@r.OutputTokens.ToString("N0")</td>

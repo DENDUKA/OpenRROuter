@@ -260,4 +260,7 @@
   <data name="Support_Error" xml:space="preserve">
     <value>Не удалось отправить сообщение. Попробуйте ещё раз позже.</value>
   </data>
+  <data name="Login_Yandex" xml:space="preserve">
+    <value>Войти через Яндекс</value>
+  </data>
 </root>

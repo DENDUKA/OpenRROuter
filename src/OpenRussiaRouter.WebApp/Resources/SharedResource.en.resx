@@ -260,4 +260,7 @@
   <data name="Support_Error" xml:space="preserve">
     <value>We couldn't send your message. Please try again later.</value>
   </data>
+  <data name="Login_Yandex" xml:space="preserve">
+    <value>Sign in with Yandex</value>
+  </data>
 </root>

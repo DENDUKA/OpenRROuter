@@ -92,7 +92,7 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
         options.SignInScheme = "External";
         options.ClientId = yandexClientId;
         options.ClientSecret = yandexClientSecret;
-        options.CallbackPath = "/signin-yandex";
+        options.CallbackPath = "/OAuth-yandex";
         options.Scope.Add("login");
     });
 }

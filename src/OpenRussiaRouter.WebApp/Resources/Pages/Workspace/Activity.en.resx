@@ -125,6 +125,9 @@
   <data name="Activity_Th_Key" xml:space="preserve">
     <value>Key</value>
   </data>
+  <data name="Activity_Th_KeyName" xml:space="preserve">
+    <value>API Key Name</value>
+  </data>
   <data name="Activity_Th_Model" xml:space="preserve">
     <value>Model</value>
   </data>

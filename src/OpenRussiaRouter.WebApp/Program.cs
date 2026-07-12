@@ -22,6 +22,7 @@ using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
@@ -81,6 +82,20 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     });
 }
 
+// Register Yandex external login only when credentials are configured.
+var yandexClientId = builder.Configuration["Yandex:ClientId"];
+var yandexClientSecret = builder.Configuration["Yandex:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yandexClientSecret))
+{
+    authenticationBuilder.AddYandex(options =>
+    {
+        options.SignInScheme = "External";
+        options.ClientId = yandexClientId;
+        options.ClientSecret = yandexClientSecret;
+        options.CallbackPath = "/signin-yandex";
+        options.Scope.Add("login");
+    });
+}
 
 builder.Services.AddAuthorization();
 

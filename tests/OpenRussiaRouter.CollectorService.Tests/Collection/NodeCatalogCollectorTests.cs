@@ -94,6 +94,38 @@ public class NodeCatalogCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_PrioritizesDedicatedComboConnection()
+    {
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProvidersWithModelsResponse
+            {
+                Connections =
+                [
+                    new NodeProviderWithModels
+                    {
+                        Id = "ocg", Provider = "openai-compatible", IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "deepseek-v4-flash", PublicId = "ocg/deepseek-v4-flash", Enabled = true }]
+                    },
+                    new NodeProviderWithModels
+                    {
+                        Id = "__combos__", Provider = "combo", IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "deepseek-v4-flash", PublicId = "deepseek-v4-flash", Enabled = true }]
+                    }
+                ]
+            });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
+
+        var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
+        var catalog = CatalogProjection.Catalog(new CollectorSnapshot([result], DateTimeOffset.UtcNow));
+
+        catalog.Should().ContainSingle(entry =>
+            entry.UpstreamId == "deepseek-v4-flash" &&
+            entry.PublicId == "deepseek-v4-flash");
+    }
+
+    [Fact]
     public async Task CollectAsync_KeepsProviderCatalog_WhenComboEndpointFails()
     {
         var client = new Mock<INodeAdminClient>();

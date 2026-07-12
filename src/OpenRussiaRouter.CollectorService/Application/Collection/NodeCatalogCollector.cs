@@ -53,7 +53,10 @@ public sealed class NodeCatalogCollector(
                     DisplayName = model.Name ?? string.Empty,
                     ModelType = model.Type ?? string.Empty,
                     SourceProviders = model.Sources ?? [],
-                    Rank = 2,
+                    // A combo alias can share its upstream id with a provider model.
+                    // Give the dedicated combo connection higher precedence so the
+                    // catalog exposes the routable alias rather than a direct route.
+                    Rank = string.Equals(connection.Provider, "combo", StringComparison.OrdinalIgnoreCase) ? 3 : 2,
                     ConnectionId = connection.Id,
                     Provider = string.IsNullOrWhiteSpace(connection.Provider) ? string.Empty : connection.Provider,
                     SupportsReasoning = model.Caps?.Reasoning ?? false,

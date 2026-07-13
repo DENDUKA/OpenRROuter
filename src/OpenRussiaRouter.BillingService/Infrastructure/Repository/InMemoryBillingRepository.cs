@@ -26,7 +26,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         var items = _ledgerByIdempotencyKey.Values
-            .Where(e => e.UserId == userId && e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp)
+            .Where(e => e.UserId == userId && e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp or LedgerEntryType.Promo1)
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
             .Take(limit + 1)

@@ -16,7 +16,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var items = (await connection.QueryAsync<LedgerEntryEntity>(new CommandDefinition(
                 LedgerEntrySelectSql +
                 """
-                where user_id = @UserId and type in ('VirtualTopUp','ExternalTopUp')
+                where user_id = @UserId and type in ('VirtualTopUp','ExternalTopUp','Promo1')
                 order by created_at_utc desc, id desc
                 limit @Limit;
                 """,

@@ -68,7 +68,9 @@
                 </div>
                 <span asp-validation-for="AcceptLegal" class="validation-message"></span>
             </div>
-            <p class="text-muted" style="font-size: 13px;">@Localizer["Credits_MinTopUp", Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
+            @* Show the limit in the user's own currency first: it is enforced in USD, so someone
+               typing rubles cannot tell from "$1.00" that 50 ₽ will bounce. *@
+            <p class="text-muted" style="font-size: 13px;">@Localizer["Credits_MinTopUp", Model.FormatAmount(Model.MinTopUpUsd), Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
         </form>
     </div>
 </div>

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -45,6 +46,7 @@ public class CreditsModel(
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public decimal MinTopUpUsd => paymentSettings.Value.MinTopUpUsd;
+    public decimal MaxTopUpUsd => paymentSettings.Value.MaxTopUpUsd;
     public bool FirstTopUpBonusAvailable { get; set; }
     public decimal FirstTopUpBonusPercent { get; set; }
 
@@ -114,8 +116,31 @@ public class CreditsModel(
 
             return Redirect(result.PayUrl);
         }
+        catch (BillingException ex)
+        {
+            // Billing owns the authoritative limits and the FX quote, so it is the only place that
+            // knows WHY a checkout was refused. Surface that reason instead of a blanket "try again"
+            // the user can only respond to by trying the same amount again.
+            _logger.LogWarning(ex,
+                "Checkout rejected by billing: {ErrorCode}. UserId={UserId} amount={Amount} {Currency}",
+                ex.ErrorCode, userId, topUpAmount, SelectedCurrency);
+            await LoadDataAsync(userId);
+            ErrorMessage = ex.ErrorCode switch
+            {
+                // Limits are enforced in USD, so quote them in the user's own currency — "$1.00"
+                // means nothing to someone typing rubles.
+                ErrorCodes.PaymentAmountOutOfRange =>
+                    _localizer["Credits_AmountOutOfRange", FormatAmount(MinTopUpUsd), FormatAmount(MaxTopUpUsd)],
+                ErrorCodes.UnsupportedCurrency => _localizer["Credits_InvalidCurrency"],
+                ErrorCodes.FxQuoteUnavailable => _localizer["Credits_FxUnavailable"],
+                _ => _localizer["Credits_CheckoutFailed"],
+            };
+            return Page();
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            // Provider-side failures land here. Stay provider-agnostic: this page must not know
+            // which aggregator is active.
             _logger.LogWarning(ex, "Checkout failed. UserId={UserId}", userId);
             await LoadDataAsync(userId);
             ErrorMessage = _localizer["Credits_CheckoutFailed"];

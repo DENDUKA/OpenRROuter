@@ -20,8 +20,11 @@ public class PaymentStartupGuardTests
     }
 
     private static IServiceProvider BuildServiceProvider(string activeProvider, params IPaymentProvider[] providers)
+        => BuildServiceProvider(new PaymentSettings { ActiveProvider = activeProvider }, providers);
+
+    private static IServiceProvider BuildServiceProvider(PaymentSettings paymentSettings, params IPaymentProvider[] providers)
     {
-        var settings = Options.Create(new PaymentSettings { ActiveProvider = activeProvider });
+        var settings = Options.Create(paymentSettings);
         var services = new ServiceCollection();
         services.AddSingleton(settings);
         // Always register the registry — even with zero providers — so the guard can ask it
@@ -81,6 +84,39 @@ public class PaymentStartupGuardTests
     {
         var env = new TestEnv { EnvironmentName = "Production" };
         var sp = BuildServiceProvider(activeProvider: "rollypay", new StubProvider("rollypay"));
+
+        var act = () => PaymentStartupGuard.Validate(sp, env);
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Production_with_rollypay_test_mode_throws()
+    {
+        var env = new TestEnv { EnvironmentName = "Production" };
+        var sp = BuildServiceProvider(
+            new PaymentSettings
+            {
+                ActiveProvider = "rollypay",
+                Rollypay = new RollypaySettings { TestMode = true },
+            },
+            new StubProvider("rollypay"));
+
+        var act = () => PaymentStartupGuard.Validate(sp, env);
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*TestMode*");
+    }
+
+    [Fact]
+    public void Dev_environment_allows_rollypay_test_mode()
+    {
+        var env = new TestEnv { EnvironmentName = "Development" };
+        var sp = BuildServiceProvider(
+            new PaymentSettings
+            {
+                ActiveProvider = "rollypay",
+                Rollypay = new RollypaySettings { TestMode = true },
+            },
+            new StubProvider("rollypay"));
 
         var act = () => PaymentStartupGuard.Validate(sp, env);
         act.Should().NotThrow();

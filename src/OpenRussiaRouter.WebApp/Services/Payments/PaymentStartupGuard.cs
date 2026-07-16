@@ -51,5 +51,15 @@ public static class PaymentStartupGuard
                 $"Payments:ActiveProvider='{active}' is not registered. " +
                 $"Known providers: {string.Join(", ", registry.RegisteredNames)}.");
         }
+
+        // A Rollypay test payment never moves money, but Billing still credits real USD when the
+        // (genuinely signed) test webhook arrives — so leaving this on in Production hands out free
+        // balance to anyone who reaches checkout.
+        if (string.Equals(active, "rollypay", StringComparison.OrdinalIgnoreCase) && settings.Rollypay.TestMode)
+        {
+            throw new InvalidOperationException(
+                "Payments:Rollypay:TestMode=true is forbidden in Production — test payments cost " +
+                "nothing but are still credited as real balance. Use it only in dev/staging.");
+        }
     }
 }

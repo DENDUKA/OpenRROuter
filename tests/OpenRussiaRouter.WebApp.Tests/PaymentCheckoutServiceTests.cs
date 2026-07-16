@@ -26,6 +26,28 @@ internal sealed class CheckoutFakeBilling : BillingProvider
     public bool ThrowOnAttach { get; set; }
     public bool ThrowOnCreate { get; set; }
 
+    /// <summary>Units per 1 USD, keyed by currency — mirrors BillingService's quote semantics.</summary>
+    public Dictionary<string, decimal> Rates { get; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["USD"] = 1m,
+        ["RUB"] = 100m,
+        ["EUR"] = 0.5m,
+    };
+
+    public List<string> FxQuoteCalls { get; } = new();
+
+    public override Task<(decimal Rate, string FxSource, DateTimeOffset FxAt, string? QuoteId)> GetFxQuoteAsync(
+        string providerCurrency,
+        CancellationToken cancellationToken = default)
+    {
+        FxQuoteCalls.Add(providerCurrency);
+        if (!Rates.TryGetValue(providerCurrency, out var rate))
+        {
+            throw new BillingException("UnsupportedCurrency");
+        }
+        return Task.FromResult((rate, "test", DateTimeOffset.UnixEpoch, (string?)"test-quote"));
+    }
+
     public override Task<CreatedPaymentInfo> CreatePaymentAsync(
         string userId, string provider,
         decimal providerAmount, string providerCurrency,
@@ -112,6 +134,88 @@ public class PaymentCheckoutServiceTests
         billing.LastCreate!.Value.provider.Should().Be("mock");
         billing.LastCreate!.Value.providerAmount.Should().Be(10m);
         billing.LastCreate!.Value.providerCurrency.Should().Be("USD");
+    }
+
+    [Fact]
+    public async Task CreateAsync_converts_display_currency_into_provider_settlement_currency()
+    {
+        var billing = new CheckoutFakeBilling();
+        // An СБП aggregator: charges rubles only, whatever the user picked.
+        var svc = CreateService(billing, "sbp", new StubProvider("sbp", settlementCurrency: "RUB"));
+
+        var result = await svc.CreateAsync(
+            "user-1", displayAmount: 10m, displayCurrency: "USD",
+            providerName: null, clientToken: "t", CancellationToken.None);
+
+        // 10 USD at 100 RUB/USD — Billing must record what the provider will actually charge.
+        var c = billing.LastCreate!.Value;
+        c.providerAmount.Should().Be(1000m);
+        c.providerCurrency.Should().Be("RUB");
+        // The display leg is preserved untouched for the user-facing history.
+        c.displayAmount.Should().Be(10m);
+        c.displayCurrency.Should().Be("USD");
+        result.ProviderAmount.Should().Be(1000m);
+        result.ProviderCurrency.Should().Be("RUB");
+    }
+
+    [Fact]
+    public async Task CreateAsync_converts_across_two_non_usd_currencies()
+    {
+        var billing = new CheckoutFakeBilling();
+        var svc = CreateService(billing, "sbp", new StubProvider("sbp", settlementCurrency: "RUB"));
+
+        await svc.CreateAsync(
+            "user-1", displayAmount: 20m, displayCurrency: "EUR",
+            providerName: null, clientToken: "t", CancellationToken.None);
+
+        // 20 EUR → 40 USD (0.5 EUR per USD) → 4000 RUB.
+        billing.LastCreate!.Value.providerAmount.Should().Be(4000m);
+        billing.LastCreate!.Value.providerCurrency.Should().Be("RUB");
+    }
+
+    [Fact]
+    public async Task CreateAsync_skips_conversion_when_display_already_matches_settlement_currency()
+    {
+        var billing = new CheckoutFakeBilling();
+        var svc = CreateService(billing, "sbp", new StubProvider("sbp", settlementCurrency: "RUB"));
+
+        await svc.CreateAsync(
+            "user-1", displayAmount: 500m, displayCurrency: "rub",
+            providerName: null, clientToken: "t", CancellationToken.None);
+
+        billing.LastCreate!.Value.providerAmount.Should().Be(500m);
+        // No round-trip to Billing for a quote it would only multiply by one.
+        billing.FxQuoteCalls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_leaves_currency_alone_when_provider_pins_none()
+    {
+        var billing = new CheckoutFakeBilling();
+        var svc = CreateService(billing, "mock", new StubProvider("mock"));
+
+        await svc.CreateAsync(
+            "user-1", displayAmount: 10m, displayCurrency: "USD",
+            providerName: null, clientToken: "t", CancellationToken.None);
+
+        billing.LastCreate!.Value.providerAmount.Should().Be(10m);
+        billing.LastCreate!.Value.providerCurrency.Should().Be("USD");
+        billing.FxQuoteCalls.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateAsync_does_not_create_a_payment_when_the_fx_quote_is_unavailable()
+    {
+        var billing = new CheckoutFakeBilling();
+        billing.Rates.Remove("RUB");
+        var svc = CreateService(billing, "sbp", new StubProvider("sbp", settlementCurrency: "RUB"));
+
+        var act = async () => await svc.CreateAsync(
+            "user-1", 10m, "USD", providerName: null, clientToken: "t", CancellationToken.None);
+
+        await act.Should().ThrowAsync<BillingException>();
+        // Conversion happens before CreatePayment, so a bad quote leaves no orphaned row behind.
+        billing.CreateCalls.Should().Be(0);
     }
 
     [Fact]

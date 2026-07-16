@@ -53,9 +53,9 @@ public sealed class PaymentCheckoutService
     /// <param name="ct">Cancellation.</param>
     /// <remarks>
     /// <para>
-    /// <b>Provider currency mapping.</b> Today the provider currency is assumed equal to the
-    /// display currency. For a real SBP aggregator this will need a fixed <c>RUB</c> mapping
-    /// regardless of display — that logic belongs here, not in the UI.
+    /// <b>Provider currency mapping.</b> A provider that pins <see cref="IPaymentProvider.SettlementCurrency"/>
+    /// (an СБП aggregator can only charge rubles) gets the display amount converted into that
+    /// currency via Billing's own FX quote. Otherwise provider currency = display currency.
     /// </para>
     /// </remarks>
     public async Task<CheckoutResult> CreateAsync(
@@ -94,9 +94,25 @@ public sealed class PaymentCheckoutService
                 $"Known: {string.Join(", ", _registry.RegisteredNames)}.");
         }
 
-        // For now provider currency = display currency. Real SBP aggregator will force RUB here.
+        // An СБП aggregator can only charge in rubles, so a provider may pin its settlement currency.
+        // Convert here rather than in the UI: Billing derives credited_usd from provider_amount and
+        // later compares it against the amount the provider confirms by webhook, so the two must be
+        // the same number. A user paying in RUB while Billing recorded USD would be charged, then hit
+        // the payment_amount_mismatch anomaly and never get credited.
         var providerCurrency = displayCurrency;
         var providerAmount = displayAmount;
+
+        var settlementCurrency = provider.SettlementCurrency;
+        if (settlementCurrency is not null &&
+            !string.Equals(settlementCurrency, displayCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            providerAmount = await ConvertAsync(displayAmount, displayCurrency, settlementCurrency, ct);
+            providerCurrency = settlementCurrency;
+
+            _logger.LogInformation(
+                "Checkout converted {DisplayAmount} {DisplayCurrency} to {ProviderAmount} {ProviderCurrency} for provider {Provider}.",
+                displayAmount, displayCurrency, providerAmount, providerCurrency, provider.Name);
+        }
 
         // Determine if first top-up bonus applies
         decimal? bonusPercent = null;
@@ -192,5 +208,50 @@ public sealed class PaymentCheckoutService
             CreditedUsdAmount: created.CreditedUsdAmount,
             ProviderCurrency: providerCurrency,
             ProviderAmount: providerAmount);
+    }
+
+    /// <summary>Convert an amount between two currencies using BillingService's trusted quotes.</summary>
+    /// <remarks>
+    /// <para>Both legs come from Billing rather than the WebApp's CBR snapshot: Billing recomputes
+    /// <c>credited_usd</c> from the converted amount, and a rate that disagreed with its own would
+    /// credit the user something other than what the checkout charged.</para>
+    /// <para>Billing quotes each currency against USD with its FX markup already folded in, so the
+    /// ratio of two quotes cancels the markup out — it stays applied exactly once, when Billing
+    /// credits the payment, instead of being charged twice on a cross-currency top-up.</para>
+    /// </remarks>
+    private async Task<decimal> ConvertAsync(
+        decimal amount,
+        string fromCurrency,
+        string toCurrency,
+        CancellationToken ct)
+    {
+        var fromRate = await UnitsPerUsdAsync(fromCurrency, ct);
+        var toRate = await UnitsPerUsdAsync(toCurrency, ct);
+
+        if (fromRate <= 0 || toRate <= 0)
+        {
+            throw new InvalidOperationException(
+                $"BillingService returned a non-positive FX rate ({fromCurrency}={fromRate}, {toCurrency}={toRate}); " +
+                "refusing to build a checkout amount from it.");
+        }
+
+        // Round to minor units: providers take the amount as a 2-decimal string, and Billing has to
+        // record the exact value it will later be asked to confirm.
+        var converted = decimal.Round(amount * toRate / fromRate, 2, MidpointRounding.AwayFromZero);
+
+        if (converted <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Converting {amount} {fromCurrency} to {toCurrency} rounded down to {converted}.");
+        }
+
+        return converted;
+    }
+
+    /// <summary>Units of <paramref name="currency"/> per 1 USD, per BillingService's quote.</summary>
+    private async Task<decimal> UnitsPerUsdAsync(string currency, CancellationToken ct)
+    {
+        var (rate, _, _, _) = await _billing.GetFxQuoteAsync(currency, ct);
+        return rate;
     }
 }

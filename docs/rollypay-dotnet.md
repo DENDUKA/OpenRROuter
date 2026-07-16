@@ -14,8 +14,10 @@
 
 **Не делает**:
 - Не принимает крипту от пользователей (USDT — только валюта расчётов с вами).
-- Не имеет sandbox. Тестировать **только реальной кассой + минимальной суммой**.
 - Нет официального .NET SDK (есть только Python, Node/PHP по запросу). Пишем тонкий `HttpClient` руками.
+
+> **Обновлено 2026-07-16**: sandbox **есть** — тестовый режим на той же кассе (`"test": true`), см. §2.1.
+> Ранее этот документ утверждал обратное; это было неверно и заставляло гонять смоук реальными деньгами.
 
 **Когда выбирать Rollypay**: нужно автоматическое СБП для физлица/мерчанта, готовы платить ~3% комиссии Rollypay за избавление от ручного админ-подтверждения.
 
@@ -36,7 +38,7 @@ Headers:
 Body:
 {
   "amount": "1500.00",             // строка, не number
-  "payment_currency": "$",       // других пока нет
+  "payment_currency": "RUB",       // других пока нет
   "payment_method": "sbp",         // или "card", "crypto" если включены в кассе
   "order_id": "your-internal-id",  // ваш id, по нему ищете платёж в webhook
   "description": "Заказ #12345",
@@ -64,6 +66,32 @@ Response 200:
 GET https://rollypay.io/api/v1/payments/{payment_id}
 Headers: X-API-Key + X-Nonce
 ```
+
+### 2.1. Тестовый режим (sandbox)
+
+**Отдельного sandbox-хоста и отдельных ключей нет** — тестовый платёж создаётся на **той же кассе**, тем же `X-API-Key`. Включается одним из двух эквивалентных способов:
+
+- поле `"test": true` в теле `POST /api/v1/payments`;
+- заголовок `X-Test-Mode: true`.
+
+Что отличается от боевого платежа:
+
+| | Тестовый платёж |
+| --- | --- |
+| Способ оплаты | Всегда заглушка СБП, независимо от `payment_method` |
+| Деньги / баланс | Не двигаются, баланс не меняется |
+| Лимиты кассы | Не проверяются и не расходуются |
+| Кэшбек RollyCoin | Не начисляется |
+| Отчёты и метрики | Тестовые платежи исключены |
+| Возвраты | Недоступны |
+
+Оплата симулируется вручную: вместо QR на pay-странице показывается баннер с кнопками, под капотом — `POST /public/payments/{token}/simulate` с `"outcome": "paid" | "failed"`. Статусы идут по обычному пути `created → processing → paid/canceled`.
+
+**Вебхуки приходят** — с `"test": true` в теле и заголовком `X-Test-Mode: true`. **Подпись считается точно так же**, как для боевых, поэтому верификатор один и тот же, никаких развилок в коде.
+
+В списке `GET /api/v1/payments` тестовые платежи по умолчанию **скрыты**: `?environment=sandbox` — только тестовые, `?environment=all` — все, без параметра — только боевые.
+
+> ⚠️ **Главная ловушка**: тестовый платёж не стоит ничего, но ваш биллинг зачислит по нему **реальный баланс** — вебхук-то настоящий и подписан валидно. Тестовый режим обязан быть выключен в проде и защищён startup-гвардом (в ORR — `PaymentStartupGuard`).
 
 ### В UI кассы три значения
 
@@ -118,6 +146,7 @@ public class RollypaySettings
     public string ApiKey { get; set; } = string.Empty;        // из UI кассы → Интеграция → API Key
     public string SigningSecret { get; set; } = string.Empty; // из UI кассы → Интеграция → Signing Secret
     public int PaymentTtlMinutes { get; set; } = 30;          // синхронизировать с TTL чека в UI кассы
+    public bool TestMode { get; set; }                        // "test": true — та же касса, без реальных денег (§2.1)
 }
 ```
 
@@ -156,7 +185,7 @@ public sealed class CreateRollypayPaymentRequest
     public string Amount { get; set; } = string.Empty;
 
     [JsonPropertyName("payment_currency")]
-    public string PaymentCurrency { get; set; } = "$";
+    public string PaymentCurrency { get; set; } = "RUB";
 
     [JsonPropertyName("payment_method")]
     public string? PaymentMethod { get; set; } = "sbp";
@@ -175,6 +204,10 @@ public sealed class CreateRollypayPaymentRequest
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, string>? Metadata { get; set; }
+
+    // null → поле не уходит в тело (нужен JsonIgnoreCondition.WhenWritingNull), см. §2.1
+    [JsonPropertyName("test")]
+    public bool? Test { get; set; }
 }
 
 public sealed class RollypayPayment
@@ -445,6 +478,10 @@ namespace YourApp.Services.Rollypay;
 
 public sealed class RollypayWebhookEvent
 {
+    // true у вебхуков тестовых платежей (дублирует заголовок X-Test-Mode). Подпись — как у боевых.
+    [JsonPropertyName("test")]
+    public bool Test { get; set; }
+
     [JsonPropertyName("event_type")]
     public string EventType { get; set; } = string.Empty;
 
@@ -776,7 +813,7 @@ your-domain.com {
 
 2. **`X-Nonce` не уникален per-request**. Anti-replay 10-минутное окно. Если генерите через `DateTime.UtcNow.Ticks` или из seed-pool — поймаете 401 при бурстах. Только `Guid.NewGuid().ToString("D")`.
 
-3. **Sandbox нет**. План тестирования: реальный ключ кассы + минимальный тариф (десятки рублей) + реальный телефон с СБП. Если нужно прогнать webhook-логику без реальной оплаты — re-fire события через их UI/API.
+3. **Тестовый режим = боевая касса с флагом**. Sandbox есть (§2.1), но он не изолирован ключами: те же `api_key`/`signing_secret`, разница только в `"test": true`. Отсюда два симметричных прокола — забыть флаг в dev (спишутся реальные деньги) и забыть выключить его в проде (юзеры получат баланс бесплатно). Флаг должен приходить из конфига, а не из кода, и проверяться на старте.
 
 4. **Status lifecycle забывается**. После `paid` могут прийти `chargeback`/`refunded`. Заранее решите: автоматически снимать подписку или только нотификация админу. Шаблон в §3.8 — нотификация (безопасный дефолт).
 
@@ -830,19 +867,24 @@ your-domain.com {
 - [ ] Минимум тест §3.10 (HMAC golden) скопирован и зелёный.
 - [ ] Юридические документы дополнены шаблоном из граблей §5 #9. `LegalVersion` bump'нут (если есть механизм re-accept).
 - [ ] Конфиг проложен: где живут `ApiKey` + `SigningSecret`, как админ переключает `Enabled` (kill switch без рестарта).
-- [ ] Прогон end-to-end: минимальная оплата реальным телефоном через СБП → в логах `Rollypay webhook received: payment.paid` → `Confirm…` → юзер получил доступ.
+- [ ] `TestMode` проброшен в конфиг и **запрещён в Production** startup-гвардом (§2.1: тестовый платёж бесплатный, но баланс зачислится настоящий).
+- [ ] Прогон end-to-end в тестовом режиме (§7), затем один боевой платёж минимальной суммой с реального телефона.
 
 ---
 
 ## 7. End-to-end smoke test
 
-1. Включить через конфиг: `Rollypay:Enabled=true`.
+Прогоняется **в тестовом режиме, без реальных денег** (§2.1) — реальная оплата нужна только как финальная проверка перед публичным запуском.
+
+1. Включить провайдера и тестовый режим через конфиг (в ORR — `Payments:ActiveProvider=rollypay` + `Payments:Rollypay:TestMode=true`).
 2. Создать платёж через ваш UI (бот / веб).
-3. В логах: `POST /api/v1/payments` → 200 OK → `pay_url` сохранён.
-4. Юзер открывает `pay_url`, оплачивает СБП-QR минимальной суммой.
+3. В логах: `POST /api/v1/payments` → 200 OK → `pay_url` сохранён, в теле ушло `"test":true`.
+4. Открыть `pay_url` — вместо QR будет баннер тестового режима с кнопкой симуляции. Нажать «оплачено».
 5. В логах: `Rollypay webhook received: payment.paid payment_id=pay_…` → верификатор вернул `Valid` → processor вызвал `ConfirmByProviderAsync` → статус Payment стал `Confirmed` → юзер получил нотификацию.
 6. Re-fire того же события (если Rollypay UI позволяет) → второй раз `ConfirmByProviderAsync` возвращает false (или просто без побочных эффектов) — повторного продления нет.
-7. Создать ещё один платёж, не оплачивать, дождаться истечения TTL → должен прийти `payment.canceled` или статус через `GET /api/v1/payments/{id}` становится `expired`.
+7. Прогнать `outcome: "failed"` — платёж должен уйти в `canceled`, баланс не тронут.
+8. Создать ещё один платёж, не оплачивать, дождаться истечения TTL → должен прийти `payment.canceled` или статус через `GET /api/v1/payments/{id}` становится `expired`.
+9. **Выключить `TestMode`** и повторить шаги 2–5 один раз реальной минимальной суммой с реального телефона: тестовый режим подменяет способ оплаты заглушкой, поэтому саму СБП-цепочку он не проверяет.
 
 ---
 

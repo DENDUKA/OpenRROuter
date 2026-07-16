@@ -202,6 +202,9 @@ services:
       Payments__Rollypay__SigningSecret: "${ROLLYPAY_SIGNING_SECRET:-}"
       Payments__Rollypay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
       Payments__Rollypay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
+      # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
+      # Production — a test payment is free but still credits real balance.
+      Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
     mem_limit: 512m
     cpus: 0.75
 

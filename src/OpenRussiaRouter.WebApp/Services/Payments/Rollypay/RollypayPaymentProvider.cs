@@ -45,6 +45,9 @@ public sealed class RollypayPaymentProvider : IPaymentProvider
 
     public string Name => "rollypay";
 
+    /// <summary>СБП settles in rubles only — the checkout converts any display currency to RUB.</summary>
+    public string? SettlementCurrency => "RUB";
+
     public async Task<PaymentCreated> CreateAsync(PaymentRequest request, CancellationToken ct)
     {
         var settings = _settings.CurrentValue.Rollypay;
@@ -53,8 +56,9 @@ public sealed class RollypayPaymentProvider : IPaymentProvider
         // Send EXACTLY the amount/currency Billing recorded for this payment — never override the
         // currency here. Billing computed credited_usd from this same (amount, currency), so any
         // divergence would credit one amount while charging another. СБП settles in rubles, so the
-        // checkout is responsible for forcing RUB; if a non-RUB currency reaches here, Rollypay
-        // rejects it (400) and no money moves — fail-safe, not a silent mismatch.
+        // checkout is responsible for forcing RUB (see SettlementCurrency); if a non-RUB currency
+        // reaches here, Rollypay rejects it (400) and no money moves — fail-safe, not a silent
+        // mismatch.
         var apiRequest = new CreateRollypayPaymentRequest
         {
             Amount = request.Amount.ToString("F2", CultureInfo.InvariantCulture),
@@ -64,6 +68,7 @@ public sealed class RollypayPaymentProvider : IPaymentProvider
             Description = request.Description,
             SuccessRedirectUrl = NullIfEmpty(settings.SuccessRedirectUrl),
             FailRedirectUrl = NullIfEmpty(settings.FailRedirectUrl),
+            Test = settings.TestMode ? true : null,
         };
 
         var payment = await client.CreatePaymentAsync(apiRequest, ct);
@@ -78,8 +83,8 @@ public sealed class RollypayPaymentProvider : IPaymentProvider
         }
 
         _logger.LogInformation(
-            "Rollypay payment created: order={OrderId} providerRef={ProviderPaymentId} amount={Amount} {Currency}",
-            request.OrderId, payment.PaymentId, apiRequest.Amount, apiRequest.PaymentCurrency);
+            "Rollypay payment created: order={OrderId} providerRef={ProviderPaymentId} amount={Amount} {Currency} test={TestMode}",
+            request.OrderId, payment.PaymentId, apiRequest.Amount, apiRequest.PaymentCurrency, settings.TestMode);
 
         return new PaymentCreated(payment.PaymentId, payment.PayUrl!, payment.ExpiresAt);
     }

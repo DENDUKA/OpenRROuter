@@ -34,6 +34,9 @@ public sealed class MockPaymentProvider : IPaymentProvider
 
     public string Name => "mock";
 
+    /// <summary>The mock charges nothing, so it happily "settles" in whatever the user picked.</summary>
+    public string? SettlementCurrency => null;
+
     public Task<PaymentCreated> CreateAsync(PaymentRequest request, CancellationToken ct)
     {
         // Provider-side id is a fresh GUID prefixed with "mock_" so it cannot collide with

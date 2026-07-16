@@ -6,13 +6,22 @@ using OpenRussiaRouter.WebApp.Services.Payments;
 namespace OpenRussiaRouter.WebApp.Tests;
 
 /// <summary>
-/// Minimal IPaymentProvider implementation for registry/guard tests — only Name matters.
+/// Minimal IPaymentProvider implementation for registry/guard/checkout tests — only Name and
+/// SettlementCurrency matter.
 /// </summary>
 internal sealed class StubProvider : IPaymentProvider
 {
     private readonly string _name;
-    public StubProvider(string name) => _name = name;
+    private readonly string? _settlementCurrency;
+
+    public StubProvider(string name, string? settlementCurrency = null)
+    {
+        _name = name;
+        _settlementCurrency = settlementCurrency;
+    }
+
     public string Name => _name;
+    public string? SettlementCurrency => _settlementCurrency;
     public Task<PaymentCreated> CreateAsync(PaymentRequest request, CancellationToken ct)
         => Task.FromResult(new PaymentCreated(
             ProviderPaymentId: $"stub_{request.OrderId}",

@@ -41,6 +41,37 @@ public class RollypayPaymentProviderTests
     }
 
     [Fact]
+    public async Task CreateAsync_omits_test_flag_when_test_mode_is_off()
+    {
+        var handler = new StubHandler(_ => Json("""{"payment_id":"pay_1","status":"created","pay_url":"https://pay/x"}"""));
+        var provider = CreateProvider(handler, testMode: false);
+
+        await provider.CreateAsync(new PaymentRequest("order-1", 10m, "RUB", "x"), CancellationToken.None);
+
+        // Absent rather than "test":false — a live payment must not depend on Rollypay's parsing of it.
+        handler.Bodies[0].Should().NotContain("\"test\"");
+    }
+
+    [Fact]
+    public async Task CreateAsync_marks_payment_as_test_when_test_mode_is_on()
+    {
+        var handler = new StubHandler(_ => Json("""{"payment_id":"pay_1","status":"created","pay_url":"https://pay/x"}"""));
+        var provider = CreateProvider(handler, testMode: true);
+
+        await provider.CreateAsync(new PaymentRequest("order-1", 10m, "RUB", "x"), CancellationToken.None);
+
+        handler.Bodies[0].Should().Contain("\"test\":true");
+    }
+
+    [Fact]
+    public void SettlementCurrency_is_RUB_because_sbp_settles_in_rubles()
+    {
+        var provider = CreateProvider(new StubHandler(_ => Json("{}")));
+
+        provider.SettlementCurrency.Should().Be("RUB");
+    }
+
+    [Fact]
     public async Task CreateAsync_sends_fresh_nonce_per_request()
     {
         var handler = new StubHandler(_ => Json(
@@ -234,7 +265,8 @@ public class RollypayPaymentProviderTests
 
     // ---- helpers -----------------------------------------------------------
 
-    private static RollypayPaymentProvider CreateProvider(StubHandler handler, string apiKey = ApiKey, string secret = Secret)
+    private static RollypayPaymentProvider CreateProvider(
+        StubHandler handler, string apiKey = ApiKey, string secret = Secret, bool testMode = false)
     {
         var settings = new PaymentSettings
         {
@@ -244,6 +276,7 @@ public class RollypayPaymentProviderTests
                 BaseUrl = "https://rollypay.test",
                 ApiKey = apiKey,
                 SigningSecret = secret,
+                TestMode = testMode,
             },
         };
 

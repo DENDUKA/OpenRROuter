@@ -155,6 +155,13 @@ public sealed class CreateRollypayPaymentRequest
 
     [JsonPropertyName("metadata")]
     public Dictionary<string, string>? Metadata { get; set; }
+
+    /// <summary>
+    /// Marks the payment as a Rollypay test payment: same касса, stub СБП, no real money, callbacks
+    /// still fire (signed identically, with <c>"test": true</c>). Omitted from the body when null.
+    /// </summary>
+    [JsonPropertyName("test")]
+    public bool? Test { get; set; }
 }
 
 /// <summary>Payment resource returned by create / get.</summary>
@@ -208,6 +215,10 @@ public sealed class RollypayWebhookPayload
 
     [JsonPropertyName("currency")]
     public string? Currency { get; set; }
+
+    /// <summary>True when the callback belongs to a test payment (mirrors the <c>X-Test-Mode</c> header).</summary>
+    [JsonPropertyName("test")]
+    public bool Test { get; set; }
 }
 
 /// <summary>Deterministic 4xx from Rollypay — do not retry, fix the request.</summary>

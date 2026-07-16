@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -42,6 +43,17 @@ public sealed class FxQuoteService(
     IOptions<ExchangeRateOptions> options,
     ILogger<FxQuoteService> logger)
 {
+    /// <remarks>
+    /// CBR serves <c>XML_daily.asp</c> as <c>windows-1251</c>, an encoding .NET Core does not know
+    /// until the CodePages provider is registered. Without this, <c>ReadAsStringAsync</c> throws
+    /// ("'windows-1251' is not a supported encoding name"), <see cref="RefreshAsync"/> swallows it
+    /// as a warning, and Billing silently prices every top-up off the configured fallback rate.
+    /// WebApp's <c>CbrClient</c> registers the same provider — this class has to do it too, because
+    /// it fetches CBR itself and is the authoritative source for credited_usd.
+    /// </remarks>
+    static FxQuoteService()
+        => Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+
     private readonly object sync = new();
     private FxSnapshot? snapshot;
 
@@ -103,7 +115,21 @@ public sealed class FxQuoteService(
     {
         lock (sync)
         {
-            return snapshot ??= new FxSnapshot(
+            if (snapshot is not null)
+            {
+                return snapshot;
+            }
+
+            // Reached only when no CBR refresh has ever succeeded. Everything priced from here uses
+            // a hardcoded rate that drifts from the market, so say it out loud once: the quiet
+            // version of this under-credited every top-up for as long as nobody read the warning.
+            logger.LogWarning(
+                "Billing FX has never refreshed from CBR; pricing from the configured fallback " +
+                "({RubPerUsd} RUB/USD, {RubPerEur} RUB/EUR). Payments will record fx_source=fallback.",
+                options.Value.Fallback.RubPerUsd,
+                options.Value.Fallback.RubPerEur);
+
+            return snapshot = new FxSnapshot(
                 options.Value.Fallback.RubPerUsd,
                 options.Value.Fallback.RubPerEur,
                 "fallback",

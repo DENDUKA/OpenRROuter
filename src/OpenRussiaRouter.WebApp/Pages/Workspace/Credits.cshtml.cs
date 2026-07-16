@@ -46,7 +46,6 @@ public class CreditsModel(
     public IReadOnlyList<TopUpInfo> TopUps { get; set; } = [];
     public string? ErrorMessage { get; set; }
     public decimal MinTopUpUsd => paymentSettings.Value.MinTopUpUsd;
-    public decimal MaxTopUpUsd => paymentSettings.Value.MaxTopUpUsd;
     public bool FirstTopUpBonusAvailable { get; set; }
     public decimal FirstTopUpBonusPercent { get; set; }
 
@@ -127,10 +126,11 @@ public class CreditsModel(
             await LoadDataAsync(userId);
             ErrorMessage = ex.ErrorCode switch
             {
-                // Limits are enforced in USD, so quote them in the user's own currency — "$1.00"
-                // means nothing to someone typing rubles.
+                // The limit is enforced in USD, so quote it in the user's own currency — "$1.00"
+                // means nothing to someone typing rubles. Only the minimum is shown: it is the one
+                // people actually hit, and naming a $10000 ceiling next to it just adds noise.
                 ErrorCodes.PaymentAmountOutOfRange =>
-                    _localizer["Credits_AmountOutOfRange", FormatAmount(MinTopUpUsd), FormatAmount(MaxTopUpUsd)],
+                    _localizer["Credits_AmountOutOfRange", FormatAmount(MinTopUpUsd)],
                 ErrorCodes.UnsupportedCurrency => _localizer["Credits_InvalidCurrency"],
                 ErrorCodes.FxQuoteUnavailable => _localizer["Credits_FxUnavailable"],
                 _ => _localizer["Credits_CheckoutFailed"],

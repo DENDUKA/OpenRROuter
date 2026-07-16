@@ -168,7 +168,7 @@
     <value>Enter a valid amount (e.g. 10.50).</value>
   </data>
   <data name="Credits_AmountOutOfRange" xml:space="preserve">
-    <value>Amount is out of range: minimum {0}, maximum {1}. Limits are enforced in USD at the CBR rate, so the boundary moves with the exchange rate.</value>
+    <value>Amount is out of range. Minimum is {0}. The limit is enforced in USD at the CBR rate, so the boundary moves with the exchange rate.</value>
   </data>
   <data name="Credits_BalanceLoadFailed" xml:space="preserve">
     <value>Failed to load balance.</value>

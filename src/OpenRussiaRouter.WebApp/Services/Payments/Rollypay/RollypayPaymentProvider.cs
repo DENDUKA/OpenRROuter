@@ -66,6 +66,7 @@ public sealed class RollypayPaymentProvider : IPaymentProvider
             PaymentMethod = "sbp",
             OrderId = request.OrderId,
             Description = request.Description,
+            CustomerId = NullIfEmpty(request.UserId),
             SuccessRedirectUrl = NullIfEmpty(settings.SuccessRedirectUrl),
             FailRedirectUrl = NullIfEmpty(settings.FailRedirectUrl),
             Test = settings.TestMode ? true : null,

@@ -163,7 +163,8 @@ public sealed class PaymentCheckoutService
                     OrderId: created.PaymentId,
                     Amount: providerAmount,
                     Currency: providerCurrency,
-                    Description: $"Top-up {displayAmount} {displayCurrency}"),
+                    Description: $"Top-up {displayAmount} {displayCurrency}",
+                    UserId: userId),
                 ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

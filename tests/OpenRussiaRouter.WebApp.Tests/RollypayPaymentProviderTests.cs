@@ -64,6 +64,30 @@ public class RollypayPaymentProviderTests
     }
 
     [Fact]
+    public async Task CreateAsync_sends_user_id_as_customer_id()
+    {
+        var handler = new StubHandler(_ => Json("""{"payment_id":"pay_1","status":"created","pay_url":"https://pay/x"}"""));
+        var provider = CreateProvider(handler);
+
+        await provider.CreateAsync(
+            new PaymentRequest("order-1", 10m, "RUB", "x", UserId: "user-42"),
+            CancellationToken.None);
+
+        handler.Bodies[0].Should().Contain("\"customer_id\":\"user-42\"");
+    }
+
+    [Fact]
+    public async Task CreateAsync_omits_customer_id_when_no_user_id()
+    {
+        var handler = new StubHandler(_ => Json("""{"payment_id":"pay_1","status":"created","pay_url":"https://pay/x"}"""));
+        var provider = CreateProvider(handler);
+
+        await provider.CreateAsync(new PaymentRequest("order-1", 10m, "RUB", "x"), CancellationToken.None);
+
+        handler.Bodies[0].Should().NotContain("customer_id");
+    }
+
+    [Fact]
     public void SettlementCurrency_is_RUB_because_sbp_settles_in_rubles()
     {
         var provider = CreateProvider(new StubHandler(_ => Json("{}")));

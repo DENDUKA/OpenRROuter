@@ -78,6 +78,27 @@ internal sealed class CheckoutFakeBilling : BillingProvider
     }
 }
 
+/// <summary>Stub provider that keeps the last <see cref="PaymentRequest"/> it was handed.</summary>
+internal sealed class CapturingProvider(string name) : IPaymentProvider
+{
+    public PaymentRequest? LastRequest { get; private set; }
+
+    public string Name => name;
+    public string? SettlementCurrency => null;
+
+    public Task<PaymentCreated> CreateAsync(PaymentRequest request, CancellationToken ct)
+    {
+        LastRequest = request;
+        return Task.FromResult(new PaymentCreated($"cap_{request.OrderId}", $"/pay/{request.OrderId}"));
+    }
+
+    public WebhookVerificationResult Verify(string rawBody, Microsoft.AspNetCore.Http.IHeaderDictionary headers)
+        => WebhookVerificationResult.Valid;
+    public PaymentWebhookEvent Parse(string rawBody) => throw new NotImplementedException();
+    public Task<ProviderPaymentStatus> GetPaymentAsync(string providerPaymentId, CancellationToken ct)
+        => Task.FromResult(new ProviderPaymentStatus(ProviderPaymentStatusType.Created, null, null, null, null));
+}
+
 public class PaymentCheckoutServiceTests
 {
     private static PaymentCheckoutService CreateService(
@@ -134,6 +155,18 @@ public class PaymentCheckoutServiceTests
         billing.LastCreate!.Value.provider.Should().Be("mock");
         billing.LastCreate!.Value.providerAmount.Should().Be(10m);
         billing.LastCreate!.Value.providerCurrency.Should().Be("USD");
+    }
+
+    [Fact]
+    public async Task CreateAsync_passes_the_payer_user_id_to_the_provider()
+    {
+        var billing = new CheckoutFakeBilling();
+        var provider = new CapturingProvider("mock");
+        var svc = CreateService(billing, "mock", provider);
+
+        await svc.CreateAsync("user-7", 10m, "USD", providerName: null, clientToken: "t", CancellationToken.None);
+
+        provider.LastRequest!.UserId.Should().Be("user-7");
     }
 
     [Fact]

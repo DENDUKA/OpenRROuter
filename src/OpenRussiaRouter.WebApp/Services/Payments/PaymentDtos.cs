@@ -5,6 +5,11 @@ namespace OpenRussiaRouter.WebApp.Services.Payments;
 /// <c>OrderId</c> is the internal <c>payment_id</c> from BillingService — passed to the provider
 /// so that webhooks arriving before <c>AttachProviderRef</c> can still resolve the local payment.
 /// </summary>
+/// <param name="UserId">
+/// Internal account id of the payer, for providers that can key their risk scoring on a customer.
+/// An opaque identifier only — never an email, name or IP: payments are created server-side, so
+/// everything we put here is a deliberate disclosure to a third party.
+/// </param>
 public sealed record PaymentRequest(
     string OrderId,
     decimal Amount,

@@ -147,6 +147,14 @@ public sealed class CreateRollypayPaymentRequest
     [JsonPropertyName("description")]
     public string? Description { get; set; }
 
+    /// <summary>
+    /// Opaque payer identifier. Payments are created server-side, so Rollypay records our server's
+    /// address as <c>client_ip</c> and cannot tell one payer from another; this gives its risk
+    /// scoring a real per-customer key without disclosing anything personal.
+    /// </summary>
+    [JsonPropertyName("customer_id")]
+    public string? CustomerId { get; set; }
+
     [JsonPropertyName("success_redirect_url")]
     public string? SuccessRedirectUrl { get; set; }
 

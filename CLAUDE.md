@@ -126,6 +126,7 @@ Current migration counts: auth (6), billing (5), control (3).
 /workspace/settings        — stub (empty)
 /admin                     — Admin Index
 /admin/users               — List users, create invite, virtual top-up
+/admin/topups              — Top-up history across all users
 /admin/models              — CRUD model/pricing catalog
 /admin/nodes               — List nodes, add, disable/enable
 /admin/nodes/{id}          — Node details + integration keys

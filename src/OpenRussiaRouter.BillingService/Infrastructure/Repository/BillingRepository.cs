@@ -30,6 +30,27 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
+    public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListAllTopUpsAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var items = (await connection.QueryAsync<LedgerEntryEntity>(new CommandDefinition(
+                LedgerEntrySelectSql +
+                """
+                where type in ('VirtualTopUp','ExternalTopUp','Promo1')
+                  and (@AfterCreatedAtUtc is null or (created_at_utc, id) < (@AfterCreatedAtUtc, @AfterId))
+                order by created_at_utc desc, id desc
+                limit @Limit;
+                """,
+                new { AfterCreatedAtUtc = afterCreatedAtUtc, AfterId = afterId, Limit = limit + 1 },
+                cancellationToken: ct)).ConfigureAwait(false))
+            .Select(BillingPersistenceMapper.ToDomain)
+            .ToArray();
+
+        var hasMore = items.Length > limit;
+        if (hasMore) items = items.Take(limit).ToArray();
+        return (items, hasMore);
+    }
+
     public async Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(entry);

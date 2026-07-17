@@ -20,6 +20,7 @@ service BillingService {
   rpc ListActivityByToken (ListActivityByTokenRequest) returns (ListActivityByTokenResponse);
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
+  rpc ListAllTopUps (ListAllTopUpsRequest) returns (ListAllTopUpsResponse);
   rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
   rpc GetAdminRequestsSummary (GetAdminRequestsSummaryRequest) returns (GetAdminRequestsSummaryResponse);
   rpc GetModel (GetModelRequest) returns (GetModelResponse);
@@ -415,6 +416,24 @@ message TopUpRecord {
 
 message ListTopUpsResponse {
   repeated TopUpRecord records = 1;
+}
+
+message ListAllTopUpsRequest {
+  string after_cursor = 1;
+  int32 page_size = 2;
+}
+
+message AdminTopUpRecord {
+  string id = 1;
+  string user_id = 2;
+  string amount_usd = 3;
+  string reason = 4;
+  string created_at_utc = 5;
+}
+
+message ListAllTopUpsResponse {
+  repeated AdminTopUpRecord records = 1;
+  string next_cursor = 2;
 }
 
 message ListAdminRequestsRequest {

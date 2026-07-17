@@ -27,7 +27,7 @@ ASP.NET Core **Razor Pages** — кабинет пользователя и ад
 
 ## Карта страниц
 
-Полный список — в корневом [CLAUDE.md](../../CLAUDE.md) («WebApp Pages»). Кратко: `/login`, `/signup`→`/verify-email`, `/invite/{token}`, `/` (workspace index), `/workspace/{api-keys,activity,credits,settings}`, `/admin/{users,models,nodes,nodes/{id},nodes/{id}/limits,anomalies,requests,tags,broadcast,…}`, `/models[/{id}]` (публичный каталог).
+Полный список — в корневом [CLAUDE.md](../../CLAUDE.md) («WebApp Pages»). Кратко: `/login`, `/signup`→`/verify-email`, `/invite/{token}`, `/` (workspace index), `/workspace/{api-keys,activity,credits,settings}`, `/admin/{users,topups,models,nodes,nodes/{id},nodes/{id}/limits,anomalies,requests,tags,broadcast,…}`, `/models[/{id}]` (публичный каталог).
 
 ## Email ([EmailDispatchWorker.cs](Email/EmailDispatchWorker.cs))
 

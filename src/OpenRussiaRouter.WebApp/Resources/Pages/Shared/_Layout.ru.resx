@@ -50,6 +50,9 @@
   <data name="Nav_Activity" xml:space="preserve">
     <value>Активность</value>
   </data>
+  <data name="Nav_Credits" xml:space="preserve">
+    <value>Баланс</value>
+  </data>
   <data name="Nav_Admin" xml:space="preserve">
     <value>Админ</value>
   </data>

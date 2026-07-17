@@ -36,6 +36,31 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
     }
 
+    public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListAllTopUpsAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
+    {
+        var query = _ledgerByIdempotencyKey.Values
+            .Where(e => e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp or LedgerEntryType.Promo1);
+
+        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterId))
+        {
+            query = query.Where(e => e.CreatedAtUtc < afterCreatedAtUtc.Value
+                || (e.CreatedAtUtc == afterCreatedAtUtc.Value && string.CompareOrdinal(e.Id, afterId) < 0));
+        }
+        else if (afterCreatedAtUtc.HasValue)
+        {
+            query = query.Where(e => e.CreatedAtUtc < afterCreatedAtUtc.Value);
+        }
+
+        var items = query
+            .OrderByDescending(e => e.CreatedAtUtc)
+            .ThenByDescending(e => e.Id)
+            .Take(limit + 1)
+            .ToList();
+        var hasMore = items.Count > limit;
+        if (hasMore) items = items.Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
+    }
+
     public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
     {
         var amount = _ledgerByIdempotencyKey.Values

@@ -574,6 +574,32 @@ public sealed class GrpcBillingService(
         return response;
     }
 
+    public override async Task<ListAllTopUpsResponse> ListAllTopUps(
+        ListAllTopUpsRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var pageSize = request.PageSize > 0 ? request.PageSize : 50;
+        var (items, hasMore, nextCursor) = await billing.ListAllTopUpsAsync(
+            string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
+            pageSize,
+            ct).ConfigureAwait(false);
+
+        var response = new ListAllTopUpsResponse
+        {
+            NextCursor = nextCursor ?? string.Empty
+        };
+        response.Records.AddRange(items.Select(entry => new AdminTopUpRecord
+        {
+            Id = entry.Id,
+            UserId = entry.UserId,
+            AmountUsd = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+            Reason = entry.Reason,
+            CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+        }));
+        return response;
+    }
+
     public override async Task<ListAdminRequestsResponse> ListAdminRequests(
         ListAdminRequestsRequest request,
         ServerCallContext context)

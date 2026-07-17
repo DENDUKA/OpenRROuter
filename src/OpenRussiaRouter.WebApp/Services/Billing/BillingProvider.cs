@@ -238,6 +238,29 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
+    public async Task<(IReadOnlyList<AdminTopUpInfo> Items, bool HasMore, string? NextCursor)> ListAllTopUpsAsync(
+        string? afterCursor = null,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var response = await client.ListAllTopUpsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListAllTopUpsRequest
+            {
+                AfterCursor = afterCursor ?? string.Empty,
+                PageSize = pageSize
+            },
+            cancellationToken: cancellationToken);
+
+        var items = response.Records.Select(r => new AdminTopUpInfo(
+            r.Id,
+            r.UserId,
+            decimal.Parse(r.AmountUsd, System.Globalization.CultureInfo.InvariantCulture),
+            r.Reason,
+            DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+
+        return (items, !string.IsNullOrEmpty(response.NextCursor), string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+    }
+
     public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountUsd, string reason, CancellationToken cancellationToken = default)
     {
         var response = await client.CreateVirtualTopUpAsync(

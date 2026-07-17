@@ -9,6 +9,8 @@ public interface IBillingRepository
 
     Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default);
 
+    Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListAllTopUpsAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default);
+
     Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default);
 
     Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default);

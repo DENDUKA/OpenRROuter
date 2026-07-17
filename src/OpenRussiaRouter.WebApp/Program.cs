@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.HttpOverrides;
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -296,6 +297,15 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+// Must be the very first middleware so downstream pipeline (auth, OAuth redirect_uri
+// generation, absolute URLs) sees the original scheme/host from Caddy.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+    KnownNetworks = { },
+    KnownProxies = { }
+});
 
 // TS-004: fail-fast in Production if the active payment provider is mock or unconfigured.
 // In Development the mock is the expected active provider, so the guard is a no-op there.

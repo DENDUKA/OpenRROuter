@@ -580,14 +580,18 @@ public sealed class GrpcBillingService(
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
         var pageSize = request.PageSize > 0 ? request.PageSize : 50;
-        var (items, hasMore, nextCursor) = await billing.ListAllTopUpsAsync(
-            string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
-            pageSize,
-            ct).ConfigureAwait(false);
+        var pageNumber = Math.Max(0, request.PageNumber);
+
+        IReadOnlyList<string>? userIds = request.UserIds.Count > 0 ? request.UserIds.ToArray() : null;
+        decimal? minAmount = string.IsNullOrEmpty(request.MinAmountUsd) ? null : decimal.Parse(request.MinAmountUsd, CultureInfo.InvariantCulture);
+        decimal? maxAmount = string.IsNullOrEmpty(request.MaxAmountUsd) ? null : decimal.Parse(request.MaxAmountUsd, CultureInfo.InvariantCulture);
+
+        var (items, totalCount) = await billing.ListAllTopUpsAsync(
+            pageNumber, pageSize, userIds, minAmount, maxAmount, ct).ConfigureAwait(false);
 
         var response = new ListAllTopUpsResponse
         {
-            NextCursor = nextCursor ?? string.Empty
+            TotalCount = totalCount
         };
         response.Records.AddRange(items.Select(entry => new AdminTopUpRecord
         {

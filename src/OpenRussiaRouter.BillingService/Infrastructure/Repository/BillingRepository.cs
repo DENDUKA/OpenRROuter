@@ -30,25 +30,39 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         return (items, hasMore);
     }
 
-    public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListAllTopUpsAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int offset, int limit,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
+
+        const string baseWhere = """
+            where type in ('VirtualTopUp','ExternalTopUp','Promo1')
+              and (@UserIds is null or user_id = any(@UserIds))
+              and (@MinAmountUsd is null or amount >= @MinAmountUsd)
+              and (@MaxAmountUsd is null or amount <= @MaxAmountUsd)
+            """;
+
+        var countSql = $"select count(*) from billing.ledger_entries {baseWhere};";
+        var totalCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            countSql,
+            new { UserIds = userIds, MinAmountUsd = minAmountUsd, MaxAmountUsd = maxAmountUsd },
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        var dataSql = LedgerEntrySelectSql + baseWhere +
+            " order by created_at_utc desc, id desc offset @Offset limit @Limit;";
+
         var items = (await connection.QueryAsync<LedgerEntryEntity>(new CommandDefinition(
-                LedgerEntrySelectSql +
-                """
-                where type in ('VirtualTopUp','ExternalTopUp','Promo1')
-                  and (@AfterCreatedAtUtc is null or (created_at_utc, id) < (@AfterCreatedAtUtc, @AfterId))
-                order by created_at_utc desc, id desc
-                limit @Limit;
-                """,
-                new { AfterCreatedAtUtc = afterCreatedAtUtc, AfterId = afterId, Limit = limit + 1 },
+                dataSql,
+                new { UserIds = userIds, MinAmountUsd = minAmountUsd, MaxAmountUsd = maxAmountUsd, Offset = offset, Limit = limit },
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
-        var hasMore = items.Length > limit;
-        if (hasMore) items = items.Take(limit).ToArray();
-        return (items, hasMore);
+        return (items, totalCount);
     }
 
     public async Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default)

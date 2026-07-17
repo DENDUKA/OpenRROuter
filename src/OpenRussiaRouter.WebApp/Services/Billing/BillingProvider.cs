@@ -238,18 +238,24 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
-    public async Task<(IReadOnlyList<AdminTopUpInfo> Items, bool HasMore, string? NextCursor)> ListAllTopUpsAsync(
-        string? afterCursor = null,
+    public async Task<(IReadOnlyList<AdminTopUpInfo> Items, int TotalCount)> ListAllTopUpsAsync(
+        int pageNumber = 0,
         int pageSize = 50,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
         CancellationToken cancellationToken = default)
     {
-        var response = await client.ListAllTopUpsAsync(
-            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListAllTopUpsRequest
-            {
-                AfterCursor = afterCursor ?? string.Empty,
-                PageSize = pageSize
-            },
-            cancellationToken: cancellationToken);
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListAllTopUpsRequest
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+        if (userIds is { Count: > 0 }) request.UserIds.AddRange(userIds);
+        if (minAmountUsd.HasValue) request.MinAmountUsd = minAmountUsd.Value.ToString(CultureInfo.InvariantCulture);
+        if (maxAmountUsd.HasValue) request.MaxAmountUsd = maxAmountUsd.Value.ToString(CultureInfo.InvariantCulture);
+
+        var response = await client.ListAllTopUpsAsync(request, cancellationToken: cancellationToken);
 
         var items = response.Records.Select(r => new AdminTopUpInfo(
             r.Id,
@@ -258,7 +264,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             r.Reason,
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
 
-        return (items, !string.IsNullOrEmpty(response.NextCursor), string.IsNullOrEmpty(response.NextCursor) ? null : response.NextCursor);
+        return (items, response.TotalCount);
     }
 
     public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountUsd, string reason, CancellationToken cancellationToken = default)

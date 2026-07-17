@@ -36,29 +36,34 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
     }
 
-    public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListAllTopUpsAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterId = null, CancellationToken ct = default)
+    public Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int offset, int limit,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default)
     {
         var query = _ledgerByIdempotencyKey.Values
             .Where(e => e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp or LedgerEntryType.Promo1);
 
-        if (afterCreatedAtUtc.HasValue && !string.IsNullOrEmpty(afterId))
+        if (userIds is { Count: > 0 })
         {
-            query = query.Where(e => e.CreatedAtUtc < afterCreatedAtUtc.Value
-                || (e.CreatedAtUtc == afterCreatedAtUtc.Value && string.CompareOrdinal(e.Id, afterId) < 0));
+            var set = new HashSet<string>(userIds, StringComparer.Ordinal);
+            query = query.Where(e => set.Contains(e.UserId));
         }
-        else if (afterCreatedAtUtc.HasValue)
-        {
-            query = query.Where(e => e.CreatedAtUtc < afterCreatedAtUtc.Value);
-        }
+        if (minAmountUsd.HasValue)
+            query = query.Where(e => e.Amount.Amount >= minAmountUsd.Value);
+        if (maxAmountUsd.HasValue)
+            query = query.Where(e => e.Amount.Amount <= maxAmountUsd.Value);
 
-        var items = query
+        var all = query
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
-            .Take(limit + 1)
             .ToList();
-        var hasMore = items.Count > limit;
-        if (hasMore) items = items.Take(limit).ToList();
-        return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
+
+        var totalCount = all.Count;
+        var items = all.Skip(offset).Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, totalCount));
     }
 
     public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)

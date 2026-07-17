@@ -419,8 +419,11 @@ message ListTopUpsResponse {
 }
 
 message ListAllTopUpsRequest {
-  string after_cursor = 1;
+  int32 page_number = 1;
   int32 page_size = 2;
+  repeated string user_ids = 3;
+  string min_amount_usd = 4;
+  string max_amount_usd = 5;
 }
 
 message AdminTopUpRecord {
@@ -433,7 +436,7 @@ message AdminTopUpRecord {
 
 message ListAllTopUpsResponse {
   repeated AdminTopUpRecord records = 1;
-  string next_cursor = 2;
+  int32 total_count = 2;
 }
 
 message ListAdminRequestsRequest {

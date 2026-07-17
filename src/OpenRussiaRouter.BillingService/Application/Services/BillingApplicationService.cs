@@ -349,18 +349,16 @@ public sealed partial class BillingApplicationService(
         return (await repository.ListTopUpsAsync(Preconditions.RequireValue(userId, nameof(userId)), pageSize, ct).ConfigureAwait(false)).Items;
     }
 
-    public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore, string? NextCursor)> ListAllTopUpsAsync(string? afterCursor = null, int? pageSize = null, CancellationToken ct = default)
+    public async Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int pageNumber, int pageSize,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default)
     {
-        var limit = pageSize ?? paginationOptions.Value.EffectivePageSize;
-        ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterId);
-        var (items, hasMore) = await repository.ListAllTopUpsAsync(limit, afterCreatedAtUtc, afterId, ct).ConfigureAwait(false);
-        string? nextCursor = null;
-        if (hasMore && items.Count > 0)
-        {
-            var last = items.Last();
-            nextCursor = $"{last.CreatedAtUtc:O}|{last.Id}";
-        }
-        return (items, hasMore, nextCursor);
+        var limit = Math.Min(pageSize, paginationOptions.Value.MaxPageSize);
+        var offset = Math.Max(0, pageNumber) * limit;
+        return await repository.ListAllTopUpsAsync(offset, limit, userIds, minAmountUsd, maxAmountUsd, ct).ConfigureAwait(false);
     }
 
     public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(string? afterCursor = null, CancellationToken ct = default)

@@ -41,9 +41,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
         const string baseWhere = """
             where type in ('VirtualTopUp','ExternalTopUp','Promo1')
-              and (@UserIds is null or user_id = any(@UserIds))
-              and (@MinAmountUsd is null or amount >= @MinAmountUsd)
-              and (@MaxAmountUsd is null or amount <= @MaxAmountUsd)
+              and (@UserIds::text[] is null or user_id = any(@UserIds::text[]))
+              and (@MinAmountUsd::numeric is null or amount >= @MinAmountUsd::numeric)
+              and (@MaxAmountUsd::numeric is null or amount <= @MaxAmountUsd::numeric)
             """;
 
         var countSql = $"select count(*) from billing.ledger_entries {baseWhere};";

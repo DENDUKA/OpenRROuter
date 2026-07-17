@@ -22,13 +22,7 @@
         <form method="get" class="d-flex gap-2 align-items-end flex-wrap mb-3" id="filterForm" style="font-weight:normal">
             <div class="form-group">
                 <label class="form-label" style="font-size:.8rem">User</label>
-                <select name="userFilter" multiple class="form-control" style="min-width:220px" size="3">
-                    @foreach (var u in Model.AllUsers)
-                    {
-                        var selected = Model.UserFilter != null && Model.UserFilter.Contains(u.Id);
-                        <option value="@u.Id" selected="@selected">@u.Email</option>
-                    }
-                </select>
+                <input type="text" name="userQuery" value="@Model.UserQuery" placeholder="email or name" class="form-control" style="min-width:220px" />
             </div>
             <div class="form-group">
                 <label class="form-label" style="font-size:.8rem">Min Amount ($)</label>
@@ -39,7 +33,7 @@
                 <input type="number" name="maxAmount" value="@Model.MaxAmount" step="0.01" class="form-control" style="width:120px" />
             </div>
             <button type="submit" class="btn btn-sm btn-primary">Apply</button>
-            @if (Model.UserFilter is { Length: > 0 } || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
+            @if (!string.IsNullOrWhiteSpace(Model.UserQuery) || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
             {
                 <a href="/admin/topups" class="btn btn-sm btn-secondary">Clear</a>
             }

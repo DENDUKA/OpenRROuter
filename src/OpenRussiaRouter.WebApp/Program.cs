@@ -93,7 +93,8 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
         options.ClientId = yandexClientId;
         options.ClientSecret = yandexClientSecret;
         options.CallbackPath = "/OAuth-yandex";
-        options.Scope.Add("login");
+        options.Scope.Add("login:info");
+        options.Scope.Add("login:email");
     });
 }
 

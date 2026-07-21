@@ -1,8 +1,13 @@
 # Prometheus scrape config for the PROD compose box (201.51.6.246).
 #
-# Targets use compose service DNS on the `orr` network, port 8080 — every ORR service exposes
-# OTel's Prometheus exporter at /metrics on its HTTP port (see BuildingBlocks/Metrics/
-# OpenTelemetryExtensions.cs). The gRPC services listen on 8081 for gRPC but keep HTTP on 8080.
+# Targets use compose service DNS on the `orr` network. Every ORR service exposes OTel's
+# Prometheus exporter at /metrics (see BuildingBlocks/Metrics/OpenTelemetryExtensions.cs),
+# but NOT all on the same port:
+#   api-gateway / webapp          -> 8080, plain HTTP/1.1
+#   collector                     -> 8080 HTTP/1.1, gRPC on 8081
+#   auth / billing / control-plane-> gRPC is cleartext HTTP/2 on 8080, so they carry a
+#                                    dedicated HTTP/1.1 endpoint on 8082 for scraping.
+# Scraping the h2c port yields "400 Bad Request": Prometheus speaks HTTP/1.1 only.
 #
 # scrape_protocols is pinned to PrometheusText0.0.4 on purpose: the OTel exporter emits
 # OpenMetrics `# UNIT` lines that the strict OpenMetrics parser rejects. Same pin exists in
@@ -21,11 +26,11 @@ scrape_configs:
     static_configs:
       - targets:
           - api-gateway:8080
-          - auth-service:8080
-          - billing-service:8080
-          - control-plane:8080
           - collector:8080
           - webapp:8080
+          - auth-service:8082
+          - billing-service:8082
+          - control-plane:8082
 
   - job_name: prometheus
     static_configs:

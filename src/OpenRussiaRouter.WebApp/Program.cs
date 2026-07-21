@@ -10,6 +10,8 @@ using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 using OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1;
 using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterControlPlane;
+using ContentGrpc = OpenRussiaRouter.Contracts.Grpc.Content.V1.ContentService;
+using OpenRussiaRouter.WebApp.Services.Content;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -149,6 +151,31 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
 .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
 builder.Services.AddScoped<BillingProvider>();
 builder.Services.AddScoped<OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver>();
+
+// ContentService owns the /tools catalog. Its admin surface is s2s-protected with the same
+// webappadmin credentials as Billing, so no new secret material is introduced.
+var contentGrpcUrl = builder.Configuration["GrpcServices:Content"] ?? "http://localhost:5007";
+var contentS2sCaller = builder.Configuration["ServiceAuth:ContentCaller"] ?? billingS2sCaller;
+var contentS2sToken = builder.Configuration["ServiceAuth:ContentToken"] ?? billingS2sToken;
+builder.Services.AddGrpcClient<ContentGrpc.ContentServiceClient>(options =>
+{
+    options.Address = new Uri(contentGrpcUrl);
+})
+.ConfigureChannel(options =>
+{
+    options.HttpHandler = new SocketsHttpHandler
+    {
+        PooledConnectionIdleTimeout = Timeout.InfiniteTimeSpan,
+        KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+        KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+    };
+    // Tool images are capped at 1 MiB; leave headroom over the 4 MiB default for framing.
+    options.MaxSendMessageSize = 8 * 1024 * 1024;
+    options.MaxReceiveMessageSize = 8 * 1024 * 1024;
+})
+.AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline))
+.AddInterceptor(() => new ServiceAuthClientInterceptor(contentS2sCaller, contentS2sToken));
+builder.Services.AddScoped<ContentProvider>();
 
 var controlPlaneGrpcUrl = builder.Configuration["GrpcServices:ControlPlane"] ?? "http://localhost:5003";
 builder.Services.AddGrpcClient<ControlGrpc.RouterControlPlaneClient>(options =>

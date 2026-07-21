@@ -1,0 +1,97 @@
+@page
+@model ToolsModel
+@{ Layout = "~/Pages/Shared/_CatalogLayout.cshtml"; ViewData["Title"] = Localizer["Tools_Title"]; }
+
+<div class="tools-page">
+    <section class="tools-hero" aria-labelledby="tools-title">
+        <div>
+            <div class="eyebrow">@Localizer["Tools_Eyebrow"]</div>
+            <h1 id="tools-title">@Localizer["Tools_Title"]</h1>
+            <p class="tools-lead">@Localizer["Tools_Lead"]</p>
+        </div>
+    </section>
+
+    @if (Model.CategoryFilters.Count > 0)
+    {
+        <nav class="tools-filters" aria-label="@Localizer["Tools_Title"]">
+            <a class="tools-chip @(Model.SelectedCategoryId is null ? "active" : "")" href="/tools">
+                @Localizer["Tools_AllCategories"]
+            </a>
+            @foreach (var c in Model.CategoryFilters)
+            {
+                <a class="tools-chip @(Model.SelectedCategoryId == c.Id ? "active" : "")"
+                   href="/tools?category=@Uri.EscapeDataString(c.Id)">@c.Name</a>
+            }
+        </nav>
+    }
+
+    <section class="tools-shell" aria-label="@Localizer["Tools_Title"]">
+        @if (Model.ErrorMessage != null)
+        {
+            <div class="catalog-state error" role="alert">
+                <strong>@Localizer["Tools_LoadFailedTitle"]</strong>
+                <span>@Model.ErrorMessage</span>
+            </div>
+        }
+        else if (Model.Tools.Count == 0)
+        {
+            <div class="catalog-state">
+                <strong>@Localizer["Tools_NoToolsTitle"]</strong>
+            </div>
+        }
+        else
+        {
+            <div class="tools-grid">
+                @foreach (var t in Model.Tools)
+                {
+                    <a class="tool-card" href="/tools/@Uri.EscapeDataString(t.Id)">
+                        <div class="tool-card-header">
+                            <img class="tool-logo" src="@t.LogoUrl" alt="@t.DisplayName" />
+                            <div class="tool-info">
+                                <h2 class="tool-name">@t.DisplayName</h2>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(t.Tagline))
+                        {
+                            <p class="tool-desc">@t.Tagline</p>
+                        }
+                        @if (t.Tags.Count > 0)
+                        {
+                            <div class="tool-tags">
+                                @foreach (var tag in t.Tags)
+                                {
+                                    <span class="tool-tag">@tag</span>
+                                }
+                            </div>
+                        }
+                    </a>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+<style>
+    .tools-page { width: 100%; }
+    .tools-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-xl); padding-bottom: var(--spacing-2xl); border-bottom: 1px solid var(--color-hairline); }
+    .tools-lead { color: var(--color-body); max-width: 620px; font-size: 18px; line-height: 28px; }
+    .tools-filters { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); padding: var(--spacing-lg) 0 0; }
+    .tools-chip { display: inline-flex; align-items: center; padding: 6px 14px; border: 1px solid var(--color-hairline); border-radius: 999px; font-size: 13px; color: var(--color-body); text-decoration: none; transition: border-color .15s ease, color .15s ease; }
+    .tools-chip:hover { border-color: var(--color-border); color: var(--color-ink); }
+    .tools-chip.active { border-color: var(--color-border); color: var(--color-ink); background: var(--color-canvas-mid); }
+    .tools-shell { padding: var(--spacing-xl) 0 var(--spacing-3xl); }
+    .tools-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--spacing-lg); }
+    .tool-card { display: block; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); padding: var(--spacing-lg); background: var(--color-canvas-card); text-decoration: none; color: inherit; transition: border-color .15s ease; }
+    .tool-card:hover { border-color: var(--color-border); }
+    .tool-card-header { display: flex; align-items: center; gap: var(--spacing-md); }
+    .tool-logo { width: 48px; height: 48px; border-radius: var(--radius-sm); object-fit: contain; border: 1px solid var(--color-hairline); background: var(--color-canvas-soft); }
+    .tool-info { display: flex; flex-direction: column; gap: 2px; }
+    .tool-name { color: var(--color-ink); font-size: 18px; font-weight: 600; margin: 0; }
+    .tool-desc { color: var(--color-body); font-size: 14px; line-height: 22px; margin: var(--spacing-md) 0 0; }
+    .tool-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: var(--spacing-md); }
+    .tool-tag { font-size: 12px; color: var(--color-body); border: 1px solid var(--color-hairline); border-radius: 999px; padding: 2px 10px; }
+    .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }
+    .catalog-state strong { color: var(--color-ink); }
+    .catalog-state.error { border-color: rgba(255,59,48,.45); }
+    @@media (max-width: 520px) { .tools-grid { grid-template-columns: 1fr; } }
+</style>

@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "OpenRussiaRouter.ContentService": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "applicationUrl": "http://localhost:5007",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Kestrel__EndpointDefaults__Protocols": "Http2"
+      }
+    }
+  }
+}

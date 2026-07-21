@@ -1,0 +1,225 @@
+syntax = "proto3";
+
+package openrussiarouter.content.v1;
+
+option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.Content.V1";
+
+service ContentService {
+  // Public: published tools only, no s2s token required.
+  rpc ListTools (ListToolsRequest) returns (ListToolsResponse);
+  rpc GetTool (GetToolRequest) returns (GetToolResponse);
+  rpc GetToolLogo (GetToolLogoRequest) returns (GetToolLogoResponse);
+  rpc GetToolImage (GetToolImageRequest) returns (GetToolImageResponse);
+  rpc ListToolCategories (ListToolCategoriesRequest) returns (ListToolCategoriesResponse);
+
+  // Admin: s2s protected (see ServiceAuth:MethodPolicies).
+  rpc ListToolsForAdmin (ListToolsForAdminRequest) returns (ListToolsResponse);
+  rpc GetToolForAdmin (GetToolRequest) returns (GetToolResponse);
+  rpc UpsertTool (UpsertToolRequest) returns (UpsertToolResponse);
+  rpc DeleteTool (DeleteToolRequest) returns (DeleteToolResponse);
+  rpc SetToolPublished (SetToolPublishedRequest) returns (SetToolPublishedResponse);
+  rpc ListToolImages (ListToolImagesRequest) returns (ListToolImagesResponse);
+  rpc UploadToolImage (UploadToolImageRequest) returns (UploadToolImageResponse);
+  rpc DeleteToolImage (DeleteToolImageRequest) returns (DeleteToolImageResponse);
+  rpc UpsertToolCategory (UpsertToolCategoryRequest) returns (UpsertToolCategoryResponse);
+  rpc DeleteToolCategory (DeleteToolCategoryRequest) returns (DeleteToolCategoryResponse);
+}
+
+// Card-sized projection: no markdown bodies, no logo bytes.
+message ToolSummary {
+  string id = 1;
+  string display_name = 2;
+  string category_id = 3;
+  repeated string tags = 4;
+  string tagline_ru = 5;
+  string tagline_en = 6;
+  bool has_logo = 7;
+  bool is_published = 8;
+  int32 sort_order = 9;
+  string website_url = 10;
+  string updated_at_utc = 11;
+}
+
+message Tool {
+  string id = 1;
+  string display_name = 2;
+  string category_id = 3;
+  repeated string tags = 4;
+  string website_url = 5;
+  string tagline_ru = 6;
+  string tagline_en = 7;
+  string description_ru = 8;
+  string description_en = 9;
+  string setup_ru = 10;
+  string setup_en = 11;
+  bool has_logo = 12;
+  string logo_content_type = 13;
+  bool is_published = 14;
+  int32 sort_order = 15;
+  string created_at_utc = 16;
+  string updated_at_utc = 17;
+}
+
+message ToolCategory {
+  string id = 1;
+  string name_ru = 2;
+  string name_en = 3;
+  int32 sort_order = 4;
+}
+
+message ToolImage {
+  string id = 1;
+  string tool_id = 2;
+  string file_name = 3;
+  string content_type = 4;
+  int32 byte_size = 5;
+  string alt_text = 6;
+  string created_at_utc = 7;
+}
+
+message ListToolsRequest {
+  string category_id = 1;
+}
+
+message ListToolsForAdminRequest {
+}
+
+message ListToolsResponse {
+  repeated ToolSummary tools = 1;
+}
+
+message GetToolRequest {
+  string tool_id = 1;
+}
+
+message GetToolResponse {
+  Tool tool = 1;
+  bool found = 2;
+}
+
+message GetToolLogoRequest {
+  string tool_id = 1;
+}
+
+message GetToolLogoResponse {
+  bool found = 1;
+  bytes logo_bytes = 2;
+  string logo_content_type = 3;
+  string display_name = 4;
+  string updated_at_utc = 5;
+}
+
+message GetToolImageRequest {
+  string image_id = 1;
+}
+
+message GetToolImageResponse {
+  bool found = 1;
+  bytes bytes = 2;
+  string content_type = 3;
+  string file_name = 4;
+}
+
+message UpsertToolRequest {
+  string id = 1;
+  string display_name = 2;
+  string category_id = 3;
+  repeated string tags = 4;
+  string website_url = 5;
+  string tagline_ru = 6;
+  string tagline_en = 7;
+  string description_ru = 8;
+  string description_en = 9;
+  string setup_ru = 10;
+  string setup_en = 11;
+  bytes logo_bytes = 12;
+  string logo_content_type = 13;
+  bool clear_logo = 14;
+  bool is_published = 15;
+  int32 sort_order = 16;
+}
+
+message UpsertToolResponse {
+  bool upserted = 1;
+  string tool_id = 2;
+  string error_code = 3;
+}
+
+message DeleteToolRequest {
+  string tool_id = 1;
+}
+
+message DeleteToolResponse {
+  bool deleted = 1;
+  string error_code = 2;
+}
+
+message SetToolPublishedRequest {
+  string tool_id = 1;
+  bool is_published = 2;
+}
+
+message SetToolPublishedResponse {
+  bool updated = 1;
+  string error_code = 2;
+}
+
+message ListToolImagesRequest {
+  string tool_id = 1;
+}
+
+message ListToolImagesResponse {
+  repeated ToolImage images = 1;
+}
+
+message UploadToolImageRequest {
+  string tool_id = 1;
+  string file_name = 2;
+  string content_type = 3;
+  bytes bytes = 4;
+  string alt_text = 5;
+}
+
+message UploadToolImageResponse {
+  bool uploaded = 1;
+  string image_id = 2;
+  string error_code = 3;
+}
+
+message DeleteToolImageRequest {
+  string image_id = 1;
+}
+
+message DeleteToolImageResponse {
+  bool deleted = 1;
+  string error_code = 2;
+}
+
+message ListToolCategoriesRequest {
+}
+
+message ListToolCategoriesResponse {
+  repeated ToolCategory categories = 1;
+}
+
+message UpsertToolCategoryRequest {
+  string id = 1;
+  string name_ru = 2;
+  string name_en = 3;
+  int32 sort_order = 4;
+}
+
+message UpsertToolCategoryResponse {
+  bool upserted = 1;
+  string category_id = 2;
+  string error_code = 3;
+}
+
+message DeleteToolCategoryRequest {
+  string category_id = 1;
+}
+
+message DeleteToolCategoryResponse {
+  bool deleted = 1;
+  string error_code = 2;
+}

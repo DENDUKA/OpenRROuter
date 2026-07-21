@@ -227,6 +227,15 @@
   <data name="Providers_LoadFailed" xml:space="preserve">
     <value>Could not load providers.</value>
   </data>
+  <data name="Tools_LoadFailed" xml:space="preserve">
+    <value>Could not load tools.</value>
+  </data>
+  <data name="ToolDetails_LoadFailed" xml:space="preserve">
+    <value>Could not load the tool.</value>
+  </data>
+  <data name="ToolDetails_NotFound" xml:space="preserve">
+    <value>Tool not found.</value>
+  </data>
   <data name="Settings_InvalidCurrency" xml:space="preserve">
     <value>Invalid currency selection.</value>
   </data>

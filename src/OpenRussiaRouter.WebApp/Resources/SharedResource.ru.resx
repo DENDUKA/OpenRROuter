@@ -227,6 +227,15 @@
   <data name="Providers_LoadFailed" xml:space="preserve">
     <value>Не удалось загрузить провайдеров.</value>
   </data>
+  <data name="Tools_LoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить инструменты.</value>
+  </data>
+  <data name="ToolDetails_LoadFailed" xml:space="preserve">
+    <value>Не удалось загрузить инструмент.</value>
+  </data>
+  <data name="ToolDetails_NotFound" xml:space="preserve">
+    <value>Инструмент не найден.</value>
+  </data>
   <data name="Settings_InvalidCurrency" xml:space="preserve">
     <value>Неверная валюта.</value>
   </data>

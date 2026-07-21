@@ -1,0 +1,193 @@
+@page "/admin/tools/edit/{id?}"
+@model Admin.ToolEditModel
+@{
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = Model.IsNew ? "Add Tool - Admin" : $"Edit {Model.Form.DisplayName} - Admin";
+    var toolId = Model.IsNew ? null : Model.Form.Id;
+}
+
+<div class="adm-section-head">
+    <h2>@(Model.IsNew ? "Add Tool" : $"Edit: {Model.Form.DisplayName}")</h2>
+    <p>Descriptions are Markdown. Paste a screenshot into any Markdown box to upload it.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+<form method="post" asp-page-handler="Save" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="validation-message"></div>
+
+    <div class="adm-card">
+        <div class="adm-card-header">Identity</div>
+        <div class="adm-card-body">
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label asp-for="Form.Id" class="form-label">Tool ID (URL slug)</label>
+                    <input asp-for="Form.Id" class="form-control" readonly="@(!Model.IsNew)" placeholder="cline" />
+                    <span asp-validation-for="Form.Id" class="validation-message"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Form.DisplayName" class="form-label">Display Name</label>
+                    <input asp-for="Form.DisplayName" class="form-control" />
+                    <span asp-validation-for="Form.DisplayName" class="validation-message"></span>
+                </div>
+            </div>
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label asp-for="Form.CategoryId" class="form-label">Category</label>
+                    <select asp-for="Form.CategoryId" class="form-control">
+                        <option value="">— none —</option>
+                        @foreach (var c in Model.Categories)
+                        {
+                            <option value="@c.Id">@c.NameEn / @c.NameRu</option>
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Form.Tags" class="form-label">Tags (comma separated)</label>
+                    <input asp-for="Form.Tags" class="form-control" placeholder="ide, free, open-source" />
+                </div>
+            </div>
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label asp-for="Form.WebsiteUrl" class="form-label">Website</label>
+                    <input asp-for="Form.WebsiteUrl" class="form-control" placeholder="https://example.com" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="Form.SortOrder" class="form-label">Sort order (higher first)</label>
+                    <input asp-for="Form.SortOrder" class="form-control" type="number" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">
+                    <input asp-for="Form.IsPublished" type="checkbox" /> Published (visible on /tools)
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-card">
+        <div class="adm-card-header">Logo</div>
+        <div class="adm-card-body">
+            <div class="adm-form-row">
+                <div class="form-group">
+                    <label class="form-label" for="logoFile">Upload (PNG, JPEG, WebP, SVG — max 256 KiB)</label>
+                    <input class="form-control" type="file" id="logoFile" name="logoFile"
+                           accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+                    <span class="validation-message">@Html.ValidationMessage("logoFile")</span>
+                </div>
+                <div class="form-group">
+                    @if (Model.ExistingLogoUrl != null)
+                    {
+                        <label class="form-label">Current</label>
+                        <div class="adm-logo-preview">
+                            <img src="@Model.ExistingLogoUrl" alt="Current logo" />
+                            <label><input type="checkbox" name="clearLogo" value="true" /> Remove logo</label>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No logo uploaded — a monogram is generated automatically.</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-card">
+        <div class="adm-card-header">Content — Russian</div>
+        <div class="adm-card-body">
+            <div class="form-group">
+                <label asp-for="Form.TaglineRu" class="form-label">Tagline (card blurb)</label>
+                <input asp-for="Form.TaglineRu" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Form.DescriptionRu" class="form-label">Description (Markdown)</label>
+                <textarea asp-for="Form.DescriptionRu" class="form-control md-editor" rows="10"></textarea>
+            </div>
+            <div class="form-group">
+                <label asp-for="Form.SetupRu" class="form-label">How to connect (Markdown)</label>
+                <textarea asp-for="Form.SetupRu" class="form-control md-editor" rows="14"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-card">
+        <div class="adm-card-header">Content — English</div>
+        <div class="adm-card-body">
+            <div class="form-group">
+                <label asp-for="Form.TaglineEn" class="form-label">Tagline (card blurb)</label>
+                <input asp-for="Form.TaglineEn" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Form.DescriptionEn" class="form-label">Description (Markdown)</label>
+                <textarea asp-for="Form.DescriptionEn" class="form-control md-editor" rows="10"></textarea>
+            </div>
+            <div class="form-group">
+                <label asp-for="Form.SetupEn" class="form-label">How to connect (Markdown)</label>
+                <textarea asp-for="Form.SetupEn" class="form-control md-editor" rows="14"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="adm-btn-row">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a class="btn btn-secondary" href="/admin/tools">Back to list</a>
+    </div>
+</form>
+
+<div class="adm-card">
+    <div class="adm-card-header">Images</div>
+    <div class="adm-card-body">
+        @if (Model.IsNew)
+        {
+            <p class="text-muted">Save the tool first — images are attached to an existing tool.</p>
+        }
+        else
+        {
+            @Html.AntiForgeryToken()
+            <p class="text-muted">
+                Paste a screenshot (Ctrl+V) into any Markdown box above, drop a file here, or pick one.
+                The Markdown link is inserted at the caret.
+            </p>
+            <div class="md-dropzone" id="toolImageDropzone" data-tool-id="@toolId">
+                <input type="file" id="toolImageInput" accept="image/png,image/jpeg,image/webp,image/gif" hidden />
+                <button type="button" class="btn btn-sm btn-secondary" id="toolImagePick">Choose image…</button>
+                <span class="md-dropzone-hint">or drop it here (max 1 MiB, up to 30 per tool)</span>
+                <span class="md-upload-status" id="toolImageStatus" role="status"></span>
+            </div>
+
+            <div class="md-image-strip" id="toolImageStrip">
+                @foreach (var image in Model.Images)
+                {
+                    <figure class="md-image-card" data-url="/tools/image/@image.Id">
+                        <img src="/tools/image/@image.Id" alt="@image.AltText" loading="lazy" />
+                        <figcaption title="@image.FileName">@image.FileName</figcaption>
+                        <div class="md-image-actions">
+                            <button type="button" class="btn btn-sm btn-link md-copy"
+                                    data-markdown="![@(image.AltText ?? image.FileName)](/tools/image/@image.Id)">
+                                Copy Markdown
+                            </button>
+                            <form method="post" asp-page-handler="DeleteImage" style="display:inline"
+                                  onsubmit="return confirm('Delete this image? Markdown referencing it will break.');">
+                                <input type="hidden" name="id" value="@toolId" />
+                                <input type="hidden" name="imageId" value="@image.Id" />
+                                <button type="submit" class="btn btn-sm btn-link">Delete</button>
+                            </form>
+                        </div>
+                    </figure>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/tool-editor.js" asp-append-version="true"></script>
+}

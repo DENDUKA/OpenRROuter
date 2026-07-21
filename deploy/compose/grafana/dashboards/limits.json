@@ -1,39 +1,65 @@
 {
   "uid": "orr-limits",
   "title": "ORR Limits",
-  "tags": ["orr", "limits"],
+  "tags": [
+    "orr",
+    "limits"
+  ],
   "timezone": "utc",
   "schemaVersion": 39,
   "version": 1,
   "editable": false,
   "refresh": "1m",
-  "time": { "from": "now-24h", "to": "now" },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "panels": [
     {
       "id": 1,
       "type": "stat",
       "title": "Отказов по лимитам (24ч)",
       "description": "Сумма orr_limit_rejections_total за сутки. Счётчик per-process: при нескольких репликах gateway значения складываются по всем инстансам.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum(increase(orr_limit_rejections_total[24h]))",
           "instant": true
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "fixed", "fixedColor": "text" },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
           "decimals": 0,
           "unit": "short"
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -46,12 +72,23 @@
       "type": "stat",
       "title": "Ключей ≥90% дневного лимита",
       "description": "Считается из billing.usage_records на лету, окно — с UTC-полуночи (как в BillingApplicationService).",
-      "datasource": { "type": "postgres", "uid": "orrbilling" },
-      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "postgres", "uid": "orrbilling" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
@@ -62,20 +99,37 @@
         "defaults": {
           "decimals": 0,
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#0ca30c", "value": null },
-              { "color": "#fab219", "value": 1 },
-              { "color": "#d03b3b", "value": 5 }
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 5
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -88,12 +142,23 @@
       "type": "stat",
       "title": "Пользователей с балансом ≤ 0",
       "description": "Баланс = сумма billing.ledger_entries. Платные модели такому пользователю отдают 402 insufficient_balance; бесплатные продолжают работать.",
-      "datasource": { "type": "postgres", "uid": "orrbilling" },
-      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "postgres", "uid": "orrbilling" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
@@ -104,20 +169,37 @@
         "defaults": {
           "decimals": 0,
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#0ca30c", "value": null },
-              { "color": "#fab219", "value": 1 },
-              { "color": "#d03b3b", "value": 10 }
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 10
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -130,12 +212,23 @@
       "type": "stat",
       "title": "Мин. остаток квоты провайдера",
       "description": "Минимум по orr_provider_quota_percent со всех нод и коннекшенов. Пороги совпадают с админкой /admin/nodes/{id}/limits: >50% ok, >20% warn, иначе danger.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "min(orr_provider_quota_percent)",
           "instant": true
         }
@@ -146,20 +239,37 @@
           "unit": "percent",
           "min": 0,
           "max": 100,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#d03b3b", "value": null },
-              { "color": "#fab219", "value": 20 },
-              { "color": "#0ca30c", "value": 50 }
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 50
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
@@ -172,12 +282,23 @@
       "type": "timeseries",
       "title": "Отказы по лимитам, в минуту",
       "description": "orr_limit_rejections_total по типам лимита. Цвета закреплены за limit_type: серия, у которой временно нет данных, не перекрашивает остальные.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 4 },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "sum by (limit_type) (rate(orr_limit_rejections_total[5m])) * 60",
           "legendFormat": "{{limit_type}}"
         }
@@ -187,7 +308,9 @@
           "unit": "short",
           "decimals": 2,
           "min": 0,
-          "color": { "mode": "palette-classic" },
+          "color": {
+            "mode": "palette-classic"
+          },
           "custom": {
             "drawStyle": "line",
             "lineWidth": 2,
@@ -201,20 +324,64 @@
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "rate_limit" },
-            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#3987e5" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "rate_limit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "spend_daily" },
-            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#d95926" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "spend_daily"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "spend_weekly" },
-            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#199e70" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "spend_weekly"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
           },
           {
-            "matcher": { "id": "byName", "options": "balance" },
-            "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "#c98500" } }]
+            "matcher": {
+              "id": "byName",
+              "options": "balance"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
           }
         ]
       },
@@ -223,9 +390,15 @@
           "showLegend": true,
           "displayMode": "table",
           "placement": "bottom",
-          "calcs": ["lastNotNull", "max"]
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
         },
-        "tooltip": { "mode": "multi", "sort": "desc" }
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
       }
     },
     {
@@ -233,12 +406,23 @@
       "type": "bargauge",
       "title": "Выборка дневного лимита по ключам (топ-15)",
       "description": "Сколько процентов суточного spend-лимита ключ уже потратил. Полная шкала = лимит. Показаны первые 8 символов api_key_id.",
-      "datasource": { "type": "postgres", "uid": "orrbilling" },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 13 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "postgres", "uid": "orrbilling" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
@@ -251,14 +435,28 @@
           "decimals": 1,
           "min": 0,
           "max": 100,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#0ca30c", "value": null },
-              { "color": "#fab219", "value": 75 },
-              { "color": "#ec835a", "value": 90 },
-              { "color": "#d03b3b", "value": 100 }
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 75
+              },
+              {
+                "color": "#ec835a",
+                "value": 90
+              },
+              {
+                "color": "#d03b3b",
+                "value": 100
+              }
             ]
           }
         },
@@ -271,20 +469,103 @@
         "valueMode": "text",
         "minVizHeight": 16,
         "minVizWidth": 8,
-        "reduceOptions": { "calcs": [], "fields": "", "values": true }
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Подключений без квоты",
+      "description": "Сколько провайдерских подключений не отдают лимиты. Пока значение > 0, панель остатка квоты ниже неполна — она видит только исправные подключения.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(orr_provider_quota_status == 0) or vector(0)",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
       }
     },
     {
       "id": 21,
       "type": "bargauge",
       "title": "Остаток квоты провайдеров",
-      "description": "orr_provider_quota_percent — сколько квоты ОСТАЛОСЬ (больше = лучше). Пороги обратные к панели выборки лимита: <20% критично.",
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 13 },
+      "description": "orr_provider_quota_percent — сколько квоты ОСТАЛОСЬ (больше = лучше). Пороги обратные к панели выборки лимита: <20% критично. Показывает только подключения, которые реально отдают квоту — см. плитку выше.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "prometheus", "uid": "prometheus" },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
           "expr": "orr_provider_quota_percent",
           "legendFormat": "{{provider}} · {{quota_name}}",
           "instant": true
@@ -296,13 +577,24 @@
           "decimals": 1,
           "min": 0,
           "max": 100,
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "color": "#d03b3b", "value": null },
-              { "color": "#fab219", "value": 20 },
-              { "color": "#0ca30c", "value": 50 }
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 50
+              }
             ]
           }
         },
@@ -315,7 +607,99 @@
         "valueMode": "text",
         "minVizHeight": 16,
         "minVizWidth": 8,
-        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Подключения, не отдающие квоту",
+      "description": "orr_provider_quota_status == 0. Такое подключение живо и обслуживает запросы, но 9R не может прочитать у него лимиты подписки — обычно протухшая авторизация у провайдера. Пусто = все подключения отчитываются.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_provider_quota_status == 0",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "otel_scope_name": true
+            },
+            "renameByName": {
+              "provider": "Провайдер",
+              "account_name": "Аккаунт",
+              "reason": "Причина",
+              "connection_id": "Connection",
+              "node_id": "Нода"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Причина"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d03b3b"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
       }
     },
     {
@@ -323,12 +707,23 @@
       "type": "table",
       "title": "Spend-лимиты ключей: сутки и неделя",
       "description": "Табличный дубль панелей выше — все значения читаются без цвета. Недельное окно начинается в понедельник 00:00 UTC, как в BillingApplicationService.",
-      "datasource": { "type": "postgres", "uid": "orrbilling" },
-      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 23 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "postgres", "uid": "orrbilling" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
@@ -337,44 +732,86 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byRegexp", "options": ".*%$" },
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*%$"
+            },
             "properties": [
-              { "id": "unit", "value": "percent" },
-              { "id": "decimals", "value": 1 },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
               {
                 "id": "custom.cellOptions",
-                "value": { "type": "color-text" }
+                "value": {
+                  "type": "color-text"
+                }
               },
               {
                 "id": "thresholds",
                 "value": {
                   "mode": "absolute",
                   "steps": [
-                    { "color": "#0ca30c", "value": null },
-                    { "color": "#fab219", "value": 75 },
-                    { "color": "#ec835a", "value": 90 },
-                    { "color": "#d03b3b", "value": 100 }
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 75
+                    },
+                    {
+                      "color": "#ec835a",
+                      "value": 90
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 100
+                    }
                   ]
                 }
               }
             ]
           },
           {
-            "matcher": { "id": "byRegexp", "options": ".*\\$$" },
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
             "properties": [
-              { "id": "unit", "value": "currencyUSD" },
-              { "id": "decimals", "value": 4 }
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
             ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "displayName": "Дневной %", "desc": true }]
+        "sortBy": [
+          {
+            "displayName": "Дневной %",
+            "desc": true
+          }
+        ]
       }
     },
     {
@@ -382,12 +819,23 @@
       "type": "table",
       "title": "Пользователи с балансом ≤ 0",
       "description": "Овердрафта нет: проверка баланса стоит ДО запроса, поэтому один дорогой запрос может увести баланс в минус.",
-      "datasource": { "type": "postgres", "uid": "orrbilling" },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 33 },
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "postgres", "uid": "orrbilling" },
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
@@ -396,21 +844,40 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "custom": { "align": "auto", "cellOptions": { "type": "auto" } }
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
         },
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "Баланс $" },
+            "matcher": {
+              "id": "byName",
+              "options": "Баланс $"
+            },
             "properties": [
-              { "id": "unit", "value": "currencyUSD" },
-              { "id": "decimals", "value": 4 }
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
             ]
           }
         ]
       },
       "options": {
         "showHeader": true,
-        "sortBy": [{ "displayName": "Баланс $", "desc": false }]
+        "sortBy": [
+          {
+            "displayName": "Баланс $",
+            "desc": false
+          }
+        ]
       }
     }
   ]

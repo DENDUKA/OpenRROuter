@@ -37,6 +37,20 @@ public sealed class ProviderQuotaMeter : IDisposable
             unit: "%",
             description: "Remaining quota percentage for providers");
 
+        // 1 = квота читается, 0 = подключение живёт, но чисел не отдаёт. Без этого гейджа
+        // сломанный провайдер просто пропадал из всех остальных метрик, и «квот нет» было
+        // неотличимо от «квоты сломаны».
+        _meter.CreateObservableGauge(
+            "orr_provider_quota_status",
+            () => store.Current.Statuses.Select(s => new Measurement<int>(
+                s.Reporting ? 1 : 0,
+                new KeyValuePair<string, object?>("node_id", s.NodeId),
+                new KeyValuePair<string, object?>("provider", s.Provider),
+                new KeyValuePair<string, object?>("connection_id", s.ConnectionId),
+                new KeyValuePair<string, object?>("account_name", s.AccountName),
+                new KeyValuePair<string, object?>("reason", s.Reason))),
+            description: "1 when a provider connection reports quota, 0 when it cannot");
+
         _meter.CreateObservableGauge(
             "orr_model_active",
             () => store.Current.Measurements

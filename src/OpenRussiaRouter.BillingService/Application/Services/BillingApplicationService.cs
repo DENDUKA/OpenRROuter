@@ -41,7 +41,8 @@ public sealed partial class BillingApplicationService(
             amount,
             Preconditions.RequireValue(idempotencyKey, nameof(idempotencyKey)),
             Preconditions.RequireValue(reason, nameof(reason)),
-            nowUtc), ct).ConfigureAwait(false);
+            nowUtc,
+            false), ct).ConfigureAwait(false);
     }
 
     public async Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
@@ -276,7 +277,8 @@ public sealed partial class BillingApplicationService(
             MoneyAmount.Usd(-cost.Amount),
             $"usage:{usageEvent.RequestId}",
             $"Usage charge for {usageEvent.ModelId}",
-            nowUtc);
+            nowUtc,
+            false);
 
         await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry, ct).ConfigureAwait(false);
 
@@ -735,7 +737,8 @@ public sealed partial class BillingApplicationService(
             MoneyAmount.Usd(amountUsd),
             $"promo1:{userId}",
             $"Start balance promo ${amountUsd:F2}",
-            nowUtc), ct).ConfigureAwait(false);
+            nowUtc,
+            false), ct).ConfigureAwait(false);
 
         return new GrantStartBalanceResult(true, entry.Id, null);
     }
@@ -771,7 +774,8 @@ public sealed partial class BillingApplicationService(
             MoneyAmount.Usd(bonusUsd),
             $"first_top_up_bonus:{paymentId}",
             $"First top-up bonus {payment.BonusPercent}% on payment {paymentId}",
-            nowUtc), ct).ConfigureAwait(false);
+            nowUtc,
+            false), ct).ConfigureAwait(false);
 
         await repository.UpdatePaymentBonusAsync(paymentId, payment.BonusPercent.Value, bonusUsd, ct).ConfigureAwait(false);
 

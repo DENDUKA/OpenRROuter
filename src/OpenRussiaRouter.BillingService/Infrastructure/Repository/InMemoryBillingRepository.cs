@@ -511,8 +511,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         lock (_paymentSync)
         {
             var hasPaid = _ledgerByIdempotencyKey.Values
-                .Any(e => e.UserId == userId && e.Type == LedgerEntryType.ExternalTopUp
-                    && !e.IdempotencyKey.StartsWith("promo1:"));
+                .Any(e => e.UserId == userId && e.IsUserPayment);
             return Task.FromResult(hasPaid);
         }
     }

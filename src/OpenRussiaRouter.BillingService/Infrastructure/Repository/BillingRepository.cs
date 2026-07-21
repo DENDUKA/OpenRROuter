@@ -73,18 +73,20 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             """
             with ins as (
                 insert into billing.ledger_entries
-                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
+                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc, is_user_payment)
                 values
-                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
+                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment)
                 on conflict (idempotency_key) do nothing
                 returning *
             )
             select id as Id, user_id as UserId, type as Type, amount as Amount, currency as Currency,
-                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc
+                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc,
+                   is_user_payment as IsUserPayment
             from ins
             union all
             select id as Id, user_id as UserId, type as Type, amount as Amount, currency as Currency,
-                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc
+                   idempotency_key as IdempotencyKey, reason as Reason, created_at_utc as CreatedAtUtc,
+                   is_user_payment as IsUserPayment
             from billing.ledger_entries
             where idempotency_key = @IdempotencyKey
               and not exists (select 1 from ins)
@@ -99,7 +101,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 Currency = entry.Amount.Currency.ToString(),
                 entry.IdempotencyKey,
                 entry.Reason,
-                entry.CreatedAtUtc
+                entry.CreatedAtUtc,
+                entry.IsUserPayment
             },
             cancellationToken: ct)).ConfigureAwait(false));
     }
@@ -588,9 +591,9 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 insert into billing.ledger_entries
-                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc)
+                    (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc, is_user_payment)
                 values
-                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc)
+                    (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment)
                 on conflict (idempotency_key) do nothing;
                 """,
                 new
@@ -602,7 +605,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                     Currency = ledgerEntry.Amount.Currency.ToString(),
                     ledgerEntry.IdempotencyKey,
                     ledgerEntry.Reason,
-                    ledgerEntry.CreatedAtUtc
+                    ledgerEntry.CreatedAtUtc,
+                    ledgerEntry.IsUserPayment
                 },
                 transaction,
                 cancellationToken: ct)).ConfigureAwait(false);
@@ -1024,8 +1028,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         var count = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             """
             select count(*) from billing.ledger_entries
-            where user_id = @UserId and type = 'ExternalTopUp'
-                and idempotency_key not like 'promo1:%';
+            where user_id = @UserId and is_user_payment = true;
             """,
             new { UserId = userId },
             cancellationToken: ct)).ConfigureAwait(false);
@@ -1272,7 +1275,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         if (updatedId is not null)
         {
             ledgerId = await InsertLedgerAsync(connection, transaction, payment, "payment", LedgerEntryType.ExternalTopUp,
-                payment.CreditedUsdAmount, nowUtc, ct).ConfigureAwait(false);
+                payment.CreditedUsdAmount, nowUtc, isUserPayment: true, ct).ConfigureAwait(false);
         }
         else if (payment.Status == PaymentStatus.Paid)
         {
@@ -1337,7 +1340,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         {
             var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
             ledgerId = await InsertLedgerAsync(connection, transaction, updated, prefix, LedgerEntryType.Correction,
-                -updated.CreditedUsdAmount, nowUtc, ct).ConfigureAwait(false);
+                -updated.CreditedUsdAmount, nowUtc, isUserPayment: false, ct).ConfigureAwait(false);
 
             // Reverse first top-up bonus if it exists
             var bonusKey = $"first_top_up_bonus:{eventRow.PaymentId}";
@@ -1347,7 +1350,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             if (bonusAmount.HasValue && bonusAmount.Value != 0)
             {
                 await InsertLedgerAsync(connection, transaction, updated, "refund_bonus",
-                    LedgerEntryType.Correction, -bonusAmount.Value, nowUtc, ct).ConfigureAwait(false);
+                    LedgerEntryType.Correction, -bonusAmount.Value, nowUtc, isUserPayment: false, ct).ConfigureAwait(false);
             }
         }
 
@@ -1409,13 +1412,13 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
     }
 
     private static async Task<string> InsertLedgerAsync(System.Data.IDbConnection connection, System.Data.IDbTransaction transaction,
-        PaymentEntity payment, string prefix, LedgerEntryType type, decimal amount, DateTimeOffset nowUtc, CancellationToken ct)
+        PaymentEntity payment, string prefix, LedgerEntryType type, decimal amount, DateTimeOffset nowUtc, bool isUserPayment, CancellationToken ct)
     {
         return await connection.QuerySingleAsync<string>(new CommandDefinition(
             """
             with ins as (
-                insert into billing.ledger_entries (id,user_id,type,amount,currency,idempotency_key,reason,created_at_utc)
-                values (@Id,@UserId,@Type,@Amount,'Usd',@Key,@Reason,@Now)
+                insert into billing.ledger_entries (id,user_id,type,amount,currency,idempotency_key,reason,created_at_utc,is_user_payment)
+                values (@Id,@UserId,@Type,@Amount,'Usd',@Key,@Reason,@Now,@IsUserPayment)
                 on conflict (idempotency_key) do nothing returning id
             )
             select id from ins union all select id from billing.ledger_entries where idempotency_key=@Key limit 1;
@@ -1423,7 +1426,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             new
             {
                 Id = Guid.NewGuid().ToString("N"), payment.UserId, Type = type.ToString(), Amount = amount,
-                Key = $"{prefix}:{payment.Id}", Reason = $"{type} payment {payment.Id}", Now = nowUtc
+                Key = $"{prefix}:{payment.Id}", Reason = $"{type} payment {payment.Id}", Now = nowUtc,
+                IsUserPayment = isUserPayment
             }, transaction, cancellationToken: ct)).ConfigureAwait(false);
     }
 

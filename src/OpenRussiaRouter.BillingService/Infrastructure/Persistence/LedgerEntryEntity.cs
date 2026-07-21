@@ -20,4 +20,6 @@ public sealed class LedgerEntryEntity
     public string Reason { get; set; } = string.Empty;
 
     public DateTimeOffset CreatedAtUtc { get; set; }
+
+    public bool IsUserPayment { get; set; }
 }

@@ -10,5 +10,6 @@ public sealed record LedgerEntry(
     MoneyAmount Amount,
     string IdempotencyKey,
     string Reason,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    bool IsUserPayment = false);
 

@@ -19,7 +19,8 @@ public static class BillingPersistenceMapper
             Currency = entry.Amount.Currency,
             IdempotencyKey = entry.IdempotencyKey,
             Reason = entry.Reason,
-            CreatedAtUtc = entry.CreatedAtUtc
+            CreatedAtUtc = entry.CreatedAtUtc,
+            IsUserPayment = entry.IsUserPayment
         };
     }
 
@@ -32,7 +33,8 @@ public static class BillingPersistenceMapper
             new MoneyAmount(entity.Amount, entity.Currency),
             entity.IdempotencyKey,
             entity.Reason,
-            entity.CreatedAtUtc);
+            entity.CreatedAtUtc,
+            entity.IsUserPayment);
     }
 
     public static ModelPriceEntity ToEntity(ModelPrice model)

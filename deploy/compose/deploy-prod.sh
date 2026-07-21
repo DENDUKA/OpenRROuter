@@ -13,7 +13,7 @@ cd "$(dirname "$0")"
 
 DIR=app
 SRC="$DIR/deploy/compose"
-APP_SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
+APP_SERVICES="auth-service billing-service control-plane content-service collector api-gateway webapp"
 
 [ -d "$DIR/.git" ] || { echo "!! $DIR is not a git clone. Run bootstrap-git.sh first." >&2; exit 1; }
 [ -f .env ]        || { echo "!! .env missing in $(pwd). Copy $SRC/.env.example and fill it." >&2; exit 1; }

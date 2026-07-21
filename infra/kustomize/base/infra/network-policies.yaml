@@ -269,6 +269,30 @@ spec:
           protocol: TCP
 
 ---
+# content-service receives gRPC from webapp (admin Tools pages + public /tools catalog).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-content-service
+  namespace: orr-dev
+spec:
+  podSelector:
+    matchLabels:
+      app: content-service
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: webapp
+      ports:
+        - port: 8081
+          protocol: TCP
+        - port: 8080
+          protocol: TCP
+
+---
 # postgres accepts connections from application services and the migration job.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
@@ -292,6 +316,9 @@ spec:
         - podSelector:
             matchLabels:
               app: control-plane
+        - podSelector:
+            matchLabels:
+              app: content-service
         - podSelector:
             matchLabels:
               app: api-gateway
@@ -444,7 +471,7 @@ spec:
     matchExpressions:
       - key: app
         operator: In
-        values: [api-gateway, webapp, auth-service, billing-service, control-plane, collector]
+        values: [api-gateway, webapp, auth-service, billing-service, control-plane, content-service, collector]
   policyTypes:
     - Ingress
   ingress:

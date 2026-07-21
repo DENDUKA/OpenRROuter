@@ -10,5 +10,6 @@ scrape_configs:
         - 'auth-service:8080'
         - 'billing-service:8080'
         - 'control-plane:8080'
+        - 'content-service:8080'
         - 'collector:8080'
         - 'webapp:8080'

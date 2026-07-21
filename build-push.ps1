@@ -18,6 +18,7 @@ $ALL_SERVICES = [ordered]@{
     "auth-service"    = "src/OpenRussiaRouter.AuthService/Dockerfile"
     "billing-service" = "src/OpenRussiaRouter.BillingService/Dockerfile"
     "control-plane"   = "src/OpenRussiaRouter.ControlPlane/Dockerfile"
+    "content-service" = "src/OpenRussiaRouter.ContentService/Dockerfile"
     "collector"       = "src/OpenRussiaRouter.CollectorService/Dockerfile"
     "webapp"          = "src/OpenRussiaRouter.WebApp/Dockerfile"
 }
@@ -38,6 +39,7 @@ $SERVICE_PATTERNS = [ordered]@{
     "auth-service"    = '^src/OpenRussiaRouter\.AuthService/'
     "billing-service" = '^src/OpenRussiaRouter\.BillingService/'
     "control-plane"   = '^src/OpenRussiaRouter\.ControlPlane/'
+    "content-service" = '^src/OpenRussiaRouter\.ContentService/'
     "collector"       = '^src/OpenRussiaRouter\.CollectorService/'
     "webapp"          = '^src/OpenRussiaRouter\.WebApp/'
 }

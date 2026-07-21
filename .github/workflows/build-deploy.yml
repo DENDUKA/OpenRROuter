@@ -57,6 +57,9 @@ jobs:
           - service: control-plane
             output_key: control_plane
             dockerfile: ./src/OpenRussiaRouter.ControlPlane/Dockerfile
+          - service: content-service
+            output_key: content_service
+            dockerfile: ./src/OpenRussiaRouter.ContentService/Dockerfile
           - service: collector
             output_key: collector
             dockerfile: ./src/OpenRussiaRouter.CollectorService/Dockerfile
@@ -88,25 +91,26 @@ jobs:
           changed_files="$(git diff --name-only "$base" "${{ github.sha }}")"
 
           api_gateway=false auth_service=false billing_service=false
-          control_plane=false collector=false webapp=false all_services=false
+          control_plane=false content_service=false collector=false webapp=false all_services=false
 
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
             case "$file" in
               .github/workflows/build-deploy.yml|OpenRussiaRouter.sln|NuGet.Config|global.json|Directory.Build.props|Directory.Packages.props|src/OpenRussiaRouter.BuildingBlocks/*|src/OpenRussiaRouter.Contracts/*)
                 all_services=true ;;
-              src/OpenRussiaRouter.ApiGateway/*)   api_gateway=true ;;
-              src/OpenRussiaRouter.AuthService/*)   auth_service=true ;;
+              src/OpenRussiaRouter.ApiGateway/*)     api_gateway=true ;;
+              src/OpenRussiaRouter.AuthService/*)    auth_service=true ;;
               src/OpenRussiaRouter.BillingService/*) billing_service=true ;;
-              src/OpenRussiaRouter.ControlPlane/*)  control_plane=true ;;
+              src/OpenRussiaRouter.ControlPlane/*)   control_plane=true ;;
+              src/OpenRussiaRouter.ContentService/*) content_service=true ;;
               src/OpenRussiaRouter.CollectorService/*) collector=true ;;
-              src/OpenRussiaRouter.WebApp/*)        webapp=true ;;
+              src/OpenRussiaRouter.WebApp/*)         webapp=true ;;
             esac
           done <<< "$changed_files"
 
           if [[ "$all_services" == "true" ]]; then
             api_gateway=true; auth_service=true; billing_service=true
-            control_plane=true; collector=true; webapp=true
+            control_plane=true; content_service=true; collector=true; webapp=true
           fi
 
           case "${{ matrix.output_key }}" in
@@ -114,6 +118,7 @@ jobs:
             auth_service)    echo "changed=$auth_service" >> "$GITHUB_OUTPUT" ;;
             billing_service) echo "changed=$billing_service" >> "$GITHUB_OUTPUT" ;;
             control_plane)   echo "changed=$control_plane" >> "$GITHUB_OUTPUT" ;;
+            content_service) echo "changed=$content_service" >> "$GITHUB_OUTPUT" ;;
             collector)       echo "changed=$collector" >> "$GITHUB_OUTPUT" ;;
             webapp)          echo "changed=$webapp" >> "$GITHUB_OUTPUT" ;;
           esac

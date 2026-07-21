@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: content-service
+  namespace: orr-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: content-service
+  template:
+    metadata:
+      labels:
+        app: content-service
+    spec:
+      containers:
+        - name: content-service
+          image: ghcr.io/denduka/content-service:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 8081
+          env:
+            - name: ASPNETCORE_URLS
+              value: "http://+:8080"
+            - name: Kestrel__Endpoints__Http__Url
+              value: "http://+:8080"
+            - name: Kestrel__Endpoints__Http__Protocols
+              value: "Http1"
+            - name: Kestrel__Endpoints__Grpc__Url
+              value: "http://+:8081"
+            - name: Kestrel__Endpoints__Grpc__Protocols
+              value: "Http2"
+            - name: Seq__Url
+              value: "http://seq:5341"
+            - name: Seq__ServiceName
+              value: "content-service"
+            - name: ConnectionStrings__ContentDb
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: content-connection
+            - name: ServiceAuth__Tokens__webappadmin
+              valueFrom:
+                secretKeyRef:
+                  name: orr-s2s-secret
+                  key: webappadmin-token
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: content-service
+  namespace: orr-dev
+spec:
+  ports:
+    - port: 8080
+      targetPort: 8081
+  selector:
+    app: content-service

@@ -2,18 +2,18 @@
 # Update OpenRussiaRouter (.NET stack) on the VPS: git pull -> build -> restart -> health-gate -> rollback on failure.
 # Usage:
 #   ./update-orr.sh                 # all .NET services
-#   ./update-orr.sh api-gateway     # one service (auth-service|billing-service|control-plane|collector|api-gateway|webapp)
+#   ./update-orr.sh api-gateway     # one service (auth-service|billing-service|control-plane|content-service|collector|api-gateway|webapp)
 set -euo pipefail
 cd "$(dirname "$0")"
 
 DIR=app
-ALL_SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
+ALL_SERVICES="auth-service billing-service control-plane content-service collector api-gateway webapp"
 REQUESTED="${1:-}"
 
 # Validate the requested service if any.
 if [ -n "$REQUESTED" ]; then
   case "$REQUESTED" in
-    auth-service|billing-service|control-plane|collector|api-gateway|webapp) ;;
+    auth-service|billing-service|control-plane|content-service|collector|api-gateway|webapp) ;;
     *) echo "!! unknown service: $REQUESTED (allowed: $ALL_SERVICES)" >&2; exit 2 ;;
   esac
   SERVICES="$REQUESTED"
@@ -106,7 +106,7 @@ fi
 docker image prune -f >/dev/null
 echo "==> [orr] OK at ${after:0:9}"
 if [ "$SERVICES" = "$ALL_SERVICES" ]; then
-  docker compose ps --format 'table {{.Service}}\t{{.Status}}' | grep -E 'auth|billing|control|collector|gateway|webapp'
+  docker compose ps --format 'table {{.Service}}\t{{.Status}}' | grep -E 'auth|billing|control|content|collector|gateway|webapp'
 else
   docker compose ps "$SERVICES" --format 'table {{.Service}}\t{{.Status}}'
 fi

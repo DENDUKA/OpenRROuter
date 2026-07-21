@@ -68,6 +68,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, внешний логин (Google/Yandex) | gRPC 5001 |
 | `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, платежи и FX, spend-лимиты, аномалии, теги | gRPC 5002 |
 | `OpenRussiaRouter.ControlPlane` | Реестр нод 9Router, health, лизинг, capability-routing, синк ключей | gRPC 5003 |
+| `OpenRussiaRouter.ContentService` | Каталог сторонних инструментов (Tools) для подключения к API; markdown-описания, картинки, s2s-защита админских RPC | gRPC 5007 |
 | `OpenRussiaRouter.WebApp` | **Razor Pages** (не Blazor) — кабинет + админка, cookie-auth, чекаут платежей и вебхуки, локализация ru/en. Своей БД нет | HTTP 5004 |
 | `OpenRussiaRouter.CollectorService` | Опрос нод/OpenRouter, in-memory кеш снапшотов. **БД нет**, состояние теряется при рестарте (by design) | gRPC 5005 |
 | `OpenRussiaRouter.BuildingBlocks` | Money, TokenUsage, ошибки, миграции, телеметрия, gRPC-хелперы. Зависимостей на другие проекты solution нет | — |
@@ -101,11 +102,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   (in-memory используется в unit-тестах).
 - **Регистрация в DI**: extension-методы `Add{Service}Infrastructure()` / `Add{Service}Application()`
   в `Infrastructure/Startup/`.
-- **SQL-миграции**: сырые `.sql` в `db/migrations/{auth|billing|control|gateway|analytics}/`,
+- **SQL-миграции**: сырые `.sql` в `db/migrations/{auth|billing|control|gateway|analytics|content}/`,
   применяются на старте через `PostgresSqlMigrationRunner`. Новый файл — со следующим
   числовым префиксом. Файлы неизменяемы: применённую миграцию не редактируем, добавляем новую.
 - **gRPC-контракты**: `.proto` в `src/OpenRussiaRouter.Contracts/Protos/` —
-  `auth.proto`, `billing.proto`, `control-plane.proto`, `collector.proto`.
+  `auth.proto`, `billing.proto`, `control-plane.proto`, `collector.proto`, `content.proto`.
 - **gRPC-инфраструктура** (`BuildingBlocks/Grpc/`): `GrpcDeadlineInterceptor`
   (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах; `ServiceAuthClientInterceptor`
   ↔ `ServiceAuthInterceptor` для межсервисной аутентификации.
@@ -117,15 +118,16 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 ### Карта страниц WebApp
 
 Публичные: `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`,
-`/invite/{token}`, `/models`, `/models/{id}`, `/providers`, `/providers/{id}`, `/docs`,
-`/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`.
+`/invite/{token}`, `/models`, `/models/{id}`, `/providers`, `/providers/{id}`, `/tools`,
+`/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`.
 
 Кабинет: `/` (обзор баланса), `/workspace/api-keys`, `/workspace/api-keys/limits`,
 `/workspace/activity`, `/workspace/credits`, `/workspace/payment-success`, `/workspace/settings`.
 
 Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/topups`, `/admin/models`, `/admin/models-sync`,
-`/admin/tags`, `/admin/providers`, `/admin/nodes`, `/admin/nodes/{id}`, `/admin/nodes/{id}/limits`,
-`/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gateway-test`.
+`/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{id}`,
+`/admin/nodes/{id}/limits`, `/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
+`/admin/gateway-test`.
 
 ## Платежи и пополнение баланса
 

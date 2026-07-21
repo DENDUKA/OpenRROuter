@@ -11,7 +11,7 @@ cd "$(dirname "$0")"
 
 DIR=app
 SRC="$DIR/deploy/compose"
-SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
+SERVICES="auth-service billing-service control-plane content-service collector api-gateway webapp"
 
 sync_tracked() {
   cp "$SRC/compose.prod.yml"    compose.yml

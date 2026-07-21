@@ -34,6 +34,8 @@ images:
   newTag: dev-latest
 - name: ghcr.io/denduka/control-plane
   newTag: dev-latest
+- name: ghcr.io/denduka/content-service
+  newTag: dev-latest
 - name: ghcr.io/denduka/collector
   newTag: dev-latest
 - name: ghcr.io/denduka/webapp

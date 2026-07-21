@@ -31,6 +31,7 @@ scrape_configs:
           - auth-service:8082
           - billing-service:8082
           - control-plane:8082
+          - content-service:8082
 
   - job_name: prometheus
     static_configs:

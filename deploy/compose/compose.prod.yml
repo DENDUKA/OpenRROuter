@@ -133,6 +133,31 @@ services:
     mem_limit: 512m
     cpus: 0.75
 
+  content-service:
+    build:
+      context: ./app
+      dockerfile: src/OpenRussiaRouter.ContentService/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5007:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
+      # /metrics and /health. Prometheus cannot scrape h2c — with a single Http2-only
+      # endpoint every scrape came back 400 Bad Request.
+      Kestrel__Endpoints__Grpc__Url: "http://+:8080"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      Kestrel__Endpoints__Metrics__Url: "http://+:8082"
+      Kestrel__Endpoints__Metrics__Protocols: "Http1"
+      ConnectionStrings__ContentDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
+      ServiceAuth__Tokens__webappadmin: "${S2S_WEBAPP_TOKEN}"
+      Seq__Url: "http://seq:80"
+    mem_limit: 512m
+    cpus: 0.75
+
   collector:
     build:
       context: ./app
@@ -200,6 +225,8 @@ services:
         condition: service_started
       collector:
         condition: service_started
+      content-service:
+        condition: service_started
     ports:
       - "3000:8080"
     environment:
@@ -208,6 +235,7 @@ services:
       GrpcServices__Billing: "http://billing-service:8080"
       GrpcServices__ControlPlane: "http://control-plane:8080"
       GrpcServices__Collector: "http://collector:8081"
+      GrpcServices__Content: "http://content-service:8080"
       ServiceAuth__BillingCaller: "webappadmin"
       ServiceAuth__BillingToken: "${S2S_WEBAPP_TOKEN}"
       Seq__Url: "http://seq:80"

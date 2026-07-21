@@ -23,6 +23,10 @@ on:
         description: "ControlPlane (.NET gRPC) — реестр нод, health, leases"
         type: boolean
         default: false
+      content-service:
+        description: "ContentService (.NET gRPC) — каталог инструментов (/tools)"
+        type: boolean
+        default: false
       collector:
         description: "CollectorService (.NET) — poller нод/OpenRouter"
         type: boolean
@@ -54,6 +58,7 @@ jobs:
           PICK_AUTH:        ${{ inputs.auth-service }}
           PICK_BILLING:     ${{ inputs.billing-service }}
           PICK_CONTROL:     ${{ inputs.control-plane }}
+          PICK_CONTENT:     ${{ inputs.content-service }}
           PICK_COLLECTOR:   ${{ inputs.collector }}
           PICK_WEBAPP:      ${{ inputs.webapp }}
           PICK_ALL_ORR:     ${{ inputs.all-orr }}
@@ -62,7 +67,7 @@ jobs:
           username: ${{ secrets.PROD_SSH_USER }}
           password: ${{ secrets.PROD_SSH_PASSWORD }}
           port: 22
-          envs: PICK_F9ROUTER,PICK_API_GATEWAY,PICK_AUTH,PICK_BILLING,PICK_CONTROL,PICK_COLLECTOR,PICK_WEBAPP,PICK_ALL_ORR
+          envs: PICK_F9ROUTER,PICK_API_GATEWAY,PICK_AUTH,PICK_BILLING,PICK_CONTROL,PICK_CONTENT,PICK_COLLECTOR,PICK_WEBAPP,PICK_ALL_ORR
           command_timeout: 25m
           script: |
             set -uo pipefail
@@ -78,6 +83,7 @@ jobs:
               [ "$PICK_AUTH" = "true" ]        && TO_DEPLOY+=("auth-service")
               [ "$PICK_BILLING" = "true" ]     && TO_DEPLOY+=("billing-service")
               [ "$PICK_CONTROL" = "true" ]     && TO_DEPLOY+=("control-plane")
+              [ "$PICK_CONTENT" = "true" ]     && TO_DEPLOY+=("content-service")
               [ "$PICK_COLLECTOR" = "true" ]   && TO_DEPLOY+=("collector")
               [ "$PICK_WEBAPP" = "true" ]      && TO_DEPLOY+=("webapp")
             fi

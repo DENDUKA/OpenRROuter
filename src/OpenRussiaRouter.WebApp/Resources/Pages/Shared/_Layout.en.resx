@@ -71,6 +71,9 @@
   <data name="Nav_Providers" xml:space="preserve">
     <value>Providers</value>
   </data>
+  <data name="Nav_Tools" xml:space="preserve">
+    <value>Tools</value>
+  </data>
   <data name="Nav_Settings" xml:space="preserve">
     <value>Settings</value>
   </data>

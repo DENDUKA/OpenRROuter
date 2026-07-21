@@ -6,6 +6,7 @@ using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.Contracts.Billing;
@@ -125,6 +126,8 @@ public sealed partial class BillingApplicationService(
                        && model.Price.CachePerMillion.Amount == 0;
 
         if (!isFreeModel && balance.Amount <= 0)
+        {
+            LimitMetrics.RecordRejection(LimitMetrics.LimitTypes.Balance, LimitMetrics.Subjects.User);
             return new BalanceCheckResult(
                 false,
                 modelId,
@@ -135,6 +138,7 @@ public sealed partial class BillingApplicationService(
                 model.SupportsReasoning,
                 model.AllowedReasoningEfforts,
                 model.DefaultReasoningEffort);
+        }
 
         if (!isFreeModel && !string.IsNullOrWhiteSpace(apiKeyId))
         {
@@ -147,6 +151,14 @@ public sealed partial class BillingApplicationService(
             var limitSummary = summaries.FirstOrDefault();
             if (limitSummary is { DailyExceeded: true } or { WeeklyExceeded: true })
             {
+                // Дневной лимит приоритетнее в метке: при одновременном превышении обоих
+                // именно он — ближайшая к пользователю причина отказа.
+                LimitMetrics.RecordRejection(
+                    limitSummary is { DailyExceeded: true }
+                        ? LimitMetrics.LimitTypes.SpendDaily
+                        : LimitMetrics.LimitTypes.SpendWeekly,
+                    LimitMetrics.Subjects.ApiKey);
+
                 return new BalanceCheckResult(
                     false,
                     modelId,

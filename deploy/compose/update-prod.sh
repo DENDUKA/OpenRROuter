@@ -14,8 +14,25 @@ SRC="$DIR/deploy/compose"
 SERVICES="auth-service billing-service control-plane collector api-gateway webapp"
 
 sync_tracked() {
-  cp "$SRC/compose.prod.yml" compose.yml
-  cp "$SRC/Caddyfile"        Caddyfile
+  cp "$SRC/compose.prod.yml"    compose.yml
+  cp "$SRC/Caddyfile"           Caddyfile
+  cp "$SRC/prometheus.prod.yml" prometheus.yml
+  # Mirror grafana/ wholesale so deleted dashboards/datasources disappear from the box too.
+  rm -rf grafana
+  cp -r "$SRC/grafana" grafana
+}
+
+# prometheus.yml and grafana/provisioning are bind mounts: `compose up -d` does NOT recreate a
+# container when only the mounted file changed, so a synced config would silently not apply.
+# Prometheus reloads in place (--web.enable-lifecycle); Grafana re-reads provisioned datasources
+# only on boot, so it gets restarted. Never fatal — monitoring must not fail an app deploy.
+reload_monitoring() {
+  curl -fsS -X POST --max-time 10 http://127.0.0.1:9090/-/reload >/dev/null 2>&1 \
+    && echo "    prometheus config reloaded" \
+    || echo "    !! prometheus reload skipped (not running?)"
+  docker compose restart grafana >/dev/null 2>&1 \
+    && echo "    grafana restarted (re-reads provisioning)" \
+    || echo "    !! grafana restart skipped"
 }
 
 health() {
@@ -39,8 +56,9 @@ sync_tracked
 
 echo "==> [prod] build"
 docker compose build $SERVICES
-echo "==> [prod] restart app + caddy"
-docker compose up -d $SERVICES caddy
+echo "==> [prod] restart app + caddy + monitoring"
+docker compose up -d $SERVICES caddy prometheus grafana
+reload_monitoring
 
 echo "==> [prod] health (up to 40s)"
 ok=0; for i in $(seq 1 8); do sleep 5; if health; then ok=1; break; fi; done
@@ -52,7 +70,7 @@ if [ "$ok" != "1" ]; then
     git -C "$DIR" reset --hard "$before"
     sync_tracked
     docker compose build $SERVICES
-    docker compose up -d $SERVICES caddy
+    docker compose up -d $SERVICES caddy prometheus grafana
   fi
   docker compose ps --format 'table {{.Service}}\t{{.Status}}'
   exit 1

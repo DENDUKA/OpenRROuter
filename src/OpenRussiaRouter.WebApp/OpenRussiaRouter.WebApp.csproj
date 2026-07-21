@@ -10,6 +10,7 @@
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\billing.proto" GrpcServices="Client" Link="Protos\billing.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\control-plane.proto" GrpcServices="Client" Link="Protos\control-plane.proto" />
     <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\collector.proto" GrpcServices="Client" Link="Protos\collector.proto" />
+    <Protobuf Include="..\OpenRussiaRouter.Contracts\Protos\content.proto" GrpcServices="Client" Link="Protos\content.proto" />
     <PackageReference Include="Google.Protobuf"  />
     <PackageReference Include="MailKit"  />
     <PackageReference Include="Markdig"  />

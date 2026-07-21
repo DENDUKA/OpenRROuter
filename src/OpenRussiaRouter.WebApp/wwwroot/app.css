@@ -1009,6 +1009,27 @@ code.d-block {
 
 .adm-key-preview { font-family: var(--font-mono); background: var(--color-canvas-mid); padding: var(--spacing-md) var(--spacing-lg); border-radius: var(--radius-sm); margin-top: var(--spacing-md); word-break: break-all; font-size: 13px; display: block; }
 
+/* ── Admin: tools editor ── */
+.adm-tool-logo { width: 28px; height: 28px; border-radius: var(--radius-sm); object-fit: contain; border: 1px solid var(--color-hairline); background: var(--color-canvas-soft); display: block; }
+.adm-logo-preview { display: flex; align-items: center; gap: var(--spacing-md); }
+.adm-logo-preview img { width: 48px; height: 48px; object-fit: contain; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); background: var(--color-canvas-soft); }
+.adm-logo-preview label { font-size: 13px; color: var(--color-body); }
+
+.md-editor { font-family: var(--font-mono); font-size: 13px; line-height: 20px; resize: vertical; }
+
+.md-dropzone { display: flex; align-items: center; flex-wrap: wrap; gap: var(--spacing-md); padding: var(--spacing-lg); border: 1px dashed var(--color-hairline); border-radius: var(--radius-md); background: var(--color-canvas-soft); margin-bottom: var(--spacing-lg); }
+.md-dropzone.is-dragover { border-color: var(--color-border); background: var(--color-canvas-mid); }
+.md-dropzone-hint { font-size: 13px; color: var(--color-body); }
+.md-upload-status { font-size: 13px; color: var(--color-body); margin-left: auto; }
+.md-upload-status.is-error { color: #dc2626; }
+
+.md-image-strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--spacing-md); }
+.md-image-card { margin: 0; border: 1px solid var(--color-hairline); border-radius: var(--radius-md); overflow: hidden; background: var(--color-canvas-card); }
+.md-image-card img { width: 100%; height: 110px; object-fit: cover; display: block; background: var(--color-canvas-soft); }
+.md-image-card figcaption { padding: 6px var(--spacing-md) 0; font-size: 12px; color: var(--color-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-image-actions { display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 var(--spacing-md) 6px; }
+.md-image-hint { font-size: 11px; color: var(--color-body); opacity: .7; }
+
 /* ── Activity page ── */
 .act-period-bar {
     display: flex;

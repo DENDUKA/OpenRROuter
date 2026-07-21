@@ -10,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Application.Extensions;
@@ -53,9 +54,18 @@ public static class GatewayRateLimiting
                 });
             });
 
-            limiter.OnRejected = async (context, _) =>
+            limiter.OnRejected = async (context, cancellationToken) =>
             {
                 var http = context.HttpContext;
+
+                // Считаем отказ до проверки HasStarted: лимит сработал в любом случае,
+                // даже если тело ответа уже поехало и переписать его нельзя.
+                LimitMetrics.RecordRejection(
+                    LimitMetrics.LimitTypes.RateLimit,
+                    BearerTokenReader.TryRead(http.Request, out _)
+                        ? LimitMetrics.Subjects.ApiKey
+                        : LimitMetrics.Subjects.Ip);
+
                 if (http.Response.HasStarted)
                 {
                     return;

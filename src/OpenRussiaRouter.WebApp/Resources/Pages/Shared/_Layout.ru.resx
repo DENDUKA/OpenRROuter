@@ -74,6 +74,9 @@
   <data name="Nav_Settings" xml:space="preserve">
     <value>Настройки</value>
   </data>
+  <data name="Nav_Tools" xml:space="preserve">
+    <value>Инструменты</value>
+  </data>
   <data name="Nav_SetupGuide" xml:space="preserve">
     <value>Инструкция</value>
   </data>

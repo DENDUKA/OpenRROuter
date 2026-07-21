@@ -1,0 +1,109 @@
+@page
+@model Admin.ToolsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Tools - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Tools</h2>
+    <p>Third-party apps that can be pointed at the API. Drafts are invisible on /tools.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success" role="status">@Model.SuccessMessage</div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Tools List</span>
+        <div class="adm-btn-row">
+            <a class="btn btn-sm btn-primary" href="/admin/tools/edit">Add Tool</a>
+        </div>
+    </div>
+    <div class="adm-card-body">
+        @if (Model.Tools.Count == 0)
+        {
+            <p class="text-muted">No tools yet.</p>
+        }
+        else
+        {
+            <div class="table-wrap">
+                <table class="table">
+                    <thead><tr>
+                        <th></th><th>Tool ID</th><th>Name</th><th>Category</th>
+                        <th>Status</th><th class="num">Sort</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                    @foreach (var t in Model.Tools)
+                    {
+                        <tr>
+                            <td>
+                                <img class="adm-tool-logo" alt=""
+                                     src="/tools/logo/@Uri.EscapeDataString(t.Id)?v=@t.UpdatedAtUtc.UtcDateTime.Ticks" />
+                            </td>
+                            <td><code>@t.Id</code></td>
+                            <td>@t.DisplayName</td>
+                            <td>@Model.CategoryName(t.CategoryId)</td>
+                            <td>
+                                @if (t.IsPublished)
+                                {
+                                    <span class="badge badge-success">Published</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-secondary">Draft</span>
+                                }
+                            </td>
+                            <td class="num">@t.SortOrder</td>
+                            <td class="adm-actions-cell">
+                                <a class="btn-icon" title="Edit" aria-label="Edit"
+                                   href="/admin/tools/edit/@Uri.EscapeDataString(t.Id)">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                    </svg>
+                                </a>
+                                <form method="post" asp-page-handler="TogglePublish" style="display:inline">
+                                    <input type="hidden" name="id" value="@t.Id" />
+                                    <input type="hidden" name="publish" value="@((!t.IsPublished).ToString().ToLowerInvariant())" />
+                                    <button type="submit" class="btn-icon"
+                                            title="@(t.IsPublished ? "Unpublish" : "Publish")"
+                                            aria-label="@(t.IsPublished ? "Unpublish" : "Publish")">
+                                        @if (t.IsPublished)
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                                                <line x1="1" y1="1" x2="23" y2="23"/>
+                                            </svg>
+                                        }
+                                        else
+                                        {
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                                <circle cx="12" cy="12" r="3"/>
+                                            </svg>
+                                        }
+                                    </button>
+                                </form>
+                                <form method="post" asp-page-handler="Delete" style="display:inline"
+                                      onsubmit="return confirm('Delete tool @t.Id and all its images?');">
+                                    <input type="hidden" name="id" value="@t.Id" />
+                                    <button type="submit" class="btn-icon btn-icon-danger" title="Delete" aria-label="Delete">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

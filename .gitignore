@@ -16,3 +16,4 @@ TestResults/
 /.claude/worktrees
 /graphify-out/cache
 /src/graphify-out/cache
+/tools

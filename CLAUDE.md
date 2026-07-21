@@ -2,301 +2,169 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Build & Test Commands
+> Общаемся и отвечаем пользователю **на русском языке**.
+
+Это корневой индекс. У **каждого проекта в `src/` есть свой `CLAUDE.md`** с деталями
+(bootstrap, слои, ключевые классы, подводные камни) — **читай его перед правкой сервиса**,
+здесь только то, что видно лишь с уровня всего репозитория.
+
+## Build & Test
 
 ```powershell
-# Restore dependencies
+# Флаги -nr:false -m:1 обязательны: без них некоторые Windows-песочницы
+# падают на MSBuild node reuse с бессмысленной ошибкой.
 dotnet restore OpenRussiaRouter.sln --configfile NuGet.Config -nr:false -m:1
+dotnet build   OpenRussiaRouter.sln --no-restore -nr:false -m:1
+dotnet test    OpenRussiaRouter.sln --no-build   -nr:false -m:1
 
-# Build solution
-dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1
-
-# Run all tests
-dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1
-
-# Run a single test project
+# Один тестовый проект
 dotnet test tests/OpenRussiaRouter.BillingService.Tests --no-build -nr:false -m:1
 
-# Run individual services
-dotnet run --project src/OpenRussiaRouter.ApiGateway
-dotnet run --project src/OpenRussiaRouter.AuthService
-dotnet run --project src/OpenRussiaRouter.BillingService
-dotnet run --project src/OpenRussiaRouter.ControlPlane
-dotnet run --project src/OpenRussiaRouter.WebApp
+# Один тест по имени
+dotnet test tests/OpenRussiaRouter.BillingService.Tests --no-build -filter "FullyQualifiedName~MyTest"
+
+# Запуск сервиса локально
+dotnet run --project src/OpenRussiaRouter.<Service>
 ```
 
-**PostgreSQL integration tests** (Testcontainers, skip gracefully without Docker):
-- `ORR_AUTH_POSTGRES_TEST_CONNECTION` — override для AuthService (обычно не нужен, Testcontainers сам поднимает контейнер)
-- `ORR_BILLING_POSTGRES_TEST_CONNECTION`
-- `ORR_CONTROL_POSTGRES_TEST_CONNECTION`
+SDK пиннится через `global.json` (8.0.420, `rollForward: latestFeature`).
 
-**E2E tests** (Playwright, opt-in):
-```powershell
-# До первого запуска установить браузеры:
-pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chromium
-# Конфиг: tests/OpenRussiaRouter.E2ETests/e2e.local.json (gitignored)
-```
+### Инварианты сборки
 
-## Architecture Overview
+- **Любой warning ломает build** — `Directory.Build.props`: `TreatWarningsAsErrors=true`,
+  `AnalysisLevel=latest`. Чинить причину, не глушить точечными `#pragma`.
+  NuGet `NU19xx` (транзитивные зависимости) не фейлят сборку.
+- **Central Package Management** — `Directory.Packages.props` держит все версии.
+  **Никогда не пиши `<PackageVersion>` в `.csproj`** — там только `<PackageReference Include="..." />`.
+  Новый пакет = правка двух файлов.
+- **Никакого Entity Framework нигде** — только Dapper + Npgsql. Не добавлять EF-пакеты,
+  `DbContext`, EF-миграции.
 
-OpenRussiaRouter is an OpenAI-compatible LLM gateway with $ billing, built as .NET 8 microservices communicating via gRPC.
+### Тесты
 
-### Services
+- xUnit + FluentAssertions + Moq.
+- **PostgreSQL-интеграционные тесты — на Testcontainers**: сами поднимают контейнер postgres,
+  без Docker тихо скипаются. Переменные `ORR_{AUTH|BILLING|CONTROL}_POSTGRES_TEST_CONNECTION`
+  только *переопределяют* строку подключения, они не включают тесты.
+- **E2E — Playwright, opt-in**:
+  ```powershell
+  pwsh tests/OpenRussiaRouter.E2ETests/bin/Debug/net8.0/playwright.ps1 install chromium
+  # конфиг: tests/OpenRussiaRouter.E2ETests/e2e.local.json (gitignored)
+  ```
 
-| Service | Role | Default Port |
+### pre-push хук собирает Docker-образы
+
+`.githooks/pre-push` запускает `build-push.ps1` при push в `main` — собирает и пушит
+изменённые образы сервисов в GHCR. Включается один раз: `git config core.hooksPath .githooks`.
+Хук **никогда не блокирует push** (при ошибке делает `exit 0`) — сборку образов проверяй отдельно.
+
+## Архитектура
+
+OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 микросервисы, между собой — gRPC.
+
+| Проект в `src/` | Роль | Порт |
 |---|---|---|
-| **ApiGateway** | Public HTTP entry point, OpenAI-compatible API | HTTP 5000 |
-| **AuthService** | User accounts, sessions, API key lifecycle | gRPC 5001 |
-| **BillingService** | Balance ledger, model pricing, usage tracking | gRPC 5002 |
-| **ControlPlane** | 9Router node registry, health checks, leasing | gRPC 5003 |
-| **WebApp** | ASP.NET Core Razor Pages user cabinet & admin dashboard | HTTP 5004 |
-| **CollectorService** | Периодический опрос нод/OpenRouter, in-memory кеш, отдаёт снапшоты по gRPC | gRPC 5005 |
-| **BuildingBlocks** | Shared library: Money, TokenUsage, errors, migrations | — |
-| **Contracts** | Shared DTOs + `.proto` files for all gRPC interfaces | — |
+| `OpenRussiaRouter.ApiGateway` | Публичный HTTP-вход, OpenAI-совместимый API. БД нет | HTTP 5000 |
+| `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, Google-логин | gRPC 5001 |
+| `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, аномалии, теги | gRPC 5002 |
+| `OpenRussiaRouter.ControlPlane` | Реестр нод 9Router, health, лизинг, capability-routing, синк ключей | gRPC 5003 |
+| `OpenRussiaRouter.WebApp` | **Razor Pages** (не Blazor) — кабинет + админка, cookie-auth. Своей БД нет | HTTP 5004 |
+| `OpenRussiaRouter.CollectorService` | Опрос нод/OpenRouter, in-memory кеш снапшотов. **БД нет**, состояние теряется при рестарте (by design) | gRPC 5005 |
+| `OpenRussiaRouter.BuildingBlocks` | Money, TokenUsage, ошибки, миграции, телеметрия, gRPC-хелперы. Зависимостей на другие проекты solution нет | — |
+| `OpenRussiaRouter.Contracts` | `.proto` (источник истины gRPC) + ручные DTO. Зависит только от BuildingBlocks | — |
+| `OpenRussiaRouter.9Router` | Форк 9Router (ядро роутера). Своя `AGENTS.md`, относиться как к upstream | — |
 
-### API Gateway Request Flow
+### Поток `POST /v1/chat/completions`
 
-`POST /v1/chat/completions` (non-streaming и streaming):
-1. Extract Bearer token → validate via AuthService gRPC
-2. Check balance + model availability via BillingService gRPC
-3. Select router node via ControlPlane gRPC (least-load)
-4. Patch request JSON: replace `model` with `router_model_id` from billing catalog
-5. Forward to 9Router node (non-streaming via YARP, streaming via `HttpCompletionOption.ResponseHeadersRead`)
-6. **Retry** on 5xx / network error before first byte reaches client (one attempt, different node)
-7. Extract token usage from response (JSON field or final SSE chunk with `include_usage`)
-8. Record usage event asynchronously (fire-and-forget gRPC call to BillingService)
-9. Release lease in ControlPlane
+1. Bearer-токен (`sk-or-*`) → валидация в AuthService (UserId, ApiKeyId, IsAdmin).
+2. Баланс + доступность модели в BillingService. Здесь публичный `ModelId`
+   (`ORR/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
+3. Выбор ноды в ControlPlane — **передаётся `RouterModelId`**, иначе capability-store
+   не сматчит модель. Capability-aware, при пустом store — fallback на least-load.
+4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —
+   `GeminiSchemaPatcher` инлайнит `$ref`/`$defs` в схемах тулов (Gemini их не принимает).
+5. Проксирование: YARP (non-streaming) либо `HttpCompletionOption.ResponseHeadersRead` (streaming).
+   **Один retry** на другую ноду при 5xx/сетевой ошибке — только пока первый байт не ушёл клиенту.
+6. Usage вынимается из JSON-тела или из финального SSE-чанка (`include_usage`).
+7. Событие usage кладётся в **PostgreSQL-outbox** (`db/migrations/gateway/`,
+   `PostgresUsageOutboxRepository` + `UsageOutboxDispatcher`), лиза освобождается.
 
-Endpoints:
-- `POST /v1/chat/completions` — non-streaming и streaming (автодетект по полю `stream`)
-- `POST /v1/chat/completions/stream` — явный streaming alias
-- `GET /v1/models` — список enabled моделей из BillingService
-- `GET /health`, `GET /ready`
+Эндпоинты: `/v1/chat/completions`, `/v1/chat/completions/stream` (явный stream-алиас),
+`/v1/models`, `/health`, `/ready`.
 
-### Key Patterns
+### Общие для всех сервисов паттерны
 
-- **Repository pattern**: Each service has `I{Service}Repository` with both Dapper/PostgreSQL and in-memory implementations (in-memory used in tests)
-- **Extension method registration**: `Add{Service}Infrastructure()` / `Add{Service}Application()` in `Infrastructure/Startup/`
-- **SQL migrations**: Raw `.sql` files in `db/migrations/{service}/`, auto-applied on startup via `ApplySqlMigrationsAsync()`
-- **gRPC contracts**: `.proto` files in `src/OpenRussiaRouter.Contracts/Protos/` — `auth.proto`, `billing.proto`, `control-plane.proto`
-- **No Entity Framework** — Dapper + Npgsql only
-- **Correlation IDs**: `X-Correlation-Id` header propagated via `CorrelationIdReader`, injected into Serilog context
-- **WebApp** — Razor Pages (`.cshtml` + `.cshtml.cs`), cookie auth, gRPC clients in `Services/`
+- **Repository**: `I{Service}Repository` с двумя реализациями — Dapper/Postgres и in-memory
+  (in-memory используется в unit-тестах).
+- **Регистрация в DI**: extension-методы `Add{Service}Infrastructure()` / `Add{Service}Application()`
+  в `Infrastructure/Startup/`.
+- **SQL-миграции**: сырые `.sql` в `db/migrations/{auth|billing|control|gateway|analytics}/`,
+  применяются на старте через `PostgresSqlMigrationRunner`. Новый файл — со следующим
+  числовым префиксом. Файлы неизменяемы: применённую миграцию не редактируем, добавляем новую.
+- **gRPC-контракты**: `.proto` в `src/OpenRussiaRouter.Contracts/Protos/` —
+  `auth.proto`, `billing.proto`, `control-plane.proto`, `collector.proto`.
+- **gRPC-инфраструктура** (`BuildingBlocks/Grpc/`): `GrpcDeadlineInterceptor`
+  (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах; `ServiceAuthClientInterceptor`
+  ↔ `ServiceAuthInterceptor` для межсервисной аутентификации.
+  Structured gRPC error details пока нет (PLATFORM-002).
+- **Correlation ID**: заголовок `X-Correlation-Id` → `CorrelationIdReader` → контекст Serilog.
+- **Конфигурация gRPC-адресов**: секция `GrpcServices` в `appsettings.json` потребителя
+  (`Auth` → `http://localhost:5001`, `Billing` → `:5002`, `ControlPlane` → `:5003`, `Collector` → `:5005`).
 
-### Shared BuildingBlocks
+### Карта страниц WebApp
 
-- `MoneyAmount` — record struct with currency, arithmetic operators
-- `TokenUsage` + `UsageCostCalculator` — token billing math
-- `TokenUsageExtractor` — extracts usage from JSON/SSE (non-streaming and streaming paths)
-- `ApiError` + `ErrorCodes` — standardized error responses
-- `PostgresSqlMigrationRunner` — runs SQL migration scripts from embedded resources
-- Serilog extensions for Seq integration
+Публичные: `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`,
+`/invite/{token}`, `/models`, `/models/{id}`, `/providers`, `/providers/{id}`, `/docs`,
+`/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`.
 
-### Configuration
+Кабинет: `/` (обзор баланса), `/workspace/api-keys`, `/workspace/api-keys/limits`,
+`/workspace/activity`, `/workspace/credits`, `/workspace/payment-success`, `/workspace/settings`.
 
-gRPC service URLs and DB connection strings live in `appsettings.json` per service:
+Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/models`, `/admin/models-sync`,
+`/admin/tags`, `/admin/providers`, `/admin/nodes`, `/admin/nodes/{id}`, `/admin/nodes/{id}/limits`,
+`/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gateway-test`.
 
-```json
-{
-  "GrpcServices": {
-    "Auth": "http://localhost:5001",
-    "Billing": "http://localhost:5002",
-    "ControlPlane": "http://localhost:5003"
-  }
-}
-```
+## Два типа токенов 9Router — не путать
 
-### Database Migrations
+1. **Control Token** (на ноду). Лежит в `control.router_nodes.control_token` как
+   **само значение токена**, а не имя секрета. Уходит как есть в
+   `Authorization: Bearer <control_token>` к admin API ноды (`/api/integrations/*`).
+   Никакого резолвинга через конфиг в `RouterNodeProvider` нет — и не надо
+   реинтродьюсить `RouterHealthChecks:NodeTokens:{name}` (это было ошибкой в старой доке).
+2. **Пользовательские API-ключи** (`sk-or-*`). Создаются в WebApp, хеш — в `auth.api_keys`,
+   при создании пушатся на активные ноды, при отзыве деактивируются. Маппинг
+   `(api_key_id, node_id, router_key_id)` — в `control.integration_key_sync`.
 
-SQL scripts are in `db/migrations/{auth|billing|control}/`. They run automatically on startup — add new files with the next numeric prefix (e.g., `004_*.sql`).
+## Деплой — граница ответственности
 
-Current migration counts: auth (6), billing (5), control (3).
+- **GitHub Actions** (`.github/workflows/build-deploy.yml`, прод — `deploy-prod.yml`):
+  restore → build → test → push образов в `ghcr.io/denduka/<service>` с тегами
+  `sha-<commit>` и `dev-latest`. Неизменённые сервисы пропускаются по path-детекту.
+- **Argo CD Image Updater** (в кластере) следит за `dev-latest`, резолвит в digest,
+  пишет image-оверрайды, дальше Argo CD синкает `orr-services`.
+  Ожидаемые Argo CD applications после бутстрапа: `orr-infra`, `orr-services`,
+  `orr-argocd-image-updater` (манифесты — в `infra/argocd/`).
+- **Нельзя** добавлять в GHA шаг, который коммитит теги образов в Kustomize-манифесты
+  или дёргает Argo CD. Этим владеет Image Updater.
+- Argo CD на dev с `selfHeal: true` → **`kubectl set env` / `kubectl edit` откатываются за ~1 мин**.
+  Любая правка env — только через `infra/kustomize/overlays/dev/services/*-env-patch.yaml` + git.
+- Health-чек ноды 9Router: в dev-оверлее обязателен `RouterHealthChecks__HealthPath=/api/health`.
+  Базовый дефолт `/v1/models` отдаёт 401 от f9router, и нода никогда не станет Healthy.
 
-### WebApp Pages
+Полная пошаговая регистрация ноды 9Router в kind-кластере (секреты, endpoint URL,
+маппинг `RouterNodeTokens`, ручной пуш ключа) — в [README.md](README.md), раздел
+«9Router node setup in Kubernetes». Локальный k8s-runbook — `docs/argo-k8s-dev-runbook.md`,
+прочее — в `docs/`.
 
-```
-/login, /logout, /invite/{token}
-/signup, /verify-email     — Self-serve email+password signup + 6-digit code confirm
-/forgot-password           — Request a password-reset code (email)
-/reset-password            — Enter 6-digit code + new password
-/                          — Workspace Index (balance overview)
-/workspace/api-keys        — Create / rename / revoke API keys
-/workspace/activity        — Usage records table
-/workspace/credits         — Balance + top-up history
-/workspace/settings        — stub (empty)
-/admin                     — Admin Index
-/admin/users               — List users, create invite, virtual top-up
-/admin/models              — CRUD model/pricing catalog
-/admin/nodes               — List nodes, add, disable/enable
-/admin/nodes/{id}          — Node details + integration keys
-/admin/nodes/{id}/limits   — Provider quota dashboard
-/admin/anomalies           — Billing anomalies
-/models, /models/{id}      — Public model catalog (user-facing)
-```
+## Известные пробелы
 
-### 9Router Integration & Two Types of Tokens
+Актуальный список задач — в `TODO.md` и `docs/todo.md` (этот раздел устаревает быстрее всего;
+перед тем как на него опереться — проверь по коду).
 
-Интеграция с 9Router использует **два разных типа токенов** — не путать:
-
-#### 1. Токен ноды (Control Token)
-
-Задаётся в настройках ноды при регистрации (поле **Control Token** в Admin → Nodes).
-
-- Это `ROUTER_CONTROL_TOKEN` из конфига 9Router
-- Используется ControlPlane для аутентификации к admin API 9Router (`/api/integrations/*`)
-- Позволяет пушить/отзывать пользовательские ключи на ноду
-- Хранится в `control.router_nodes.control_token` как **фактическое значение токена** (не имя секрета)
-- `RouterNodeProvider` отправляет его напрямую как `Authorization: Bearer <control_token>` — никакого разрешения через config нет
-- В k8s задаётся через `f9router-secret` (поле `ROUTER_CONTROL_TOKEN`), значение вводится вручную при регистрации ноды
-- **Не хранится в репозитории** — только в k8s Secret и в БД ControlPlane
-
-> **Важно**: В CLAUDE.md ранее было описано, что control_token хранит «имя секрета» и резолвится через `RouterHealthChecks:NodeTokens`. Это **неверно** — в коде `RouterNodeProvider.cs` нет такой логики. Поле `control_token` хранит сам токен.
-
-#### 2. Пользовательские API-ключи
-
-Создаются пользователями в WebApp (Workspace → API Keys).
-
-- Формат: `sk-or-<random>` (требование 9Router)
-- Хранятся в AuthService (хеш в `auth.api_keys`)
-- При создании автоматически пушатся на все активные ноды через ControlPlane → `POST /api/integrations/keys`
-- При создании пушится на все активные ноды через ControlPlane → `POST /api/integrations/keys`; при отзыве деактивируется через `PATCH /api/integrations/keys/{id}/status`. Маппинг `(api_key_id, node_id, router_key_id)` хранится в `control.integration_key_sync`.
-- Используются для аутентификации при вызове LLM-моделей через 9Router proxy
-- Видны в дашборде 9Router (`/dashboard/endpoint`)
-
-### Регистрация новой ноды 9Router в Kubernetes
-
-Полная пошаговая процедура. Применима при первоначальной настройке кластера или добавлении новой ноды.
-
-#### Предварительные условия
-
-- Кластер `kind` поднят, ArgoCD синхронизирован.
-- f9router pod запущен (`kubectl get pods -n orr-dev -l app=f9router`).
-- Есть доступ к `http://localhost/admin/nodes` (admin@example.com / StrongPassword123!).
-
-#### 1. Создать / обновить f9router-secret
-
-```powershell
-# Сгенерировать токен (40 символов)
-$ct = -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 40 | % { [char]$_ })
-
-kubectl create secret generic f9router-secret -n orr-dev `
-  --from-literal=ROUTER_CONTROL_TOKEN="$ct" `
-  --from-literal=OPENROUTER_API_KEY="sk-or-v2-..." `
-  --dry-run=client -o yaml | kubectl apply -f -
-
-# Перезапустить pod, чтобы подхватил новый секрет
-kubectl rollout restart deployment/f9router -n orr-dev
-kubectl rollout status deployment/f9router -n orr-dev
-```
-
-#### 2. Определить endpoint URL
-
-Для постоянной регистрации — k8s Service DNS:
-```
-http://f9router/
-```
-Service `f9router` слушает `:80` → проксирует на `containerPort 20128`.
-
-Для разовой отладки — pod IP:
-```powershell
-kubectl get pod -n orr-dev -l app=f9router -o jsonpath='{.items[0].status.podIP}'
-# → http://<pod-ip>:20128/
-```
-
-#### 3. Зарегистрировать ноду в Admin UI
-
-`http://localhost/admin/nodes` → **Add Node**:
-- **Endpoint URL**: `http://f9router/`
-- **Control Token**: значение `$ct` из шага 1 (сам токен, не алиас)
-
-После добавления нода должна стать `Healthy` за 30–60 сек — ControlPlane проверяет `GET /api/health` (без авторизации, HTTP 200).
-
-#### 4. Убедиться, что HealthPath = `/api/health`
-
-Базовый дефолт в `infra/kustomize/base/services/control-plane.yaml` — `/v1/models` (требует auth, 401).
-Dev overlay патч `infra/kustomize/overlays/dev/services/control-plane-env-patch.yaml` переопределяет на `/api/health`.
-Если нода не становится Healthy — проверить:
-
-```powershell
-kubectl get deployment -n orr-dev control-plane `
-  -o jsonpath='{.spec.template.spec.containers[0].env}' `
-  | ConvertFrom-Json | Where-Object name -eq RouterHealthChecks__HealthPath
-# Должно быть: /api/health
-```
-
-#### 5. Настроить маппинг токенов для WebApp
-
-WebApp запрашивает `/v1/models` у ноды, используя `sk-or-*` ключ (f9router требует его для запросов с IP, отличных от 127.0.0.1).
-
-Маппинг: `RouterNodeTokens:{controlToken}` → `sk-or-*` API ключ.
-
-Добавить в `infra/kustomize/overlays/dev/services/webapp-env-patch.yaml`:
-
-```yaml
-env:
-  - name: RouterNodeTokens__<ЗНАЧЕНИЕ_CONTROL_TOKEN>
-    value: "sk-or-<активный-api-ключ>"
-```
-
-Пример:
-```yaml
-- name: RouterNodeTokens__GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM
-  value: "sk-or-SEAiRlwrPc0KVJoOCwYB1DmMfn_lQfDfj7qWZ5vHcaCg4EQC"
-```
-
-**Обязательно закоммитить и запушить** — ArgoCD (`selfHeal: true`) откатит `kubectl set env`.
-
-#### 6. Пушнуть API ключ на ноду вручную (если нужно)
-
-Ключ автоматически пушится на ноды при создании в WebApp. Если нода добавлена позже — пуш вручную:
-
-```powershell
-# Из pod control-plane (имеет доступ в кластер)
-kubectl exec -n orr-dev deploy/control-plane -- wget -qO- `
-  --header="Authorization: Bearer <CONTROL_TOKEN>" `
-  --header="Content-Type: application/json" `
-  --post-data='{"key":"sk-or-<key>","name":"admin-seed"}' `
-  http://f9router/api/integrations/keys
-# Ожидаемый ответ: HTTP 201 + JSON с router_key_id
-```
-
-#### Ключевые заблуждения (не повторять)
-
-| Неверно | Верно |
+| Область | Пробел |
 |---|---|
-| `control_token` в БД = имя секрета | `control_token` = реальное значение токена |
-| `RouterHealthChecks:NodeTokens:{name}` резолвит токен | Такой логики в коде нет — `RouterNodeProvider` использует `node.ControlToken` напрямую |
-| `kubectl set env` — безопасный способ настройки | ArgoCD откатит через ~1–2 мин; менять только через kustomize + git |
-| HealthPath `/v1/models` работает | 401 от f9router; нужно `/api/health` |
-
-## Current Status (MVP completeness)
-
-### Готово
-
-| Area | What's done |
-|---|---|
-| Platform | Solution, all projects build, shared contracts, migrations runner |
-| AuthService | Full domain + PostgreSQL persistence, all gRPC methods, unit + integration + PG tests |
-| BillingService | Ledger, model catalog, usage recording, all gRPC methods, unit + integration + PG tests |
-| ControlPlane | Node registry, health checks, lease management, 9Router admin API client, all gRPC methods |
-| ApiGateway | Non-streaming + SSE streaming, retry/failover, YARP proxy, OpenAI error shape |
-| WebApp | All user and admin Razor Pages, cookie auth, gRPC clients |
-| E2E Tests | Playwright: API key lifecycle, node lifecycle |
-| Infra | Docker Compose, Kubernetes/Kustomize/ArgoCD |
-
-### Не готово / заглушки
-
-| Area | Gap |
-|---|---|
-| ~~WebApp `/workspace/settings`~~ | Реализовано: display currency + смена пароля |
-| ~~Password reset / lockout~~ | Реализовано: `/forgot-password` → 6-значный код на почту → `/reset-password`; смена пароля в Settings; login lockout (5 неудачных попыток → блокировка 15 мин, поля `failed_login_count`/`locked_until_utc` в `auth.users`, таблица `auth.password_resets`, миграция 011) |
-| ~~API key revoke → nodes~~ | Реализовано: маппинг в `control.integration_key_sync`, revoke деактивирует на нодах |
-| gRPC error interceptors | Нет structured gRPC error details (PLATFORM-002) |
-| Metrics / tracing | Нет OpenTelemetry, нет метрик request count/latency (PLATFORM-003) |
-| Log redaction | Нет явного хелпера для redact sensitive fields в логах |
-| ~~Invite delivery~~ | Реализовано: invite-email + self-serve signup (`/signup` → email+пароль → 6-значный код на почту → `/verify-email` → активация). Пользователь создаётся со статусом `PendingVerification`, login заблокирован до подтверждения. Invite-механизм (admin) сохранён. Требует настроенного Email SMTP-секрета (см. `docs/email-integration-plan.md`) — без него код не уходит |
-| Immutable price history | В `billing.model_prices` один active row на модель, не versioned history (BILLING-003) |
-| Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox (BILLING-004) |
-| Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` (CONTROL-002) |
-| ~~Capability-aware routing~~ | Реализовано: `RouterControlPlaneService` фильтрует кандидатов по `NodeModelCapabilityStore` (наполняется `CapabilityReplicaRefresher` из CollectorService), при пустом store — fallback на least-load без фильтра (CONTROL-003) |
-| Lease recovery | После рестарта ControlPlane in-flight счётчики сбрасываются, нет recovery (CONTROL-004) |
+| gRPC | Нет structured error details (PLATFORM-002) |
+| Логи | Нет хелпера для redact чувствительных полей |
+| Billing | `billing.model_prices` — одна активная строка на модель, без versioned history (BILLING-003) |
+| ControlPlane | Нет cooldown/anti-flapping в `RouterHealthCheckWorker` (CONTROL-002) |
+| ControlPlane | После рестарта in-flight счётчики лиз сбрасываются, recovery нет (CONTROL-004) |

@@ -14,6 +14,7 @@
     <PackageReference Include="MailKit"  />
     <PackageReference Include="Markdig"  />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google"  />
+    <PackageReference Include="AspNet.Security.OAuth.Yandex"  />
     <PackageReference Include="Grpc.Net.Client"  />
     <PackageReference Include="Grpc.Net.ClientFactory"  />
     <PackageReference Include="Grpc.Tools" >

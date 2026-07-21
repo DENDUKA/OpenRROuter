@@ -60,7 +60,7 @@
     <value>История пополнений</value>
   </data>
   <data name="Credits_MinTopUp" xml:space="preserve">
-    <value>Минимум: ${0} USD. Авторитетный лимит проверяется на сервере.</value>
+    <value>Минимум: {0} (${1} USD). Лимит считается в долларах по курсу ЦБ, поэтому в рублях граница смещается вместе с курсом.</value>
   </data>
   <data name="Credits_NoTopUps" xml:space="preserve">
     <value>Пополнений ещё не было.</value>

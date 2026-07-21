@@ -1,0 +1,161 @@
+{
+  "uid": "orr-analytics",
+  "title": "ORR Product Analytics",
+  "tags": [
+    "orr"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": {
+    "from": "now-90d",
+    "to": "now"
+  },
+  "refresh": "5m",
+  "annotations": {
+    "list": []
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Активация (verified → key → first request)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "rawSql": "with verified as (select distinct_id, min(occurred_at_utc) verified_at from analytics.events where event_name='user verified' group by 1),\napi_key as (select distinct_id, min(occurred_at_utc) key_created_at from analytics.events where event_name='api key created' group by 1),\nfirst_request as (select distinct_id, min(occurred_at_utc) first_request_at from analytics.events where event_name='api request completed' group by 1)\nselect count(*) filter (where v.verified_at is not null) as \"Verified\",\n       count(*) filter (where k.key_created_at is not null) as \"Created key\",\n       count(*) filter (where r.first_request_at is not null) as \"First request\"\nfrom verified v left join api_key k on k.distinct_id=v.distinct_id left join first_request r on r.distinct_id=v.distinct_id"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Конверсия: first request → paid",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "rawSql": "with fr as (select distinct_id, min(occurred_at_utc) t from analytics.events where event_name='api request completed' group by 1),\nfp as (select distinct_id, min(occurred_at_utc) t from analytics.events where event_name='payment completed' group by 1)\nselect count(*) filter (where fr.t is not null) as \"Made first request\",\n       count(*) filter (where fp.t is not null) as \"Paid\"\nfrom fr left join fp on fp.distinct_id=fr.distinct_id"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Weekly Active Users (API)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "rawSql": "select date_trunc('week', occurred_at_utc) as time, count(distinct distinct_id) as \"Weekly active users\" from analytics.events where event_name='api request completed' group by 1 order by 1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Запросы по моделям и endpoint (30д)",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "rawSql": "select coalesce(properties->>'model','unknown') as model, coalesce(properties->>'endpoint','unknown') as endpoint, count(*) as requests from analytics.events where event_name='api request completed' and occurred_at_utc > now()-interval '30 days' group by 1,2 order by requests desc"
+        }
+      ]
+    }
+  ]
+}

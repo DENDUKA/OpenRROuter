@@ -9,6 +9,13 @@ public interface IBillingRepository
 
     Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default);
 
+    Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int offset, int limit,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default);
+
     Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default);
 
     Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default);
@@ -92,6 +99,12 @@ public interface IBillingRepository
 
     Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default);
     Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default);
+
+    Task<string?> HasPromo1EntryAsync(string userId, CancellationToken ct = default);
+    Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default);
+    Task<bool> HasFirstTopUpBonusEntryAsync(string paymentId, CancellationToken ct = default);
+    Task UpdatePaymentBonusAsync(string paymentId, decimal bonusPercent, decimal bonusUsd, CancellationToken ct = default);
+    Task<(string? LedgerEntryId, decimal Amount)?> GetFirstTopUpBonusForPaymentAsync(string paymentId, CancellationToken ct = default);
 
     Task<Payment> CreatePaymentAsync(Payment payment, CancellationToken ct = default);
     Task<bool> AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default);

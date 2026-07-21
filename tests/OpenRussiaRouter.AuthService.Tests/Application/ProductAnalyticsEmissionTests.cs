@@ -100,9 +100,9 @@ public sealed class ProductAnalyticsEmissionTests
     {
         var repository = new InMemoryAuthRepository();
         var analytics = new RecordingProductAnalytics();
-        var sut = new GoogleAuthService(repository, new SecretGenerator(), analytics, NullLogger<GoogleAuthService>.Instance);
+        var sut = new ExternalLoginService(repository, new SecretGenerator(), analytics, NullLogger<ExternalLoginService>.Instance);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-new", "new@example.com", DateTimeOffset.UtcNow);
+        var result = await sut.LoginOrRegisterAsync("google","google-sub-new", "new@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         await WaitUntil(() => analytics.UserVerifiedCalls.Count == 1);
@@ -122,9 +122,9 @@ public sealed class ProductAnalyticsEmissionTests
             "login-1", existingUser.Id, "google", "google-sub-existing", DateTimeOffset.UtcNow);
         await repository.AddUserWithExternalLoginAsync(existingUser, existingLogin);
         var analytics = new RecordingProductAnalytics();
-        var sut = new GoogleAuthService(repository, new SecretGenerator(), analytics, NullLogger<GoogleAuthService>.Instance);
+        var sut = new ExternalLoginService(repository, new SecretGenerator(), analytics, NullLogger<ExternalLoginService>.Instance);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-existing", "existing@example.com", DateTimeOffset.UtcNow);
+        var result = await sut.LoginOrRegisterAsync("google","google-sub-existing", "existing@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         await Task.Delay(50);
@@ -140,9 +140,9 @@ public sealed class ProductAnalyticsEmissionTests
             "pbkdf2-sha256.210000.abc.def", DateTimeOffset.UtcNow);
         await repository.AddUserAndMarkInviteUsedAsync(invitedUser, MakeDummyInvite());
         var analytics = new RecordingProductAnalytics();
-        var sut = new GoogleAuthService(repository, new SecretGenerator(), analytics, NullLogger<GoogleAuthService>.Instance);
+        var sut = new ExternalLoginService(repository, new SecretGenerator(), analytics, NullLogger<ExternalLoginService>.Instance);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-invited", "invited@example.com", DateTimeOffset.UtcNow);
+        var result = await sut.LoginOrRegisterAsync("google","google-sub-invited", "invited@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
         await Task.Delay(50);
@@ -153,9 +153,9 @@ public sealed class ProductAnalyticsEmissionTests
     public async Task AnalyticsThrows_GoogleLoginStillSucceeds()
     {
         var repository = new InMemoryAuthRepository();
-        var sut = new GoogleAuthService(repository, new SecretGenerator(), new ThrowingProductAnalytics(), NullLogger<GoogleAuthService>.Instance);
+        var sut = new ExternalLoginService(repository, new SecretGenerator(), new ThrowingProductAnalytics(), NullLogger<ExternalLoginService>.Instance);
 
-        var result = await sut.LoginOrRegisterWithGoogleAsync("google-sub-throw", "throw@example.com", DateTimeOffset.UtcNow);
+        var result = await sut.LoginOrRegisterAsync("google","google-sub-throw", "throw@example.com", DateTimeOffset.UtcNow);
 
         result.Succeeded.Should().BeTrue();
     }

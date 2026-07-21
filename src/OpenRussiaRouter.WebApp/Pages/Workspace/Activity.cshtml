@@ -102,10 +102,12 @@
                             </tr>
                         </thead>
                         <tbody>
+                            @{ var keyNames = Model.ApiKeys.ToDictionary(a => a.Id, a => a.Name); }
                             @foreach (var k in Model.Summary.Keys)
                             {
+                                var keyName = keyNames.TryGetValue(k.ApiKeyId, out var name) ? name : null;
                                 <tr>
-                                    <td><code>@($"{k.ApiKeyPrefix}***")</code></td>
+                                    <td><code>@($"{k.ApiKeyPrefix}***")</code>@if (keyName != null){<text> (@keyName)</text>}</td>
                                     <td class="num">@k.Requests.ToString("N0")</td>
                                     <td class="num">@k.InputTokens.ToString("N0")</td>
                                     <td class="num">@k.OutputTokens.ToString("N0")</td>
@@ -203,11 +205,13 @@ else
                         </tr>
                     </thead>
                     <tbody>
+                        @{ var keyNames = Model.ApiKeys.ToDictionary(a => a.Id, a => a.Name); }
                         @foreach (var r in Model.Activity)
                         {
+                            var keyName = keyNames.TryGetValue(r.ApiKeyId, out var name) ? name : null;
                             <tr>
                                 <td>@r.CreatedAt.ToLocalTime().ToString("g")</td>
-                                <td><code>@($"{r.ApiKeyPrefix}***")</code></td>
+                                <td><code>@($"{r.ApiKeyPrefix}***")</code>@if (keyName != null){<text> (@keyName)</text>}</td>
                                 <td><code>@r.ModelId</code></td>
                                 <td class="num">@r.InputTokens.ToString("N0")</td>
                                 <td class="num">@r.OutputTokens.ToString("N0")</td>

@@ -1,0 +1,884 @@
+{
+  "uid": "orr-limits",
+  "title": "ORR Limits",
+  "tags": [
+    "orr",
+    "limits"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Отказов по лимитам (24ч)",
+      "description": "Сумма orr_limit_rejections_total за сутки. Счётчик per-process: при нескольких репликах gateway значения складываются по всем инстансам.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum(increase(orr_limit_rejections_total[24h]))",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "decimals": 0,
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Ключей ≥90% дневного лимита",
+      "description": "Считается из billing.usage_records на лету, окно — с UTC-полуночи (как в BillingApplicationService).",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with bounds as (\n  select date_trunc('day',  (now() at time zone 'utc')) at time zone 'utc' as day_start,\n         date_trunc('week', (now() at time zone 'utc')) at time zone 'utc' as week_start\n),\nspend as (\n  select u.api_key_id,\n         coalesce(sum(u.cost_amount) filter (where u.created_at_utc >= b.day_start), 0) as daily_spent\n  from billing.usage_records u, bounds b\n  where u.created_at_utc >= b.week_start\n  group by u.api_key_id\n)\nselect count(*)::int as value\nfrom billing.api_key_spend_limits l\nleft join spend s on s.api_key_id = l.api_key_id\nwhere l.daily_limit_amount is not null\n  and 100 * coalesce(s.daily_spent, 0) / nullif(l.daily_limit_amount, 0) >= 90"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Пользователей с балансом ≤ 0",
+      "description": "Баланс = сумма billing.ledger_entries. Платные модели такому пользователю отдают 402 insufficient_balance; бесплатные продолжают работать.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(*)::int as value\nfrom (\n  select user_id\n  from billing.ledger_entries\n  group by user_id\n  having sum(amount) <= 0\n) t"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Мин. остаток квоты провайдера",
+      "description": "Минимум по orr_provider_quota_percent со всех нод и коннекшенов. Пороги совпадают с админкой /admin/nodes/{id}/limits: >50% ok, >20% warn, иначе danger.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "min(orr_provider_quota_percent)",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Отказы по лимитам, в минуту",
+      "description": "orr_limit_rejections_total по типам лимита. Цвета закреплены за limit_type: серия, у которой временно нет данных, не перекрашивает остальные.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (limit_type) (rate(orr_limit_rejections_total[5m])) * 60",
+          "legendFormat": "{{limit_type}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 2,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "never",
+            "pointSize": 8,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "rate_limit"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "spend_daily"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "spend_weekly"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "balance"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 20,
+      "type": "bargauge",
+      "title": "Выборка дневного лимита по ключам (топ-15)",
+      "description": "Сколько процентов суточного spend-лимита ключ уже потратил. Полная шкала = лимит. Показаны первые 8 символов api_key_id.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with bounds as (\n  select date_trunc('day',  (now() at time zone 'utc')) at time zone 'utc' as day_start,\n         date_trunc('week', (now() at time zone 'utc')) at time zone 'utc' as week_start\n),\nspend as (\n  select u.api_key_id,\n         coalesce(sum(u.cost_amount) filter (where u.created_at_utc >= b.day_start), 0) as daily_spent\n  from billing.usage_records u, bounds b\n  where u.created_at_utc >= b.week_start\n  group by u.api_key_id\n)\nselect left(l.api_key_id, 8) as metric,\n       round(100 * coalesce(s.daily_spent, 0) / nullif(l.daily_limit_amount, 0), 1) as value\nfrom billing.api_key_spend_limits l\nleft join spend s on s.api_key_id = l.api_key_id\nwhere l.daily_limit_amount is not null\norder by value desc nulls last\nlimit 15"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 75
+              },
+              {
+                "color": "#ec835a",
+                "value": 90
+              },
+              {
+                "color": "#d03b3b",
+                "value": 100
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Подключений без квоты",
+      "description": "Сколько провайдерских подключений не отдают лимиты. Пока значение > 0, панель остатка квоты ниже неполна — она видит только исправные подключения.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "count(orr_provider_quota_status == 0) or vector(0)",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 3
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 21,
+      "type": "bargauge",
+      "title": "Остаток квоты провайдеров",
+      "description": "orr_provider_quota_percent — сколько квоты ОСТАЛОСЬ (больше = лучше). Пороги обратные к панели выборки лимита: <20% критично. Показывает только подключения, которые реально отдают квоту — см. плитку выше.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 17
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_provider_quota_percent",
+          "legendFormat": "{{provider}} · {{quota_name}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Подключения, не отдающие квоту",
+      "description": "orr_provider_quota_status == 0. Такое подключение живо и обслуживает запросы, но 9R не может прочитать у него лимиты подписки — обычно протухшая авторизация у провайдера. Пусто = все подключения отчитываются.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_provider_quota_status == 0",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "Value": true,
+              "__name__": true,
+              "instance": true,
+              "job": true,
+              "otel_scope_name": true
+            },
+            "renameByName": {
+              "provider": "Провайдер",
+              "account_name": "Аккаунт",
+              "reason": "Причина",
+              "connection_id": "Connection",
+              "node_id": "Нода"
+            }
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Причина"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d03b3b"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 30,
+      "type": "table",
+      "title": "Spend-лимиты ключей: сутки и неделя",
+      "description": "Табличный дубль панелей выше — все значения читаются без цвета. Недельное окно начинается в понедельник 00:00 UTC, как в BillingApplicationService.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 30
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with bounds as (\n  select date_trunc('day',  (now() at time zone 'utc')) at time zone 'utc' as day_start,\n         date_trunc('week', (now() at time zone 'utc')) at time zone 'utc' as week_start\n),\nspend as (\n  select u.api_key_id,\n         coalesce(sum(u.cost_amount) filter (where u.created_at_utc >= b.day_start), 0) as daily_spent,\n         coalesce(sum(u.cost_amount), 0) as weekly_spent\n  from billing.usage_records u, bounds b\n  where u.created_at_utc >= b.week_start\n  group by u.api_key_id\n)\nselect l.api_key_id                                                                    as \"API key\",\n       l.daily_limit_amount                                                            as \"Дневной лимит $\",\n       coalesce(s.daily_spent, 0)                                                      as \"Потрачено сегодня $\",\n       round(100 * coalesce(s.daily_spent, 0) / nullif(l.daily_limit_amount, 0), 1)    as \"Дневной %\",\n       l.weekly_limit_amount                                                           as \"Недельный лимит $\",\n       coalesce(s.weekly_spent, 0)                                                     as \"Потрачено за неделю $\",\n       round(100 * coalesce(s.weekly_spent, 0) / nullif(l.weekly_limit_amount, 0), 1)  as \"Недельный %\"\nfrom billing.api_key_spend_limits l\nleft join spend s on s.api_key_id = l.api_key_id\norder by \"Дневной %\" desc nulls last"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*%$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#0ca30c",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 75
+                    },
+                    {
+                      "color": "#ec835a",
+                      "value": 90
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 100
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Дневной %",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 31,
+      "type": "table",
+      "title": "Пользователи с балансом ≤ 0",
+      "description": "Овердрафта нет: проверка баланса стоит ДО запроса, поэтому один дорогой запрос может увести баланс в минус.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 40
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select l.user_id                    as \"User\",\n       sum(l.amount)                as \"Баланс $\",\n       max(l.created_at_utc)        as \"Последняя операция\"\nfrom billing.ledger_entries l\ngroup by l.user_id\nhaving sum(l.amount) <= 0\norder by 2 asc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Баланс $"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Баланс $",
+            "desc": false
+          }
+        ]
+      }
+    }
+  ]
+}

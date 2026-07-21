@@ -48,7 +48,8 @@ public sealed class NodePollingWorker(
         var quotaResults = await Task.WhenAll(
             routable.Select(node => quotaCollector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
         var activeModels = await activeBillingModelProvider.ListActiveModelsAsync(cancellationToken).ConfigureAwait(false);
-        var flatMeasurements = quotaResults.SelectMany(m => m).ToList();
+        var flatMeasurements = quotaResults.SelectMany(r => r.Measurements).ToList();
+        var quotaStatuses = quotaResults.SelectMany(r => r.Statuses).ToList();
         var enrichedMeasurements = new List<QuotaMeasurement>(flatMeasurements.Count);
 
         foreach (var measurement in flatMeasurements)
@@ -74,7 +75,7 @@ public sealed class NodePollingWorker(
         }
 
         var activeModelMeasurements = BuildActiveModelMeasurements(catalogResults, flatMeasurements, activeModels);
-        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now, activeModelMeasurements));
+        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now, activeModelMeasurements, quotaStatuses));
     }
 
     private static IReadOnlyList<ActiveModelQuotaMeasurement> BuildActiveModelMeasurements(

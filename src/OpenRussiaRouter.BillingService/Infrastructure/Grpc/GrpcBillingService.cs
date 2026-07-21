@@ -574,6 +574,36 @@ public sealed class GrpcBillingService(
         return response;
     }
 
+    public override async Task<ListAllTopUpsResponse> ListAllTopUps(
+        ListAllTopUpsRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var pageSize = request.PageSize > 0 ? request.PageSize : 50;
+        var pageNumber = Math.Max(0, request.PageNumber);
+
+        IReadOnlyList<string>? userIds = request.UserIds.Count > 0 ? request.UserIds.ToArray() : null;
+        decimal? minAmount = string.IsNullOrEmpty(request.MinAmountUsd) ? null : decimal.Parse(request.MinAmountUsd, CultureInfo.InvariantCulture);
+        decimal? maxAmount = string.IsNullOrEmpty(request.MaxAmountUsd) ? null : decimal.Parse(request.MaxAmountUsd, CultureInfo.InvariantCulture);
+
+        var (items, totalCount) = await billing.ListAllTopUpsAsync(
+            pageNumber, pageSize, userIds, minAmount, maxAmount, ct).ConfigureAwait(false);
+
+        var response = new ListAllTopUpsResponse
+        {
+            TotalCount = totalCount
+        };
+        response.Records.AddRange(items.Select(entry => new AdminTopUpRecord
+        {
+            Id = entry.Id,
+            UserId = entry.UserId,
+            AmountUsd = entry.Amount.Amount.ToString(CultureInfo.InvariantCulture),
+            Reason = entry.Reason,
+            CreatedAtUtc = entry.CreatedAtUtc.ToString("O", CultureInfo.InvariantCulture)
+        }));
+        return response;
+    }
+
     public override async Task<ListAdminRequestsResponse> ListAdminRequests(
         ListAdminRequestsRequest request,
         ServerCallContext context)
@@ -769,11 +799,15 @@ public sealed class GrpcBillingService(
     {
         try
         {
+            var bonusPercent = string.IsNullOrEmpty(request.BonusPercent)
+                ? (decimal?)null
+                : decimal.Parse(request.BonusPercent, CultureInfo.InvariantCulture);
+
             var payment = await billing.CreatePaymentAsync(
                 request.UserId, request.Provider,
                 decimal.Parse(request.ProviderAmount, CultureInfo.InvariantCulture), request.ProviderCurrency,
                 decimal.Parse(request.DisplayAmount, CultureInfo.InvariantCulture), request.DisplayCurrency,
-                request.ClientToken, DateTimeOffset.UtcNow, context.CancellationToken).ConfigureAwait(false);
+                request.ClientToken, DateTimeOffset.UtcNow, bonusPercent, context.CancellationToken).ConfigureAwait(false);
             return new CreatePaymentResponse
             {
                 PaymentId = payment.Id,
@@ -1031,5 +1065,65 @@ public sealed class GrpcBillingService(
             logger.LogWarning(ex, "DeleteModelProvider failed. Id: {Id}", request.ProviderId);
             return new DeleteProviderResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
+    }
+
+    public override async Task<GrantStartBalanceResponse> GrantStartBalance(
+        GrantStartBalanceRequest request,
+        ServerCallContext context)
+    {
+        var amountUsd = decimal.TryParse(request.AmountUsd, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? v : 0m;
+        var result = await billing.GrantStartBalanceAsync(
+            request.UserId, amountUsd, DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new GrantStartBalanceResponse
+        {
+            Granted = result.Granted,
+            LedgerEntryId = result.LedgerEntryId ?? string.Empty,
+            ErrorCode = result.ErrorCode ?? string.Empty
+        };
+    }
+
+    public override async Task<HasUserHadPaidTopUpResponse> HasUserHadPaidTopUp(
+        HasUserHadPaidTopUpRequest request,
+        ServerCallContext context)
+    {
+        var result = await billing.Repository.HasUserHadPaidTopUpAsync(
+            request.UserId,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new HasUserHadPaidTopUpResponse { HasPaidTopUp = result };
+    }
+
+    public override async Task<GetPromotionSettingsResponse> GetPromotionSettings(
+        GetPromotionSettingsRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var sbEnabled = await billing.Repository.GetPlatformSettingAsync("promotions.start_balance.enabled", ct).ConfigureAwait(false) ?? "false";
+        var sbAmount = await billing.Repository.GetPlatformSettingAsync("promotions.start_balance.amount_usd", ct).ConfigureAwait(false) ?? "1.00";
+        var ftEnabled = await billing.Repository.GetPlatformSettingAsync("promotions.first_top_up.enabled", ct).ConfigureAwait(false) ?? "false";
+        var ftPercent = await billing.Repository.GetPlatformSettingAsync("promotions.first_top_up.percent", ct).ConfigureAwait(false) ?? "20.00";
+
+        return new GetPromotionSettingsResponse
+        {
+            StartBalanceEnabled = bool.TryParse(sbEnabled, out var sb) && sb,
+            StartBalanceAmountUsd = sbAmount,
+            FirstTopUpEnabled = bool.TryParse(ftEnabled, out var ft) && ft,
+            FirstTopUpPercent = ftPercent
+        };
+    }
+
+    public override async Task<GrantFirstTopUpBonusResponse> GrantFirstTopUpBonus(
+        GrantFirstTopUpBonusRequest request,
+        ServerCallContext context)
+    {
+        var result = await billing.GrantFirstTopUpBonusAsync(
+            request.PaymentId, DateTimeOffset.UtcNow,
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+        return new GrantFirstTopUpBonusResponse
+        {
+            Granted = result.Granted,
+            LedgerEntryId = result.LedgerEntryId ?? string.Empty,
+            ErrorCode = result.ErrorCode ?? string.Empty
+        };
     }
 }

@@ -45,6 +45,12 @@
             </div>
             <span asp-validation-for="Input.AcceptLegal" class="validation-message" aria-live="polite"></span>
         </div>
+        @if (Model.StartBalanceEnabled)
+        {
+            <div class="alert alert-info" style="font-size: 13px; margin-bottom: var(--spacing-lg);">
+                После подтверждения email вы получите стартовый баланс <strong>$@Model.StartBalanceAmountUsd</strong> для первого тестового запроса.
+            </div>
+        }
         <button type="submit" id="signup-submit" class="btn btn-primary w-100">@Localizer["Signup_Submit"]</button>
     </form>
     <div class="auth-alt">@Localizer["Signup_AltLogin"] <a href="/login">@Localizer["Signup_LoginLink"]</a></div>

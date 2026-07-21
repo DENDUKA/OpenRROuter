@@ -20,6 +20,7 @@ service BillingService {
   rpc ListActivityByToken (ListActivityByTokenRequest) returns (ListActivityByTokenResponse);
   rpc GetActivitySummary (GetActivitySummaryRequest) returns (GetActivitySummaryResponse);
   rpc ListTopUps (ListTopUpsRequest) returns (ListTopUpsResponse);
+  rpc ListAllTopUps (ListAllTopUpsRequest) returns (ListAllTopUpsResponse);
   rpc ListAdminRequests (ListAdminRequestsRequest) returns (ListAdminRequestsResponse);
   rpc GetAdminRequestsSummary (GetAdminRequestsSummaryRequest) returns (GetAdminRequestsSummaryResponse);
   rpc GetModel (GetModelRequest) returns (GetModelResponse);
@@ -40,6 +41,10 @@ service BillingService {
   rpc GetModelProvider (GetProviderRequest) returns (GetProviderResponse);
   rpc UpsertModelProvider (UpsertProviderRequest) returns (UpsertProviderResponse);
   rpc DeleteModelProvider (DeleteProviderRequest) returns (DeleteProviderResponse);
+  rpc GrantStartBalance (GrantStartBalanceRequest) returns (GrantStartBalanceResponse);
+  rpc HasUserHadPaidTopUp (HasUserHadPaidTopUpRequest) returns (HasUserHadPaidTopUpResponse);
+  rpc GetPromotionSettings (GetPromotionSettingsRequest) returns (GetPromotionSettingsResponse);
+  rpc GrantFirstTopUpBonus (GrantFirstTopUpBonusRequest) returns (GrantFirstTopUpBonusResponse);
 }
 
 message GetPlatformSettingRequest {
@@ -413,6 +418,27 @@ message ListTopUpsResponse {
   repeated TopUpRecord records = 1;
 }
 
+message ListAllTopUpsRequest {
+  int32 page_number = 1;
+  int32 page_size = 2;
+  repeated string user_ids = 3;
+  string min_amount_usd = 4;
+  string max_amount_usd = 5;
+}
+
+message AdminTopUpRecord {
+  string id = 1;
+  string user_id = 2;
+  string amount_usd = 3;
+  string reason = 4;
+  string created_at_utc = 5;
+}
+
+message ListAllTopUpsResponse {
+  repeated AdminTopUpRecord records = 1;
+  int32 total_count = 2;
+}
+
 message ListAdminRequestsRequest {
   string after_cursor = 1;
   int32 page_size = 2;
@@ -523,6 +549,7 @@ message CreatePaymentRequest {
   string display_amount = 5;
   string display_currency = 6;
   string client_token = 7;
+  string bonus_percent = 8;
 }
 
 message CreatePaymentResponse {
@@ -565,6 +592,8 @@ message PaymentRecord {
   string expires_at_utc = 17;
   string confirmed_at_utc = 18;
   string canceled_at_utc = 19;
+  string bonus_percent = 20;
+  string bonus_usd = 21;
 }
 
 message ConfirmPaymentByProviderRequest {
@@ -678,4 +707,43 @@ message DeleteProviderRequest {
 message DeleteProviderResponse {
   bool deleted = 1;
   string error_code = 2;
+}
+
+message GrantStartBalanceRequest {
+  string user_id = 1;
+  string amount_usd = 2;
+}
+
+message GrantStartBalanceResponse {
+  bool granted = 1;
+  string ledger_entry_id = 2;
+  string error_code = 3;
+}
+
+message HasUserHadPaidTopUpRequest {
+  string user_id = 1;
+}
+
+message HasUserHadPaidTopUpResponse {
+  bool has_paid_top_up = 1;
+}
+
+message GetPromotionSettingsRequest {
+}
+
+message GetPromotionSettingsResponse {
+  bool start_balance_enabled = 1;
+  string start_balance_amount_usd = 2;
+  bool first_top_up_enabled = 3;
+  string first_top_up_percent = 4;
+}
+
+message GrantFirstTopUpBonusRequest {
+  string payment_id = 1;
+}
+
+message GrantFirstTopUpBonusResponse {
+  bool granted = 1;
+  string ledger_entry_id = 2;
+  string error_code = 3;
 }

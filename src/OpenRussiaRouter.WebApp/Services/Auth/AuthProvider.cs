@@ -86,6 +86,16 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
     }
 
+    public async Task<LoginResponse?> LoginOrRegisterWithExternalProviderAsync(string provider, string providerSub, string email, CancellationToken cancellationToken = default)
+    {
+        var response = await client.LoginOrRegisterWithExternalProviderAsync(
+            new LoginWithExternalProviderRequest { Provider = provider, ProviderSub = providerSub, Email = email },
+            cancellationToken: cancellationToken);
+        if (!response.Succeeded)
+            return null;
+        return new LoginResponse(response.SessionToken, response.UserId, response.Role, email);
+    }
+
     public async Task<InviteCompletionResponse> CompleteInviteAsync(string rawToken, string password, CancellationToken cancellationToken = default)
     {
         var response = await client.CompleteInviteAsync(new CompleteInviteRequest { RawToken = rawToken, Password = password }, cancellationToken: cancellationToken);

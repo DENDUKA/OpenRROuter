@@ -71,6 +71,20 @@ public sealed class RollypaySettings
 
     /// <summary>Optional redirect after a failed/abandoned payment.</summary>
     public string FailRedirectUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Send every payment as a Rollypay test payment (<c>test: true</c>). Test payments run on the
+    /// SAME касса and the same credentials — there is no separate sandbox host or key.
+    /// </summary>
+    /// <remarks>
+    /// <para>Rollypay forces a stub СБП method, never moves money, leaves the balance untouched and
+    /// excludes the payment from its reports. The payer completes it from the pay page via a
+    /// simulate button instead of a real QR. Callbacks still fire, carry <c>"test": true</c> plus an
+    /// <c>X-Test-Mode: true</c> header, and are signed exactly like live ones.</para>
+    /// <para>Because Billing credits real USD for a test payment just as it would for a live one,
+    /// this MUST stay false in production — <c>PaymentStartupGuard</c> enforces that.</para>
+    /// </remarks>
+    public bool TestMode { get; set; }
 }
 
 public sealed class ReconciliationSettings

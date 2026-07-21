@@ -28,4 +28,6 @@ public sealed class PaymentEntity
     public DateTimeOffset? ExpiresAtUtc { get; init; }
     public DateTimeOffset? ConfirmedAtUtc { get; init; }
     public DateTimeOffset? CanceledAtUtc { get; init; }
+    public decimal? BonusPercent { get; init; }
+    public decimal? BonusUsd { get; init; }
 }

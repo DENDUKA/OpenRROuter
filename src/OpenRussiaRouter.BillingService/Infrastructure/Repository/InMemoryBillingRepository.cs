@@ -26,7 +26,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         var items = _ledgerByIdempotencyKey.Values
-            .Where(e => e.UserId == userId && e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp)
+            .Where(e => e.UserId == userId && e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp or LedgerEntryType.Promo1)
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
             .Take(limit + 1)
@@ -34,6 +34,36 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         var hasMore = items.Count > limit;
         if (hasMore) items = items.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, hasMore));
+    }
+
+    public Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int offset, int limit,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default)
+    {
+        var query = _ledgerByIdempotencyKey.Values
+            .Where(e => e.Type is LedgerEntryType.VirtualTopUp or LedgerEntryType.ExternalTopUp or LedgerEntryType.Promo1);
+
+        if (userIds is { Count: > 0 })
+        {
+            var set = new HashSet<string>(userIds, StringComparer.Ordinal);
+            query = query.Where(e => set.Contains(e.UserId));
+        }
+        if (minAmountUsd.HasValue)
+            query = query.Where(e => e.Amount.Amount >= minAmountUsd.Value);
+        if (maxAmountUsd.HasValue)
+            query = query.Where(e => e.Amount.Amount <= maxAmountUsd.Value);
+
+        var all = query
+            .OrderByDescending(e => e.CreatedAtUtc)
+            .ThenByDescending(e => e.Id)
+            .ToList();
+
+        var totalCount = all.Count;
+        var items = all.Skip(offset).Take(limit).ToList();
+        return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, totalCount));
     }
 
     public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
@@ -466,6 +496,57 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         return Task.CompletedTask;
     }
 
+    public Task<string?> HasPromo1EntryAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var entry = _ledgerByIdempotencyKey.Values
+                .FirstOrDefault(e => e.UserId == userId && e.IdempotencyKey == $"promo1:{userId}");
+            return Task.FromResult(entry?.Id);
+        }
+    }
+
+    public Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var hasPaid = _ledgerByIdempotencyKey.Values
+                .Any(e => e.UserId == userId && e.Type == LedgerEntryType.ExternalTopUp
+                    && !e.IdempotencyKey.StartsWith("promo1:"));
+            return Task.FromResult(hasPaid);
+        }
+    }
+
+    public Task<bool> HasFirstTopUpBonusEntryAsync(string paymentId, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var exists = _ledgerByIdempotencyKey.ContainsKey($"first_top_up_bonus:{paymentId}");
+            return Task.FromResult(exists);
+        }
+    }
+
+    public Task UpdatePaymentBonusAsync(string paymentId, decimal bonusPercent, decimal bonusUsd, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            if (_payments.TryGetValue(paymentId, out var payment))
+                _payments[paymentId] = payment with { BonusPercent = bonusPercent, BonusUsd = bonusUsd };
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task<(string? LedgerEntryId, decimal Amount)?> GetFirstTopUpBonusForPaymentAsync(string paymentId, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var key = $"first_top_up_bonus:{paymentId}";
+            if (_ledgerByIdempotencyKey.TryGetValue(key, out var entry))
+                return Task.FromResult<(string?, decimal)?>((entry.Id, entry.Amount.Amount));
+            return Task.FromResult<(string?, decimal)?>((null, 0));
+        }
+    }
+
     public Task DeleteTagAsync(string id, CancellationToken ct = default)
     {
         _tags.Remove(id);
@@ -613,6 +694,16 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
                     Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
                     MoneyAmount.Usd(-payment.CreditedUsd.Amount), $"{prefix}:{payment.Id}",
                     $"{target} payment {payment.Id}", nowUtc));
+
+                // Reverse first top-up bonus if it exists
+                var bonusKey = $"first_top_up_bonus:{payment.Id}";
+                if (_ledgerByIdempotencyKey.TryGetValue(bonusKey, out var bonusEntry))
+                {
+                    _ledgerByIdempotencyKey.GetOrAdd($"refund_bonus:{payment.Id}", _ => new LedgerEntry(
+                        Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
+                        MoneyAmount.Usd(-bonusEntry.Amount.Amount), $"refund_bonus:{payment.Id}",
+                        $"Reversed first top-up bonus for payment {payment.Id}", nowUtc));
+                }
             }
             MarkEventProcessedUnsafe(paymentEvent, nowUtc);
             return Task.FromResult(new ApplyOutcome(true, payment, ledger?.Id, null));

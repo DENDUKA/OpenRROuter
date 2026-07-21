@@ -1,0 +1,98 @@
+@page
+@model Admin.TopUpsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Top-ups - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Top-up History</h2>
+    <p>All balance top-ups across users.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header">
+        <span>All Top-ups</span>
+        <span class="text-muted" style="font-weight:normal;margin-left:8px">@Model.TotalCount total</span>
+    </div>
+    <div class="adm-card-body">
+
+        <form method="get" class="d-flex gap-2 align-items-end flex-wrap mb-3" id="filterForm" style="font-weight:normal">
+            <div class="form-group">
+                <label class="form-label" style="font-size:.8rem">User</label>
+                <input type="text" name="userQuery" value="@Model.UserQuery" placeholder="email or name" class="form-control" style="min-width:220px" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size:.8rem">Min Amount ($)</label>
+                <input type="number" name="minAmount" value="@Model.MinAmount" step="0.01" class="form-control" style="width:120px" />
+            </div>
+            <div class="form-group">
+                <label class="form-label" style="font-size:.8rem">Max Amount ($)</label>
+                <input type="number" name="maxAmount" value="@Model.MaxAmount" step="0.01" class="form-control" style="width:120px" />
+            </div>
+            <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+            @if (!string.IsNullOrWhiteSpace(Model.UserQuery) || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
+            {
+                <a href="/admin/topups" class="btn btn-sm btn-secondary">Clear</a>
+            }
+        </form>
+
+        @if (Model.Records.Count == 0)
+        {
+            <p class="text-muted">No top-ups found.</p>
+        }
+        else
+        {
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Amount</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.Records)
+                    {
+                        <tr>
+                            <td style="white-space:nowrap"><small title="@r.CreatedAtUtc.ToString("O")">@r.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
+                            <td>@Model.GetUserDisplayName(r.UserId)</td>
+                            <td style="white-space:nowrap">@r.Amount.ToString("N2") $</td>
+                            <td>@r.Reason</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (Model.TotalPages > 1)
+            {
+                <div class="d-flex gap-2 align-items-center mt-3 mb-2">
+                    @if (Model.HasPreviousPage)
+                    {
+                        <a href="@Model.BuildPageUrl(Model.PageNumber - 1)" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-secondary" disabled>&larr; Prev</button>
+                    }
+
+                    <span class="text-muted" style="font-size:.85rem">
+                        Page @(Model.PageNumber + 1) of @Model.TotalPages
+                    </span>
+
+                    @if (Model.HasNextPage)
+                    {
+                        <a href="@Model.BuildPageUrl(Model.PageNumber + 1)" class="btn btn-sm btn-primary">Next &rarr;</a>
+                    }
+                    else
+                    {
+                        <button class="btn btn-sm btn-primary" disabled>Next &rarr;</button>
+                    }
+                </div>
+            }
+        }
+    </div>
+</div>

@@ -422,6 +422,37 @@ public sealed class BillingRepositoryPostgresTests
         summary.WeeklyRemaining.Amount.Should().Be(20);
     }
 
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task ListAllTopUpsAsync_NoFilters_DoesNotThrowParameterTypeResolutionError()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+        await repository.AddLedgerEntryAsync(new LedgerEntry(
+            "ledger-all-1", "user-1", LedgerEntryType.VirtualTopUp, MoneyAmount.Usd(100), "idem-all-1", "top-up", now));
+        await repository.AddLedgerEntryAsync(new LedgerEntry(
+            "ledger-all-2", "user-2", LedgerEntryType.VirtualTopUp, MoneyAmount.Usd(50), "idem-all-2", "top-up", now));
+
+        var (items, totalCount) = await repository.ListAllTopUpsAsync(offset: 0, limit: 50);
+
+        totalCount.Should().Be(2);
+        items.Should().HaveCount(2);
+
+        var byUser = (await repository.ListAllTopUpsAsync(0, 50, userIds: ["user-1"])).Items;
+        byUser.Should().ContainSingle().Which.UserId.Should().Be("user-1");
+
+        var byMinAmount = (await repository.ListAllTopUpsAsync(0, 50, minAmountUsd: 75m)).Items;
+        byMinAmount.Should().ContainSingle().Which.Amount.Amount.Should().Be(100);
+
+        var byMaxAmount = (await repository.ListAllTopUpsAsync(0, 50, maxAmountUsd: 75m)).Items;
+        byMaxAmount.Should().ContainSingle().Which.Amount.Amount.Should().Be(50);
+    }
+
     private static Payment CreatePayment(string id, DateTimeOffset createdAt) =>
         new(id, "user-1", "mock", null, id, $"client-{id}",
             10, "USD", 10, "USD", MoneyAmount.Usd(10), 1, "fallback", createdAt,

@@ -6,6 +6,7 @@ namespace OpenRussiaRouter.CollectorService.Application.NodeAdmin;
 public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
 {
     private const string ModelsPath = "/v1/models";
+    private const string CombosPath = "/api/integrations/combos";
     private const string ProvidersWithModelsPath = "/api/integrations/providers/with-models";
     private const string ProviderQuotaPath = "/api/integrations/providers/quota";
 
@@ -17,6 +18,9 @@ public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
     public string DescribeListModelsRequest(Uri endpoint) =>
         $"GET {new Uri(endpoint, ModelsPath)}";
 
+    public string DescribeListCombosRequest(Uri endpoint) =>
+        $"GET {new Uri(endpoint, CombosPath)}";
+
     public Task<NodeProvidersWithModelsResponse> ListProvidersWithModelsAsync(
         Uri endpoint, string controlToken, CancellationToken cancellationToken) =>
         SendAsync<NodeProvidersWithModelsResponse>(endpoint, controlToken, ProvidersWithModelsPath, cancellationToken);
@@ -24,6 +28,10 @@ public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
     public Task<NodeModelsResponse> ListModelsAsync(
         Uri endpoint, string controlToken, CancellationToken cancellationToken) =>
         SendAsync<NodeModelsResponse>(endpoint, controlToken, ModelsPath, cancellationToken);
+
+    public Task<NodeCombosResponse> ListCombosAsync(
+        Uri endpoint, string controlToken, CancellationToken cancellationToken) =>
+        SendAsync<NodeCombosResponse>(endpoint, controlToken, CombosPath, cancellationToken);
 
     public Task<NodeProviderQuotaResponse> GetProviderQuotaAsync(
         Uri endpoint, string controlToken, bool includeInactive, CancellationToken cancellationToken)

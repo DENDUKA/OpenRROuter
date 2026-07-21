@@ -167,8 +167,14 @@
   <data name="Credits_AmountInvalid" xml:space="preserve">
     <value>Введите корректную сумму (например, 10.50).</value>
   </data>
+  <data name="Credits_AmountOutOfRange" xml:space="preserve">
+    <value>Сумма вне допустимого диапазона. Минимум — {0}. Лимит считается в долларах по курсу ЦБ, поэтому в рублях граница смещается вместе с курсом.</value>
+  </data>
   <data name="Credits_BalanceLoadFailed" xml:space="preserve">
     <value>Не удалось загрузить баланс.</value>
+  </data>
+  <data name="Credits_FxUnavailable" xml:space="preserve">
+    <value>Курс валют временно недоступен, пополнение сейчас невозможно. Попробуйте через несколько минут.</value>
   </data>
   <data name="Credits_CheckoutFailed" xml:space="preserve">
     <value>Не удалось инициировать оплату. Попробуйте ещё раз.</value>
@@ -259,5 +265,8 @@
   </data>
   <data name="Support_Error" xml:space="preserve">
     <value>Не удалось отправить сообщение. Попробуйте ещё раз позже.</value>
+  </data>
+  <data name="Login_Yandex" xml:space="preserve">
+    <value>Войти через Яндекс</value>
   </data>
 </root>

@@ -14,6 +14,18 @@ public interface IPaymentProvider
     string Name { get; }
 
     /// <summary>
+    /// The only currency this provider can charge in (e.g. <c>"RUB"</c> for an СБП aggregator), or
+    /// null when it accepts whatever the user picked.
+    /// </summary>
+    /// <remarks>
+    /// When set, <see cref="PaymentCheckoutService"/> converts the display amount into this currency
+    /// before Billing records the payment, so <c>provider_amount</c>/<c>provider_currency</c> always
+    /// match what the provider will actually charge and later confirm by webhook. Converting in the
+    /// UI instead would let the two drift apart and trip Billing's amount-mismatch anomaly.
+    /// </remarks>
+    string? SettlementCurrency { get; }
+
+    /// <summary>
     /// Create a payment at the provider. <paramref name="request.OrderId"/> is the internal
     /// <c>payment_id</c> from BillingService — passed to the provider so that early webhooks
     /// (arriving before <c>AttachProviderRef</c>) can still resolve the local payment.

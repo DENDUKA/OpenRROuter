@@ -245,7 +245,9 @@ public static class BillingPersistenceMapper
         UpdatedAtUtc = payment.UpdatedAtUtc,
         ExpiresAtUtc = payment.ExpiresAtUtc,
         ConfirmedAtUtc = payment.ConfirmedAtUtc,
-        CanceledAtUtc = payment.CanceledAtUtc
+        CanceledAtUtc = payment.CanceledAtUtc,
+        BonusPercent = payment.BonusPercent,
+        BonusUsd = payment.BonusUsd
     };
 
     public static Payment ToDomain(PaymentEntity entity) => new(
@@ -254,7 +256,8 @@ public static class BillingPersistenceMapper
         entity.ProviderCurrency, MoneyAmount.Usd(entity.CreditedUsdAmount), entity.FxRate,
         entity.FxSource, entity.FxAtUtc, entity.Status, entity.CancelReason, entity.LeaseOwner,
         entity.LeaseUntilUtc, entity.CreatedAtUtc, entity.UpdatedAtUtc, entity.ExpiresAtUtc,
-        entity.ConfirmedAtUtc, entity.CanceledAtUtc, entity.PayUrl);
+        entity.ConfirmedAtUtc, entity.CanceledAtUtc, entity.PayUrl,
+        entity.BonusPercent, entity.BonusUsd);
 
     public static PaymentEvent ToDomain(PaymentEventEntity entity) => new(
         entity.Id, entity.PaymentId, entity.Provider, entity.ProviderEventId, entity.ProviderPaymentId,

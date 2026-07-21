@@ -238,6 +238,35 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
     }
 
+    public async Task<(IReadOnlyList<AdminTopUpInfo> Items, int TotalCount)> ListAllTopUpsAsync(
+        int pageNumber = 0,
+        int pageSize = 50,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.ListAllTopUpsRequest
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize
+        };
+        if (userIds is { Count: > 0 }) request.UserIds.AddRange(userIds);
+        if (minAmountUsd.HasValue) request.MinAmountUsd = minAmountUsd.Value.ToString(CultureInfo.InvariantCulture);
+        if (maxAmountUsd.HasValue) request.MaxAmountUsd = maxAmountUsd.Value.ToString(CultureInfo.InvariantCulture);
+
+        var response = await client.ListAllTopUpsAsync(request, cancellationToken: cancellationToken);
+
+        var items = response.Records.Select(r => new AdminTopUpInfo(
+            r.Id,
+            r.UserId,
+            decimal.Parse(r.AmountUsd, System.Globalization.CultureInfo.InvariantCulture),
+            r.Reason,
+            DateTimeOffset.Parse(r.CreatedAtUtc, System.Globalization.CultureInfo.InvariantCulture))).ToList();
+
+        return (items, response.TotalCount);
+    }
+
     public async Task CreateVirtualTopUpAsync(string adminId, string userId, decimal amountUsd, string reason, CancellationToken cancellationToken = default)
     {
         var response = await client.CreateVirtualTopUpAsync(
@@ -563,28 +592,31 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
    /// provider) and the credited USD amount Billing computed from its trusted FX quote.
    /// Idempotent by <paramref name="clientToken"/> per user.
    /// </summary>
-   public virtual async Task<CreatedPaymentInfo> CreatePaymentAsync(
-       string userId,
-       string provider,
-       decimal providerAmount,
-       string providerCurrency,
-       decimal displayAmount,
-       string displayCurrency,
-       string clientToken,
-       CancellationToken cancellationToken = default)
-   {
-       var response = await client.CreatePaymentAsync(
-           new OpenRussiaRouter.Contracts.Grpc.Billing.V1.CreatePaymentRequest
-           {
-               UserId = userId,
-               Provider = provider,
-               ProviderAmount = providerAmount.ToString(CultureInfo.InvariantCulture),
-               ProviderCurrency = providerCurrency,
-               DisplayAmount = displayAmount.ToString(CultureInfo.InvariantCulture),
-               DisplayCurrency = displayCurrency,
-               ClientToken = clientToken
-           },
-           cancellationToken: cancellationToken);
+    public virtual async Task<CreatedPaymentInfo> CreatePaymentAsync(
+        string userId,
+        string provider,
+        decimal providerAmount,
+        string providerCurrency,
+        decimal displayAmount,
+        string displayCurrency,
+        string clientToken,
+        decimal? bonusPercent = null,
+        CancellationToken cancellationToken = default)
+    {
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.CreatePaymentRequest
+        {
+            UserId = userId,
+            Provider = provider,
+            ProviderAmount = providerAmount.ToString(CultureInfo.InvariantCulture),
+            ProviderCurrency = providerCurrency,
+            DisplayAmount = displayAmount.ToString(CultureInfo.InvariantCulture),
+            DisplayCurrency = displayCurrency,
+            ClientToken = clientToken
+        };
+        if (bonusPercent.HasValue)
+            request.BonusPercent = bonusPercent.Value.ToString("F2", CultureInfo.InvariantCulture);
+
+        var response = await client.CreatePaymentAsync(request, cancellationToken: cancellationToken);
 
        if (!string.IsNullOrWhiteSpace(response.ErrorCode))
        {
@@ -814,5 +846,50 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         {
             throw new BillingException(response.ErrorCode);
         }
+    }
+
+    public async Task GrantStartBalanceAsync(string userId, decimal amountUsd, CancellationToken cancellationToken = default)
+    {
+        await client.GrantStartBalanceAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GrantStartBalanceRequest
+            {
+                UserId = userId,
+                AmountUsd = amountUsd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)
+            },
+            cancellationToken: cancellationToken);
+    }
+
+    public async Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.HasUserHadPaidTopUpAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.HasUserHadPaidTopUpRequest { UserId = userId },
+            cancellationToken: cancellationToken);
+        return response.HasPaidTopUp;
+    }
+
+    public async Task<(bool StartBalanceEnabled, decimal StartBalanceAmountUsd, bool FirstTopUpEnabled, decimal FirstTopUpPercent)> GetPromotionSettingsAsync(CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetPromotionSettingsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetPromotionSettingsRequest(),
+            cancellationToken: cancellationToken);
+        return (
+            response.StartBalanceEnabled,
+            decimal.TryParse(response.StartBalanceAmountUsd, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var sbAmt) ? sbAmt : 1.00m,
+            response.FirstTopUpEnabled,
+            decimal.TryParse(response.FirstTopUpPercent, System.Globalization.NumberStyles.Number,
+                System.Globalization.CultureInfo.InvariantCulture, out var ftPct) ? ftPct : 20.00m
+        );
+    }
+
+    public async Task<OpenRussiaRouter.Contracts.Billing.GrantFirstTopUpBonusResult> GrantFirstTopUpBonusAsync(string paymentId, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GrantFirstTopUpBonusAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GrantFirstTopUpBonusRequest { PaymentId = paymentId },
+            cancellationToken: cancellationToken);
+        return new OpenRussiaRouter.Contracts.Billing.GrantFirstTopUpBonusResult(
+            response.Granted,
+            string.IsNullOrEmpty(response.LedgerEntryId) ? null : response.LedgerEntryId,
+            string.IsNullOrEmpty(response.ErrorCode) ? null : response.ErrorCode);
     }
 }

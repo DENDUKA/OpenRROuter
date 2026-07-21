@@ -52,11 +52,24 @@ services:
       - "5001:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Kestrel__EndpointDefaults__Protocols: "Http2"
+      # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
+      # /metrics and /health. Prometheus cannot scrape h2c — with a single Http2-only
+      # endpoint every scrape came back 400 Bad Request.
+      Kestrel__Endpoints__Grpc__Url: "http://+:8080"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      Kestrel__Endpoints__Metrics__Url: "http://+:8082"
+      Kestrel__Endpoints__Metrics__Protocols: "Http1"
       ConnectionStrings__AuthDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
       Seq__Url: "http://seq:80"
       AuthOptions__InitialAdminEmail: "${INITIAL_ADMIN_EMAIL}"
       AuthOptions__InitialAdminPassword: "${INITIAL_ADMIN_PASSWORD}"
+      # Product analytics — pseudonymized, own DB. IdentitySalt is the HMAC pepper: it MUST stay
+      # stable for this box across restarts, rotating it invalidates every existing distinct_id.
+      ProductAnalytics__Enabled: "true"
+      ProductAnalytics__Provider: "Postgres"
+      ProductAnalytics__ConnectionString: "Host=postgres;Port=5432;Database=orr_analytics;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
+      ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
+      ProductAnalytics__Environment: "production"
     mem_limit: 512m
     cpus: 0.75
 
@@ -72,11 +85,24 @@ services:
       - "5002:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Kestrel__EndpointDefaults__Protocols: "Http2"
+      # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
+      # /metrics and /health. Prometheus cannot scrape h2c — with a single Http2-only
+      # endpoint every scrape came back 400 Bad Request.
+      Kestrel__Endpoints__Grpc__Url: "http://+:8080"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      Kestrel__Endpoints__Metrics__Url: "http://+:8082"
+      Kestrel__Endpoints__Metrics__Protocols: "Http1"
       ConnectionStrings__BillingDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
       ServiceAuth__Tokens__apigateway: "${S2S_API_GATEWAY_TOKEN}"
       ServiceAuth__Tokens__webappadmin: "${S2S_WEBAPP_TOKEN}"
       Seq__Url: "http://seq:80"
+      # BillingService owns the analytics migration: it creates orr_analytics + analytics.events
+      # on startup whenever ProductAnalytics:ConnectionString is set.
+      ProductAnalytics__Enabled: "true"
+      ProductAnalytics__Provider: "Postgres"
+      ProductAnalytics__ConnectionString: "Host=postgres;Port=5432;Database=orr_analytics;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
+      ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
+      ProductAnalytics__Environment: "production"
     mem_limit: 512m
     cpus: 0.75
 
@@ -92,7 +118,13 @@ services:
       - "5003:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      Kestrel__EndpointDefaults__Protocols: "Http2"
+      # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
+      # /metrics and /health. Prometheus cannot scrape h2c — with a single Http2-only
+      # endpoint every scrape came back 400 Bad Request.
+      Kestrel__Endpoints__Grpc__Url: "http://+:8080"
+      Kestrel__Endpoints__Grpc__Protocols: "Http2"
+      Kestrel__Endpoints__Metrics__Url: "http://+:8082"
+      Kestrel__Endpoints__Metrics__Protocols: "Http1"
       ConnectionStrings__ControlPlaneDb: "Host=postgres;Port=5432;Database=openrussiarouter;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=5;MaxPoolSize=50;Connection Idle Lifetime=300"
       GrpcServices__Auth: "http://auth-service:8080"
       GrpcServices__Collector: "http://collector:8081"
@@ -202,6 +234,9 @@ services:
       Payments__Rollypay__SigningSecret: "${ROLLYPAY_SIGNING_SECRET:-}"
       Payments__Rollypay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
       Payments__Rollypay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
+      # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
+      # Production — a test payment is free but still credits real balance.
+      Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
     mem_limit: 512m
     cpus: 0.75
 
@@ -224,8 +259,57 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  # ---------------------------------------------------------------------------
+  # Monitoring. Both are bound to 127.0.0.1 only — reach them over an SSH tunnel:
+  #   ssh -i .deploy/orr_prod_vps_access -L 3001:127.0.0.1:3001 root@201.51.6.246
+  # Do NOT publish them on 0.0.0.0: Grafana holds read access to the billing DB.
+  # ---------------------------------------------------------------------------
+
+  prometheus:
+    # quay.io, not docker.io/prom/prometheus: the box hits Docker Hub's anonymous pull
+    # limit (429) and the deploy dies at `compose up`. Quay is the project's own mirror.
+    image: quay.io/prometheus/prometheus:v2.51.2
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    mem_limit: 512m
+    cpus: 0.5
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # Consumed by provisioning/datasources/datasources.yml via $POSTGRES_PASSWORD.
+      # Must be a real value — an empty one silently yields a password-less datasource.
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/etc/grafana/dashboards:ro
+    mem_limit: 256m
+    cpus: 0.5
+
 volumes:
   postgres_data:
   seq_data:
   caddy_data:
   caddy_config:
+  prometheus_data:
+  grafana_data:

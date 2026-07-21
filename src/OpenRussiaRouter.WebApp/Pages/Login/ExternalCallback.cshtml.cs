@@ -15,13 +15,14 @@ public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
         if (!result.Succeeded)
             return RedirectToPage("/Login");
 
-        var googleSub = result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
+        var provider = result.Properties?.Items.TryGetValue("provider", out var p) == true ? p : null;
+        var providerSub = result.Principal!.FindFirstValue(ClaimTypes.NameIdentifier);
         var email = result.Principal!.FindFirstValue(ClaimTypes.Email);
 
-        if (googleSub is null || email is null)
+        if (provider is null || providerSub is null || email is null)
             return RedirectToPage("/Login");
 
-        var loginResult = await AuthProvider.LoginOrRegisterWithGoogleAsync(googleSub, email);
+        var loginResult = await AuthProvider.LoginOrRegisterWithExternalProviderAsync(provider, providerSub, email);
         if (loginResult is null)
             return RedirectToPage("/Login");
 

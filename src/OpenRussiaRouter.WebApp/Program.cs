@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.HttpOverrides;
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
@@ -22,6 +23,7 @@ using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
@@ -81,6 +83,21 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
     });
 }
 
+// Register Yandex external login only when credentials are configured.
+var yandexClientId = builder.Configuration["Yandex:ClientId"];
+var yandexClientSecret = builder.Configuration["Yandex:ClientSecret"];
+if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yandexClientSecret))
+{
+    authenticationBuilder.AddYandex(options =>
+    {
+        options.SignInScheme = "External";
+        options.ClientId = yandexClientId;
+        options.ClientSecret = yandexClientSecret;
+        options.CallbackPath = "/OAuth-yandex";
+        options.Scope.Add("login:info");
+        options.Scope.Add("login:email");
+    });
+}
 
 builder.Services.AddAuthorization();
 
@@ -280,6 +297,15 @@ builder.Services.AddRateLimiter(options =>
 });
 
 var app = builder.Build();
+
+// Must be the very first middleware so downstream pipeline (auth, OAuth redirect_uri
+// generation, absolute URLs) sees the original scheme/host from Caddy.
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,
+    KnownNetworks = { },
+    KnownProxies = { }
+});
 
 // TS-004: fail-fast in Production if the active payment provider is mock or unconfigured.
 // In Development the mock is the expected active provider, so the guard is a no-op there.

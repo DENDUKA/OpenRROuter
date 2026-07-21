@@ -6,6 +6,7 @@ using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 using OpenRussiaRouter.Contracts.Billing;
@@ -21,6 +22,7 @@ public sealed partial class BillingApplicationService(
     IOptions<PaymentOptions>? paymentOptions = null,
     IProductAnalytics? productAnalytics = null)
 {
+    public IBillingRepository Repository => repository;
     public async Task<LedgerEntry> CreateVirtualTopUpAsync(
         string adminId,
         string userId,
@@ -123,6 +125,8 @@ public sealed partial class BillingApplicationService(
                        && model.Price.CachePerMillion.Amount == 0;
 
         if (!isFreeModel && balance.Amount <= 0)
+        {
+            LimitMetrics.RecordRejection(LimitMetrics.LimitTypes.Balance, LimitMetrics.Subjects.User);
             return new BalanceCheckResult(
                 false,
                 modelId,
@@ -133,6 +137,7 @@ public sealed partial class BillingApplicationService(
                 model.SupportsReasoning,
                 model.AllowedReasoningEfforts,
                 model.DefaultReasoningEffort);
+        }
 
         if (!isFreeModel && !string.IsNullOrWhiteSpace(apiKeyId))
         {
@@ -145,6 +150,14 @@ public sealed partial class BillingApplicationService(
             var limitSummary = summaries.FirstOrDefault();
             if (limitSummary is { DailyExceeded: true } or { WeeklyExceeded: true })
             {
+                // Дневной лимит приоритетнее в метке: при одновременном превышении обоих
+                // именно он — ближайшая к пользователю причина отказа.
+                LimitMetrics.RecordRejection(
+                    limitSummary is { DailyExceeded: true }
+                        ? LimitMetrics.LimitTypes.SpendDaily
+                        : LimitMetrics.LimitTypes.SpendWeekly,
+                    LimitMetrics.Subjects.ApiKey);
+
                 return new BalanceCheckResult(
                     false,
                     modelId,
@@ -348,6 +361,18 @@ public sealed partial class BillingApplicationService(
         return (await repository.ListTopUpsAsync(Preconditions.RequireValue(userId, nameof(userId)), pageSize, ct).ConfigureAwait(false)).Items;
     }
 
+    public async Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
+        int pageNumber, int pageSize,
+        IReadOnlyList<string>? userIds = null,
+        decimal? minAmountUsd = null,
+        decimal? maxAmountUsd = null,
+        CancellationToken ct = default)
+    {
+        var limit = Math.Min(pageSize, paginationOptions.Value.MaxPageSize);
+        var offset = Math.Max(0, pageNumber) * limit;
+        return await repository.ListAllTopUpsAsync(offset, limit, userIds, minAmountUsd, maxAmountUsd, ct).ConfigureAwait(false);
+    }
+
     public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(string? afterCursor = null, CancellationToken ct = default)
     {
         ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterId);
@@ -516,6 +541,7 @@ public sealed partial class BillingApplicationService(
         string displayCurrency,
         string clientToken,
         DateTimeOffset nowUtc,
+        decimal? bonusPercent = null,
         CancellationToken ct = default)
     {
         if (providerAmount <= 0 || displayAmount <= 0)
@@ -551,7 +577,9 @@ public sealed partial class BillingApplicationService(
             nowUtc,
             null,
             null,
-            null), ct).ConfigureAwait(false);
+            null,
+            null,
+            bonusPercent), ct).ConfigureAwait(false);
     }
 
     public async Task AttachProviderRefAsync(string paymentId, string providerPaymentId, string? payUrl, DateTimeOffset? expiresAt, CancellationToken ct = default)
@@ -699,6 +727,67 @@ public sealed partial class BillingApplicationService(
                     usageEvent.RequestId,
                     endpoint,
                     usageEvent.Stream)));
+    }
+
+    public async Task<GrantStartBalanceResult> GrantStartBalanceAsync(
+        string userId, decimal amountUsd, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        _ = Preconditions.RequireValue(userId, nameof(userId));
+        if (amountUsd <= 0 || amountUsd > 100)
+            return new GrantStartBalanceResult(false, null, "invalid_amount");
+
+        var existing = await repository.HasPromo1EntryAsync(userId, ct).ConfigureAwait(false);
+        if (existing is not null)
+            return new GrantStartBalanceResult(false, existing, null);
+
+        var entry = await repository.AddLedgerEntryAsync(new LedgerEntry(
+            Guid.NewGuid().ToString("N"),
+            userId,
+            LedgerEntryType.Promo1,
+            MoneyAmount.Usd(amountUsd),
+            $"promo1:{userId}",
+            $"Start balance promo ${amountUsd:F2}",
+            nowUtc), ct).ConfigureAwait(false);
+
+        return new GrantStartBalanceResult(true, entry.Id, null);
+    }
+
+    public async Task<GrantFirstTopUpBonusResult> GrantFirstTopUpBonusAsync(
+        string paymentId, DateTimeOffset nowUtc, CancellationToken ct = default)
+    {
+        _ = Preconditions.RequireValue(paymentId, nameof(paymentId));
+
+        var payment = await repository.GetPaymentAsync(paymentId, ct).ConfigureAwait(false);
+        if (payment is null)
+            return new GrantFirstTopUpBonusResult(false, null, "payment_not_found");
+
+        if (payment.Status != PaymentStatus.Paid)
+            return new GrantFirstTopUpBonusResult(false, null, "payment_not_paid");
+
+        if (payment.BonusPercent is null || payment.BonusPercent <= 0)
+            return new GrantFirstTopUpBonusResult(false, null, "no_bonus_snapshot");
+
+        var existing = await repository.HasFirstTopUpBonusEntryAsync(paymentId, ct).ConfigureAwait(false);
+        if (existing)
+            return new GrantFirstTopUpBonusResult(false, null, null);
+
+        var hasPaidBefore = await repository.HasUserHadPaidTopUpAsync(payment.UserId, ct).ConfigureAwait(false);
+        if (hasPaidBefore)
+            return new GrantFirstTopUpBonusResult(false, null, "not_first_paid_top_up");
+
+        var bonusUsd = payment.CreditedUsd.Amount * payment.BonusPercent.Value / 100m;
+        var entry = await repository.AddLedgerEntryAsync(new LedgerEntry(
+            Guid.NewGuid().ToString("N"),
+            payment.UserId,
+            LedgerEntryType.FirstTopUpBonus,
+            MoneyAmount.Usd(bonusUsd),
+            $"first_top_up_bonus:{paymentId}",
+            $"First top-up bonus {payment.BonusPercent}% on payment {paymentId}",
+            nowUtc), ct).ConfigureAwait(false);
+
+        await repository.UpdatePaymentBonusAsync(paymentId, payment.BonusPercent.Value, bonusUsd, ct).ConfigureAwait(false);
+
+        return new GrantFirstTopUpBonusResult(true, entry.Id, null);
     }
 
     private static int MapStatusToStatusCode(string? status)

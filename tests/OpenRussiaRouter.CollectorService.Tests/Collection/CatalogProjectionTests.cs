@@ -34,6 +34,19 @@ public class CatalogProjectionTests
     }
 
     [Fact]
+    public void Capabilities_ExposesComboAlias()
+    {
+        var snapshot = new CollectorSnapshot(
+            [new NodeCatalogResult("n1", false, [Obs("deepseek-v4-flash", "deepseek-v4-flash", rank: 3)], null, null)],
+            DateTimeOffset.UnixEpoch);
+
+        var caps = CatalogProjection.Capabilities(snapshot);
+
+        caps.Should().ContainSingle();
+        caps[0].ModelIds.Should().ContainSingle().Which.Should().Be("deepseek-v4-flash");
+    }
+
+    [Fact]
     public void Catalog_RichRank2_OverridesFallbackRank1_AndMergesNodeIds()
     {
         var snapshot = new CollectorSnapshot(

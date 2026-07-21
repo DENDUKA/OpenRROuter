@@ -110,6 +110,9 @@
   <data name="Home_StepBuy_Desc" xml:space="preserve">
     <value>Внесите USD-баланс один раз и используйте его на любых моделях.</value>
   </data>
+  <data name="Home_StepBuy_Desc_PromoBonus" xml:space="preserve">
+    <value>Пополните баланс и получите бонус +{0}% к сумме.</value>
+  </data>
   <data name="Home_StepBuy_Title" xml:space="preserve">
     <value>Пополните баланс</value>
   </data>

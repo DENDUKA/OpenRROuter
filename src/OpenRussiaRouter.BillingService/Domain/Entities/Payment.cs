@@ -27,4 +27,6 @@ public sealed record Payment(
     DateTimeOffset? ExpiresAtUtc,
     DateTimeOffset? ConfirmedAtUtc,
     DateTimeOffset? CanceledAtUtc,
-    string? PayUrl = null);
+    string? PayUrl = null,
+    decimal? BonusPercent = null,
+    decimal? BonusUsd = null);

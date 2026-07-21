@@ -22,15 +22,26 @@ echo "==> [prod] fetch + pull app"
 git -C "$DIR" fetch --quiet origin
 git -C "$DIR" pull --ff-only
 
-echo "==> [prod] sync tracked compose.prod.yml + Caddyfile -> /opt/orr"
-cp "$SRC/compose.prod.yml" compose.yml
-cp "$SRC/Caddyfile"        Caddyfile
+echo "==> [prod] sync tracked compose.prod.yml + Caddyfile + monitoring config -> /opt/orr"
+cp "$SRC/compose.prod.yml"   compose.yml
+cp "$SRC/Caddyfile"          Caddyfile
+cp "$SRC/prometheus.prod.yml" prometheus.yml
+# Mirror grafana/ wholesale so deleted dashboards/datasources disappear from the box too.
+rm -rf grafana
+cp -r "$SRC/grafana" grafana
 
 echo "==> [prod] build .NET services"
 docker compose build $APP_SERVICES
 
 echo "==> [prod] up (all services incl. caddy)"
 docker compose up -d --remove-orphans
+
+# Bind-mounted configs (prometheus.yml, grafana/provisioning) do not trigger a container
+# recreate on their own — nudge both so a synced config actually takes effect.
+curl -fsS -X POST --max-time 10 http://127.0.0.1:9090/-/reload >/dev/null 2>&1 \
+  && echo "    prometheus config reloaded" || true
+docker compose restart grafana >/dev/null 2>&1 \
+  && echo "    grafana restarted (re-reads provisioning)" || true
 
 echo "==> [prod] health (up to 60s)"
 ok=0

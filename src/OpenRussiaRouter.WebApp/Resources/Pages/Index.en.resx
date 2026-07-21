@@ -110,6 +110,9 @@
   <data name="Home_StepBuy_Desc" xml:space="preserve">
     <value>Add USD balance once and use it across available models.</value>
   </data>
+  <data name="Home_StepBuy_Desc_PromoBonus" xml:space="preserve">
+    <value>Top up your balance and get a +{0}% bonus on the amount.</value>
+  </data>
   <data name="Home_StepBuy_Title" xml:space="preserve">
     <value>Buy credits</value>
   </data>

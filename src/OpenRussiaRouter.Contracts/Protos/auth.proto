@@ -22,6 +22,7 @@ service AuthService {
   rpc ListActiveApiKeyHashes (ListActiveApiKeyHashesRequest) returns (ListActiveApiKeyHashesResponse);
   rpc GetFirstActiveApiKeyRaw (GetFirstActiveApiKeyRawRequest) returns (GetFirstActiveApiKeyRawResponse);
   rpc LoginOrRegisterWithGoogle (LoginWithGoogleRequest) returns (LoginResponse);
+  rpc LoginOrRegisterWithExternalProvider (LoginWithExternalProviderRequest) returns (LoginResponse);
   rpc ListAllActiveApiKeysRaw (ListAllActiveApiKeysRawRequest) returns (ListAllActiveApiKeysRawResponse);
   rpc ListAllNonDeletedApiKeysRaw (ListAllNonDeletedApiKeysRawRequest) returns (ListAllNonDeletedApiKeysRawResponse);
   rpc GetUser (GetUserRequest) returns (GetUserResponse);
@@ -232,6 +233,12 @@ message GetFirstActiveApiKeyRawResponse {
 message LoginWithGoogleRequest {
   string google_sub = 1;
   string email      = 2;
+}
+
+message LoginWithExternalProviderRequest {
+  string provider      = 1;
+  string provider_sub  = 2;
+  string email         = 3;
 }
 
 message ListAllActiveApiKeysRawRequest {}

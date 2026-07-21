@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Auth;
@@ -24,11 +25,18 @@ public class LoginModel : PageModelBase
 
     public string? ReturnUrl { get; set; }
 
-    public LoginModel(AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer, ILogger<LoginModel> logger)
+    public bool GoogleEnabled { get; }
+    public bool YandexEnabled { get; }
+
+    public LoginModel(AuthProvider AuthProvider, IStringLocalizer<SharedResource> localizer, ILogger<LoginModel> logger, IConfiguration configuration)
     {
         _authClient = AuthProvider;
         _localizer = localizer;
         _logger = logger;
+        GoogleEnabled = !string.IsNullOrWhiteSpace(configuration["Google:ClientId"])
+                     && !string.IsNullOrWhiteSpace(configuration["Google:ClientSecret"]);
+        YandexEnabled = !string.IsNullOrWhiteSpace(configuration["Yandex:ClientId"])
+                     && !string.IsNullOrWhiteSpace(configuration["Yandex:ClientSecret"]);
     }
 
     public IActionResult OnGet(string? returnUrl = null)
@@ -101,8 +109,25 @@ public class LoginModel : PageModelBase
         if (User.Identity?.IsAuthenticated == true)
             return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
 
-        var props = new AuthenticationProperties { RedirectUri = "/Login/ExternalCallback" };
+        var props = new AuthenticationProperties
+        {
+            RedirectUri = "/Login/ExternalCallback",
+            Items = { ["provider"] = "google" }
+        };
         return Challenge(props, GoogleDefaults.AuthenticationScheme);
+    }
+
+    public IActionResult OnPostYandex()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectTo(User.FindFirstValue(ClaimTypes.Role));
+
+        var props = new AuthenticationProperties
+        {
+            RedirectUri = "/Login/ExternalCallback",
+            Items = { ["provider"] = "yandex" }
+        };
+        return Challenge(props, YandexAuthenticationDefaults.AuthenticationScheme);
     }
 
     private IActionResult RedirectTo(string? role) =>

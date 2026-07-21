@@ -65,7 +65,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | Проект в `src/` | Роль | Порт |
 |---|---|---|
 | `OpenRussiaRouter.ApiGateway` | Публичный HTTP-вход, OpenAI-совместимый API. БД нет | HTTP 5000 |
-| `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, Google-логин | gRPC 5001 |
+| `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, внешний логин (Google/Yandex) | gRPC 5001 |
 | `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, аномалии, теги | gRPC 5002 |
 | `OpenRussiaRouter.ControlPlane` | Реестр нод 9Router, health, лизинг, capability-routing, синк ключей | gRPC 5003 |
 | `OpenRussiaRouter.WebApp` | **Razor Pages** (не Blazor) — кабинет + админка, cookie-auth. Своей БД нет | HTTP 5004 |
@@ -120,7 +120,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 Кабинет: `/` (обзор баланса), `/workspace/api-keys`, `/workspace/api-keys/limits`,
 `/workspace/activity`, `/workspace/credits`, `/workspace/payment-success`, `/workspace/settings`.
 
-Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/models`, `/admin/models-sync`,
+Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/topups`, `/admin/models`, `/admin/models-sync`,
 `/admin/tags`, `/admin/providers`, `/admin/nodes`, `/admin/nodes/{id}`, `/admin/nodes/{id}/limits`,
 `/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gateway-test`.
 

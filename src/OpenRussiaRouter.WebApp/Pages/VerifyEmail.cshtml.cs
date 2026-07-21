@@ -7,12 +7,14 @@ using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Billing;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
 public class VerifyEmailModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
+    private readonly BillingProvider _billingProvider;
     private readonly IEmailDispatchQueue _emailQueue;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<VerifyEmailModel> _logger;
@@ -28,9 +30,10 @@ public class VerifyEmailModel : PageModelBase
     public string? ErrorMessage { get; set; }
     public string? StatusMessage { get; set; }
 
-    public VerifyEmailModel(AuthProvider authProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<VerifyEmailModel> logger)
+    public VerifyEmailModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<VerifyEmailModel> logger)
     {
         _authClient = authProvider;
+        _billingProvider = billingProvider;
         _emailQueue = emailQueue;
         _localizer = localizer;
         _logger = logger;
@@ -70,6 +73,27 @@ public class VerifyEmailModel : PageModelBase
                 CookieAuthenticationDefaults.AuthenticationScheme,
                 new ClaimsPrincipal(identity),
                 new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
+
+            // Grant start balance if promotion is enabled (best-effort)
+            try
+            {
+                var enabledRaw = await _billingProvider.GetPlatformSettingAsync(
+                    PlatformSettingKeys.PromotionsStartBalanceEnabled, HttpContext.RequestAborted);
+                if (bool.TryParse(enabledRaw, out var enabled) && enabled)
+                {
+                    var amountUsdRaw = await _billingProvider.GetPlatformSettingAsync(
+                        PlatformSettingKeys.PromotionsStartBalanceAmountUsd, HttpContext.RequestAborted);
+                    if (decimal.TryParse(amountUsdRaw, System.Globalization.NumberStyles.Number,
+                        System.Globalization.CultureInfo.InvariantCulture, out var amountUsd) && amountUsd > 0)
+                    {
+                        await _billingProvider.GrantStartBalanceAsync(response.UserId, amountUsd, HttpContext.RequestAborted);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to grant start balance after email verification. UserId={UserId}", response.UserId);
+            }
 
             return RedirectToPage("/Workspace/ApiKeys");
         }

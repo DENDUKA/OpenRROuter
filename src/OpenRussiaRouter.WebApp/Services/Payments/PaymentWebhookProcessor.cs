@@ -131,6 +131,19 @@ public sealed class PaymentWebhookProcessor
             return new ProcessResult(ProcessOutcome.Rejected, result.ErrorCode);
         }
 
+        // Grant first top-up bonus if applicable (best-effort)
+        if (result.Confirmed && !string.IsNullOrEmpty(evt.OrderId))
+        {
+            try
+            {
+                await _billing.GrantFirstTopUpBonusAsync(evt.OrderId, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to grant first top-up bonus for payment {PaymentId}", evt.OrderId);
+            }
+        }
+
         return new ProcessResult(ProcessOutcome.Applied);
     }
 

@@ -66,9 +66,9 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 |---|---|---|
 | `OpenRussiaRouter.ApiGateway` | Публичный HTTP-вход, OpenAI-совместимый API. БД нет | HTTP 5000 |
 | `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, внешний логин (Google/Yandex) | gRPC 5001 |
-| `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, аномалии, теги | gRPC 5002 |
+| `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, платежи и FX, spend-лимиты, аномалии, теги | gRPC 5002 |
 | `OpenRussiaRouter.ControlPlane` | Реестр нод 9Router, health, лизинг, capability-routing, синк ключей | gRPC 5003 |
-| `OpenRussiaRouter.WebApp` | **Razor Pages** (не Blazor) — кабинет + админка, cookie-auth. Своей БД нет | HTTP 5004 |
+| `OpenRussiaRouter.WebApp` | **Razor Pages** (не Blazor) — кабинет + админка, cookie-auth, чекаут платежей и вебхуки, локализация ru/en. Своей БД нет | HTTP 5004 |
 | `OpenRussiaRouter.CollectorService` | Опрос нод/OpenRouter, in-memory кеш снапшотов. **БД нет**, состояние теряется при рестарте (by design) | gRPC 5005 |
 | `OpenRussiaRouter.BuildingBlocks` | Money, TokenUsage, ошибки, миграции, телеметрия, gRPC-хелперы. Зависимостей на другие проекты solution нет | — |
 | `OpenRussiaRouter.Contracts` | `.proto` (источник истины gRPC) + ручные DTO. Зависит только от BuildingBlocks | — |
@@ -76,9 +76,12 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 ### Поток `POST /v1/chat/completions`
 
+0. Rate limit (`GatewayRateLimiting`, политика `gateway-chat`): fixed-window per-API-key
+   с фолбэком per-IP, секция `RateLimiting`, при `Enabled=false` — no-op. Отказ — 429
+   в OpenAI-формате ошибки + `Retry-After`.
 1. Bearer-токен (`sk-or-*`) → валидация в AuthService (UserId, ApiKeyId, IsAdmin).
-2. Баланс + доступность модели в BillingService. Здесь публичный `ModelId`
-   (`ORR/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
+2. Баланс, spend-лимиты ключа (суточный/недельный) и доступность модели в BillingService.
+   Здесь публичный `ModelId` (`ORR/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
 3. Выбор ноды в ControlPlane — **передаётся `RouterModelId`**, иначе capability-store
    не сматчит модель. Capability-aware, при пустом store — fallback на least-load.
 4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —
@@ -123,6 +126,46 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/topups`, `/admin/models`, `/admin/models-sync`,
 `/admin/tags`, `/admin/providers`, `/admin/nodes`, `/admin/nodes/{id}`, `/admin/nodes/{id}/limits`,
 `/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gateway-test`.
+
+## Платежи и пополнение баланса
+
+Разделение ответственности жёсткое, не нарушать:
+
+- **BillingService — единственный владелец денег.** Считает `credited_usd` по собственной
+  доверенной FX-котировке (`FxQuoteService`, источник ЦБ РФ + `MarkupPercent`, фолбэк-курсы
+  в `ExchangeRateOptions.Fallback`, котировка живёт 48ч). Авторитетные min/max суммы пополнения —
+  тоже здесь (`PaymentOptions`). Таблица платежей — миграции `db/migrations/billing/013_payments.sql`
+  и `016_promo_settings_and_payment_fields.sql`.
+- **WebApp — только оркестрация чекаута и приём вебхуков.** Страницы вызывают
+  **только `PaymentCheckoutService`**, никогда `BillingProvider.CreatePayment` / `AttachProviderRef`
+  напрямую. Флоу: Billing создаёт строку и `payment_id` (= `order_id`) → провайдер отдаёт свой id
+  и pay URL → `AttachProviderRef` атомарно их привязывает.
+- **Провайдеры** за `IPaymentProvider` + `PaymentProviderRegistry`: `mock` (только dev) и
+  `rollypay` (СБП-агрегатор, `Services/Payments/Rollypay/`). Активный выбирается
+  `Payments:ActiveProvider`; пустое значение просто выключает платежи.
+- **`PaymentStartupGuard`** падает на старте, если вне Development активен `mock` или
+  неизвестный провайдер. Не ослаблять — мок не должен быть доступен в проде.
+- **Вебхук** — `PaymentWebhookEndpoint.Map(app)`: анонимный (провайдер не может залогиниться),
+  per-IP rate limit, лимит размера тела, **verify-then-parse по сырому телу**
+  (`RollypayWebhookVerifier`). Незаконфигуренный секрет → 401, а не пропуск.
+- **`PaymentReconciliationWorker`** добирает статусы: `Created` без оплаты уходит в `Expired`.
+
+Страницы: `/workspace/credits` (пополнение), `/pay/mock` (dev-заглушка оплаты),
+`/workspace/payment-success`, `/admin/topups` (история пополнений по всем пользователям).
+
+## Лимиты, метрики, продуктовая аналитика
+
+- **`LimitMetrics`** (`BuildingBlocks/Metrics/`) — единый счётчик отказов по лимитам,
+  в Prometheus как `orr_limit_rejections_total`. Метки узкие (`limit_type` × `subject`,
+  ~5 серий). **В лейблы нельзя класть api key id / user id / ip** — неограниченная
+  кардинальность на публичном эндпоинте. Разрезы «кто именно упёрся» берём SQL-панелями
+  поверх `billing.usage_records`, не метриками.
+- **Продуктовая аналитика** (`BuildingBlocks/Analytics/`): очередь + фоновой флаш
+  (`ProductAnalyticsEventQueue` → `ProductAnalyticsFlushWorker`) в `analytics.events`.
+  Есть no-op реализация, псевдонимизация пользователя (`UserPseudonymizer`) и путь стирания
+  (`IProductAnalyticsErasure`). Схема — `db/migrations/analytics/`.
+- Дашборды Grafana и конфиг Prometheus для прода — в `deploy/compose/grafana/`
+  и `deploy/compose/prometheus.prod.yml`.
 
 ## Два типа токенов 9Router — не путать
 

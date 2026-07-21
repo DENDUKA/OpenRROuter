@@ -22,9 +22,13 @@ echo "==> [prod] fetch + pull app"
 git -C "$DIR" fetch --quiet origin
 git -C "$DIR" pull --ff-only
 
-echo "==> [prod] sync tracked compose.prod.yml + Caddyfile -> /opt/orr"
-cp "$SRC/compose.prod.yml" compose.yml
-cp "$SRC/Caddyfile"        Caddyfile
+echo "==> [prod] sync tracked compose.prod.yml + Caddyfile + monitoring config -> /opt/orr"
+cp "$SRC/compose.prod.yml"   compose.yml
+cp "$SRC/Caddyfile"          Caddyfile
+cp "$SRC/prometheus.prod.yml" prometheus.yml
+# Mirror grafana/ wholesale so deleted dashboards/datasources disappear from the box too.
+rm -rf grafana
+cp -r "$SRC/grafana" grafana
 
 echo "==> [prod] build .NET services"
 docker compose build $APP_SERVICES

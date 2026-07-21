@@ -8,7 +8,8 @@ using OpenRussiaRouter.BuildingBlocks.Migrations;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("billing-service");
-builder.AddOpenTelemetryMetrics("OpenRussiaRouter.BillingService", "Npgsql");
+// DefaultMeterName обязателен: без него кастомные инструменты (LimitMetrics) молча не экспортируются.
+builder.AddOpenTelemetryMetrics("OpenRussiaRouter.BillingService", "Npgsql", OpenTelemetryExtensions.DefaultMeterName);
 
 Startup.ConfigureServices(builder.Services, builder.Configuration);
 

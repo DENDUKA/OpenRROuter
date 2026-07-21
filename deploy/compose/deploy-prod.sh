@@ -36,6 +36,13 @@ docker compose build $APP_SERVICES
 echo "==> [prod] up (all services incl. caddy)"
 docker compose up -d --remove-orphans
 
+# Bind-mounted configs (prometheus.yml, grafana/provisioning) do not trigger a container
+# recreate on their own — nudge both so a synced config actually takes effect.
+curl -fsS -X POST --max-time 10 http://127.0.0.1:9090/-/reload >/dev/null 2>&1 \
+  && echo "    prometheus config reloaded" || true
+docker compose restart grafana >/dev/null 2>&1 \
+  && echo "    grafana restarted (re-reads provisioning)" || true
+
 echo "==> [prod] health (up to 60s)"
 ok=0
 for i in $(seq 1 12); do

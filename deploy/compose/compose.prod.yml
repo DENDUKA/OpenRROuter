@@ -248,7 +248,9 @@ services:
   # ---------------------------------------------------------------------------
 
   prometheus:
-    image: prom/prometheus:v2.51.2
+    # quay.io, not docker.io/prom/prometheus: the box hits Docker Hub's anonymous pull
+    # limit (429) and the deploy dies at `compose up`. Quay is the project's own mirror.
+    image: quay.io/prometheus/prometheus:v2.51.2
     restart: unless-stopped
     ports:
       - "127.0.0.1:9090:9090"

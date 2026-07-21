@@ -225,6 +225,10 @@ services:
       NEXT_PUBLIC_BASE_URL: "${F9_PUBLIC_URL:-http://localhost:20128}"
       CLOUD_URL: "https://9router.com"
       NEXT_PUBLIC_CLOUD_URL: "https://9router.com"
+      # Node's heap ceiling is auto-derived from mem_limit (~396 MB at 768m), and a 429
+      # retry storm blew past it → "Reached heap limit" crashes ~every 12h. Pin the heap
+      # explicitly at 1 GB and give the cgroup 1.5g so there's non-heap headroom under it.
+      NODE_OPTIONS: "--max-old-space-size=1024"
     volumes:
       - f9router_data:/app/data
     healthcheck:
@@ -232,7 +236,14 @@ services:
       interval: 15s
       timeout: 5s
       retries: 10
-    mem_limit: 768m
+    # Cap the json log: a retry storm wrote ~14k lines/min and the file had grown to 629 MB
+    # unbounded. 3×50m keeps at most 150 MB on disk.
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    mem_limit: 1536m
     cpus: 1.0
 
 volumes:

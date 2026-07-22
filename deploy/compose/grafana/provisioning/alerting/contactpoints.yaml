@@ -1,0 +1,19 @@
+# Alert delivery goes through a webhook to the WebApp, which relays to email over Brevo's HTTP
+# API. Grafana's native SMTP contact point is unusable here — the prod box blocks outbound SMTP
+# (25/465/587/2525), only HTTPS/443 is open. ${ALERT_WEBHOOK_TOKEN} is interpolated from the
+# grafana container's env at startup (fed from /opt/orr/.env).
+
+apiVersion: 1
+
+contactPoints:
+  - orgId: 1
+    name: orr-email
+    receivers:
+      - uid: orr_email_relay
+        type: webhook
+        disableResolveMessage: false
+        settings:
+          url: http://webapp:8080/internal/alerts/grafana
+          httpMethod: POST
+          authorization_scheme: Bearer
+          authorization_credentials: ${ALERT_WEBHOOK_TOKEN}

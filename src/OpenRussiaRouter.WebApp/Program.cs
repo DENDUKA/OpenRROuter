@@ -366,6 +366,10 @@ app.MapOpenTelemetryEndpoints();
 // body-capped, raw-body verify-then-parse. See PaymentWebhookEndpoint for details.
 PaymentWebhookEndpoint.Map(app);
 
+// Grafana Alerting webhook → email via the Brevo HTTP path (SMTP is blocked on the prod box).
+// Token-gated; disabled (503) unless Alerting:WebhookToken + Alerting:EmailTo are set.
+AlertWebhookEndpoint.Map(app);
+
 app.Run();
 
 public partial class Program;

@@ -243,6 +243,10 @@ services:
       # config (host/port) ships in appsettings.json.
       Email__SmtpUsername: "${EMAIL_SMTP_USERNAME}"
       Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD}"
+      # Grafana alert relay: /internal/alerts/grafana emails via the Brevo HTTP path. Disabled
+      # (503) unless both are set. Token is shared with the grafana container's contact point.
+      Alerting__WebhookToken: "${ALERT_WEBHOOK_TOKEN}"
+      Alerting__EmailTo: "${ALERT_EMAIL_TO}"
       # Branded prod sender. Overrides appsettings so the box sends from the service's own
       # domain even on an image built before the appsettings default was updated (no rebuild).
       # openrussiarouter.com MUST be SPF/DKIM-authenticated in Brevo before this sends mail.
@@ -327,6 +331,9 @@ services:
       # Consumed by provisioning/datasources/datasources.yml via $POSTGRES_PASSWORD.
       # Must be a real value — an empty one silently yields a password-less datasource.
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      # Interpolated into provisioning/alerting/contactpoints.yaml — the token the webhook
+      # sends to the WebApp relay. Must match the WebApp's Alerting__WebhookToken.
+      ALERT_WEBHOOK_TOKEN: "${ALERT_WEBHOOK_TOKEN}"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning:ro

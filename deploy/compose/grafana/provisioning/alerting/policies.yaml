@@ -1,0 +1,12 @@
+# Root notification policy: every alert goes to the email relay. group_by keeps one email per
+# distinct alertname; the wait/interval keep re-notification sane rather than per-evaluation spam.
+
+apiVersion: 1
+
+policies:
+  - orgId: 1
+    receiver: orr-email
+    group_by: ['alertname']
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 4h

@@ -1,0 +1,143 @@
+# Alert rules for the ORR Limits story. Four signals, each the "silent death" case a dashboard
+# you have to look at would miss. All route to the email relay via the root policy.
+#
+# Datasource uids: prometheus, orrbilling (db openrussiarouter), orranalytics (db orr_analytics)
+# — must match provisioning/datasources/datasources.yml.
+
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: orr-limits
+    folder: ORR
+    interval: 1m
+    rules:
+      # 1) A provider connection stopped reporting quota (auth expired, key dead, node down).
+      #    Fires for the connections currently broken; `for` avoids flapping on a single scrape.
+      - uid: orr_quota_broken
+        title: Provider quota connection not reporting
+        condition: C
+        for: 15m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $values.A.Value }} provider connection(s) are not reporting quota (orr_provider_quota_status==0)."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: count(orr_provider_quota_status == 0) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 2) A spike of limit rejections — someone hammering rate limit / balance / spend limit.
+      - uid: orr_rejection_spike
+        title: Limit rejection spike
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $values.A.Value }} limit rejections in the last 10m (orr_limit_rejections_total)."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: sum(increase(orr_limit_rejections_total[10m])) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [20] }
+
+      # 3) The 9R node is unreachable — the collector polled it and got nothing. This is the
+      #    OOM-crash / node-down case we'd otherwise learn about only from user complaints.
+      - uid: orr_node_unreachable
+        title: 9R node unreachable
+        condition: C
+        for: 5m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: critical
+        annotations:
+          summary: "The collector reports the 9R node unreachable (orr_provider_quota_status reason=node_unreachable)."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: prometheus
+            model:
+              refId: A
+              expr: count(orr_provider_quota_status{reason="node_unreachable"}) or vector(0)
+              instant: true
+              intervalMs: 1000
+              maxDataPoints: 43200
+          - refId: C
+            relativeTimeRange: { from: 600, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator: { type: gt, params: [0] }
+
+      # 4) Analytics stopped recording despite live traffic. Two-query check so quiet nights don't
+      #    false-fire: alert only when billing saw real requests but analytics logged no events.
+      - uid: orr_analytics_stalled
+        title: Analytics not recording despite traffic
+        condition: C
+        for: 30m
+        noDataState: OK
+        execErrState: Error
+        labels:
+          severity: warning
+        annotations:
+          summary: "Billing recorded {{ $values.A.Value }} requests in 6h but analytics logged {{ $values.B.Value }} events — analytics pipeline is likely broken."
+        data:
+          - refId: A
+            relativeTimeRange: { from: 21600, to: 0 }
+            datasourceUid: orrbilling
+            model:
+              refId: A
+              format: table
+              rawSql: "select count(*)::float8 as value from billing.usage_records where created_at_utc > now() - interval '6 hours'"
+          - refId: B
+            relativeTimeRange: { from: 21600, to: 0 }
+            datasourceUid: orranalytics
+            model:
+              refId: B
+              format: table
+              rawSql: "select count(*)::float8 as value from analytics.events where occurred_at_utc > now() - interval '6 hours'"
+          - refId: C
+            relativeTimeRange: { from: 0, to: 0 }
+            datasourceUid: __expr__
+            model:
+              refId: C
+              type: math
+              expression: "$A > 20 && $B < 1"

@@ -113,7 +113,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   Structured gRPC error details пока нет (PLATFORM-002).
 - **Correlation ID**: заголовок `X-Correlation-Id` → `CorrelationIdReader` → контекст Serilog.
 - **Конфигурация gRPC-адресов**: секция `GrpcServices` в `appsettings.json` потребителя
-  (`Auth` → `http://localhost:5001`, `Billing` → `:5002`, `ControlPlane` → `:5003`, `Collector` → `:5005`).
+  (`Auth` → `http://localhost:5001`, `Billing` → `:5002`, `ControlPlane` → `:5003`,
+  `Collector` → `:5005`, `Content` → `:5007`).
+- **Порт 5006 не занимать**: в compose (`deploy/compose/compose.yml`, `compose.prod.yml`) это
+  HTTP-эндпоинт коллектора (`5006:8080`), по нему же ходит health-чек в `update-orr.sh`.
+  Новым сервисам — следующий свободный порт.
 
 ### Карта страниц WebApp
 
@@ -185,6 +189,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 - **GitHub Actions** (`.github/workflows/build-deploy.yml`, прод — `deploy-prod.yml`):
   restore → build → test → push образов в `ghcr.io/denduka/<service>` с тегами
   `sha-<commit>` и `dev-latest`. Неизменённые сервисы пропускаются по path-детекту.
+- **ContentService** добавлен во все compose-файлы (корневой `docker-compose.yml`,
+  `deploy/compose/compose.yml`, `compose.prod.yml`), `prometheus.prod.yml`, CI workflow
+  (`build-deploy.yml`, `deploy-prod.yml`), `build-push.ps1`, `update-orr.sh`/`update-prod.sh`,
+  и kustomize-манифесты (`base/services/content-service.yaml`, overlay dev, postgres-secret,
+  migration-job, network-policies, image-list в `orr-dev-app.yaml`).
 - **Argo CD Image Updater** (в кластере) следит за `dev-latest`, резолвит в digest,
   пишет image-оверрайды, дальше Argo CD синкает `orr-services`.
   Ожидаемые Argo CD applications после бутстрапа: `orr-infra`, `orr-services`,

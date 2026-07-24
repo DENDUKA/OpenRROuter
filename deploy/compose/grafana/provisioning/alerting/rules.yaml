@@ -13,7 +13,10 @@ groups:
     interval: 1m
     rules:
       # 1) A provider connection stopped reporting quota (auth expired, key dead, node down).
-      #    Fires for the connections currently broken; `for` avoids flapping on a single scrape.
+      #    Fires PER connection — the query keeps the series labels (provider/account_name/reason)
+      #    so the notification names exactly which one is broken, instead of a bare count. The
+      #    metric is 1 when reporting, 0 when not, so the condition is "value < 1". `for` avoids
+      #    flapping on a single scrape.
       - uid: orr_quota_broken
         title: Provider quota connection not reporting
         condition: C
@@ -23,14 +26,14 @@ groups:
         labels:
           severity: warning
         annotations:
-          summary: "{{ $values.A.Value }} provider connection(s) are not reporting quota (orr_provider_quota_status==0)."
+          summary: "Provider {{ $labels.provider }} / {{ $labels.account_name }} is not reporting quota (reason: {{ $labels.reason }})."
         data:
           - refId: A
             relativeTimeRange: { from: 600, to: 0 }
             datasourceUid: prometheus
             model:
               refId: A
-              expr: count(orr_provider_quota_status == 0) or vector(0)
+              expr: orr_provider_quota_status
               instant: true
               intervalMs: 1000
               maxDataPoints: 43200
@@ -42,7 +45,7 @@ groups:
               type: threshold
               expression: A
               conditions:
-                - evaluator: { type: gt, params: [0] }
+                - evaluator: { type: lt, params: [1] }
 
       # 2) A spike of limit rejections — someone hammering rate limit / balance / spend limit.
       - uid: orr_rejection_spike

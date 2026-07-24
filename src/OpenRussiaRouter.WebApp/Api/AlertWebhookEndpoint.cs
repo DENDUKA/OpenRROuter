@@ -144,13 +144,21 @@ public static class AlertWebhookEndpoint
                 {
                     var name = GetNested(alert, "labels", "alertname") ?? "alert";
                     if (i == 0) firstName = name;
-                    sb.Append("• [").Append(GetString(alert, "status") ?? status).Append("] ").Append(name).Append('\n');
+
+                    // Prefer the human-authored summary; fall back to the rule name so a line is
+                    // never blank. The raw Grafana valueString ("[ var='A' … value=3 ]") is
+                    // deliberately dropped — it's internal expression state, not information.
                     var summary = GetNested(alert, "annotations", "summary");
+                    sb.Append("• ").Append(string.IsNullOrWhiteSpace(summary) ? name : summary).Append('\n');
+
                     var description = GetNested(alert, "annotations", "description");
-                    var value = GetString(alert, "valueString");
-                    if (!string.IsNullOrWhiteSpace(summary)) sb.Append("    ").Append(summary).Append('\n');
                     if (!string.IsNullOrWhiteSpace(description)) sb.Append("    ").Append(description).Append('\n');
-                    if (!string.IsNullOrWhiteSpace(value)) sb.Append("    value: ").Append(value).Append('\n');
+
+                    // The identifying labels of this specific series (provider/account/reason),
+                    // so an alert that fires per connection actually names the connection.
+                    var context = FormatLabels(alert);
+                    if (!string.IsNullOrWhiteSpace(context)) sb.Append("    ").Append(context).Append('\n');
+
                     sb.Append('\n');
                     i++;
                 }
@@ -165,6 +173,47 @@ public static class AlertWebhookEndpoint
             var truncated = rawBody.Length > 4000 ? rawBody[..4000] + "…(truncated)" : rawBody;
             return ("[ORR alert] (unparsed payload)", truncated);
         }
+    }
+
+    /// <summary>
+    /// Renders the alert's identifying labels as <c>k=v, k=v</c>, keeping only the domain labels
+    /// (provider, account_name, reason, model_id, limit_type, …) and dropping Grafana's internal
+    /// bookkeeping (<c>alertname</c>, <c>grafana_folder</c>, <c>severity</c>, anything <c>__…__</c>)
+    /// and the high-cardinality id labels (connection_id, node_id) that add noise, not meaning.
+    /// </summary>
+    private static string FormatLabels(JsonElement alert)
+    {
+        if (alert.ValueKind != JsonValueKind.Object
+            || !alert.TryGetProperty("labels", out var labels)
+            || labels.ValueKind != JsonValueKind.Object)
+        {
+            return string.Empty;
+        }
+
+        var skip = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "alertname", "grafana_folder", "severity", "connection_id", "node_id",
+        };
+
+        var parts = new List<string>();
+        foreach (var label in labels.EnumerateObject())
+        {
+            if (label.Name.StartsWith("__", StringComparison.Ordinal) || skip.Contains(label.Name))
+            {
+                continue;
+            }
+
+            if (label.Value.ValueKind == JsonValueKind.String)
+            {
+                var v = label.Value.GetString();
+                if (!string.IsNullOrWhiteSpace(v))
+                {
+                    parts.Add($"{label.Name}={v}");
+                }
+            }
+        }
+
+        return string.Join(", ", parts);
     }
 
     private static string? GetString(JsonElement el, string prop) =>

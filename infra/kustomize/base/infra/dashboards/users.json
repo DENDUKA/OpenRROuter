@@ -1,0 +1,2375 @@
+{
+  "uid": "orr-users",
+  "title": "ORR Users",
+  "tags": [
+    "orr",
+    "users"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": false,
+  "refresh": "1h",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 100,
+      "type": "row",
+      "title": "Сводка",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "panels": []
+    },
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Пользователей всего",
+      "description": "auth.users со статусом Active. Ждущие подтверждения почты и заблокированные сюда не входят — они на отдельных плитках.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(*)::int as value\nfrom auth.users\nwhere status = 'Active'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Новых за период",
+      "description": "Регистрации в выбранном диапазоне времени (auth.users.created_at_utc), включая ещё не подтвердивших почту.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(*)::int as value\nfrom auth.users u\nwhere $__timeFilter(u.created_at_utc)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Активных за период",
+      "description": "Уникальные пользователи, сделавшие хотя бы один запрос. Считается по billing.activity_by_token ⋈ auth.api_keys: activity пишется на КАЖДЫЙ запрос, а billing.usage_records — только когда токены > 0 и найдена цена, поэтому бесплатные модели в usage_records не попадают.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(distinct k.user_id)::int as value\nfrom billing.activity_by_token a\njoin auth.api_keys k on k.id = a.api_key_id\nwhere $__timeFilter(a.created_at_utc)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Платящих всего",
+      "description": "Пользователи, у которых есть хотя бы одно реальное пополнение. Флаг billing.ledger_entries.is_user_payment отделяет оплату от промо-начислений (тип ExternalTopUp используется и для промо).",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(distinct user_id)::int as value\nfrom billing.ledger_entries\nwhere is_user_payment"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#0ca30c"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Не подтвердили почту",
+      "description": "Статус PendingVerification: аккаунт создан, но код из письма не введён — залогиниться нельзя. Растущее число обычно значит проблему с доставкой писем, а не с интересом к продукту.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(*)::int as value\nfrom auth.users\nwhere status = 'PendingVerification'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#0ca30c",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 1
+              },
+              {
+                "color": "#d03b3b",
+                "value": 10
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Пополнено за период",
+      "description": "Сумма credited_usd_amount по оплаченным платежам (billing.payments, status = Paid). Дата берётся по подтверждению платежа, а не по его созданию.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 1
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select coalesce(sum(p.credited_usd_amount), 0) as value\nfrom billing.payments p\nwhere p.status = 'Paid'\n  and $__timeFilter(coalesce(p.confirmed_at_utc, p.created_at_utc))"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 2,
+          "unit": "currencyUSD",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#0ca30c"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Рост и активность",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "panels": []
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Регистрации по дням",
+      "description": "Способ регистрации определяется по первой записи в auth.external_logins; если её нет — считаем, что регистрация была по паролю.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select date_trunc('day', u.created_at_utc) as time,\n       count(*) filter (where e.provider is null)               as \"Пароль\",\n       count(*) filter (where lower(e.provider) = 'google')     as \"Google\",\n       count(*) filter (where lower(e.provider) = 'yandex')     as \"Yandex\"\nfrom auth.users u\nleft join lateral (\n  select el.provider\n  from auth.external_logins el\n  where el.user_id = u.id\n  order by el.created_at_utc\n  limit 1\n) e on true\nwhere $__timeFilter(u.created_at_utc)\ngroup by 1\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 70,
+            "showPoints": "never",
+            "stacking": {
+              "mode": "normal",
+              "group": "A"
+            },
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Пароль"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Google"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#d95926"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Yandex"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Активные пользователи по дням",
+      "description": "Пользователь считается активным в день, если в этот день был хотя бы один запрос (billing.activity_by_token ⋈ auth.api_keys). «Новый» — день первого в жизни запроса, «вернувшийся» — все остальные дни.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with acts as (\n  select k.user_id, date_trunc('day', a.created_at_utc) as day\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nuser_days as (select distinct user_id, day from acts),\nfirsts as (select user_id, min(day) as first_day from user_days group by 1)\nselect d.day                                                   as time,\n       count(*)                                                as \"Активных\",\n       count(*) filter (where f.first_day = d.day)             as \"Новых\",\n       count(*) filter (where f.first_day < d.day)             as \"Вернувшихся\"\nfrom user_days d\njoin firsts f on f.user_id = d.user_id\nwhere $__timeFilter(d.day)\ngroup by 1\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Активных"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Новых"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0ca30c"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Вернувшихся"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Воронка и удержание",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "bargauge",
+      "title": "Воронка по когорте периода",
+      "description": "Когорта — пользователи, зарегистрировавшиеся в выбранном диапазоне. Ступени считаются за всё время жизни этих пользователей, а не только внутри диапазона: иначе вчерашняя регистрация никогда не дошла бы до оплаты. Полная шкала = размер когорты.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with cohort as (\n  select u.id, u.status\n  from auth.users u\n  where $__timeFilter(u.created_at_utc)\n),\nkeys as (\n  select distinct k.user_id\n  from auth.api_keys k\n  join cohort c on c.id = k.user_id\n),\nreqs as (\n  select distinct k.user_id\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n  join cohort c on c.id = k.user_id\n),\npays as (\n  select distinct l.user_id\n  from billing.ledger_entries l\n  join cohort c on c.id = l.user_id\n  where l.is_user_payment\n),\nsteps as (\n  select 1 as step, 'Зарегистрировались' as metric, count(*)::int as value from cohort\n  union all\n  select 2, 'Подтвердили почту', count(*)::int from cohort where status <> 'PendingVerification'\n  union all\n  select 3, 'Создали ключ', count(*)::int from keys\n  union all\n  select 4, 'Сделали запрос', count(*)::int from reqs\n  union all\n  select 5, 'Оплатили', count(*)::int from pays\n)\nselect s.metric, s.value\nfrom steps s\norder by s.step"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "bargauge",
+      "title": "Время от регистрации до первого запроса",
+      "description": "Та же когорта, что и в воронке слева. «Не сделал» — зарегистрировался, но ни одного запроса за всё время. Большой перевес в сторону «> 7 дней» и «Не сделал» = проблема онбординга, а не привлечения.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with cohort as (\n  select u.id, u.created_at_utc\n  from auth.users u\n  where $__timeFilter(u.created_at_utc)\n),\nfirst_req as (\n  select k.user_id, min(a.created_at_utc) as t\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n  group by 1\n)\nselect bucket as metric, count(*)::int as value\nfrom (\n  select case\n    when fr.t is null                                             then '5. Не сделал'\n    when fr.t - c.created_at_utc < interval '1 hour'               then '1. < 1 часа'\n    when fr.t - c.created_at_utc < interval '1 day'                then '2. 1-24 часа'\n    when fr.t - c.created_at_utc < interval '7 days'               then '3. 1-7 дней'\n    else                                                                '4. > 7 дней'\n  end as bucket\n  from cohort c\n  left join first_req fr on fr.user_id = c.id\n) t\ngroup by 1\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#199e70"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [],
+          "fields": "",
+          "values": true
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "Возврат в первую неделю (D1-D7)",
+      "description": "Доля пользователей, сделавших хотя бы один запрос через 1-7 дней после своего ПЕРВОГО запроса. В знаменателе только те, у кого с первого запроса прошло ≥ 7 дней — иначе вчерашние пользователи занижали бы метрику. Диапазон дашборда на эту панель не влияет.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with acts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nf as (select user_id, min(created_at_utc) as t0 from acts group by 1),\neligible as (select user_id, t0 from f where t0 <= now() - interval '7 days')\nselect round(\n         100.0 * count(distinct a.user_id) / nullif((select count(*) from eligible), 0)\n       , 1) as value\nfrom acts a\njoin eligible e on e.user_id = a.user_id\nwhere a.created_at_utc >  e.t0 + interval '1 day'\n  and a.created_at_utc <= e.t0 + interval '7 days'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 40
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "Возврат во второй месяц (D8-D30)",
+      "description": "То же, что панель выше, но окно 8-30 дней после первого запроса; в знаменателе — у кого с первого запроса прошло ≥ 30 дней.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 20
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with acts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nf as (select user_id, min(created_at_utc) as t0 from acts group by 1),\neligible as (select user_id, t0 from f where t0 <= now() - interval '30 days')\nselect round(\n         100.0 * count(distinct a.user_id) / nullif((select count(*) from eligible), 0)\n       , 1) as value\nfrom acts a\njoin eligible e on e.user_id = a.user_id\nwhere a.created_at_utc >  e.t0 + interval '7 days'\n  and a.created_at_utc <= e.t0 + interval '30 days'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 15
+              },
+              {
+                "color": "#0ca30c",
+                "value": 30
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "Недельные когорты: кто ещё делает запросы",
+      "description": "Строка — неделя регистрации (UTC, понедельник). W0 — доля когорты, сделавшая запрос на неделе регистрации, W1 — на следующей и т.д. Молодые когорты имеют пустые правые колонки: эти недели ещё не наступили, это не отток.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with cohort as (\n  select u.id, u.created_at_utc, date_trunc('week', u.created_at_utc) as cohort_week\n  from auth.users u\n  where $__timeFilter(u.created_at_utc)\n),\nacts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nw as (\n  select c.id,\n         c.cohort_week,\n         floor(extract(epoch from (a.created_at_utc - c.created_at_utc)) / 604800)::int as week_no\n  from cohort c\n  join acts a on a.user_id = c.id\n  where a.created_at_utc >= c.created_at_utc\n)\nselect to_char(c.cohort_week, 'YYYY-MM-DD')                                                              as \"Когорта\",\n       count(distinct c.id)                                                                              as \"Размер\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 0) / nullif(count(distinct c.id), 0), 0) as \"W0\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 1) / nullif(count(distinct c.id), 0), 0) as \"W1\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 2) / nullif(count(distinct c.id), 0), 0) as \"W2\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 3) / nullif(count(distinct c.id), 0), 0) as \"W3\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 4) / nullif(count(distinct c.id), 0), 0) as \"W4\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 5) / nullif(count(distinct c.id), 0), 0) as \"W5\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 6) / nullif(count(distinct c.id), 0), 0) as \"W6\",\n       round(100.0 * count(distinct w.id) filter (where w.week_no = 7) / nullif(count(distinct c.id), 0), 0) as \"W7\"\nfrom cohort c\nleft join w on w.id = c.id\ngroup by c.cohort_week\norder by c.cohort_week desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "^W\\d$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background",
+                  "mode": "gradient"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#d03b3b",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 20
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 50
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 103,
+      "type": "row",
+      "title": "По дням",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 33
+      },
+      "panels": []
+    },
+    {
+      "id": 30,
+      "type": "table",
+      "title": "Сводка по дням",
+      "description": "Один день = одна строка, дни без событий тоже показаны. «Из них подтвердили» — сколько из зарегистрировавшихся В ЭТОТ день сейчас имеют подтверждённую почту (момент подтверждения в БД не хранится). «Запросов» и «DAU» — из activity_by_token, «Потрачено» — из usage_records (бесплатные модели в деньги не попадают).",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with days as (\n  select generate_series(\n           date_trunc('day', $__timeFrom()::timestamptz),\n           date_trunc('day', $__timeTo()::timestamptz),\n           interval '1 day') as day\n),\nregs as (\n  select date_trunc('day', created_at_utc) as d,\n         count(*)                                                as n,\n         count(*) filter (where status <> 'PendingVerification') as verified\n  from auth.users\n  group by 1\n),\nfirst_key as (\n  select date_trunc('day', t) as d, count(*) as n\n  from (select user_id, min(created_at_utc) as t from auth.api_keys group by 1) x\n  group by 1\n),\nacts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nfirst_req as (\n  select date_trunc('day', t) as d, count(*) as n\n  from (select user_id, min(created_at_utc) as t from acts group by 1) y\n  group by 1\n),\ndau as (\n  select date_trunc('day', created_at_utc) as d,\n         count(distinct user_id) as users,\n         count(*)                as reqs\n  from acts\n  group by 1\n),\nspend as (\n  select date_trunc('day', created_at_utc) as d, sum(cost_amount) as s\n  from billing.usage_records\n  group by 1\n),\ntopup as (\n  select date_trunc('day', coalesce(confirmed_at_utc, created_at_utc)) as d,\n         sum(credited_usd_amount) as s,\n         count(distinct user_id)  as payers\n  from billing.payments\n  where status = 'Paid'\n  group by 1\n)\nselect to_char(days.day, 'YYYY-MM-DD')     as \"Дата\",\n       coalesce(regs.n, 0)                 as \"Регистраций\",\n       coalesce(regs.verified, 0)          as \"Из них подтвердили\",\n       coalesce(first_key.n, 0)            as \"Создали первый ключ\",\n       coalesce(first_req.n, 0)            as \"Сделали первый запрос\",\n       coalesce(dau.users, 0)              as \"Активных\",\n       coalesce(dau.reqs, 0)               as \"Запросов\",\n       coalesce(spend.s, 0)                as \"Потрачено $\",\n       coalesce(topup.s, 0)                as \"Пополнено $\",\n       coalesce(topup.payers, 0)           as \"Платили\"\nfrom days\nleft join regs      on regs.d      = days.day\nleft join first_key on first_key.d = days.day\nleft join first_req on first_req.d = days.day\nleft join dau       on dau.d       = days.day\nleft join spend     on spend.d     = days.day\nleft join topup     on topup.d     = days.day\norder by days.day desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Регистраций"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "footer": {
+          "show": true,
+          "reducer": [
+            "sum"
+          ],
+          "fields": [
+            "Регистраций",
+            "Сделали первый запрос",
+            "Запросов",
+            "Потрачено $",
+            "Пополнено $"
+          ]
+        }
+      }
+    },
+    {
+      "id": 31,
+      "type": "table",
+      "title": "Кто зарегистрировался — детализация по дням",
+      "description": "Детализация к сводке выше: строка = пользователь, зарегистрировавшийся в выбранном диапазоне. Имя — display_name, если он задан, иначе 'user' + первые 8 символов id. Email намеренно не выводится; найти человека по id можно в админке /admin/users.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 45
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with acts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n)\nselect u.created_at_utc                                                              as \"Регистрация\",\n       coalesce(nullif(u.display_name, ''), 'user ' || left(u.id, 8))                as \"Пользователь\",\n       coalesce((select lower(el.provider)\n                 from auth.external_logins el\n                 where el.user_id = u.id\n                 order by el.created_at_utc\n                 limit 1), 'password')                                               as \"Способ\",\n       u.status                                                                      as \"Статус\",\n       (select count(*) from auth.api_keys k\n         where k.user_id = u.id and k.deleted_at_utc is null)                        as \"Ключей\",\n       (select min(a.created_at_utc) from acts a where a.user_id = u.id)             as \"Первый запрос\",\n       (select count(*) from acts a where a.user_id = u.id)                          as \"Запросов\",\n       coalesce((select sum(ur.cost_amount) from billing.usage_records ur\n                  where ur.user_id = u.id), 0)                                       as \"Потрачено $\",\n       coalesce((select sum(p.credited_usd_amount) from billing.payments p\n                  where p.user_id = u.id and p.status = 'Paid'), 0)                  as \"Пополнено $\",\n       coalesce((select sum(l.amount) from billing.ledger_entries l\n                  where l.user_id = u.id), 0)                                        as \"Баланс $\"\nfrom auth.users u\nwhere $__timeFilter(u.created_at_utc)\norder by u.created_at_utc desc"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Статус"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "Active": {
+                        "text": "Активен",
+                        "color": "#0ca30c",
+                        "index": 0
+                      },
+                      "PendingVerification": {
+                        "text": "Ждёт подтверждения",
+                        "color": "#fab219",
+                        "index": 1
+                      },
+                      "Disabled": {
+                        "text": "Заблокирован",
+                        "color": "#d03b3b",
+                        "index": 2
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Первый запрос"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "noValue",
+                "value": "не начал"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Регистрация",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 32,
+      "type": "table",
+      "title": "Топ активных за период",
+      "description": "Кто реально нагружает платформу в выбранном диапазоне. «Запросов» и «Токенов» — из activity_by_token, «Потрачено» — из usage_records по тому же request_id, поэтому у пользователя только с бесплатными моделями будет 0 $ при ненулевом числе запросов.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select coalesce(nullif(u.display_name, ''), 'user ' || left(u.id, 8))            as \"Пользователь\",\n       count(*)                                                                 as \"Запросов\",\n       sum(a.input_tokens + a.output_tokens)                                    as \"Токенов\",\n       coalesce(sum(ur.cost_amount), 0)                                         as \"Потрачено $\",\n       max(a.created_at_utc)                                                    as \"Последний запрос\",\n       coalesce((select sum(l.amount) from billing.ledger_entries l\n                  where l.user_id = u.id), 0)                                   as \"Баланс $\"\nfrom billing.activity_by_token a\njoin auth.api_keys k on k.id = a.api_key_id\njoin auth.users   u on u.id = k.user_id\nleft join billing.usage_records ur on ur.request_id = a.request_id\nwhere $__timeFilter(a.created_at_utc)\ngroup by u.id, u.display_name\norder by 2 desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Баланс $"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#d03b3b",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 0.000001
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Запросов",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 104,
+      "type": "row",
+      "title": "Отток",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "panels": []
+    },
+    {
+      "id": 40,
+      "type": "table",
+      "title": "Замолчали (нет запросов 14+ дней)",
+      "description": "Пользователи, которые раньше делали запросы, но за последние 14 дней — ни одного. Диапазон дашборда на панель не влияет: она всегда про «сейчас». Положительный баланс в последней колонке = деньги остались, человек ушёл — самые интересные для возврата.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 67
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with acts as (\n  select k.user_id, a.created_at_utc\n  from billing.activity_by_token a\n  join auth.api_keys k on k.id = a.api_key_id\n),\nlast_act as (select user_id, max(created_at_utc) as t from acts group by 1)\nselect coalesce(nullif(u.display_name, ''), 'user ' || left(u.id, 8))          as \"Пользователь\",\n       l.t                                                                     as \"Последний запрос\",\n       extract(day from now() - l.t)::int                                      as \"Дней тишины\",\n       coalesce((select sum(ur.cost_amount) from billing.usage_records ur\n                  where ur.user_id = u.id), 0)                                 as \"Всего потрачено $\",\n       coalesce((select sum(le.amount) from billing.ledger_entries le\n                  where le.user_id = u.id), 0)                                 as \"Баланс $\"\nfrom last_act l\njoin auth.users u on u.id = l.user_id\nwhere l.t < now() - interval '14 days'\norder by l.t desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*\\$$"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "currencyUSD"
+              },
+              {
+                "id": "decimals",
+                "value": 4
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Дней тишины"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#fab219",
+                      "value": null
+                    },
+                    {
+                      "color": "#ec835a",
+                      "value": 30
+                    },
+                    {
+                      "color": "#d03b3b",
+                      "value": 60
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Дней тишины",
+            "desc": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 41,
+      "type": "table",
+      "title": "Зарегистрировались, но так и не начали",
+      "description": "Подтверждённый аккаунт старше 3 дней без единого запроса. Колонка «Ключей» отделяет тех, кто дошёл до создания ключа и застрял на интеграции, от тех, кто не начал вовсе. Диапазон дашборда на панель не влияет.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orrbilling"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 67
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select coalesce(nullif(u.display_name, ''), 'user ' || left(u.id, 8))          as \"Пользователь\",\n       u.created_at_utc                                                        as \"Регистрация\",\n       extract(day from now() - u.created_at_utc)::int                         as \"Дней без запроса\",\n       (select count(*) from auth.api_keys k\n         where k.user_id = u.id and k.deleted_at_utc is null)                   as \"Ключей\"\nfrom auth.users u\nwhere u.status = 'Active'\n  and u.created_at_utc < now() - interval '3 days'\n  and not exists (\n    select 1\n    from billing.activity_by_token a\n    join auth.api_keys k on k.id = a.api_key_id\n    where k.user_id = u.id\n  )\norder by u.created_at_utc desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ключей"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#d03b3b",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 1
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Регистрация",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 105,
+      "type": "row",
+      "title": "Посетители сайта",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 76
+      },
+      "panels": []
+    },
+    {
+      "id": 50,
+      "type": "stat",
+      "title": "Уникальных посетителей",
+      "description": "analytics.site_visits — визиты на сайт, включая незарегистрированных. Посетитель = HMAC от (IP + User-Agent), кук нет и сырой IP не хранится. Из этого следуют два ограничения: люди за одним NAT считаются как один посетитель, а X-Forwarded-For задаётся клиентом, поэтому число можно накрутить. Боты исключены.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 77
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(distinct visitor_hash)::int as value\nfrom analytics.site_visits\nwhere device_class <> 'bot'\n  and $__timeFilter(occurred_at_utc)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#3987e5"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 51,
+      "type": "stat",
+      "title": "Просмотров страниц",
+      "description": "Число отданных HTML-страниц (боты исключены). Статика, редиректы, API и вебхуки не считаются: визит пишется только когда ответ действительно оказался страницей.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 77
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select count(*)::int as value\nfrom analytics.site_visits\nwhere device_class <> 'bot'\n  and $__timeFilter(occurred_at_utc)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 0,
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 52,
+      "type": "stat",
+      "title": "Дошли до аккаунта",
+      "description": "Доля посетителей периода, у которых хотя бы один визит был в залогиненном виде (в такой строке заполняется distinct_id). Это верхняя граница конверсии «зашёл → стал пользователем»: сюда попадают и те, кто уже был клиентом.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 77
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with visitors as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where device_class <> 'bot'\n    and $__timeFilter(occurred_at_utc)\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect round(\n         100.0 * count(*) filter (where s.visitor_hash is not null) / nullif(count(*), 0)\n       , 1) as value\nfrom visitors v\nleft join signed s on s.visitor_hash = v.visitor_hash"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 2
+              },
+              {
+                "color": "#0ca30c",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 53,
+      "type": "stat",
+      "title": "Доля ботов в трафике",
+      "description": "Сколько процентов всех просмотров классифицированы как бот по User-Agent. Все остальные панели секции ботов исключают; эта плитка показывает, насколько велика отброшенная часть.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 77
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select round(\n         100.0 * count(*) filter (where device_class = 'bot') / nullif(count(*), 0)\n       , 1) as value\nfrom analytics.site_visits\nwhere $__timeFilter(occurred_at_utc)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "text",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 50
+              },
+              {
+                "color": "#d03b3b",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "auto",
+        "orientation": "auto"
+      }
+    },
+    {
+      "id": 54,
+      "type": "timeseries",
+      "title": "Уникальные посетители по дням",
+      "description": "«Новый» — день, когда этот visitor_hash встретился впервые за всю историю таблицы, а не в диапазоне дашборда. Сразу после включения трекинга все посетители будут выглядеть новыми — это артефакт старта, а не всплеск трафика.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 81
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with vd as (\n  select distinct visitor_hash, date_trunc('day', occurred_at_utc) as day\n  from analytics.site_visits\n  where device_class <> 'bot'\n),\nfirsts as (select visitor_hash, min(day) as first_day from vd group by 1)\nselect vd.day                                              as time,\n       count(*)                                            as \"Уникальных\",\n       count(*) filter (where f.first_day = vd.day)        as \"Новых\",\n       count(*) filter (where f.first_day < vd.day)        as \"Вернувшихся\"\nfrom vd\njoin firsts f on f.visitor_hash = vd.visitor_hash\nwhere $__timeFilter(vd.day)\ngroup by 1\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Уникальных"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Новых"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0ca30c"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Вернувшихся"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#199e70"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 55,
+      "type": "timeseries",
+      "title": "Просмотры страниц по дням",
+      "description": "Объём трафика рядом с числом людей: расхождение между линиями показывает, сколько страниц смотрит один посетитель. Ботовая серия выведена отдельно, чтобы всплеск краулера не читался как рост интереса.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 81
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select date_trunc('day', occurred_at_utc)                   as time,\n       count(*) filter (where device_class <> 'bot')       as \"Просмотров\",\n       count(*) filter (where device_class = 'bot')        as \"Ботами\"\nfrom analytics.site_visits\nwhere $__timeFilter(occurred_at_utc)\ngroup by 1\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 60,
+            "showPoints": "never",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Просмотров"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Ботами"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#8e8e8e"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "sum"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 56,
+      "type": "timeseries",
+      "title": "Посетители и регистрации по дням",
+      "description": "Уникальные посетители (site_visits) против подтверждённых регистраций (событие «user verified» в analytics.events, та же база). Конверсия считается за день: посетитель и его регистрация в разные дни попадут в разные точки — смотреть на тренд, а не на отдельный день.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 90
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "time_series",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with visitors as (\n  select date_trunc('day', occurred_at_utc) as d, count(distinct visitor_hash) as n\n  from analytics.site_visits\n  where device_class <> 'bot'\n  group by 1\n),\nsignups as (\n  select date_trunc('day', occurred_at_utc) as d, count(distinct distinct_id) as n\n  from analytics.events\n  where event_name = 'user verified'\n  group by 1\n)\nselect coalesce(v.d, s.d)                                        as time,\n       coalesce(v.n, 0)                                          as \"Посетителей\",\n       coalesce(s.n, 0)                                          as \"Регистраций\",\n       round(100.0 * coalesce(s.n, 0) / nullif(v.n, 0), 1)       as \"Конверсия %\"\nfrom visitors v\nfull join signups s on s.d = v.d\nwhere $__timeFilter(coalesce(v.d, s.d))\norder by 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0,
+          "min": 0,
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 0,
+            "showPoints": "auto",
+            "pointSize": 6,
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "gradientMode": "none"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Посетителей"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3987e5"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Регистраций"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#0ca30c"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Конверсия %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "dash",
+                  "dash": [
+                    8,
+                    6
+                  ]
+                }
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#c98500"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "showLegend": true,
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 57,
+      "type": "table",
+      "title": "Откуда приходят (первое касание)",
+      "description": "Источник берётся из ПЕРВОГО визита каждого посетителя, поэтому внутренние переходы по сайту не размывают картину привлечения. «Стали пользователями» — те, у кого позже был залогиненный визит. Пустой источник = переход без Referer: прямой заход, закладка или мессенджер.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 99
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, referrer_kind, referrer_host, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect ft.referrer_kind                                                             as \"Тип\",\n       coalesce(ft.referrer_host, 'нет referer')                                    as \"Источник\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.occurred_at_utc)\ngroup by 1, 2\norder by 3 desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Конверсия %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 2
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 5
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Тип"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "direct": {
+                        "text": "Прямой",
+                        "index": 0
+                      },
+                      "search": {
+                        "text": "Поиск",
+                        "index": 1
+                      },
+                      "social": {
+                        "text": "Соцсети",
+                        "index": 2
+                      },
+                      "external": {
+                        "text": "Другой сайт",
+                        "index": 3
+                      },
+                      "internal": {
+                        "text": "Внутренний",
+                        "index": 4
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Посетителей",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 58,
+      "type": "table",
+      "title": "Страницы входа",
+      "description": "Первая страница, которую увидел посетитель. Пути с id схлопнуты в {id}, чтобы каталог моделей не разъезжался на сотни строк.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 99
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash) visitor_hash, path, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n)\nselect path      as \"Страница входа\",\n       count(*)  as \"Посетителей\"\nfrom first_touch\nwhere $__timeFilter(occurred_at_utc)\ngroup by 1\norder by 2 desc\nlimit 25"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Посетителей",
+            "desc": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 59,
+      "type": "table",
+      "title": "UTM-метки",
+      "description": "Только визиты с utm_source или utm_campaign, по первому касанию посетителя. Пусто — значит рекламных ссылок с метками ещё не было: обычные переходы сюда не попадают.",
+      "datasource": {
+        "type": "postgres",
+        "uid": "orranalytics"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 109
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orranalytics"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, utm_source, utm_medium, utm_campaign, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect coalesce(ft.utm_source, '—')                                                 as \"Источник\",\n       coalesce(ft.utm_medium, '—')                                                 as \"Канал\",\n       coalesce(ft.utm_campaign, '—')                                               as \"Кампания\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.occurred_at_utc)\n  and (ft.utm_source is not null or ft.utm_campaign is not null)\ngroup by 1, 2, 3\norder by 4 desc\nlimit 50"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            }
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Конверсия %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "#fab219",
+                      "value": 2
+                    },
+                    {
+                      "color": "#0ca30c",
+                      "value": 5
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Посетителей",
+            "desc": true
+          }
+        ]
+      }
+    }
+  ]
+}

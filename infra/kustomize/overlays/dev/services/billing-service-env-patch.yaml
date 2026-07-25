@@ -14,3 +14,14 @@ spec:
                 secretKeyRef:
                   name: postgres-secret
                   key: analytics-connection
+            # Without Enabled the connection string above is inert — appsettings ships false.
+            # The salt is shared with webapp/auth so one person keeps one distinct_id.
+            - name: ProductAnalytics__Enabled
+              value: "true"
+            - name: ProductAnalytics__Environment
+              value: "dev"
+            - name: ProductAnalytics__IdentitySalt
+              valueFrom:
+                secretKeyRef:
+                  name: analytics-secret
+                  key: identity-salt

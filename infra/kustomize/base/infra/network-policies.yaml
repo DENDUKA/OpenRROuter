@@ -293,7 +293,8 @@ spec:
           protocol: TCP
 
 ---
-# postgres accepts connections from application services and the migration job.
+# postgres accepts connections from application services, the migration job, the webapp
+# (product analytics + site visits) and Grafana (read-only dashboards over billing/analytics).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -325,6 +326,17 @@ spec:
         - podSelector:
             matchLabels:
               app: db-create
+        - podSelector:
+            matchLabels:
+              app: webapp
+        - podSelector:
+            matchLabels:
+              app: grafana
+        # postgres reaching itself: the postgres_fdw link from orr_billing to orr_auth opens a
+        # real TCP connection back through the service ClusterIP, so the pod is its own client.
+        - podSelector:
+            matchLabels:
+              app: postgres
       ports:
         - port: 5432
           protocol: TCP

@@ -5,9 +5,21 @@ resources:
   - namespaces.yaml
   - postgres.yaml
   - postgres-secret.yaml
+  - analytics-secret.yaml
   - seq.yaml
   - grafana.yaml
   - grafana-dashboards-cm.yaml
   - prometheus.yaml
   - migration-job.yaml
   - network-policies.yaml
+
+# Dashboards shared with the compose deployment. The files under dashboards/ are copies of
+# deploy/compose/grafana/dashboards/ — kustomize refuses to read files outside its own
+# directory, so they cannot be symlinked or referenced up the tree. Keep both copies in sync
+# when a dashboard changes.
+configMapGenerator:
+  - name: grafana-dashboards-orr
+    files:
+      - dashboards/users.json
+      - dashboards/limits.json
+      - dashboards/analytics.json

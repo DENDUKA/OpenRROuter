@@ -13,3 +13,20 @@ spec:
               value: "GaChSrSJDnxKAYTDaAMZ0UyemR1cQSUtiF2PUnXSM"
             - name: ApiGatewayUrl
               value: "http://api-gateway"
+            # Product analytics + site visits. Off by default in appsettings, so the ORR Users
+            # dashboard has no visitor data until this is switched on. SiteVisits itself needs
+            # no flag — it defaults to on and stays dormant while this sink is unconfigured.
+            - name: ProductAnalytics__Enabled
+              value: "true"
+            - name: ProductAnalytics__Environment
+              value: "dev"
+            - name: ProductAnalytics__ConnectionString
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: analytics-connection
+            - name: ProductAnalytics__IdentitySalt
+              valueFrom:
+                secretKeyRef:
+                  name: analytics-secret
+                  key: identity-salt

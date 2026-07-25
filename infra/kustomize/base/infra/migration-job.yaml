@@ -7,7 +7,9 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  activeDeadlineSeconds: 120
+  # Generous: the FDW step below waits for auth-service to apply its migrations, which only
+  # happens once that pod is up — and this hook can run before it.
+  activeDeadlineSeconds: 420
   backoffLimit: 5
   template:
     metadata:
@@ -41,7 +43,7 @@ spec:
             - -c
             - |
               set -e
-              for db in orr_auth orr_billing orr_control orr_content orr_gateway; do
+              for db in orr_auth orr_billing orr_control orr_content orr_gateway orr_analytics; do
                 if ! psql -h postgres -U orr -d postgres -tAc \
                     "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1; then
                   echo "Creating database: $db"
@@ -51,6 +53,58 @@ spec:
                 fi
               done
               echo "All databases ready."
+
+              # ---------------------------------------------------------------------------
+              # Expose auth.* inside orr_billing via postgres_fdw.
+              #
+              # The Grafana dashboards are shared verbatim with the compose deployment
+              # (deploy/compose/grafana/dashboards/), where auth and billing live in ONE
+              # database and 12 panels join auth.users against billing.activity_by_token in a
+              # single query. This cluster splits them per service, and Postgres cannot join
+              # across databases — so orr_billing gets auth as a foreign schema instead of the
+              # dashboards getting a cluster-only fork.
+              # ---------------------------------------------------------------------------
+              echo "Waiting for the auth schema in orr_auth..."
+              i=0
+              while [ "$i" -lt 60 ]; do
+                if psql -h postgres -U orr -d orr_auth -tAc \
+                    "SELECT 1 FROM information_schema.schemata WHERE schema_name='auth'" | grep -q 1; then
+                  break
+                fi
+                i=$((i + 1))
+                sleep 5
+              done
+
+              if [ "$i" -ge 60 ]; then
+                echo "auth schema not present yet (auth-service has not migrated) — skipping FDW."
+                echo "The next Argo sync will retry; Grafana panels over auth.* stay empty until then."
+                exit 0
+              fi
+
+              # Never clobber real tables: the schema we drop below must contain foreign
+              # tables only. relkind 'r' = ordinary table, 'f' = foreign table.
+              NATIVE=$(psql -h postgres -U orr -d orr_billing -tAc \
+                "SELECT count(*) FROM pg_class c
+                   JOIN pg_namespace n ON n.oid = c.relnamespace
+                  WHERE n.nspname = 'auth' AND c.relkind = 'r'")
+              if [ "$NATIVE" != "0" ]; then
+                echo "orr_billing.auth holds $NATIVE ordinary table(s) — refusing to replace it."
+                exit 1
+              fi
+
+              echo "Wiring postgres_fdw: orr_billing.auth -> orr_auth.auth"
+              psql -h postgres -U orr -d orr_billing -v ON_ERROR_STOP=1 \
+                -c "CREATE EXTENSION IF NOT EXISTS postgres_fdw" \
+                -c "CREATE SERVER IF NOT EXISTS orr_auth_fdw
+                      FOREIGN DATA WRAPPER postgres_fdw
+                      OPTIONS (host 'postgres', port '5432', dbname 'orr_auth')" \
+                -c "DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER orr_auth_fdw" \
+                -c "CREATE USER MAPPING FOR CURRENT_USER SERVER orr_auth_fdw
+                      OPTIONS (user 'orr', password '$PGPASSWORD')" \
+                -c "DROP SCHEMA IF EXISTS auth CASCADE" \
+                -c "CREATE SCHEMA auth" \
+                -c "IMPORT FOREIGN SCHEMA auth FROM SERVER orr_auth_fdw INTO auth"
+              echo "FDW ready."
           env:
             - name: PGPASSWORD
               valueFrom:

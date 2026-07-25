@@ -24,6 +24,13 @@ spec:
               value: "admin"
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            # Interpolated into provisioning/datasources by Grafana itself ($VAR syntax).
+            # Never inline the password in the ConfigMap — that file is in git.
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: password
           volumeMounts:
             - name: grafana-provisioning-datasources
               mountPath: /etc/grafana/provisioning/datasources
@@ -31,6 +38,10 @@ spec:
               mountPath: /etc/grafana/provisioning/dashboards
             - name: grafana-dashboards
               mountPath: /etc/grafana/dashboards
+            # Nested mount: the provider scans /etc/grafana/dashboards recursively, so the
+            # shared compose dashboards land in a subfolder without touching the CM above.
+            - name: grafana-dashboards-orr
+              mountPath: /etc/grafana/dashboards/orr
           readinessProbe:
             httpGet:
               path: /api/health
@@ -60,6 +71,9 @@ spec:
         - name: grafana-dashboards
           configMap:
             name: grafana-dashboards
+        - name: grafana-dashboards-orr
+          configMap:
+            name: grafana-dashboards-orr
 ---
 apiVersion: v1
 kind: Service
@@ -95,6 +109,43 @@ data:
         url: http://prometheus:9090
         isDefault: true
         editable: false
+  # Postgres datasources backing the dashboards shared with the compose deployment. The uids
+  # (orrbilling / orranalytics) are referenced by the dashboard JSON and MUST match the ones
+  # in deploy/compose/grafana/provisioning/datasources/datasources.yml.
+  #
+  # Prod keeps auth+billing in a single database; this cluster splits them per service, so
+  # `auth.*` reaches orr_billing as a postgres_fdw foreign schema (see migration-job.yaml).
+  postgres.yml: |
+    apiVersion: 1
+
+    datasources:
+      - name: ORR Billing
+        uid: orrbilling
+        type: postgres
+        access: proxy
+        url: postgres:5432
+        database: orr_billing
+        user: orr
+        editable: false
+        secureJsonData:
+          password: $POSTGRES_PASSWORD
+        jsonData:
+          sslmode: disable
+          postgresVersion: 1600
+
+      - name: ORR Analytics
+        uid: orranalytics
+        type: postgres
+        access: proxy
+        url: postgres:5432
+        database: orr_analytics
+        user: orr
+        editable: false
+        secureJsonData:
+          password: $POSTGRES_PASSWORD
+        jsonData:
+          sslmode: disable
+          postgresVersion: 1600
 ---
 apiVersion: v1
 kind: ConfigMap

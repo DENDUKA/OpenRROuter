@@ -269,6 +269,16 @@ services:
       # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
       # Production — a test payment is free but still credits real balance.
       Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
+      # Site traffic → analytics.site_visits (unique visitors, referrers, UTM on the ORR Users
+      # dashboard). Same DB and same IdentitySalt as auth/billing: the salt keys both the
+      # visitor hash and distinct_id, so a different value would break the visit → signup
+      # funnel. Raw IPs are never stored. SiteVisits__Enabled=false turns tracking off.
+      ProductAnalytics__Enabled: "true"
+      ProductAnalytics__Provider: "Postgres"
+      ProductAnalytics__ConnectionString: "Host=postgres;Port=5432;Database=orr_analytics;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
+      ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
+      ProductAnalytics__Environment: "production"
+      SiteVisits__Enabled: "${SITE_VISITS_ENABLED:-true}"
     mem_limit: 512m
     cpus: 0.75
 
@@ -277,6 +287,8 @@ services:
     restart: unless-stopped
     depends_on:
       webapp:
+        condition: service_started
+      grafana:
         condition: service_started
     ports:
       - "80:80"
@@ -328,6 +340,11 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      # Exposed behind Caddy at https://<ORR_PUBLIC_DOMAIN>/grafana/ — see Caddyfile.
+      # SERVE_FROM_SUB_PATH keeps the /grafana/ prefix so Grafana emits correct asset URLs.
+      GF_SERVER_SERVE_FROM_SUB_PATH: "true"
+      GF_SERVER_DOMAIN: "${ORR_PUBLIC_DOMAIN}"
+      GF_SERVER_ROOT_URL: "https://${ORR_PUBLIC_DOMAIN}/grafana/"
       # Consumed by provisioning/datasources/datasources.yml via $POSTGRES_PASSWORD.
       # Must be a real value — an empty one silently yields a password-less datasource.
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"

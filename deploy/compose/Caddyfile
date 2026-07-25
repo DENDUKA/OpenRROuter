@@ -13,8 +13,15 @@
 }
 
 # User cabinet + admin + payment webhook (POST /webhook/rollypay).
+# Grafana dashboards are served under /grafana/ — the @grafana matcher routes those
+# requests to grafana:3000 (running with GF_SERVER_SERVE_FROM_SUB_PATH=true so it
+# generates correct self-referential URLs). Anything else falls through to webapp.
 {$ORR_PUBLIC_DOMAIN} {
 	encode zstd gzip
+
+	@grafana path /grafana /grafana/*
+	reverse_proxy @grafana grafana:3000
+
 	reverse_proxy webapp:8080
 }
 

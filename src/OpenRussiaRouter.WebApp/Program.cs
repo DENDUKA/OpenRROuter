@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Grpc.Net.ClientFactory;
 using OpenRussiaRouter.Contracts.Grpc.Auth.V1;
 using AuthGrpc = OpenRussiaRouter.Contracts.Grpc.Auth.V1.AuthService;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Metrics;
@@ -30,11 +31,18 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 using OpenRussiaRouter.WebApp.Services.Localization;
+using OpenRussiaRouter.WebApp.Services.SiteStats;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddSeqLogging("webapp");
 builder.AddOpenTelemetryMetrics("OpenRussiaRouter.WebApp");
+
+// Analytics sink (orr_analytics): gives the app the shared UserPseudonymizer and the
+// Npgsql data source. Site visit tracking rides on top of it and stays off when the sink
+// is not configured — see SiteVisitServiceCollectionExtensions.
+builder.Services.AddProductAnalytics(builder.Configuration);
+builder.Services.AddSiteVisitTracking(builder.Configuration);
 
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddRazorPages()
@@ -351,6 +359,15 @@ app.UseRequestLocalization();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Site visit tracking. Registered only when the analytics sink is configured — the
+// middleware resolves SiteVisitQueue/VisitorIdHasher per request and would throw on every
+// page otherwise. Must sit after UseAuthentication so a signed-in visit carries the
+// user's distinct_id.
+if (app.Services.GetService<SiteVisitQueue>() is not null)
+{
+    app.UseMiddleware<SiteVisitTrackingMiddleware>();
+}
 
 // Rate limiter MUST be wired up before the webhook endpoint is mapped, so the policy is
 // enforced on the request path. Other endpoints without a policy are unaffected.

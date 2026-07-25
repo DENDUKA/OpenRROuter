@@ -75,6 +75,12 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | `OpenRussiaRouter.Contracts` | `.proto` (источник истины gRPC) + ручные DTO. Зависит только от BuildingBlocks | — |
 | `OpenRussiaRouter.9Router` | Форк 9Router (ядро роутера). Своя `AGENTS.md`, относиться как к upstream | — |
 
+Вне solution, но в репозитории: `docs-site/` — публичная документация на **VitePress**
+(отдельный npm-проект со своим `Dockerfile`, `npm run docs:dev` / `docs:build`;
+`dotnet build` его не собирает, CI-шаги для .NET его не трогают), `tools/fill-providers` —
+разовая утилита наполнения каталога провайдеров, `db/migrations/` — SQL-миграции,
+`deploy/` — compose+Caddy+Grafana для VPS, `infra/` — kustomize и Argo CD.
+
 ### Поток `POST /v1/chat/completions`
 
 0. Rate limit (`GatewayRateLimiting`, политика `gateway-chat`): fixed-window per-API-key
@@ -93,8 +99,21 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 7. Событие usage кладётся в **PostgreSQL-outbox** (`db/migrations/gateway/`,
    `PostgresUsageOutboxRepository` + `UsageOutboxDispatcher`), лиза освобождается.
 
-Эндпоинты: `/v1/chat/completions`, `/v1/chat/completions/stream` (явный stream-алиас),
-`/v1/models`, `/health`, `/ready`.
+### Эндпоинты gateway и что из них биллится
+
+`MapGatewayEndpoints` (`Application/Extensions/ApiGatewayExtensions.cs`) вешает четыре
+проксирующих POST-а (все под rate-limit-политикой `gateway-chat`) и три GET-а:
+
+| Эндпоинт | Handler | Usage / биллинг |
+|---|---|---|
+| `POST /v1/chat/completions` | `ChatCompletionHandler.HandleAsync` | outbox (токены из тела) |
+| `POST /v1/chat/completions/stream` | `ChatCompletionHandler.HandleStreamAsync` | outbox (токены из финального SSE-чанка) |
+| `POST /v1/audio/speech` | `TextToSpeechHandler` | outbox; **`output_tokens` = число Unicode-символов `input`** |
+| `POST /v1/images/generations` | `ImageGenerationHandler` | **никакого usage не пишется — запросы не биллятся** |
+| `GET /v1/models`, `/health`, `/ready` | `ModelsHandler` / инлайн | — |
+
+Все четыре POST-а идут через один `GatewayPipeline.AuthorizeAndAcquireLeaseAsync`
+и один и тот же retry/failover-цикл по нодам (`MaxRouterAttempts = 5` в image/tts-хендлерах).
 
 ### Общие для всех сервисов паттерны
 
@@ -123,7 +142,8 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 Публичные: `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`,
 `/invite/{token}`, `/models`, `/models/{id}`, `/providers`, `/providers/{id}`, `/tools`,
-`/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`.
+`/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`,
+`/logout`, `/login/external-callback` (возврат из Google/Yandex OAuth).
 
 Кабинет: `/` (обзор баланса), `/workspace/api-keys`, `/workspace/api-keys/limits`,
 `/workspace/activity`, `/workspace/credits`, `/workspace/payment-success`, `/workspace/settings`.
@@ -170,8 +190,26 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   (`ProductAnalyticsEventQueue` → `ProductAnalyticsFlushWorker`) в `analytics.events`.
   Есть no-op реализация, псевдонимизация пользователя (`UserPseudonymizer`) и путь стирания
   (`IProductAnalyticsErasure`). Схема — `db/migrations/analytics/`.
+- **Трафик сайта** (`analytics.site_visits`): WebApp пишет по строке на отданную HTML-страницу
+  (`SiteVisitTrackingMiddleware` → `SiteVisitQueue` → `SiteVisitFlushWorker`). Посетитель — это
+  `HMAC(IdentitySalt, ip + user-agent)`, **сырой IP не хранится и кук нет**; у залогиненного
+  визита заполняется тот же `distinct_id`, что в `analytics.events`, поэтому воронка
+  «визит → регистрация» считается внутри одной БД. Детали и ограничения —
+  в [WebApp/CLAUDE.md](src/OpenRussiaRouter.WebApp/CLAUDE.md).
 - Дашборды Grafana и конфиг Prometheus для прода — в `deploy/compose/grafana/`
-  и `deploy/compose/prometheus.prod.yml`.
+  и `deploy/compose/prometheus.prod.yml`. Дашборды: `ORR Limits` (лимиты и квоты),
+  `ORR Product Analytics` (псевдонимные события), `ORR Users` (рост, retention, посетители
+  сайта; строится по `auth`+`billing` и по `analytics.site_visits`).
+- **Алерты Grafana уходят почтой не по SMTP.** На прод-хосте закрыт исходящий SMTP
+  (25/465/587/2525), открыт только 443, поэтому native SMTP contact point не работает.
+  Схема: правила `deploy/compose/grafana/provisioning/alerting/{rules,policies,contactpoints}.yaml`
+  → webhook `POST http://webapp:8080/internal/alerts/grafana` (`AlertWebhookEndpoint`)
+  → общая очередь писем WebApp → Brevo HTTP API (`Email:Transport=brevoApi`, ключ в
+  `Email:BrevoApiKey`). Эндпоинт анонимный, но гейтится shared-токеном
+  (`Alerting:WebhookToken`, приходит в `Authorization: Bearer` либо `X-Alert-Token`,
+  сравнение constant-time); без `Alerting:WebhookToken`/`Alerting:EmailTo` он отдаёт 503,
+  а не остаётся открытым. Payload парсится защитно: сломанный JSON уезжает письмом «как есть»,
+  алерт не теряется.
 
 ## Два типа токенов 9Router — не путать
 
@@ -222,3 +260,4 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | Billing | `billing.model_prices` — одна активная строка на модель, без versioned history (BILLING-003) |
 | ControlPlane | Нет cooldown/anti-flapping в `RouterHealthCheckWorker` (CONTROL-002) |
 | ControlPlane | После рестарта in-flight счётчики лиз сбрасываются, recovery нет (CONTROL-004) |
+| ApiGateway | `/v1/images/generations` проксируется, но usage не пишет — картинки не биллятся |

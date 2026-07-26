@@ -1,72 +1,259 @@
 # WebApp — CLAUDE.md
 
-ASP.NET Core **Razor Pages** — кабинет пользователя и админ-дашборд. **HTTP (порт 5004)**, cookie-аутентификация. К Auth/Billing/ControlPlane/Collector ходит как gRPC-клиент; к ApiGateway и нодам 9Router — HTTP. Своей БД нет — вся логика в backend-сервисах.
+ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, кабинет пользователя и админка. **HTTP (порт 5004)**, cookie-аутентификация, локализация ru/en. К Auth/Billing/ControlPlane/Collector/Content ходит gRPC-клиентом; к ApiGateway, нодам 9Router, OpenRouter, ЦБ РФ, Rollypay и Brevo — HTTP. **Доменной БД нет** — единственное прямое подключение к Postgres это аналитический синк `orr_analytics` (визиты + продуктовые события).
 
 ## Bootstrap ([Program.cs](Program.cs))
 
-- `AddSeqLogging("webapp")` + `AddOpenTelemetryMetrics` (`MapOpenTelemetryEndpoints`);
-- **Cookie-auth**: основная схема `Cookies` (LoginPath `/Login`, 30 дней, sliding) + вторая схема `External` (`.orr.ext`) для OAuth;
-- **Google-логин регистрируется условно** — только если заданы `Google:ClientId`/`Google:ClientSecret`. Без гварда OAuth-хендлер падает с 500 на `/Login` («ClientId option must be provided»);
-- **gRPC-клиенты** Auth(5001)/Billing(5002)/ControlPlane(5003)/Collector(5005) — каждый scoped-провайдер, keep-alive + `GrpcDeadlineInterceptor` (`GrpcServices:CallDeadlineSeconds`, дефолт 30);
-- **именованные `HttpClient`**: `ApiGateway` (`ApiGatewayUrl`, 120с), `RouterNode` (HTTP/1.1 exact, 20с), `DirectNodeChat` (HTTP/1.1, 120с — для UI-теста прокси);
-- `AddEmailInfrastructure`;
-- `AddProductAnalytics` + `AddSiteVisitTracking` (BuildingBlocks) — аналитическая БД `orr_analytics`
-  (см. «Трекинг визитов» ниже).
+- `AddSeqLogging("webapp")` + `AddOpenTelemetryMetrics` (`MapOpenTelemetryEndpoints`), `GET /health`.
+- **Локализация**: `AddLocalization(ResourcesPath = "Resources")` + `AddViewLocalization` +
+  DataAnnotations через `SharedResource`. Культуры — из
+  [`SupportedCultures`](Services/Localization/SupportedCultures.cs) (`ru` по умолчанию, `en`),
+  провайдеры только **cookie → Accept-Language** (query-string нет).
+  `UseRequestLocalization()` стоит после `UseStaticFiles` и **до** `UseAuthentication`.
+- **Cookie-auth**: основная схема `Cookies` (LoginPath/AccessDeniedPath `/Login`, HttpOnly,
+  SameSite=Lax, 30 дней, sliding) + вторая схема `External` (`.orr.ext`) для OAuth.
+- **Внешний логин регистрируется условно** — Google при заданных `Google:ClientId`/`ClientSecret`
+  (callback `/signin-google`), Yandex при `Yandex:ClientId`/`ClientSecret` (callback `/OAuth-yandex`),
+  оба с `SignInScheme = "External"`. Без гварда OAuth-хендлер падает 500 на `/Login`
+  («ClientId option must be provided»).
+- **gRPC-клиенты**: Auth(5001), Billing(5002), ControlPlane(5003), Collector(5005), Content(5007) —
+  keep-alive `SocketsHttpHandler` + `GrpcDeadlineInterceptor` (`GrpcServices:CallDeadlineSeconds`,
+  дефолт 30). Billing и Content дополнительно с `ServiceAuthClientInterceptor`:
+  **`ServiceAuth:BillingToken` обязателен — без него сервис падает на старте**; Content по умолчанию
+  переиспользует те же caller/token (`ServiceAuth:ContentCaller`/`ContentToken` переопределяют),
+  и у его канала лимит сообщения поднят до 8 MiB (картинки инструментов ≤ 1 MiB).
+- **Именованные `HttpClient`**: `ApiGateway` (`ApiGatewayUrl`, 120с), `RouterNode`
+  (HTTP/1.1 exact, 20с), `DirectNodeChat` (HTTP/1.1, 120с — прямой чат с нодой из `/admin/nodes`),
+  `OpenRouterDirect` (`https://openrouter.ai`, 20с), `Cbr`, клиент Rollypay, клиент Brevo.
+- `AddEmailInfrastructure`, `AddProductAnalytics` + `AddSiteVisitTracking` (BuildingBlocks),
+  currency-слой, платежи, rate-limit политика вебхука.
+- **Hosted services**: `EmailDispatchWorker`, `CbrRateRefresher`, `PaymentReconciliationWorker`,
+  `ReasoningEnrichmentWorker`.
+- **`UseForwardedHeaders` — самый первый middleware** (XFF/Proto/Host от Caddy, `KnownNetworks`/
+  `KnownProxies` очищены). Иначе ломаются генерация OAuth `redirect_uri` и абсолютные URL.
+- `PaymentStartupGuard.Validate(...)` сразу после `builder.Build()`.
+- Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
+  `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`. `UseRateLimiter()` — **до** маппинга.
 
 ## Структура
 
 | Папка | Содержимое |
 |---|---|
-| `Pages/` | Razor Pages (`.cshtml` + `.cshtml.cs`). `PageModelBase` — общий базовый класс. Корень — workspace; `Pages/Admin/`, `Pages/Workspace/`, `Pages/Login/ExternalCallback` |
-| `Services/Auth` | `AuthProvider` (gRPC→Auth) + DTO; `AuthException`; `ClaimsExtensions` |
-| `Services/Billing` | `BillingProvider` (gRPC→Billing) + DTO (balance, usage, models, anomalies, tags); `BillingException` |
-| `Services/ControlPlane` | `ControlPlaneProvider` (gRPC) + `RouterNodeApiProvider` (прямой HTTP к нодам, напр. `/v1/models`) |
+| `Pages/` | Razor Pages (`.cshtml` + `.cshtml.cs`), [`PageModelBase`](Pages/PageModelBase.cs) (`CurrentUser`). Layout'ы: `_Layout` (общий), `_CatalogLayout` (публичные), `_WorkspaceLayout` (кабинет), `_AdminLayout` (админка), партиал `_IntegrationExamples` |
+| `Api/` | Minimal-API эндпоинты: [`PaymentWebhookEndpoint`](Api/PaymentWebhookEndpoint.cs), [`AlertWebhookEndpoint`](Api/AlertWebhookEndpoint.cs) |
+| `Controllers/` | MVC-контроллеры для того, что нужно с любой страницы или отдаёт бинарь: `PreferencesController`, `PublicProviderLogoController`, `PublicToolLogoController`, `PublicToolImageController`, `Admin/ProviderLogoController`, `Admin/GatewayTestController` |
+| `Services/Auth` | `AuthProvider` (gRPC→Auth) + DTO, `AuthException` |
+| `Services/Billing` | `BillingProvider` (gRPC→Billing) + DTO (balance, usage, models, providers, anomalies, tags, payments, лимиты ключей), `PlatformSettingKeys`, `BillingException` |
+| `Services/Content` | `ContentProvider` (gRPC→Content) — каталог Tools, логотипы/картинки, `ContentException` |
+| `Services/ControlPlane` | `ControlPlaneProvider` (gRPC) + `RouterNodeApiProvider` (прямой HTTP к admin API нод и `/v1/chat/completions`) |
 | `Services/Collector` | `CollectorProvider` (gRPC→Collector) |
-| `Services/Enrichment` | `OpenRouterCatalogClient` (`IOpenRouterCatalogClient`) — обогащение каталога моделей |
-| `Services/State` | `UserSession`, `ClaimsExtensions`; `Services/ColorContrast.cs` |
-| `Email/` | SMTP: `SmtpEmailSender` (`IEmailSender`), очередь `EmailDispatchQueue`+`EmailDispatchWorker`, `EmailTemplates`, `EmailBroadcastService`, `EmailSettings` |
-| `Services/SiteStats` | `SiteVisitTrackingMiddleware` — запись визитов на сайт в `analytics.site_visits` |
-| `Controllers/Admin` | `GatewayTestController` — прогон запроса через gateway/ноду из UI |
+| `Services/Payments` | Чекаут, провайдеры, вебхук-процессор, гвард, воркер сверки, `Rollypay/` |
+| `Services/Currency` | Display-only слой курсов ЦБ РФ: `CbrClient`, `CbrRateSnapshot`, `CbrRateRefresher`, `CbrExchangeRateProvider`, `CurrencyFormatter`, `DisplayCurrency` |
+| `Services/Enrichment` | `OpenRouterCatalogClient` (обогащение каталога моделей), `ReasoningEnrichmentWorker` |
+| `Services/Legal` | `LegalDocumentService` — рендер `docs/mandatory/*.md` в страницы `/legal/*` |
+| `Services/Markup` | `MarkdownRenderer` (санитизация недоверенного markdown), `MonogramSvg` (фолбэк-логотип) |
+| `Services/SiteStats` | `SiteVisitTrackingMiddleware` (запись визитов в `analytics.site_visits`), `SiteVisitReader` (чтение истории для `/admin/visitors`) |
+| `Services/State` | `UserSession`, `ClaimsExtensions` (`GetUserId`, `GetSessionToken`); рядом `Services/ApiBaseUrlResolver.cs`, `Services/ColorContrast.cs` |
+| `Email/` | Очередь + воркер + два транспорта (SMTP/Brevo API), шаблоны, рассылки |
+| `Resources/` | `.ru.resx`/`.en.resx`: `SharedResource` + per-page ресурсы, путь зеркалит путь страницы (`Resources/Pages/Workspace/Credits.*.resx`) |
+| `Support/` | `SupportSettings` (секция `Support`) для формы `/support` |
+| `wwwroot/` | `app.css`, локальный `bootstrap/`, `favicon.png`, `icons/`, `js/tool-editor.js`. Своего фронтенд-билда нет, CDN не используется |
 
-## Карта страниц
+## Карта маршрутов
 
-Полный список — в корневом [CLAUDE.md](../../CLAUDE.md) («WebApp Pages»). Кратко: `/login`, `/signup`→`/verify-email`, `/invite/{token}`, `/` (workspace index), `/workspace/{api-keys,activity,credits,settings}`, `/admin/{users,topups,models,nodes,nodes/{id},nodes/{id}/limits,anomalies,requests,tags,broadcast,…}`, `/models[/{id}]` (публичный каталог).
+**Кебаб-кейс не выводится автоматически**: маршрут — это либо явная директива `@page "..."`, либо
+PascalCase-путь файла. Источник истины — директивы `@page`; в корневом `CLAUDE.md` часть путей
+записана в «причёсанном» виде.
 
-## Email ([EmailDispatchWorker.cs](Email/EmailDispatchWorker.cs))
+| Группа | Маршруты |
+|---|---|
+| Публичные | `/` (лендинг, `Pages/Index`), `/models`, `/models/{provider}/{slug}`, `/providers`, `/providers/{id}`, `/tools`, `/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/error` |
+| Аутентификация | `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`, `/invite/{token}`, `/logout`, `/login/externalcallback` |
+| Кабинет (`[Authorize]`) | `/workspace` (редирект на `/workspace/apikeys`), `/workspace/apikeys`, `/workspace/apikeys/limits`, `/workspace/activity`, `/workspace/credits`, `/workspace/paymentsuccess`, `/workspace/settings` |
+| Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest`, `/admin/visitors` |
+| Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`) |
+| Контроллеры | `POST /preferences/currency` (`[Authorize]`), `POST /preferences/language` (анонимно, ставит culture-cookie), `GET /providers/logo/{id}`, `GET /tools/logo/{id}` (фолбэк — монограмма), `GET /tools/image/{id:guid}`, `GET /admin/providers/logo/{id}`, `POST /admin/gatewaytest/stream` (SSE) |
+| Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, OTel-эндпоинты |
 
-Асинхронная отправка через `Channel`-очередь. Воркер дренит её последовательно: на сообщение до **3 попыток** с backoff 1с/2с/4с, на финальном провале сообщение **отбрасывается** (log error). После каждого — пауза `EmailSettings.BatchDelayMs` (дефолт 1000мс ≈ 1 msg/s, throttle под лимиты SMTP). **Без настроенного SMTP-секрета коды верификации/инвайты не уходят** (`docs/email-integration-plan.md`).
+Все POST-контроллеры под `[ValidateAntiForgeryToken]`.
+
+## Платежи ([Services/Payments](Services/Payments))
+
+Границы ответственности жёсткие (см. корневой CLAUDE.md), в коде это выглядит так:
+
+- **Страницы вызывают только [`PaymentCheckoutService`](Services/Payments/PaymentCheckoutService.cs)**,
+  никогда `BillingProvider.CreatePayment` / `AttachProviderRef` напрямую. Флоу: Billing создаёт строку
+  и `payment_id` (= `order_id`, считает `credited_usd` по своей FX-котировке) → провайдер отдаёт свой id
+  и pay URL → `AttachProviderRef` атомарно привязывает id/URL/expiry.
+- **Кросс-курсовая конверсия — по котировкам Billing** (`GetFxQuoteAsync`), а не по CBR-снапшоту
+  WebApp: если провайдер пинит `SettlementCurrency` (Rollypay = RUB), Billing позже сверяет
+  подтверждённую провайдером сумму со своей записью, и расхождение курсов даст аномалию
+  `payment_amount_mismatch` вместо зачисления.
+- `Payments:MinTopUpUsd`/`MaxTopUpUsd` — **только UI-подсказка**, авторитетная проверка в Billing.
+- Первый топап с бонусом: `PlatformSettingKeys.PromotionsFirstTopUp*` из Billing +
+  `HasUserHadPaidTopUpAsync`; ошибка чтения настройки просто отключает бонус.
+- **Реестр провайдеров** `PaymentProviderRegistry` + `IPaymentProvider`: `MockPaymentProvider`
+  регистрируется **только в Development**, `RollypayPaymentProvider` — всегда, но активен лишь при
+  `Payments:ActiveProvider="rollypay"`. Пустой `ActiveProvider` просто выключает платежи.
+- **[`PaymentStartupGuard`](Services/Payments/PaymentStartupGuard.cs)** вне Development падает при:
+  `ActiveProvider="mock"`, неизвестном провайдере и **`Payments:Rollypay:TestMode=true`**
+  (тестовый платёж денег не двигает, но Billing зачисляет реальные USD). Не ослаблять.
+- **Вебхук** `POST /webhook/{provider}`: анонимный, политика rate-limit `payment-webhook`
+  (per-IP fixed window 60/мин), тело ≤ 64 KB (`LimitedStream` работает и без `Content-Length`),
+  **verify-then-parse по сырому телу** (`RollypayWebhookVerifier`:
+  `HMAC-SHA256(secret, "{X-Timestamp}.{raw_body}")` в `X-Signature`) → 401 при провале
+  подписи, 400 при неразбираемом теле, 200 `ok`/`ignored`, 422 при отказе Billing.
+  Незаконфигуренный `SigningSecret` → все вебхуки 401 (fail safe), пустой `ApiKey` → исходящие
+  вызовы бросают.
+- **`PaymentReconciliationWorker`** добирает статусы: раз в `Reconciliation:Interval` берёт
+  `Created`-платежи старше `OlderThanMinutes` через Billing (`SKIP LOCKED` + лиза), спрашивает
+  провайдера и **прогоняет ответ через тот же `PaymentWebhookProcessor`**, замапив статус
+  в webhook-подобное событие (succeeded/expired/…). Отдельного RPC на release лизы нет — успешный
+  переход состояния в Billing её снимает; иначе лиза истекает сама.
+
+## Валюта отображения ([Services/Currency](Services/Currency))
+
+Секция `ExchangeRates` (`Source`, `RefreshHourMsk`, `MarkupPercent`, `Fallback.RubPerUsd/RubPerEur`).
+`CbrRateRefresher` раз в сутки обновляет `CbrRateSnapshot`, `CurrencyFormatter` печатает баланс
+в RUB/USD/EUR. **Это слой только отображения**: реальные деньги, зачисления и суммы чекаута считает
+BillingService своей котировкой.
+
+## Email ([Email/](Email))
+
+- `AddEmailInfrastructure`: `EmailSettings` (секция `Email`), singleton-очередь
+  `EmailDispatchQueue`/`IEmailDispatchQueue` + `EmailDispatchWorker`, `EmailBroadcastService`.
+- **Транспорт по `Email:Transport`**: `brevoApi` → [`BrevoApiEmailSender`](Email/BrevoApiEmailSender.cs)
+  (HTTPS `api.brevo.com`, ключ в `Email:BrevoApiKey`), иначе (дефолт `smtp`) MailKit
+  [`SmtpEmailSender`](Email/SmtpEmailSender.cs). **Креды SMTP умышленно не в `EmailSettings`** —
+  `SmtpUsername`/`SmtpPassword` читаются из секретов/env, чтобы не утечь в лог сериализацией опций.
+  На прод-хосте исходящий SMTP закрыт → там обязателен `Transport=brevoApi`.
+- Воркер дренит очередь последовательно: до **3 попыток** с backoff 1с/2с/4с, на финальном провале
+  сообщение **отбрасывается** (log error), после каждого — пауза `EmailSettings.BatchDelayMs`
+  (дефолт 1000мс ≈ 1 msg/s). Без настроенного транспорта коды верификации/инвайты не уходят.
+- Через ту же очередь идут: письма верификации/инвайтов/сброса пароля (`EmailTemplates`),
+  рассылка из `/admin/broadcast`, форма `/support` (Reply-To = отправитель, тикеты нигде не хранятся)
+  и алерты Grafana.
+
+## Алерт-вебхук Grafana ([AlertWebhookEndpoint.cs](Api/AlertWebhookEndpoint.cs))
+
+`POST /internal/alerts/grafana` — почему так, а не SMTP-contact point, см. корневой CLAUDE.md.
+
+- Анонимный, но гейтится shared-токеном `Alerting:WebhookToken`: читается из
+  `Authorization: Bearer` **или** `X-Alert-Token`, сравнение constant-time.
+- **Без `Alerting:WebhookToken`/`Alerting:EmailTo` эндпоинт отдаёт 503**, а не остаётся открытым.
+  Обеих ключей в `appsettings.json` нет — только env/secret.
+- Тело ≤ 256 KB. Парсинг защитный: сломанный JSON уезжает письмом «как есть» (обрезка до 4000
+  символов), алерт не теряется.
+- В письмо идут `annotations.summary` (фолбэк — `alertname`), `description` и **доменные лейблы**;
+  выкидываются `alertname`, `grafana_folder`, `severity`, `connection_id`, `node_id`, всё `__*`
+  и внутренний `valueString`.
 
 ## Трекинг визитов ([SiteVisitTrackingMiddleware.cs](Services/SiteStats/SiteVisitTrackingMiddleware.cs))
 
 Считает уникальных посетителей сайта, **включая незарегистрированных**, и источник перехода —
 это данные для секции «Посетители сайта» дашборда Grafana `ORR Users`.
 
-- Строка пишется **после** ответа и только если он оказался HTML (`text/html`, статус < 400) —
-  так отсеиваются статика, редиректы, API и вебхуки без списка расширений. Плюс явный
-  чёрный список префиксов (`/health`, `/metrics`, `/internal`, `/webhook`, `/.well-known`).
+- Пишутся только **GET**-запросы, строка ставится **после** ответа и только если он оказался HTML
+  (`text/html`, статус < 400) — так отсеиваются статика, редиректы, API и вебхуки без списка
+  расширений. Плюс явный чёрный список префиксов (`/health`, `/metrics`, `/internal`, `/webhook`,
+  `/.well-known`).
 - Посетитель = `HMAC-SHA256(ProductAnalytics:IdentitySalt, ip + "|" + user-agent)`
   (`VisitorIdHasher`). **Сырой IP не сохраняется, кук не ставим** — согласие не требуется.
   Соль стабильная: без неё нельзя отличить вернувшегося посетителя от нового.
   Ограничения: один NAT = один посетитель; `X-Forwarded-For` подделывается клиентом.
 - У залогиненного визита заполняется `distinct_id` — тот же `UserPseudonymizer`, что и в
   `analytics.events`, поэтому воронка «визит → регистрация» считается одним SQL.
+- Что ещё складывается в строку: `NormalizePath` схлопывает id-подобные сегменты в `{id}`
+  (`/models/{id}`, `/invite/{id}`), из referer берётся **только host** + грубая корзина
+  (direct/internal/search/social/external), `utm_source|medium|campaign` (≤100 символов, lowercase),
+  класс устройства (desktop/mobile/tablet/**bot** — по маркерам в UA; пустой UA считается ботом).
 - Очередь + фоновой флаш (`SiteVisitQueue` → `SiteVisitFlushWorker` в BuildingBlocks):
   очередь переполнена — визит отбрасывается, ошибка вставки — батч дропается с логом.
-  Рендер страницы не блокируется никогда.
-- Выключается `SiteVisits__Enabled=false`; без настроенного `ProductAnalytics`-синка
+  Рендер страницы не блокируется никогда, исключение в middleware проглатывается с warning.
+- Выключается `SiteVisits:Enabled=false`; без настроенного `ProductAnalytics`-синка
   middleware вообще не регистрируется (`Program.cs` проверяет наличие `SiteVisitQueue` в DI).
 - Схема — `db/migrations/analytics/002_site_visits.sql`, применяет **BillingService**
   (он владеет базой `orr_analytics`).
 
+## История визитов в админке ([Visitors.cshtml](Pages/Admin/Visitors.cshtml))
+
+`/admin/visitors` — read-сторона той же таблицы `analytics.site_visits`. Использует
+[`SiteVisitReader`](Services/SiteStats/SiteVisitReader.cs), который инжектит уже
+зарегистрированный `NpgsqlDataSource` (тот же, что пишет flush-воркер) и `UserPseudonymizer`.
+
+- **Сценарий «кто это до регистрации»**: админ передаёт `?userId=` → ридер вычисляет
+  `distinct_id = pseudonymizer.ComputeDistinctId(userId)`, находит самый свежий визит с этим
+  `distinct_id`, берёт оттуда `visitor_hash`, и тащит **все** визиты с этим `visitor_hash`
+  (анонимные до регистрации + залогиненные после). Альтернатива — прямой фильтр
+  `?visitorHash=`. Дополнительно `?from=`/`?to=` (UTC, `yyyy-MM-dd`).
+- **Пагинация**: `?p=0..N`, `PageSize = 50`, `BuildPageUrl` сохраняет все фильтры.
+- **Disabled-режим**: если аналитический sink не сконфигурирован (нет `NpgsqlDataSource` в DI),
+  `SiteVisitReader.IsEnabled = false` и страница рисует жёлтый баннер «Analytics sink is not
+  configured» вместо запроса. Регистрация в `Program.cs` — `AddSingleton<SiteVisitReader>` с
+  фабрикой, отдающей nullable-зависимости.
+- **Privacy**: `visitor_hash` уже HMAC-псевдоним, raw IP не виден; `distinct_id` показывается
+  только когда есть фильтр по `userId` — для анонимных запросов остаётся только `visitor_hash`.
+- Сетку колонок и пагинацию см. в `Pages/Admin/TopUps.cshtml` — паттерн общий для админских
+  страниц с постраничным списком.
+
+## Конфигурация
+
+| Ключ / секция | Назначение |
+|---|---|
+| `ApiGatewayUrl` | база для named-клиента `ApiGateway` (тест шлюза из админки) |
+| `PublicApiBaseUrl` | фолбэк для `ApiBaseUrlResolver` (примеры интеграции, `/docs`) |
+| `GrpcServices:{Auth,Billing,ControlPlane,Collector,Content}` | адреса сервисов; `CallDeadlineSeconds` — дедлайн всех gRPC-вызовов |
+| `ServiceAuth:{BillingCaller,BillingToken,ContentCaller,ContentToken}` | s2s-креды; **`BillingToken` обязателен**, Content-пара по умолчанию наследует Billing |
+| `Google:*`, `Yandex:*` | внешний логин; провайдер не регистрируется, пока не заданы оба значения |
+| `Email:*` | транспорт, SMTP-хост/порт/SSL, отправитель, `BatchDelayMs`; секреты (`BrevoApiKey`, SMTP-логин/пароль) — только env/secret |
+| `Support:{Inbox,TelegramUrl}` | получатель формы `/support` и альтернативный канал |
+| `ProductAnalytics:*` | синк `orr_analytics` (`Enabled`, `ConnectionString`, `IdentitySalt`, `Environment`, размеры очереди) |
+| `SiteVisits:{Enabled,QueueCapacity,BatchSize}` | трекинг визитов |
+| `ExchangeRates:*` | display-only курсы ЦБ РФ + фолбэки |
+| `Payments:*` | `ActiveProvider`, `Min/MaxTopUpUsd`, `Mock.SharedSecret`, `Rollypay.*`, `Reconciliation.*` |
+| `Alerting:{WebhookToken,EmailTo}` | алерт-вебхук; **в `appsettings.json` отсутствуют** |
+
+`appsettings.Development.json` включает mock-провайдер, dev s2s-токен и dev-креды Yandex —
+в прод это не уезжает (`PaymentStartupGuard` + отдельные секреты).
+
 ## Подводные камни
 
 - **Только gRPC/HTTP-клиенты** — доменной БД у WebApp нет, вся логика в backend-сервисах.
-  Единственное прямое подключение к Postgres — запись визитов в `orr_analytics` (см. выше);
+  Единственное прямое подключение к Postgres — аналитический синк (визиты/события);
   для доменных данных так делать нельзя.
-- **`RouterNodeApiProvider`** ходит на ноды `sk-or-*` ключом. Маппинг `RouterNodeTokens:{controlToken}` → `sk-or-*` задаётся в env (см. корневой CLAUDE.md, шаг 5 регистрации ноды). **Менять только через kustomize+git** — ArgoCD (`selfHeal`) откатит `kubectl set env`.
-- `/workspace/settings` — пустая заглушка.
-- Google-логин не появится, пока не заданы оба `Google:*` секрета.
+- **Новая строка UI = две `.resx`** (`.ru.resx` + `.en.resx`) в пути, зеркалящем путь страницы,
+  иначе на второй культуре останется ключ. Новый маршрут — не забыть ссылку в соответствующем
+  layout'е и что кебаб-кейс сам не появится (нужна директива `@page "..."`).
+- **`RouterNodeApiProvider`** ходит в admin API нод (`/api/integrations/*`) со **значением
+  `control_token` из ControlPlane-БД** (`Authorization: Bearer` + дублирующий `X-ORR-Node-Token`).
+  Никакого маппинга токенов через конфиг здесь нет и не надо реинтродьюсить. Для чат-теста
+  (`/admin/gatewaytest`, прямой чат в `/admin/nodes`) bearer'ом идёт первый активный `sk-or-*`
+  ключ текущего админа.
+- **`LegalDocumentService`** читает `docs/mandatory/{privacy-policy,public-offer}.md`, которые
+  копируются в output через `<Content Include="../../docs/mandatory/*.md">` в
+  [csproj](OpenRussiaRouter.WebApp.csproj), и подставляет плейсхолдеры `ORR_*`. Переименование или
+  удаление файла ломает `/legal/*`; whitelist имён — в самом сервисе.
+- **`MarkdownRenderer`** — для недоверенного markdown (описания моделей из OpenRouter, админские
+  textarea): строгий pipeline с `DisableHtml()` + regex-скраббер. Скраббер не HTML-парсер, не
+  полагаться на него как на единственную защиту.
+- `ApiBaseUrlResolver`: `platform_settings` (админская настройка) → `PublicApiBaseUrl` → origin
+  запроса. Ошибка Billing не валит страницу, просто уводит на фолбэк.
+- `ReasoningEnrichmentWorker` крутится **в каждой реплике**, идемпотентен по `model_id` и **не
+  перетирает** админскую разметку reasoning-возможностей (патчит только не отмеченные модели или
+  отмеченные с пустым списком efforts).
+- `UseForwardedHeaders` должен остаться первым middleware, иначе за Caddy ломаются OAuth и
+  абсолютные ссылки.
+- Внешний логин не появится, пока не заданы оба секрета соответствующего провайдера.
 
-## E2E
+## Тесты
 
-Playwright (`tests/OpenRussiaRouter.E2ETests`). Креды dev: `admin@example.com` / `StrongPassword123!`, UI `http://localhost`. Конфиг `e2e.local.json` (gitignored).
+- **`tests/OpenRussiaRouter.WebApp.Tests`** — xUnit + FluentAssertions + Moq;
+  [`WebAppFactory`](../../tests/OpenRussiaRouter.WebApp.Tests/WebAppFactory.cs) —
+  `WebApplicationFactory<Program>` с глобально выключенным antiforgery, плюс
+  `TestAuthenticationHandler` для залогиненных сценариев. Покрыто: платежи (чекаут, реестр, гвард,
+  вебхук-эндпоинт и процессор, Rollypay-верификатор), email (очередь, воркер, шаблоны),
+  локализация и переключение языка, юридические страницы/согласие/`LegalDocumentService`,
+  трекинг визитов, markdown, курсы ЦБ, activity, support, страницы Tools.
+- **E2E** — Playwright, opt-in (`tests/OpenRussiaRouter.E2ETests`). База —
+  `ORR_E2E_BASE_URL` / `e2e.local.json` (дефолт `http://localhost:5004`), креды —
+  `ORR_E2E_USER_EMAIL`/`ORR_E2E_USER_PASSWORD`; **без кредов тесты тихо скипаются**.

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Контекст каждой сессии: AGENTS.md (короткий шлюз на русском + ссылка) и CLAUDE.md
+  // (источник истины по сборке/архитектуре/деплою + раздел «Agent workflow»).
+  // Per-service CLAUDE.md НЕ подключаем always-on — агент подгрузит нужный по правилу
+  // из раздела «Agent workflow» перед правкой конкретного сервиса.
+  "instructions": ["AGENTS.md", "CLAUDE.md"],
+
+  // Автопилот для всей обычной работы; необратимые операции переведены в `ask` — рекомендация
+  // скила agent-harness-construction (микро-контроль high-risk операций). Порядок правил в bash:
+  // catch-all первым, узкие — последними (opencode: выигрывает ПОСЛЕДНЕЕ совпадение).
+  "permission": {
+    "bash": {
+      "*": "allow",
+      "git push --force*": "ask",
+      "git push -f*": "ask",
+      "git push * --force*": "ask",
+      "git push * -f*": "ask",
+      "git push --delete*": "ask",
+      "git push * --delete*": "ask",
+      "git commit --amend*": "ask",
+      "git reset --hard*": "ask",
+      "git clean -*f*": "ask",
+      "git branch -D*": "ask",
+      "docker rm -f*": "ask",
+      "docker rmi -f*": "ask",
+      "docker volume rm*": "ask",
+      "docker system prune*": "ask",
+      "kubectl delete*": "ask",
+      "dropdb *": "ask",
+      "*DROP DATABASE*": "ask",
+      "*DROP TABLE*": "ask",
+      "*TRUNCATE TABLE*": "ask"
+    }
+  },
+
+  // Файловый наблюдатель не должен триггериться на артефакты сборки и сторонние node_modules.
+  "watcher": {
+    "ignore": [
+      "bin/**",
+      "obj/**",
+      ".vs/**",
+      ".git/**",
+      "node_modules/**",
+      "graphify-out/**",
+      "TestResults/**",
+      "**/NuGet/**"
+    ]
+  }
+}

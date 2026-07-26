@@ -44,6 +44,17 @@ builder.AddOpenTelemetryMetrics("OpenRussiaRouter.WebApp");
 builder.Services.AddProductAnalytics(builder.Configuration);
 builder.Services.AddSiteVisitTracking(builder.Configuration);
 
+// Visitor-history reader for /admin/visitors. Resolves to a disabled instance when the
+// analytics sink is not configured (no NpgsqlDataSource in DI) — the page renders a
+// banner instead of throwing.
+builder.Services.AddSingleton<SiteVisitReader>(sp =>
+{
+    var dataSource = sp.GetService<Npgsql.NpgsqlDataSource>();
+    var pseudonymizer = sp.GetService<UserPseudonymizer>();
+    var logger = sp.GetRequiredService<ILogger<SiteVisitReader>>();
+    return new SiteVisitReader(dataSource, pseudonymizer, logger);
+});
+
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddRazorPages()
     .AddViewLocalization()

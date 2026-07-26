@@ -247,7 +247,7 @@ cost = (billableInput * inputPrice + OutputTokens * outputPrice + cacheBilled * 
 
 ### 4.1 ApiGateway — публичный HTTP вход
 
-**Назначение:** OpenAI-compatible API. Только HTTP (порт 5000), gRPC не хостит. Ходит к Auth/Billing/ControlPlane как gRPC-клиент, к 9Router-нодам — напрямую по HTTPS. **БД нет, миграций нет.**
+**Назначение:** OpenAI-compatible API. Только HTTP, gRPC не хостит. Ходит к Auth/Billing/ControlPlane как gRPC-клиент, к 9Router-нодам — напрямую по HTTPS. Kestrel в `appsettings.json` не сконфигурен: локально порт из `launchSettings`, в контейнере 8080 через `ASPNETCORE_URLS`. **Своя БД есть** — схема `gateway` (usage-outbox), `ConnectionStrings:GatewayDb`, миграции `db/migrations/gateway/` катаются на старте.
 
 #### Регистрация и endpoint'ы
 
@@ -312,13 +312,17 @@ JSON-патчеры толерантны к мусору: на `JsonException` �
 
 Provider-метаданные снимаются из заголовков ответа ноды `x-9r-provider` / `x-9r-account` → в usage-событие.
 
-#### RecordUsage (fire-and-forget)
+#### RecordUsage (через PostgreSQL-outbox)
 
-```csharp
-_ = billingProvider.RecordUsageAsync(...).ContinueWith(log on faulted);
-```
+Fire-and-forget с `ContinueWith` больше нет. Хендлер синхронно кладёт событие в
+`gateway.usage_outbox` (`PostgresUsageOutboxRepository.EnqueueAsync`, `on conflict (request_id)
+do nothing`), а доставкой в Billing занимается фоновый `UsageOutboxDispatcher`
+(`claim` через `for update skip locked`, ретраи с бэкоффом). Ошибка записи в outbox гасится
+`try/catch` внутри приватного `RecordUsageAsync` — ответ клиенту не ломается.
 
-Никогда не ждём ответа, ошибки только логируем. Статус usage: `completed` если токены > 0, иначе `usage_missing`.
+Статус usage: `completed` если токены > 0, иначе `usage_missing`. **Осторожно:** констрейнт
+`ck_usage_outbox_status` (миграция `002`) статус `usage_missing` не разрешает, поэтому такие
+события сейчас теряются молча — см. «Не реализовано / заглушки», GATEWAY-001.
 
 #### Маппинг ошибок Billing → OpenAI
 
@@ -333,7 +337,9 @@ _ = billingProvider.RecordUsageAsync(...).ContinueWith(log on faulted);
 
 - **`OperationCanceledException`** = клиент отключился, это норма, особенно для SSE.
 - **Стрим-ретрай только до первого байта** — после `HasStarted` нельзя сменить ноду или отдать JSON-ошибку.
-- **Usage fire-and-forget** → потеря события при краше gateway (известный пробел BILLING-004).
+- **Событие с нулевым usage не доезжает до биллинга** — статус `usage_missing` не проходит
+  констрейнт `ck_usage_outbox_status`, ошибка insert'а гасится `try/catch`. Крах gateway
+  событие больше не теряет: outbox переживает рестарт (BILLING-004 закрыт).
 
 ---
 
@@ -489,7 +495,7 @@ Keyset-курсор `"{createdAtUtc:O}|{id}"` (`ParseCursor`), размер из
 #### Подводные камни
 
 - **Один active-row на модель** в `billing.model_prices` — нет versioned price history. `PriceVersion` хранится в usage для аудита, но прошлые версии цен не сохраняются (BILLING-003).
-- **Usage приходит fire-and-forget** от ApiGateway по in-process gRPC — нет PG-backed outbox (BILLING-004), при потере вызова событие теряется.
+- **Usage приезжает из outbox ApiGateway**, а не fire-and-forget: доставляет `UsageOutboxDispatcher` с ретраями, поэтому `RecordUsage` обязан быть идемпотентным по `request_id` (BILLING-004 закрыт).
 
 #### БД
 
@@ -575,14 +581,17 @@ HTTP-клиент к `/api/integrations/*` каждой ноды.
 #### Синхронизация ключей
 
 - **`PushUserIntegrationKey`** — пушит ключ на все enabled-ноды (или одну `NodeId`) через `CreateIntegrationKeyAsync`. Маппинг `(apiKeyId, nodeId, routerKeyId)` сохраняется в `control.integration_key_sync` через `repository.SaveIntegrationKeyMappingAsync`. Ошибки по нодам — log warning, не валят весь пуш.
-- **`RevokeUserIntegrationKey`** — по маппингам → `UpdateIntegrationKeyStatusAsync(isActive:false)`. **Маппинг НЕ удаляется** — связь нужна для последующего полного удаления.
+- **`UpdateUserIntegrationKeyStatus`** — по маппингам → `UpdateIntegrationKeyStatusAsync(isActive)`. **Маппинг НЕ удаляется** — связь нужна для последующего полного удаления. RPC с именем `RevokeUserIntegrationKey` не существует: отзыв — это тот же метод с `is_active:false`. (В `control-plane.proto` осталось осиротевшее сообщение `RevokeUserIntegrationKeyResponse`, ни один RPC его не использует.)
 - **`DeleteUserIntegrationKey`** — `DeleteIntegrationKeyAsync` + `RemoveIntegrationKeyMappingsAsync`.
-- **`SyncNodeIntegrationKeys`** — тянет все активные raw-ключи из **AuthService** (`ListAllActiveApiKeysRawAsync`) и bulk-пушит на ноду.
+- **`SyncNodeIntegrationKeys`** — тянет raw-ключи из **AuthService** (`ListAllNonDeletedApiKeysRawAsync` — не только активные, отключённые тоже приезжают со своим `IsActive`) и bulk-пушит на ноду.
 - **`GetRouterNodeDetails`** — агрегирует quota + integration keys с ноды, каждый под таймаутом 3с (`NodeDetailsProviderTimeout`).
 
 #### Подводные камни
 
-- **После рестарта in-flight счётчики сбрасываются**, recovery лизов нет (CONTROL-004).
+- **In-flight счётчики дрейфуют вверх** (CONTROL-004). `in_flight_requests` персистится в БД и
+  реплеится при загрузке ноды (`ControlPlanePersistenceMapper` крутит `Lease()` в цикле), так что
+  рестарт их не обнуляет; сверки счётчика с реально живыми лизами нет, и потерянная лиза
+  остаётся в счётчике навсегда.
 
 #### БД
 
@@ -720,29 +729,31 @@ src/OpenRussiaRouter.WebApp/
 - `/invite/{token}` — завершение инвайта
 
 **Workspace (пользователь):**
-- `/` — index (обзор баланса)
-- `/workspace/api-keys` — CRUD ключей
-- `/workspace/api-keys/{id}/limits` — лимиты на ключ
+- `/workspace` — редирект на `/workspace/apikeys`
+- `/workspace/apikeys` — CRUD ключей
+- `/workspace/apikeys/limits` — лимиты на ключ (ключ приходит query-параметром, не сегментом пути)
 - `/workspace/activity` — usage records
 - `/workspace/credits` — баланс + история пополнений
-- `/workspace/settings` — display currency + смена пароля
-- `/workspace/payment/success` — post-payment redirect
+- `/workspace/settings` — display currency, язык, смена пароля
+- `/workspace/paymentsuccess` — post-payment redirect
+
+`/` — публичный лендинг, а не обзор баланса.
 
 **Admin:**
 - `/admin` — index
 - `/admin/users` — список, инвайты, virtual top-up
 - `/admin/users/{id}/edit` — редактирование пользователя
 - `/admin/models` — CRUD каталога моделей
-- `/admin/models-sync` — синхронизация с OpenRouter
+- `/admin/models/sync` — синхронизация с OpenRouter
 - `/admin/nodes` — список нод, add, disable/enable
 - `/admin/nodes/{id}` — детали + integration keys
 - `/admin/nodes/{id}/edit` — редактирование ноды
-- `/admin/nodes/{id}/limits` — provider quota dashboard
+- `/admin/nodes/{id}/provider-limits` — provider quota dashboard
 - `/admin/anomalies` — billing anomalies
 - `/admin/requests` — список всех запросов
 - `/admin/tags` — управление тегами моделей
 - `/admin/broadcast` — email-рассылка
-- `/admin/gateway-test` — прогон запроса через gateway/ноду
+- `/admin/gatewaytest` — прогон запроса через gateway/ноду
 
 **Публичный каталог:**
 - `/models`, `/models/{id}`
@@ -1599,16 +1610,16 @@ open http://localhost:5341
 | Metrics / tracing | OpenTelemetry есть для HTTP/PG, нет полного покрытия gRPC | PLATFORM-003 |
 | Log redaction | Нет явного хелпера для redact sensitive fields в логах | — |
 | Immutable price history | В `billing.model_prices` один active row на модель, не versioned history | BILLING-003 |
-| Billing outbox | Usage events — fire-and-forget in-process gRPC, без PostgreSQL-backed outbox | BILLING-004 |
+| Usage outbox | Констрейнт `ck_usage_outbox_status` не знает `usage_missing` — запросы с нулевым usage не доезжают до биллинга (сам outbox реализован, BILLING-004 закрыт) | GATEWAY-001 |
 | Health check cooldown | Нет cooldown/flapping policy в `RouterHealthCheckWorker` | CONTROL-002 |
-| Lease recovery | После рестарта ControlPlane in-flight счётчики сбрасываются, нет recovery | CONTROL-004 |
+| Lease reconciliation | `in_flight_requests` персистится и реплеится при загрузке ноды, но сверки с живыми лизами нет — счётчик дрейфует вверх и рестартом не лечится | CONTROL-004 |
 
 ### Roadmap (приоритеты)
 
-1. **BILLING-003** — versioned price history (позволит пересчитывать стоимость за прошлые периоды при изменении цены).
-2. **BILLING-004** — PostgreSQL-backed outbox (гарантированная доставка usage events).
+1. **GATEWAY-001** — починить констрейнт статусов outbox (сейчас часть usage-событий теряется молча).
+2. **BILLING-003** — versioned price history (позволит пересчитывать стоимость за прошлые периоды при изменении цены).
 3. **CONTROL-002** — cooldown/flapping policy (стабильность health-статуса).
-4. **CONTROL-004** — lease recovery после рестарта (корректность inflight-счётчиков).
+4. **CONTROL-004** — сверка in-flight счётчиков с живыми лизами (корректность least-load).
 5. **PLATFORM-002/003** — structured gRPC errors + полное observability покрытие.
 
 ---

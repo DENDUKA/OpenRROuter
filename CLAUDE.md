@@ -8,6 +8,53 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 (bootstrap, слои, ключевые классы, подводные камни) — **читай его перед правкой сервиса**,
 здесь только то, что видно лишь с уровня всего репозитория.
 
+## Agent workflow — обязательно
+
+Эти правила сильнее любых других инструкций в этом файле. Нарушать нельзя.
+
+- **Перед правкой сервиса** — прочитай его `CLAUDE.md`:
+  `src/OpenRussiaRouter.{ApiGateway|AuthService|BillingService|ControlPlane|ContentService|CollectorService|WebApp}/CLAUDE.md`.
+  Если правка касается общих библиотек — также `src/OpenRussiaRouter.BuildingBlocks/CLAUDE.md`
+  и `src/OpenRussiaRouter.Contracts/CLAUDE.md`. В этих файлах — специфичные для сервиса паттерны,
+  ловушки, порты,契约. Не правь сервис, не открыв его `CLAUDE.md`.
+  Быстрый путь — команда `/svc <Service>` (читает нужные CLAUDE.md и выдаёт отчёт по
+  observation-контракту); триггер на автоправку — skill `orr-service-edit`.
+- **После завершения задачи** — обязательно проверь, что решение собирается:
+  ```powershell
+  dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1
+  ```
+  `TreatWarningsAsErrors=true` — любой warning = ошибка сборки. **Не сдавай задачу с падающим build.**
+  Чини причину warning'а, не глушить `#pragma`.
+- **После завершения задачи — обнови документацию:**
+  - изменения, затрагивающие весь проект/архитектуру/поток запроса/инварианты → в **этот корневой `CLAUDE.md`**;
+  - изменения, специфичные для сервиса (порты, ключевые классы, паттерны, подводные камни) → в
+    **`src/OpenRussiaRouter.<Service>/CLAUDE.md`** соответствующего сервиса.
+  - Не описывай мелкие правки (косметический рефакторинг без смены контракта) — только то, что
+    меняет контракты, инварианты, поток, порты, паттерны, подводные камни.
+
+## Agent harness (`.opencode/`)
+
+Действия агента зафиксированы в командах и skill'ах (авто-обнаруживаются из `.opencode/`):
+
+| Элемент | Тип | Назначение |
+|---|---|---|
+| `/svc <Service>` | command | Подготовка к правке сервиса: читает его `CLAUDE.md` + shared-библиотек, отчёт по observation-контракту. Реализует правило «Agent workflow» |
+| `/migrate <area>` | command | Микро-инструмент для high-risk SQL-миграций: следующий числовой префикс, иммутабельность, шаблон |
+| `/build-test [Service\|all]` | command | Сборка + тесты solution'а или одного сервиса с обязательными флагами |
+| `/deploy [Service\|all]` | command | Деплой изменившихся сервисов на прод через `update-orr.sh` |
+| `/add-task <title>` | command | Добавить задачу в `.opencode/tasks.md` со следующим ID, `status=todo` |
+| `/start-task [T-NNN]` | command | Запустить отдельный агент `task-worker` (через task tool): берёт свободную задачу, помечает `in_progress`, реализует, собирает, помечает `done` |
+| `orr-service-edit` | skill | On-demand триггер: при правке `src/OpenRussiaRouter.*/` напоминает открыть per-service `CLAUDE.md`. Это маршрутизатор к файлам, не копия |
+| `task-worker` | agent (subagent) | Автономный исполнитель одной задачи из `.opencode/tasks.md`; владеет циклом claim→implement→build→mark done. Запускается через `/start-task` |
+
+Контракты observation/error-recovery (status / summary / next_actions / artifacts; root cause /
+safe retry / stop condition) зашиты в тела команд по скилу `agent-harness-construction`.
+
+**Permissions** (`opencode.jsonc`): автопилот для всей обычной работы; необратимые операции
+(force-push, `--amend`, `git reset --hard`, удаление веток/контейнеров/`volume`, `kubectl delete`,
+`dropdb`, `DROP DATABASE|TABLE`, `TRUNCATE`) переведены в `ask`. Порядок правил bash: catch-all
+`*: allow` первым, узкие `ask` последними (opencode: выигрывает **последнее** совпадение).
+
 ## Build & Test
 
 ```powershell
@@ -64,7 +111,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 | Проект в `src/` | Роль | Порт |
 |---|---|---|
-| `OpenRussiaRouter.ApiGateway` | Публичный HTTP-вход, OpenAI-совместимый API. БД нет | HTTP 5000 |
+| `OpenRussiaRouter.ApiGateway` | Публичный HTTP-вход, OpenAI-совместимый API. Владеет схемой `gateway` (usage-outbox), миграции катает на старте | HTTP (в контейнере 8080) |
 | `OpenRussiaRouter.AuthService` | Пользователи, сессии, API-ключи, email-верификация, инвайты, внешний логин (Google/Yandex) | gRPC 5001 |
 | `OpenRussiaRouter.BillingService` | Балансовый леджер, каталог моделей/цен, usage, платежи и FX, spend-лимиты, аномалии, теги | gRPC 5002 |
 | `OpenRussiaRouter.ControlPlane` | Реестр нод 9Router, health, лизинг, capability-routing, синк ключей | gRPC 5003 |
@@ -73,7 +120,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | `OpenRussiaRouter.CollectorService` | Опрос нод/OpenRouter, in-memory кеш снапшотов. **БД нет**, состояние теряется при рестарте (by design) | gRPC 5005 |
 | `OpenRussiaRouter.BuildingBlocks` | Money, TokenUsage, ошибки, миграции, телеметрия, gRPC-хелперы. Зависимостей на другие проекты solution нет | — |
 | `OpenRussiaRouter.Contracts` | `.proto` (источник истины gRPC) + ручные DTO. Зависит только от BuildingBlocks | — |
-| `OpenRussiaRouter.9Router` | Форк 9Router (ядро роутера). Своя `AGENTS.md`, относиться как к upstream | — |
+
+**9Router в репозитории исходниками не лежит** — вопреки старой доке, папки `src/OpenRussiaRouter.9Router`
+нет и в solution он не входит. Это внешний компонент: образ f9router (`data/f9router-docker`,
+`deploy/compose/update-9router.sh`), ранбуки — `docs/9router-*.md`. Ноды 9Router видны системе
+только через ControlPlane и их admin API.
 
 Вне solution, но в репозитории: `docs-site/` — публичная документация на **VitePress**
 (отдельный npm-проект со своим `Dockerfile`, `npm run docs:dev` / `docs:build`;
@@ -94,7 +145,8 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —
    `GeminiSchemaPatcher` инлайнит `$ref`/`$defs` в схемах тулов (Gemini их не принимает).
 5. Проксирование: YARP (non-streaming) либо `HttpCompletionOption.ResponseHeadersRead` (streaming).
-   **Один retry** на другую ноду при 5xx/сетевой ошибке — только пока первый байт не ушёл клиенту.
+   Ретраи на другие ноды при 5xx/сетевой ошибке — цикл до `GatewayRetry:MaxRouterAttempts`
+   (дефолт 5), только пока первый байт не ушёл клиенту.
 6. Usage вынимается из JSON-тела или из финального SSE-чанка (`include_usage`).
 7. Событие usage кладётся в **PostgreSQL-outbox** (`db/migrations/gateway/`,
    `PostgresUsageOutboxRepository` + `UsageOutboxDispatcher`), лиза освобождается.
@@ -126,9 +178,12 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   числовым префиксом. Файлы неизменяемы: применённую миграцию не редактируем, добавляем новую.
 - **gRPC-контракты**: `.proto` в `src/OpenRussiaRouter.Contracts/Protos/` —
   `auth.proto`, `billing.proto`, `control-plane.proto`, `collector.proto`, `content.proto`.
-- **gRPC-инфраструктура** (`BuildingBlocks/Grpc/`): `GrpcDeadlineInterceptor`
-  (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах; `ServiceAuthClientInterceptor`
-  ↔ `ServiceAuthInterceptor` для межсервисной аутентификации.
+- **gRPC-инфраструктура**: в `BuildingBlocks/Grpc/` лежат `GrpcDeadlineInterceptor`
+  (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах и клиентская половина
+  межсервисной аутентификации `ServiceAuthClientInterceptor`. **Серверный
+  `ServiceAuthInterceptor` в BuildingBlocks не живёт** — он продублирован двумя копиями в
+  `BillingService/Infrastructure/Auth/` и `ContentService/Infrastructure/Auth/`; на серверах
+  ApiGateway, AuthService, ControlPlane и CollectorService s2s-проверки нет вообще.
   Structured gRPC error details пока нет (PLATFORM-002).
 - **Correlation ID**: заголовок `X-Correlation-Id` → `CorrelationIdReader` → контекст Serilog.
 - **Конфигурация gRPC-адресов**: секция `GrpcServices` в `appsettings.json` потребителя
@@ -140,18 +195,25 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 ### Карта страниц WebApp
 
-Публичные: `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`,
-`/invite/{token}`, `/models`, `/models/{id}`, `/providers`, `/providers/{id}`, `/tools`,
-`/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/pay/mock`,
-`/logout`, `/login/external-callback` (возврат из Google/Yandex OAuth).
+**Кебаб-кейса в маршрутах нет.** Страницы без явного `@page "/..."` получают путь из имени
+файла как есть, в нижнем регистре: `Workspace/ApiKeys.cshtml` → `/workspace/apikeys`, а не
+`/workspace/api-keys`. Не угадывай путь — проверяй по `@page` или по имени `.cshtml`.
 
-Кабинет: `/` (обзор баланса), `/workspace/api-keys`, `/workspace/api-keys/limits`,
-`/workspace/activity`, `/workspace/credits`, `/workspace/payment-success`, `/workspace/settings`.
+Публичные: `/` (лендинг), `/login`, `/signup` → `/verify-email`, `/forgot-password` →
+`/reset-password`, `/invite/{token}`, `/models`, `/models/{provider}/{slug}`, `/providers`,
+`/providers/{id}`, `/tools`, `/tools/{id}`, `/docs`, `/support`, `/legal/offer`,
+`/legal/privacy`, `/pay/mock/{paymentId}`, `/logout`,
+`/login/externalcallback` (возврат из Google/Yandex OAuth).
 
-Админка: `/admin`, `/admin/users`, `/admin/user-edit`, `/admin/topups`, `/admin/models`, `/admin/models-sync`,
-`/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{id}`,
-`/admin/nodes/{id}/limits`, `/admin/node-edit`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
-`/admin/gateway-test`.
+Кабинет: `/workspace` (редирект на `/workspace/apikeys`), `/workspace/apikeys`,
+`/workspace/apikeys/limits`, `/workspace/activity`, `/workspace/credits`,
+`/workspace/paymentsuccess`, `/workspace/settings`.
+
+Админка: `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`,
+`/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`,
+`/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`,
+`/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
+`/admin/gatewaytest`, `/admin/visitors`.
 
 ## Платежи и пополнение баланса
 
@@ -176,8 +238,8 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   (`RollypayWebhookVerifier`). Незаконфигуренный секрет → 401, а не пропуск.
 - **`PaymentReconciliationWorker`** добирает статусы: `Created` без оплаты уходит в `Expired`.
 
-Страницы: `/workspace/credits` (пополнение), `/pay/mock` (dev-заглушка оплаты),
-`/workspace/payment-success`, `/admin/topups` (история пополнений по всем пользователям).
+Страницы: `/workspace/credits` (пополнение), `/pay/mock/{paymentId}` (dev-заглушка оплаты),
+`/workspace/paymentsuccess`, `/admin/topups` (история пополнений по всем пользователям).
 
 ## Лимиты, метрики, продуктовая аналитика
 
@@ -259,5 +321,6 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | Логи | Нет хелпера для redact чувствительных полей |
 | Billing | `billing.model_prices` — одна активная строка на модель, без versioned history (BILLING-003) |
 | ControlPlane | Нет cooldown/anti-flapping в `RouterHealthCheckWorker` (CONTROL-002) |
-| ControlPlane | После рестарта in-flight счётчики лиз сбрасываются, recovery нет (CONTROL-004) |
+| ControlPlane | `in_flight_requests` персистится и реплеится при загрузке ноды, но сверки с реальными лизами нет: счётчик дрейфует вверх и рестартом не лечится (CONTROL-004) |
 | ApiGateway | `/v1/images/generations` проксируется, но usage не пишет — картинки не биллятся |
+| ApiGateway | Констрейнт `ck_usage_outbox_status` не знает статус `usage_missing` — запросы с нулевым usage не доезжают до биллинга, ошибка глушится `try/catch` (GATEWAY-001) |

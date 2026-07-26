@@ -279,6 +279,13 @@ services:
       ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
       ProductAnalytics__Environment: "production"
       SiteVisits__Enabled: "${SITE_VISITS_ENABLED:-true}"
+      # Data Protection key ring: persisted to a Docker volume so the antiforgery tokens
+      # and cookie-auth session tickets survive container restarts. Without this every
+      # restart silently mints a new key ring, logged-in users are kicked out, and stale
+      # antiforgery cookies throw AntiforgeryValidationException ("key not found").
+      DataProtection__KeyRingPath: "/var/lib/orr/dataprotection-keys"
+    volumes:
+      - webapp_keys:/var/lib/orr/dataprotection-keys
     mem_limit: 512m
     cpus: 0.75
 
@@ -365,3 +372,4 @@ volumes:
   caddy_config:
   prometheus_data:
   grafana_data:
+  webapp_keys:

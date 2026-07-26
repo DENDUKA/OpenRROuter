@@ -26,6 +26,7 @@ using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.DataProtection;
 using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
@@ -121,6 +122,22 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
 }
 
 builder.Services.AddAuthorization();
+
+// Data Protection: persist the key ring to a stable location so antiforgery tokens and
+// the cookie-auth session ticket survive container/pod restarts. Without this the keys
+// live in the ephemeral container FS and every restart silently generates a new ring —
+// logged-in users get kicked out (the auth ticket is protected with these keys) and
+// leftover antiforgery cookies throw AntiforgeryValidationException ("The key {...} was
+// not found in the key ring"). When DataProtection:KeyRingPath is unset, the framework
+// default (ephemeral store) is used — handy for local dotnet run and unit tests.
+var dataProtectionBuilder = builder.Services
+    .AddDataProtection()
+    .SetApplicationName("OpenRussiaRouter.WebApp");
+var keyRingPath = builder.Configuration["DataProtection:KeyRingPath"];
+if (!string.IsNullOrWhiteSpace(keyRingPath))
+{
+    dataProtectionBuilder.PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+}
 
 // Default per-call deadline for all gRPC clients (overridable via GrpcServices:CallDeadlineSeconds).
 var grpcCallDeadline = TimeSpan.FromSeconds(

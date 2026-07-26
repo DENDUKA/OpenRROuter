@@ -31,6 +31,13 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   `ReasoningEnrichmentWorker`.
 - **`UseForwardedHeaders` — самый первый middleware** (XFF/Proto/Host от Caddy, `KnownNetworks`/
   `KnownProxies` очищены). Иначе ломаются генерация OAuth `redirect_uri` и абсолютные URL.
+- **Data Protection** персистится в файловое хранилище по пути `DataProtection:KeyRingPath`
+  (env `DataProtection__KeyRingPath`, в compose — named volume `webapp_keys` →
+  `/var/lib/orr/dataprotection-keys`). Без этого ключи живут в ephemeral-ФС контейнера, каждый
+  рестарт генерирует новое кольцо → выкидывает залогиненных (cookie-auth ticket защищён этими
+  ключами) и плодит `AntiforgeryValidationException` ("key {guid} was not found in the key ring")
+  на оставшихся антифоргери-куках. `SetApplicationName("OpenRussiaRouter.WebApp")` фиксирует
+  дискриминатор. В unit-тестах (`WebAppFactory`) путь пуст — антифоргери там глобально выключен.
 - `PaymentStartupGuard.Validate(...)` сразу после `builder.Build()`.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
   `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`. `UseRateLimiter()` — **до** маппинга.
@@ -201,6 +208,7 @@ BillingService своей котировкой.
 | Ключ / секция | Назначение |
 |---|---|
 | `ApiGatewayUrl` | база для named-клиента `ApiGateway` (тест шлюза из админки) |
+| `DataProtection:KeyRingPath` | путь к persistent-кольцу ключей Data Protection; пусто → ephemeral-дефолт (только локал/тесты) |
 | `PublicApiBaseUrl` | фолбэк для `ApiBaseUrlResolver` (примеры интеграции, `/docs`) |
 | `GrpcServices:{Auth,Billing,ControlPlane,Collector,Content}` | адреса сервисов; `CallDeadlineSeconds` — дедлайн всех gRPC-вызовов |
 | `ServiceAuth:{BillingCaller,BillingToken,ContentCaller,ContentToken}` | s2s-креды; **`BillingToken` обязателен**, Content-пара по умолчанию наследует Billing |

@@ -197,6 +197,10 @@ services:
       # config (host/port/sender noreply@web-point.top) ships in appsettings.json.
       Email__SmtpUsername: "${EMAIL_SMTP_USERNAME}"
       Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD}"
+      # Data Protection key ring — persisted across restarts (see compose.prod.yml).
+      DataProtection__KeyRingPath: "/var/lib/orr/dataprotection-keys"
+    volumes:
+      - webapp_keys:/var/lib/orr/dataprotection-keys
     mem_limit: 512m
     cpus: 0.75
 
@@ -250,3 +254,4 @@ volumes:
   postgres_data:
   seq_data:
   f9router_data:
+  webapp_keys:

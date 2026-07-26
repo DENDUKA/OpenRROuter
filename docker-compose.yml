@@ -170,6 +170,12 @@ services:
       # Non-secret Email config (host/port/sender) comes from appsettings.json.
       Email__SmtpUsername: "${EMAIL_SMTP_USERNAME:-}"
       Email__SmtpPassword: "${EMAIL_SMTP_PASSWORD:-}"
+      # Data Protection key ring — persisted across restarts so antiforgery tokens and
+      # the cookie-auth session tickets survive. Without this every restart silently
+      # mints a new key ring and kicks out logged-in users.
+      DataProtection__KeyRingPath: "/var/lib/orr/dataprotection-keys"
+    volumes:
+      - webapp_keys:/var/lib/orr/dataprotection-keys
 
   prometheus:
     image: prom/prometheus:v2.51.2
@@ -201,3 +207,4 @@ volumes:
   seq_data:
   prometheus_data:
   grafana_data:
+  webapp_keys:

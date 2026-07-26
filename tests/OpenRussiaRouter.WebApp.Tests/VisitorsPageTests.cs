@@ -114,8 +114,11 @@ public sealed class VisitorsPageTests
     }
 
     /// <summary>
-    /// Constructs a model with a disabled <see cref="SiteVisitReader"/> — DI is irrelevant
-    /// for the pure URL/state helpers we exercise here.
+    /// Constructs a model with a disabled <see cref="SiteVisitReader"/> and a stub
+    /// <see cref="AuthProvider"/>/<see cref="UserPseudonymizer"/> — DI is irrelevant for
+    /// the pure URL/state helpers we exercise here. The primary constructor requires all
+    /// four dependencies, so we pass minimal stand-ins; nothing in the tested code paths
+    /// actually calls them.
     /// </summary>
     private static Pages.Admin.VisitorsModel NewModel()
     {
@@ -125,6 +128,10 @@ public sealed class VisitorsPageTests
             dataSource: null,
             pseudonymizer: null,
             logger: readerLogger);
-        return new Pages.Admin.VisitorsModel(reader, modelLogger);
+        var authProvider = new OpenRussiaRouter.WebApp.Services.Auth.AuthProvider(
+            client: null!);
+        var pseudonymizer = new OpenRussiaRouter.BuildingBlocks.Analytics.UserPseudonymizer(
+            new OpenRussiaRouter.BuildingBlocks.Analytics.ProductAnalyticsOptions { IdentitySalt = "test-salt" });
+        return new Pages.Admin.VisitorsModel(reader, authProvider, pseudonymizer, modelLogger);
     }
 }

@@ -82,8 +82,7 @@ else
                         <tr>
                             <th>Time</th>
                             <th>Visitor</th>
-                            <th>Path</th>
-                            <th>Referrer</th>
+                            <th>Path / Source</th>
                             <th>UTM</th>
                             <th>Device</th>
                             <th>Auth</th>
@@ -99,15 +98,23 @@ else
                                         <code>@(v.VisitorHash.Length > 12 ? v.VisitorHash[..12] + "&hellip;" : v.VisitorHash)</code>
                                     </a>
                                 </td>
-                                <td><code>@v.Path</code></td>
                                 <td>
-                                    @if (string.IsNullOrEmpty(v.ReferrerHost))
+                                    <code>@v.Path</code>
+                                    @if (!string.IsNullOrEmpty(v.ReferrerHost))
                                     {
-                                        <span class="text-muted">@v.ReferrerKind</span>
+                                        <br />
+                                        <small class="text-muted">
+                                            &larr; @v.ReferrerHost
+                                            @if (v.ReferrerKind != "external" && v.ReferrerKind != "internal")
+                                            {
+                                                <span class="badge badge-secondary">@v.ReferrerKind</span>
+                                            }
+                                        </small>
                                     }
-                                    else
+                                    else if (v.ReferrerKind == "direct")
                                     {
-                                        <span><small>@v.ReferrerHost</small> <span class="badge badge-secondary">@v.ReferrerKind</span></span>
+                                        <br />
+                                        <small class="text-muted">&larr; direct</small>
                                     }
                                 </td>
                                 <td>
@@ -124,9 +131,12 @@ else
                                 </td>
                                 <td><span class="badge @(v.DeviceClass == "bot" ? "badge-warning" : "badge-secondary")">@v.DeviceClass</span></td>
                                 <td>
+                                    @{
+                                        var userName = Model.GetUserName(v);
+                                    }
                                     @if (v.IsAuthenticated)
                                     {
-                                        <span class="badge badge-success" title="@v.DistinctId">signed-in</span>
+                                        <span class="badge badge-success" title="@v.DistinctId">signed-in@(userName is null ? "" : $" ({userName})")</span>
                                     }
                                     else
                                     {

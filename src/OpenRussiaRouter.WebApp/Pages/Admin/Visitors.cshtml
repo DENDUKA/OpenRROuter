@@ -71,11 +71,7 @@ else
             <span class="text-muted" style="font-weight:normal;margin-left:8px">@Model.TotalCount total</span>
         </div>
         <div class="adm-card-body">
-            @if (!Model.HasActiveFilter())
-            {
-                <p class="text-muted">Enter a User ID or Visitor hash to see their journey.</p>
-            }
-            else if (Model.Records.Count == 0)
+            @if (Model.Records.Count == 0)
             {
                 <p class="text-muted">No visits found.</p>
             }
@@ -85,11 +81,12 @@ else
                     <thead>
                         <tr>
                             <th>Time</th>
+                            <th>Visitor</th>
                             <th>Path</th>
                             <th>Referrer</th>
                             <th>UTM</th>
                             <th>Device</th>
-                            <th>Authenticated</th>
+                            <th>Auth</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -97,6 +94,11 @@ else
                         {
                             <tr>
                                 <td style="white-space:nowrap"><small title="@v.OccurredAtUtc.ToString("O")">@v.OccurredAtUtc.ToLocalTime().ToString("g")</small></td>
+                                <td>
+                                    <a href="/admin/visitors?visitorHash=@Uri.EscapeDataString(v.VisitorHash)" title="Filter by this visitor">
+                                        <code>@(v.VisitorHash.Length > 12 ? v.VisitorHash[..12] + "&hellip;" : v.VisitorHash)</code>
+                                    </a>
+                                </td>
                                 <td><code>@v.Path</code></td>
                                 <td>
                                     @if (string.IsNullOrEmpty(v.ReferrerHost))
@@ -124,7 +126,7 @@ else
                                 <td>
                                     @if (v.IsAuthenticated)
                                     {
-                                        <span class="badge badge-success">signed-in</span>
+                                        <span class="badge badge-success" title="@v.DistinctId">signed-in</span>
                                     }
                                     else
                                     {

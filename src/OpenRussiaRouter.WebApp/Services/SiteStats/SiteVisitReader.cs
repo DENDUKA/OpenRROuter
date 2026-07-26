@@ -55,14 +55,16 @@ public sealed class SiteVisitReader
 
         string? resolvedVisitorHash = null;
         string? resolvedDistinctId = null;
+        var hasUserFilter = !string.IsNullOrWhiteSpace(query.UserId);
+        var hasHashFilter = !string.IsNullOrWhiteSpace(query.VisitorHash);
 
         // Resolve visitor_hash from userId: compute distinct_id, then take the most recent
         // visit that carries it — its visitor_hash anchors the anonymous part of the journey.
-        if (!string.IsNullOrWhiteSpace(query.UserId))
+        if (hasUserFilter)
         {
             try
             {
-                resolvedDistinctId = _pseudonymizer.ComputeDistinctId(query.UserId.Trim());
+                resolvedDistinctId = _pseudonymizer.ComputeDistinctId(query.UserId!.Trim());
             }
             catch (Exception ex)
             {
@@ -81,18 +83,19 @@ public sealed class SiteVisitReader
                     Array.Empty<VisitHistoryEntry>(), 0, null, resolvedDistinctId);
             }
         }
-        else if (!string.IsNullOrWhiteSpace(query.VisitorHash))
+        else if (hasHashFilter)
         {
-            resolvedVisitorHash = query.VisitorHash.Trim();
+            resolvedVisitorHash = query.VisitorHash!.Trim();
         }
-        else
-        {
-            // No filter — caller should pass either. Return empty so the UI can prompt.
-            return new SiteVisitQueryResult(Array.Empty<VisitHistoryEntry>(), 0, null, null);
-        }
+        // No filter at all → fall through to "latest visits across everyone" mode, same as
+        // how /admin/topups behaves. This is the default landing view so the page is not
+        // empty when an admin opens it without parameters.
 
-        var total = await CountVisitsAsync(_dataSource, resolvedVisitorHash!, query, ct).ConfigureAwait(false);
-        var items = await ListVisitsAsync(_dataSource, resolvedVisitorHash!, query, offset, pageSize, ct)
+        string? filterColumn = (hasUserFilter || hasHashFilter) ? "visitor_hash" : null;
+
+        var total = await CountVisitsAsync(_dataSource, filterColumn, resolvedVisitorHash, query, ct)
+            .ConfigureAwait(false);
+        var items = await ListVisitsAsync(_dataSource, filterColumn, resolvedVisitorHash, query, offset, pageSize, ct)
             .ConfigureAwait(false);
 
         return new SiteVisitQueryResult(items, total, resolvedVisitorHash, resolvedDistinctId);
@@ -116,51 +119,52 @@ public sealed class SiteVisitReader
         return (string?)await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Counts visits. When <paramref name="filterColumn"/> is <c>"visitor_hash"</c>, scopes
+    /// the count to that visitor; when <c>null</c> (no filter), counts across everyone —
+    /// used for the default landing view of the page.
+    /// </summary>
     private static async Task<int> CountVisitsAsync(
-        NpgsqlDataSource ds, string visitorHash, SiteVisitQuery query, CancellationToken ct)
+        NpgsqlDataSource ds, string? filterColumn, string? filterValue, SiteVisitQuery query, CancellationToken ct)
     {
-        var sql = """
-            select count(*)
-            from analytics.site_visits
-            where visitor_hash = :visitorHash
-            """;
-
-        (sql, var parameters) = ApplyTimeWindow(sql, query, BuildBaseParameters(visitorHash));
+        var sql = "select count(*) from analytics.site_visits where 1=1";
+        (sql, var parameters) = ApplyTimeWindow(sql, query, new List<NpgsqlParameter>());
+        if (filterColumn is not null && !string.IsNullOrEmpty(filterValue))
+        {
+            sql += $" and {filterColumn} = :{filterColumn}";
+            parameters.Add(new NpgsqlParameter(filterColumn, filterValue));
+        }
 
         await using var conn = await ds.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var cmd = new NpgsqlCommand(sql, conn);
-        foreach (var p in parameters)
-        {
-            cmd.Parameters.Add(p);
-        }
+        foreach (var p in parameters) cmd.Parameters.Add(p);
 
         var result = await cmd.ExecuteScalarAsync(ct).ConfigureAwait(false);
         return result is int i ? i : Convert.ToInt32(result, System.Globalization.CultureInfo.InvariantCulture);
     }
 
+    /// <summary>
+    /// Lists visits. When <paramref name="filterColumn"/> is <c>"visitor_hash"</c>, scopes
+    /// the rows to that visitor; when <c>null</c>, returns the latest visits across all
+    /// visitors — same pattern as <c>/admin/topups</c>. Always ordered newest-first.
+    /// </summary>
     private static async Task<IReadOnlyList<VisitHistoryEntry>> ListVisitsAsync(
-        NpgsqlDataSource ds, string visitorHash, SiteVisitQuery query, int offset, int pageSize, CancellationToken ct)
+        NpgsqlDataSource ds, string? filterColumn, string? filterValue, SiteVisitQuery query, int offset, int pageSize, CancellationToken ct)
     {
         var sql = """
-            select id,
-                   visitor_hash,
-                   distinct_id,
-                   occurred_at_utc,
-                   path,
-                   referrer_host,
-                   referrer_kind,
-                   utm_source,
-                   utm_medium,
-                   utm_campaign,
-                   device_class,
-                   is_authenticated,
-                   environment
+            select id, visitor_hash, distinct_id, occurred_at_utc, path,
+                   referrer_host, referrer_kind, utm_source, utm_medium, utm_campaign,
+                   device_class, is_authenticated, environment
             from analytics.site_visits
-            where visitor_hash = :visitorHash
+            where 1=1
             """;
-
-        var parameters = BuildBaseParameters(visitorHash);
+        var parameters = new List<NpgsqlParameter>();
         (sql, parameters) = ApplyTimeWindow(sql, query, parameters);
+        if (filterColumn is not null && !string.IsNullOrEmpty(filterValue))
+        {
+            sql += $" and {filterColumn} = :{filterColumn}";
+            parameters.Add(new NpgsqlParameter(filterColumn, filterValue));
+        }
 
         sql += " order by occurred_at_utc desc limit :limit offset :offset";
         parameters.Add(new NpgsqlParameter("limit", pageSize));
@@ -206,13 +210,12 @@ public sealed class SiteVisitReader
         return items;
     }
 
-    private static List<NpgsqlParameter> BuildBaseParameters(string visitorHash) =>
-        new(1) { new NpgsqlParameter("visitorHash", visitorHash) };
-
     /// <summary>
     /// Appends <c>:fromUtc</c>/<c>:toUtc</c> predicates to the SQL and adds the matching
-    /// parameters when the query specifies a time window. Keeps both count and list queries
-    /// in sync — caller passes in the SQL + the parameters accumulated so far.
+    /// parameters when the query specifies a time window. Keeps count, list and "latest
+    /// across everyone" queries in sync — caller passes in the SQL + the parameters
+    /// accumulated so far. The base SQL is assumed to end with a <c>where 1=1</c> anchor
+    /// so each appended clause can start with <c>and</c>.
     /// </summary>
     private static (string Sql, List<NpgsqlParameter> Parameters) ApplyTimeWindow(
         string sql, SiteVisitQuery query, List<NpgsqlParameter> parameters)

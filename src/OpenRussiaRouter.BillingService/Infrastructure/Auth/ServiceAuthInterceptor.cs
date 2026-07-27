@@ -15,7 +15,13 @@ public sealed class ServiceAuthInterceptor(
     IOptions<ServiceAuthOptions> options,
     ILogger<ServiceAuthInterceptor> logger) : Interceptor
 {
-    private static readonly HashSet<string> ProtectedMethods = new(StringComparer.Ordinal)
+    /// <summary>
+    /// Code-owned allowlist of mutating methods enforced by <see cref="EnforceAuth"/>. Any
+    /// method not listed here is treated as read-only and stays open. A method added here MUST
+    /// also receive a <c>ServiceAuth:MethodPolicies</c> entry in every environment, otherwise
+    /// the interceptor fails closed with <c>missing_method_policy</c>.
+    /// </summary>
+    public static readonly HashSet<string> ProtectedMethods = new(StringComparer.Ordinal)
     {
         "RecordUsage",
         "CreateVirtualTopUp",
@@ -29,7 +35,12 @@ public sealed class ServiceAuthInterceptor(
         "ApplyPaymentEvent",
         "AcquireStalePayments",
         "UpsertModelProvider",
-        "DeleteModelProvider"
+        "DeleteModelProvider",
+        // Money-printing / settings RPCs (T-002): these write positive ledger entries or alter
+        // operational settings and must never be reachable without s2s auth.
+        "GrantStartBalance",
+        "GrantFirstTopUpBonus",
+        "SetPlatformSetting"
     };
 
     private readonly ServiceAuthOptions auth = options.Value;

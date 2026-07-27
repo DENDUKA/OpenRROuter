@@ -31,15 +31,19 @@
 - desc: `BillingApplicationService.cs:777`. `ConfirmPaymentAtomicAsync` (`BillingRepository.cs:1277`) вставляет леджер с `isUserPayment: true` ДО того, как `PaymentWebhookProcessor.cs:139` вызывает `GrantFirstTopUpBonusAsync`. Внутри `HasUserHadPaidTopUpAsync` (`BillingRepository.cs:1024`) считает все строки `is_user_payment = true`, включая только что созданную → всегда `true` → `"not_first_paid_top_up"`. Промо мертво в проде. Фикс: передать `paymentId` и добавить `and idempotency_key <> 'payment:' || @PaymentId`, либо начислять бонус внутри транзакции подтверждения. Обязательны unit-тесты: бонус выдаётся на первом платеже и не выдаётся на втором.
 
 ## T-002 — RPC, печатающие деньги, не защищены s2s-аутентификацией
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T11:39:59+04:00
+- completed:2026-07-27T11:55:52+04:00
 - desc: `BillingService/Infrastructure/Auth/ServiceAuthInterceptor.cs:18-33`. В `ProtectedMethods` нет `GrantStartBalance`, `GrantFirstTopUpBonus` (обе пишут положительные суммы в леджер) и `SetPlatformSetting` (`billing.proto:44-47`) — интерцептор для них делает `return`. Любой с доступом к порту 5002 печатает баланс в цикле. Фикс: добавить все три в `ProtectedMethods` и в `MethodPolicies` во всех окружениях (`appsettings.json:29-43`, compose, kustomize).
 
 ## T-003 — Рабочий s2s-токен закоммичен как дефолт
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T11:39:59+04:00
+- completed:2026-07-27T11:55:52+04:00
 - desc: `BillingService/appsettings.json:26` — `"apigateway": "test-s2s-token-12345"`, активен везде, где env `ServiceAuth__Tokens__apigateway` не задан. Вместе с T-002 — полный обход s2s-защиты Billing. Фикс: пустая строка по умолчанию + fail-fast при старте вне Development, если токен не задан (по образцу `PaymentStartupGuard`). Делать одним коммитом с T-002.
 
 ## T-004 — Промо-настройки сохраняются в культуре запроса → сумма искажается в 100 раз

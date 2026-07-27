@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
+using OpenRussiaRouter.BillingService.Infrastructure.Auth;
 using OpenRussiaRouter.BillingService.Infrastructure.Startup;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BuildingBlocks.Metrics;
@@ -14,6 +15,11 @@ builder.AddOpenTelemetryMetrics("OpenRussiaRouter.BillingService", "Npgsql", Ope
 Startup.ConfigureServices(builder.Services, builder.Configuration);
 
 var app = builder.Build();
+
+// T-003: refuse to start outside Development without real s2s tokens — the shipped
+// appsettings.json keeps both tokens blank, so a missing ServiceAuth__Tokens__<caller> env
+// would otherwise leave the money-printing RPCs (T-002) without enforceable auth.
+ServiceAuthStartupGuard.Validate(app.Services, app.Environment);
 
 await app.ApplySqlMigrationsAsync("BillingDb", "billing", RepositoryMigrationPath.ForService("billing"));
 

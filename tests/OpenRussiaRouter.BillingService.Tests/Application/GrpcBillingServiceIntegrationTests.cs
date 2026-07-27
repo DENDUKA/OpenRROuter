@@ -80,6 +80,9 @@ public sealed class GrpcBillingServiceIntegrationTests
     [InlineData("ApplyPaymentEvent")]
     [InlineData("AcquireStalePayments")]
     [InlineData("UpsertModelProvider")]
+    [InlineData("GrantStartBalance")]
+    [InlineData("GrantFirstTopUpBonus")]
+    [InlineData("SetPlatformSetting")]
     public async Task MutatingMethod_WithoutS2sToken_ReturnsUnauthenticated(string methodName)
     {
         await using var factory = BuildFactory();
@@ -205,6 +208,9 @@ public sealed class GrpcBillingServiceIntegrationTests
                     opts.MethodPolicies["ConfirmPaymentByProvider"] = new[] { "webappadmin" };
                     opts.MethodPolicies["ApplyPaymentEvent"] = new[] { "webappadmin" };
                     opts.MethodPolicies["AcquireStalePayments"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["GrantStartBalance"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["GrantFirstTopUpBonus"] = new[] { "webappadmin" };
+                    opts.MethodPolicies["SetPlatformSetting"] = new[] { "webappadmin" };
                     configureAuth?.Invoke(opts);
                 });
             });
@@ -270,6 +276,15 @@ public sealed class GrpcBillingServiceIntegrationTests
                 break;
             case "UpsertModelProvider":
                 await client.UpsertModelProviderAsync(new UpsertProviderRequest());
+                break;
+            case "GrantStartBalance":
+                await client.GrantStartBalanceAsync(new GrantStartBalanceRequest());
+                break;
+            case "GrantFirstTopUpBonus":
+                await client.GrantFirstTopUpBonusAsync(new GrantFirstTopUpBonusRequest());
+                break;
+            case "SetPlatformSetting":
+                await client.SetPlatformSettingAsync(new SetPlatformSettingRequest());
                 break;
             default:
                 throw new ArgumentOutOfRangeException(nameof(methodName), methodName, null);

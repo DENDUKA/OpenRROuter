@@ -139,12 +139,23 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hoste
 gRPC-вызовы, но проверяет лишь список мутирующих методов, **зашитый в коде** (`ProtectedMethods`):
 `RecordUsage`, `CreateVirtualTopUp`, `UpsertApiKeyLimitSettings`, `UpsertModelPrice`, `UpsertTag`,
 `DeleteTag`, `CreatePayment`, `AttachProviderRef`, `ConfirmPaymentByProvider`, `ApplyPaymentEvent`,
-`AcquireStalePayments`, `UpsertModelProvider`, `DeleteModelProvider`. Читающие методы открыты
-намеренно. Клиент присылает `x-orr-caller` + `x-orr-s2s-token`; токен ищется в `ServiceAuth:Tokens`
-и сравнивается constant-time, затем caller проверяется по `ServiceAuth:MethodPolicies[method]`.
-Отсутствующая политика для защищённого метода — **fail closed** (`Unauthenticated`,
+`AcquireStalePayments`, `UpsertModelProvider`, `DeleteModelProvider`,
+**`GrantStartBalance`, `GrantFirstTopUpBonus`, `SetPlatformSetting`** (последние три — «печатает
+деньги»/правит настройки; T-002). Читающие методы (`GetBalance`, `ListPublicModels`, `GetFxQuote`,
+`HasUserHadPaidTopUp`, `GetPromotionSettings`, …) открыты намеренно. Клиент присылает
+`x-orr-caller` + `x-orr-s2s-token`; токен ищется в `ServiceAuth:Tokens` и сравнивается
+constant-time, затем caller проверяется по `ServiceAuth:MethodPolicies[method]`. Отсутствующая
+политика для защищённого метода — **fail closed** (`Unauthenticated`,
 `reason=missing_method_policy`). Фактические caller-id: `apigateway` (только `RecordUsage`)
-и `webappadmin` (всё остальное).
+и `webappadmin` (всё остальное, включая `Grant*` и `SetPlatformSetting`).
+
+**Fail-fast на старте** — [`ServiceAuthStartupGuard`](Infrastructure/Auth/ServiceAuthStartupGuard.cs)
+(T-003): вне `Development` падает `InvalidOperationException`, если `ServiceAuth:Tokens[apigateway]`
+или `[webappadmin]` пустые/whitespace. Шитый `appsettings.json` держит оба токена **пустыми** —
+ реальные секреты приходят только env (`ServiceAuth__Tokens__<caller>`). Dev-заглушки живут в
+ `appsettings.Development.json` и работают только при `ASPNETCORE_ENVIRONMENT=Development`.
+ По образцу `PaymentStartupGuard`; ни в коем случае не ослаблять — иначе интерцептору не с чем
+  сравнивать токен, и любой, кто дотянется до порта 5002, обходят s2s полностью.
 
 ## Схема БД (`db/migrations/billing/`, 25 файлов)
 
@@ -181,9 +192,19 @@ gRPC-вызовы, но проверяет лишь список мутирую�
   `.csproj` — проект на `Microsoft.NET.Sdk`, а не `Sdk.Web`. Уберёшь — в образе не окажется
   `ServiceAuth`, и `RecordUsage` начнёт падать с `missing_method_policy` (это уже случалось,
   см. комментарий в csproj).
-- **Новый мутирующий RPC = три правки**: `.proto`, `ProtectedMethods` в интерцепторе и
-  `MethodPolicies` во всех окружениях (appsettings + compose/kustomize env). Пропустишь третье —
-  метод закроется наглухо.
+- **Новый мутирующий RPC = четыре правки**: `.proto`, `ProtectedMethods` в интерцепторе,
+  `MethodPolicies` во всех окружениях (appsettings + compose/kustomize env — но окружения
+  переопределяют только `Tokens`, политики берутся из `appsettings.json`), и Theory-кейс в
+  `GrpcBillingServiceIntegrationTests` (чтобы protection проверялся на CI). Пропустишь третье —
+  метод закроется наглухо (`missing_method_policy`); забудешь второй — метод останется открытым.
+  Регистрация нового RPC, пишущего деньги или настройки, **должна** попасть в `ProtectedMethods`.
+- **`ServiceAuthStartupGuard` падает вне `Development` при пустом `apigateway`/`webappadmin`
+  токене** (T-003). Шитый `appsettings.json` держит оба токена пустыми — это намеренно, секреты
+  приходят только env. `ServiceAuthPolicyCoverageTests` (`NoPolicyTargetsAnUnprotectedMethod` +
+  `EveryProtectedMethod_HasAPolicyInShippedAppSettings` + `ShippedAppSettings_DoesNotSeedAnyRealDefaultToken`)
+  ловит рассинхрон `ProtectedMethods` и конфига и рецидив закоммиченного секрета.
+  Не возвращать `appsettings.json` к непустому токену «по умолчанию» — это открывает прямой обход
+  s2s в любом окружении без env-переменной (T-002+T-003).
 - **`FxQuoteService`**: static-конструктор регистрирует `CodePagesEncodingProvider` — ЦБ отдаёт
   XML в `windows-1251`, без этого `RefreshAsync` тихо падает в warning и все платежи считаются по
   fallback-курсу (`fx_source=fallback`). Снапшот живёт в памяти singleton'а: после рестарта до

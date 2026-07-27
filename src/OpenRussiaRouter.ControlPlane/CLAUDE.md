@@ -194,9 +194,10 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 
 ## Подводные камни
 
-- **Не возвращай read-modify-write для нагрузки.** Лизинг, release и expiry cleanup обязаны идти
-  через атомарные методы репозитория; `UpsertNodeAsync` намеренно не перезаписывает
-  `in_flight_requests`, а health пишется точечным `ApplyHealthAsync`.
+- **Не возвращай read-modify-write для состояния ноды.** `UpsertNodeAsync` применяется только при
+  регистрации и при конфликте ничего не меняет. Административные metadata/token/enabled обновления,
+  health, лизинг, release и expiry cleanup обязаны идти через свои точечные/атомарные методы
+  репозитория — иначе конкурентный admin update может воскресить ноду или затереть health/load.
 - **Снимок метаданных может устареть.** Это допустимо только как предварительный фильтр: SQL при
   выдаче лизы повторно проверяет `enabled` и `Healthy`, поэтому stale snapshot не выдаст лизу
   отключённой или нездоровой ноде.

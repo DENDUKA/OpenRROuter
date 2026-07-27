@@ -18,9 +18,54 @@ public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
     {
         lock (_gate)
         {
-            _nodes[node.Id] = node;
+            _nodes.TryAdd(node.Id, node);
         }
         return Task.CompletedTask;
+    }
+
+    public Task<bool> UpdateNodeMetadataAsync(
+        string nodeId,
+        string name,
+        Uri endpointUrl,
+        string controlToken,
+        int capacityWeight,
+        CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (!_nodes.TryGetValue(nodeId, out var node))
+                return Task.FromResult(false);
+
+            node.Update(name, endpointUrl, controlToken, capacityWeight);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (!_nodes.TryGetValue(nodeId, out var node))
+                return Task.FromResult(false);
+
+            node.UpdateControlToken(controlToken);
+            return Task.FromResult(true);
+        }
+    }
+
+    public Task<bool> UpdateNodeEnabledAsync(string nodeId, bool enabled, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            if (!_nodes.TryGetValue(nodeId, out var node))
+                return Task.FromResult(false);
+
+            if (enabled)
+                node.Enable();
+            else
+                node.Disable();
+            return Task.FromResult(true);
+        }
     }
 
     public Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default)

@@ -8,6 +8,18 @@ public interface IControlPlaneRepository
 {
     Task UpsertNodeAsync(RouterNode node, CancellationToken ct = default);
 
+    Task<bool> UpdateNodeMetadataAsync(
+        string nodeId,
+        string name,
+        Uri endpointUrl,
+        string controlToken,
+        int capacityWeight,
+        CancellationToken ct = default);
+
+    Task<bool> UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default);
+
+    Task<bool> UpdateNodeEnabledAsync(string nodeId, bool enabled, CancellationToken ct = default);
+
     Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default);
 
     Task<RouterNode?> GetNodeAsync(string nodeId, CancellationToken ct = default);

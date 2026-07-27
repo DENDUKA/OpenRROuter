@@ -34,11 +34,7 @@ public static class ControlPlanePersistenceMapper
             entity.CapacityWeight,
             entity.CreatedAtUtc);
 
-        if (!entity.Enabled)
-        {
-            node.Disable();
-        }
-        else if (entity.Status != RouterNodeStatus.Unhealthy || entity.LastCheckedAtUtc.HasValue)
+        if (entity.Status != RouterNodeStatus.Unhealthy || entity.LastCheckedAtUtc.HasValue)
         {
             node.ApplyHealth(
                 entity.Status,
@@ -46,6 +42,9 @@ public static class ControlPlanePersistenceMapper
                 entity.LastHealthLatencyMs,
                 entity.LastHealthErrorCode);
         }
+
+        if (!entity.Enabled)
+            node.Disable();
 
         for (var i = 0; i < entity.InFlightRequests; i++)
         {

@@ -23,19 +23,69 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 (@Id, @Name, @EndpointUrl, @ControlToken, @CapacityWeight, @Enabled, @Status,
                  @InFlightRequests, @LastCheckedAtUtc, @LastHealthLatencyMs,
                  @LastHealthErrorCode, @CreatedAtUtc)
-            on conflict (id) do update set
-                name = excluded.name,
-                endpoint_url = excluded.endpoint_url,
-                control_token = excluded.control_token,
-                capacity_weight = excluded.capacity_weight,
-                enabled = excluded.enabled,
-                status = excluded.status,
-                last_checked_at_utc = excluded.last_checked_at_utc,
-                last_health_latency_ms = excluded.last_health_latency_ms,
-                last_health_error_code = excluded.last_health_error_code;
+            on conflict (id) do nothing;
             """,
             ToParameters(node),
             cancellationToken: ct)).ConfigureAwait(false);
+    }
+
+    public async Task<bool> UpdateNodeMetadataAsync(
+        string nodeId,
+        string name,
+        Uri endpointUrl,
+        string controlToken,
+        int capacityWeight,
+        CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update control.router_nodes
+            set name = @Name,
+                endpoint_url = @EndpointUrl,
+                control_token = @ControlToken,
+                capacity_weight = @CapacityWeight
+            where id = @NodeId;
+            """,
+            new
+            {
+                NodeId = nodeId,
+                Name = name,
+                EndpointUrl = endpointUrl.ToString(),
+                ControlToken = controlToken,
+                CapacityWeight = capacityWeight
+            },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return affected > 0;
+    }
+
+    public async Task<bool> UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update control.router_nodes
+            set control_token = @ControlToken
+            where id = @NodeId;
+            """,
+            new { NodeId = nodeId, ControlToken = controlToken },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return affected > 0;
+    }
+
+    public async Task<bool> UpdateNodeEnabledAsync(string nodeId, bool enabled, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
+            """
+            update control.router_nodes
+            set enabled = @Enabled,
+                status = case when @Enabled then status else 'Disabled' end
+            where id = @NodeId;
+            """,
+            new { NodeId = nodeId, Enabled = enabled },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return affected > 0;
     }
 
     public async Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default)

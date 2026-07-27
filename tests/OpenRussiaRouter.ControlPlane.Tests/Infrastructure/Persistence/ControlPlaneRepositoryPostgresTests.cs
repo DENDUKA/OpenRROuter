@@ -107,4 +107,36 @@ public sealed class ControlPlaneRepositoryPostgresTests
         (await service.GetRouterNodeAsync(node.Id))!.InFlightRequests.Should().Be(0);
     }
 
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task Store_ConcurrentDisableAndMetadataUpdate_PreservesDisabledStateAndLoad()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+            return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var service = new RouterControlPlaneService(
+            new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(database.ConnectionString)),
+            new NodeModelCapabilityStore());
+        var now = DateTimeOffset.UtcNow;
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now);
+        for (var index = 0; index < 3; index++)
+            await service.SelectRouterNodeAsync(null, $"request-{index}", now);
+
+        await Task.WhenAll(
+            service.DisableNodeAsync(node.Id),
+            service.UpdateNodeAsync(node.Id, "node-b", new Uri("https://router-b.example"), "secret-b", 2));
+
+        var persisted = (await service.GetRouterNodeAsync(node.Id))!;
+        persisted.Enabled.Should().BeFalse();
+        persisted.Status.Should().Be(RouterNodeStatus.Disabled);
+        persisted.InFlightRequests.Should().Be(3);
+        persisted.Name.Should().Be("node-b");
+        persisted.ControlToken.Should().Be("secret-b");
+        persisted.LastCheckedAtUtc.Should().Be(now);
+    }
+
 }

@@ -38,9 +38,10 @@ public sealed class RouterControlPlaneService(
     public async Task UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default)
     {
         var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
-        node.UpdateControlToken(controlToken);
-        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
-        _snapshotStore.Upsert(node);
+        _ = new RouterNode(node.Id, node.Name, node.EndpointUrl, controlToken, node.CapacityWeight, node.CreatedAtUtc);
+        if (!await repository.UpdateNodeControlTokenAsync(nodeId, controlToken, ct).ConfigureAwait(false))
+            throw new KeyNotFoundException("Router node was not found.");
+        await RefreshSnapshotAsync(nodeId, ct).ConfigureAwait(false);
     }
 
     public async Task UpdateNodeAsync(
@@ -52,25 +53,26 @@ public sealed class RouterControlPlaneService(
         CancellationToken ct = default)
     {
         var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
-        node.Update(name, endpointUrl, controlToken, capacityWeight);
-        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
-        _snapshotStore.Upsert(node);
+        _ = new RouterNode(node.Id, name, endpointUrl, controlToken, capacityWeight, node.CreatedAtUtc);
+        if (!await repository.UpdateNodeMetadataAsync(nodeId, name, endpointUrl, controlToken, capacityWeight, ct).ConfigureAwait(false))
+            throw new KeyNotFoundException("Router node was not found.");
+        await RefreshSnapshotAsync(nodeId, ct).ConfigureAwait(false);
     }
 
     public async Task DisableNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
-        node.Disable();
-        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
-        _snapshotStore.Upsert(node);
+        await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
+        if (!await repository.UpdateNodeEnabledAsync(nodeId, false, ct).ConfigureAwait(false))
+            throw new KeyNotFoundException("Router node was not found.");
+        await RefreshSnapshotAsync(nodeId, ct).ConfigureAwait(false);
     }
 
     public async Task EnableNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        var node = await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
-        node.Enable();
-        await repository.UpsertNodeAsync(node, ct).ConfigureAwait(false);
-        _snapshotStore.Upsert(node);
+        await GetRequiredNodeAsync(nodeId, ct).ConfigureAwait(false);
+        if (!await repository.UpdateNodeEnabledAsync(nodeId, true, ct).ConfigureAwait(false))
+            throw new KeyNotFoundException("Router node was not found.");
+        await RefreshSnapshotAsync(nodeId, ct).ConfigureAwait(false);
     }
 
     public async Task DeleteNodeAsync(string nodeId, CancellationToken ct = default)
@@ -193,4 +195,10 @@ public sealed class RouterControlPlaneService(
         node.CapacityWeight,
         node.Enabled,
         node.Status);
+
+    private async Task RefreshSnapshotAsync(string nodeId, CancellationToken ct)
+    {
+        if (await repository.GetNodeAsync(nodeId, ct).ConfigureAwait(false) is { } node)
+            _snapshotStore.Upsert(node);
+    }
 }

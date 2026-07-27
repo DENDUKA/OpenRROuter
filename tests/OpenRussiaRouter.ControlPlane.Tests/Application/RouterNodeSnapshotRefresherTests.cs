@@ -50,6 +50,9 @@ public sealed class RouterNodeSnapshotRefresherTests
     private sealed class ThrowingListRepository : IControlPlaneRepository
     {
         public Task UpsertNodeAsync(RouterNode node, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<bool> UpdateNodeMetadataAsync(string nodeId, string name, Uri endpointUrl, string controlToken, int capacityWeight, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<bool> UpdateNodeControlTokenAsync(string nodeId, string controlToken, CancellationToken ct = default) => throw new NotSupportedException();
+        public Task<bool> UpdateNodeEnabledAsync(string nodeId, bool enabled, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<RouterNode?> GetNodeAsync(string nodeId, CancellationToken ct = default) => throw new NotSupportedException();
         public Task<(IReadOnlyCollection<RouterNode> Items, bool HasMore)> ListNodesAsync(int limit, string? afterName = null, CancellationToken ct = default) => throw new InvalidOperationException("database unavailable");

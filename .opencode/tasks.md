@@ -62,9 +62,10 @@
 - desc: `ChatCompletionHandler.cs:126, 308` и `TextToSpeechHandler.cs:116` пишут `status = "usage_missing"`, а `db/migrations/gateway/002_usage_outbox_status_check.sql:32` разрешает только `'pending','processing','completed','failed'`. INSERT падает, исключение глотается в `RecordUsageAsync` (`ChatCompletionHandler.cs:415`), клиент получает 200, событие исчезает. Статус уже знают `BillingApplicationService.cs:800` и `Admin/Requests.cshtml.cs:178` — рассинхрон схемы и кода. Фикс: новая миграция `db/migrations/gateway/003_*.sql`, добавляющая `'usage_missing'` в констрейнт. Существующие миграции не редактировать.
 
 ## T-006 — Rate-limit платёжного вебхука обходится подделкой X-Forwarded-For
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:03:14+04:00
 - desc: `WebApp/Program.cs:366-371` — `UseForwardedHeaders` с пустыми `KnownNetworks`/`KnownProxies`, поэтому `Connection.RemoteIpAddress` переписывается клиентским заголовком. Лимитер (`Program.cs:351`) партиционируется ровно по нему → атакующий получает по 60 запросов в минуту на каждое выдуманное значение на анонимном `POST /webhook/{provider}`. Фикс: прописать подсеть Caddy в `KnownNetworks`/`KnownProxies` либо `ForwardLimit = 1`.
 
 ## T-007 — Гонка на in_flight_requests: read-modify-write всей строки ноды

@@ -41,6 +41,36 @@ public sealed class PaymentWebhookEndpointTests : IClassFixture<WebApplicationFa
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Forged_forwarded_for_values_do_not_bypass_webhook_rate_limit()
+    {
+        for (var requestNumber = 1; requestNumber <= 60; requestNumber++)
+        {
+            using var request = CreateForgedForwardedForRequest(requestNumber);
+            using var response = await _client.SendAsync(request);
+
+            Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        }
+
+        using var rejectedRequest = CreateForgedForwardedForRequest(61);
+        using var rejectedResponse = await _client.SendAsync(rejectedRequest);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, rejectedResponse.StatusCode);
+    }
+
+    private static HttpRequestMessage CreateForgedForwardedForRequest(int requestNumber)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/webhook/mock")
+        {
+            Content = new StringContent("not-json")
+        };
+        request.Headers.Add("X-Mock-Signature", "wrong");
+        request.Headers.TryAddWithoutValidation(
+            "X-Forwarded-For",
+            $"198.51.100.{requestNumber}, 172.20.0.2");
+        return request;
+    }
+
     private sealed class UnknownLengthContent(byte[] content) : HttpContent
     {
         protected override Task SerializeToStreamAsync(Stream stream, TransportContext? context) =>

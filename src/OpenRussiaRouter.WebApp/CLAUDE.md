@@ -30,7 +30,9 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 - **Hosted services**: `EmailDispatchWorker`, `CbrRateRefresher`, `PaymentReconciliationWorker`,
   `ReasoningEnrichmentWorker`.
 - **`UseForwardedHeaders` — самый первый middleware** (XFF/Proto/Host от Caddy, `KnownNetworks`/
-  `KnownProxies` очищены). Иначе ломаются генерация OAuth `redirect_uri` и абсолютные URL.
+  `KnownProxies` очищены, `ForwardLimit = 1`). Обрабатывается только ближайший hop Caddy: это не даёт
+  подставленным клиентским частям `X-Forwarded-For` создавать новые bucket'ы rate limit вебхука, сохраняя
+  forwarding схемы и host для OAuth `redirect_uri` и абсолютных URL.
 - **Data Protection** персистится в файловое хранилище по пути `DataProtection:KeyRingPath`
   (env `DataProtection__KeyRingPath`, в compose — named volume `webapp_keys` →
   `/var/lib/orr/dataprotection-keys`). Без этого ключи живут в ephemeral-ФС контейнера, каждый
@@ -257,7 +259,9 @@ BillingService своей котировкой.
   перетирает** админскую разметку reasoning-возможностей (патчит только не отмеченные модели или
   отмеченные с пустым списком efforts).
 - `UseForwardedHeaders` должен остаться первым middleware, иначе за Caddy ломаются OAuth и
-  абсолютные ссылки.
+  абсолютные ссылки. `ForwardLimit = 1` ограничивает обработку ближайшим Caddy hop, чтобы
+  подставленный клиентом `X-Forwarded-For` не обходил per-IP rate limit платёжного вебхука;
+  не фиксировать для этого Docker-подсеть и не убирать forwarding схемы/host.
 - Внешний логин не появится, пока не заданы оба секрета соответствующего провайдера.
 
 ## Тесты

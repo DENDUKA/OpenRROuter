@@ -114,8 +114,12 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hoste
 - Ключи идемпотентности: `usage:{requestId}`, `payment:{paymentId}`, `refund:{paymentId}`,
   `chargeback:{paymentId}`, `refund_bonus:{paymentId}`, `promo1:{userId}`,
   `first_top_up_bonus:{paymentId}`; админское пополнение — ключ от вызывающего.
-- Все денежные колонки — `numeric(18,6)`; `UsageCostCalculator` округляет до 6 знаков
-  (`MidpointRounding.ToEven`), поэтому возвращённая стоимость равна сохранённой.
+- Все денежные колонки — `numeric(18,6)`; **любой расчёт денег в C# округляется через единый
+  `MoneyRounding.Round` (BuildingBlocks/Money, `ToEven`, 6 знаков)** — стоимость usage, `credited_usd`
+  и `bonus_usd`. Bankers' rounding совпадает с PostgreSQL scale-coercion `numeric(18,6)`/`numeric(12,6)`,
+  поэтому сохранённое значение = посчитанному; никаких inline `decimal.Round(..., AwayFromZero)`.
+  В частности, `bonus_usd` округляется **в C# до** `UpdatePaymentBonusAsync`, иначе леджер и
+  `payments.bonus_usd` разъезжаются в 6-м знаке (T-033).
 - Предварительная проверка — только `balance > 0`, а не «хватит на запрос»: **за один вызов баланс
   может уйти в минус**, это осознанный компромисс.
 - **`credited_usd` считается только по своей котировке** (`FxQuoteService.GetQuote` → `usdPerUnit`),
@@ -201,6 +205,13 @@ gRPC-вызовы, но проверяет лишь список мутирую�
 - Префикс `016` в миграциях занят **тремя** файлами; сортировка — по полному имени файла
   (`SqlMigrationLoader`), так что это работает, но следующий файл нужно называть `024_…`.
   Применённые миграции неизменяемы.
+- **Select-лист `billing.payments` — общий через `PaymentSelectColumns`** (см. `BillingRepository.cs`).
+  `PaymentSelectSql` (для `from billing.payments`) и `PaymentSelectFromUpdatedSql` (для CTE
+  `from updated` в `AcquireStalePaymentsAsync`) собраны из него конкатенацией. **При добавлении
+  новой колонки в `billing.payments`** поправить надо ровно один `PaymentSelectColumns` и
+  `PaymentEntity` + маппер — иначе Dapper молча оставит `null` и бонус/снапшот потеряется
+  (так T-029 словил регрессию: `AcquireStalePaymentsAsync` обрывал список на `canceled_at_utc`
+  и не возвращал `bonus_percent`/`bonus_usd`, реконсилиляция браковала платёж `no_bonus_snapshot`).
 
 ## Тесты
 

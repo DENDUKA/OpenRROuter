@@ -6,6 +6,7 @@ using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BillingService.Infrastructure.Repository;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 using System.Globalization;
 
@@ -161,6 +162,44 @@ public sealed class PaymentApplicationServiceTests
         second.LedgerEntryId.Should().BeNull();
         // Only one bonus entry credited.
         (await service.GetBalanceAsync("user-1")).Amount.Should().Be(12m);
+    }
+
+    [Fact]
+    public async Task GrantFirstTopUpBonus_RoundsBonusToSixPlacesWithBankersRounding()
+    {
+        // T-033 regression: bonus_usd must be rounded to 6 decimal places in C# with the
+        // project-wide bankers'-rounding policy so that ledger_entries.amount and
+        // payments.bonus_usd stay byte-for-byte equal (numeric(18,6) vs numeric(12,6)).
+        // 123.445 RUB ÷ 100 (fallback RubPerUsd) = 1.23445 USD credited;
+        // raw bonus = 1.23445 * 1 / 100 = 0.0123445 (7 fractional digits); the 7th digit is 5
+        // (exactly half) and the 6th is 4 (even) → bankers' rounding goes DOWN to 0.012344
+        // (away-from-zero would round up to 0.012345).
+        var (service, repository) = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        const decimal providerAmount = 123.445m;
+        const decimal bonusPercent = 1m;
+        const decimal expectedCreditedUsd = 1.23445m;
+        const decimal expectedBonusUsd = 0.012344m;
+
+        var payment = await service.CreatePaymentAsync("user-1", "mock", providerAmount, "RUB",
+            providerAmount, "RUB", "round-token", now, bonusPercent: bonusPercent);
+
+        payment.CreditedUsd.Amount.Should().Be(expectedCreditedUsd);
+        (await service.ConfirmPaymentByProviderAsync(Paid(payment, "paid-round"), now)).Confirmed.Should().BeTrue();
+
+        var grant = await service.GrantFirstTopUpBonusAsync(payment.Id, now);
+        grant.Granted.Should().BeTrue();
+        grant.ErrorCode.Should().BeNull();
+
+        var ledger = await repository.GetFirstTopUpBonusForPaymentAsync(payment.Id);
+        ledger!.Value.Amount.Should().Be(expectedBonusUsd);
+
+        var stored = await service.GetPaymentAsync(payment.Id);
+        stored!.BonusUsd.Should().Be(expectedBonusUsd);
+        stored!.BonusUsd.Should().Be(ledger!.Value.Amount);
+
+        (await service.GetBalanceAsync("user-1")).Amount
+            .Should().Be(expectedCreditedUsd + expectedBonusUsd);
     }
 
     private static (BillingApplicationService Service, InMemoryBillingRepository Repository) CreateService()

@@ -550,7 +550,7 @@ public sealed partial class BillingApplicationService(
             throw new PaymentOperationException(ErrorCodes.PaymentAmountOutOfRange);
 
         var quote = RequireFx().GetQuote(providerCurrency, nowUtc);
-        var credited = decimal.Round(providerAmount * quote.UsdPerUnit, 6, MidpointRounding.AwayFromZero);
+        var credited = MoneyRounding.Round(providerAmount * quote.UsdPerUnit);
         var limits = paymentOptions?.Value ?? new PaymentOptions();
         if (credited < limits.MinTopUpUsd || credited > limits.MaxTopUpUsd)
             throw new PaymentOperationException(ErrorCodes.PaymentAmountOutOfRange);
@@ -778,7 +778,7 @@ public sealed partial class BillingApplicationService(
         if (hasPaidBefore)
             return new GrantFirstTopUpBonusResult(false, null, "not_first_paid_top_up");
 
-        var bonusUsd = payment.CreditedUsd.Amount * payment.BonusPercent.Value / 100m;
+        var bonusUsd = MoneyRounding.Round(payment.CreditedUsd.Amount * payment.BonusPercent.Value / 100m);
         var entry = await repository.AddLedgerEntryAsync(new LedgerEntry(
             Guid.NewGuid().ToString("N"),
             payment.UserId,

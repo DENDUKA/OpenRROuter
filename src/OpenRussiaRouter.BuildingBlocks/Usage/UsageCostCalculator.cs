@@ -24,7 +24,7 @@ public sealed class UsageCostCalculator : IUsageCostCalculator
 
         // Match numeric(18,6) precision used for cost/ledger columns so that the
         // returned cost equals what is persisted and summed into the balance.
-        amount = Math.Round(amount, 6, MidpointRounding.ToEven);
+        amount = MoneyRounding.Round(amount);
 
         return new MoneyAmount(amount, price.InputPerMillion.Currency);
     }

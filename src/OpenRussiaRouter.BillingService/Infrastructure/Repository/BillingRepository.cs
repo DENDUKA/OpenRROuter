@@ -1196,15 +1196,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 )
                 returning *
             )
-            select id as Id, user_id as UserId, provider as Provider, provider_payment_id as ProviderPaymentId,
-                order_id as OrderId, client_token as ClientToken, display_amount as DisplayAmount,
-                display_currency as DisplayCurrency, provider_amount as ProviderAmount, provider_currency as ProviderCurrency,
-                credited_usd_amount as CreditedUsdAmount, fx_rate as FxRate, fx_source as FxSource, fx_at_utc as FxAtUtc,
-                status as Status, cancel_reason as CancelReason, pay_url as PayUrl, lease_owner as LeaseOwner,
-                lease_until_utc as LeaseUntilUtc, created_at_utc as CreatedAtUtc, updated_at_utc as UpdatedAtUtc,
-                expires_at_utc as ExpiresAtUtc, confirmed_at_utc as ConfirmedAtUtc, canceled_at_utc as CanceledAtUtc
-            from updated;
-            """,
+            """ + PaymentSelectFromUpdatedSql + ";",
             new { WorkerId = workerId, LeaseUntil = now.Add(lease), Now = now, OlderThanUtc = olderThanUtc, Limit = limit },
             transaction, cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain).ToArray();
@@ -1567,7 +1559,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
 
         """;
 
-    private const string PaymentSelectSql = """
+    private const string PaymentSelectColumns = """
         select id as Id, user_id as UserId, provider as Provider, provider_payment_id as ProviderPaymentId,
             order_id as OrderId, client_token as ClientToken, display_amount as DisplayAmount,
             display_currency as DisplayCurrency, provider_amount as ProviderAmount, provider_currency as ProviderCurrency,
@@ -1576,7 +1568,17 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             created_at_utc as CreatedAtUtc, updated_at_utc as UpdatedAtUtc, expires_at_utc as ExpiresAtUtc,
             confirmed_at_utc as ConfirmedAtUtc, canceled_at_utc as CanceledAtUtc,
             bonus_percent as BonusPercent, bonus_usd as BonusUsd
+        """;
+
+    private const string PaymentSelectSql = PaymentSelectColumns + """
+
         from billing.payments
+
+        """;
+
+    private const string PaymentSelectFromUpdatedSql = PaymentSelectColumns + """
+
+        from updated
 
         """;
 

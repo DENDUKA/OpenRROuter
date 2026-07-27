@@ -14,7 +14,7 @@
 
 | Папка | Что там | Ключевые типы |
 |---|---|---|
-| `Money/` | доллар как единственная валюта | `MoneyAmount`, `Currency` (`Usd = 840`, других значений нет) |
+| `Money/` | доллар как единственная валюта | `MoneyAmount`, `Currency` (`Usd = 840`, других значений нет), `MoneyRounding` (единая политика округления денег) |
 | `Usage/` | токены, цены, расчёт стоимости, парсинг usage из ответов LLM | `TokenUsage`, `ModelTokenPrice`, `UsageCostCalculator` (+`IUsageCostCalculator`), `TokenUsageExtractor` |
 | `Migrations/` | применение сырых `.sql` на старте сервиса | `PostgresSqlMigrationRunner`, `SqlMigrationLoader`, `SqlMigration`, `RepositoryMigrationPath`, `WebApplicationMigrationExtensions` |
 | `Analytics/` | продуктовые события + трафик сайта, обе очереди и оба воркера | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure`, `SiteVisit`, `VisitorIdHasher`, `SiteVisitQueue`/`FlushWorker` |
@@ -33,6 +33,15 @@
 Операторы `+`/`-` бросают `InvalidOperationException` при разных валютах (`EnsureSameCurrency`),
 `*`/`/` не определены. **Везде в биллинге деньги — только это, не голый `decimal`.**
 
+### Округление — `MoneyRounding` ([файл](Money/MoneyRounding.cs))
+
+Единая политика округления денег для всего solution: `decimal.Round(..., 6, MidpointRounding.ToEven)`
+через `MoneyRounding.Round(decimal)` / `MoneyRounding.Round(MoneyAmount)`. `DecimalPlaces = 6`,
+`Mode = ToEven`. Bankers' rounding совпадает с тем, как `numeric(18,6)`/`numeric(12,6)` скейлят
+значение в PostgreSQL, поэтому C#- side и БД не расходятся в 6-м знаке. **Любой расчёт денег, который
+уходит в БД (стоимость usage, `credited_usd`, `bonus_usd`), обязан округляться через этот хелпер** —
+никаких inline `decimal.Round(..., AwayFromZero)` и `Math.Round` в сервисах быть не должно.
+
 ## Биллинг токенов — `TokenUsage` + расчёт
 
 - `UsageCostCalculator.Calculate(usage, price)` ([файл](Usage/UsageCostCalculator.cs)):
@@ -40,8 +49,9 @@
     Отсюда же `TokenUsage.TotalTokens = Input + Output` (кэш не прибавляется второй раз).
     Биллится `billableInput = Input - Cache` по input-ставке + cache по cache-ставке
     (защита от двойного списания, `Math.Max(0, …)` от рассинхрона);
-  - формула на млн токенов, **округление до 6 знаков `MidpointRounding.ToEven`** — совпадает
-    с `numeric(18,6)` колонок cost/ledger, чтобы возвращаемая стоимость = сохранённой;
+  - формула на млн токенов, **округление до 6 знаков через `MoneyRounding.Round`**
+    (`MidpointRounding.ToEven`) — совпадает с `numeric(18,6)` колонок cost/ledger, чтобы
+    возвращаемая стоимость = сохранённой;
   - `EnsureValid()` на обоих аргументах: отрицательные токены и отрицательные ставки —
     исключение, все три ставки в `ModelTokenPrice` обязаны быть в одной валюте.
 - `TokenUsageExtractor` ([файл](Usage/TokenUsageExtractor.cs)) — извлечение usage из ответа LLM,

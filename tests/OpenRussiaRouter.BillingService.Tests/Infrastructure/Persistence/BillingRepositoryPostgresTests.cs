@@ -36,6 +36,33 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task AcquireStalePayments_PreservesBonusSnapshot()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+        var createdAt = now.AddHours(-1);
+
+        var payment = new Payment(
+            "payment-bonus", "user-1", "mock", null, "payment-bonus", "client-bonus",
+            1000, "RUB", 1000, "RUB", MoneyAmount.Usd(10), 100, "fallback", createdAt,
+            PaymentStatus.Created, null, null, null, createdAt, createdAt, null, null, null,
+            BonusPercent: 20m);
+        await repository.CreatePaymentAsync(payment);
+
+        var acquired = (await repository.AcquireStalePaymentsAsync(
+            "worker-1", TimeSpan.FromMinutes(5), now, 10)).Should().ContainSingle().Which;
+
+        acquired.Id.Should().Be("payment-bonus");
+        acquired.BonusPercent.Should().Be(20m);
+        acquired.BonusUsd.Should().BeNull();
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task AcquireUnprocessedEvents_ConcurrentReplicas_ProcessEventOnce()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

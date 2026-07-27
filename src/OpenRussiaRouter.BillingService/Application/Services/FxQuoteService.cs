@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
@@ -82,7 +83,7 @@ public sealed class FxQuoteService(
     public decimal CalculateCreditedUsd(decimal amount, string currency, DateTimeOffset nowUtc)
     {
         var quote = GetQuote(currency, nowUtc);
-        return decimal.Round(amount * quote.UsdPerUnit, 6, MidpointRounding.AwayFromZero);
+        return MoneyRounding.Round(amount * quote.UsdPerUnit);
     }
 
     public async Task RefreshAsync(CancellationToken ct = default)

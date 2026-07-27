@@ -201,7 +201,7 @@ public sealed class AuthAccountApplicationServiceTests
         return new AuthAccountApplicationService(
             repository,
             new InviteRegistrationService(secretHasher, passwordHasher, secretGenerator),
-            new EmailVerificationService(secretHasher),
+            new EmailVerificationService(HmacSecretHasher.CreateDev()),
             passwordHasher,
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);

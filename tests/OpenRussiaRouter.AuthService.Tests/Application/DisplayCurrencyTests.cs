@@ -111,7 +111,7 @@ public sealed class DisplayCurrencyTests
         var accounts = new AuthAccountApplicationService(
             repo,
             new InviteRegistrationService(secretHasher, new Pbkdf2PasswordHasher(), secretGenerator),
-            new EmailVerificationService(secretHasher),
+            new EmailVerificationService(HmacSecretHasher.CreateDev()),
             new Pbkdf2PasswordHasher(),
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);

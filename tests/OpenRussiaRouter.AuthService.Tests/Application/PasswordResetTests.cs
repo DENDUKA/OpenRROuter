@@ -222,7 +222,7 @@ public sealed class PasswordResetTests
         var service = new AuthAccountApplicationService(
             repo,
             new InviteRegistrationService(secretHasher, passwordHasher, secretGenerator),
-            new EmailVerificationService(secretHasher),
+            new EmailVerificationService(HmacSecretHasher.CreateDev()),
             passwordHasher,
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher);

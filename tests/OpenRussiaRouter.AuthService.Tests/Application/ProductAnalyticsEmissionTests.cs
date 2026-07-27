@@ -170,7 +170,7 @@ public sealed class ProductAnalyticsEmissionTests
         var service = new AuthAccountApplicationService(
             repository,
             new InviteRegistrationService(secretHasher, passwordHasher, secretGenerator),
-            new EmailVerificationService(secretHasher),
+            new EmailVerificationService(HmacSecretHasher.CreateDev()),
             passwordHasher,
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher,
@@ -188,7 +188,7 @@ public sealed class ProductAnalyticsEmissionTests
         var service = new AuthAccountApplicationService(
             repository,
             new InviteRegistrationService(secretHasher, passwordHasher, secretGenerator),
-            new EmailVerificationService(secretHasher),
+            new EmailVerificationService(HmacSecretHasher.CreateDev()),
             passwordHasher,
             new ApiKeyFactory(secretHasher, secretGenerator),
             secretHasher,

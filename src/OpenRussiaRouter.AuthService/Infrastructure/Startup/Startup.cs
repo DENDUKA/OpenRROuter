@@ -21,7 +21,7 @@ public static class Startup
 
         var connectionString = configuration.GetConnectionString("AuthDb");
         services.AddAuthInfrastructure(connectionString);
-        services.AddAuthApplicationServices();
+        services.AddAuthApplicationServices(configuration);
         services.AddProductAnalytics(configuration);
 
         return services;

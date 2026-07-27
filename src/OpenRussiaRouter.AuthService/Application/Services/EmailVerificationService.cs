@@ -7,9 +7,11 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 /// <summary>
 /// Issues and checks emailed 6-digit codes — signup email confirmation and
 /// password resets share this mechanic. The raw code is returned to the caller
-/// (so the WebApp can mail it) but only its SHA-256 hash is ever persisted.
+/// (so the WebApp can mail it) but only its hash is ever persisted.
+/// Uses a dedicated HMAC hasher for codes (low-entropy secrets need protection
+/// against rainbow tables).
 /// </summary>
-public sealed class EmailVerificationService(ISecretHasher secretHasher)
+public sealed class EmailVerificationService(ISecretHasher codeHasher)
 {
     public static readonly TimeSpan CodeTtl = TimeSpan.FromMinutes(15);
     public static readonly TimeSpan ResendCooldown = TimeSpan.FromSeconds(60);
@@ -20,7 +22,7 @@ public sealed class EmailVerificationService(ISecretHasher secretHasher)
         var code = GenerateCode();
         var verification = new EmailVerification(
             userId,
-            secretHasher.Hash(code),
+            codeHasher.Hash(code),
             nowUtc.Add(CodeTtl),
             nowUtc);
         return new IssuedVerification(verification, code);
@@ -39,7 +41,7 @@ public sealed class EmailVerificationService(ISecretHasher secretHasher)
         }
 
         var code = GenerateCode();
-        verification.Reissue(secretHasher.Hash(code), nowUtc.Add(CodeTtl), nowUtc);
+        verification.Reissue(codeHasher.Hash(code), nowUtc.Add(CodeTtl), nowUtc);
         return code;
     }
 
@@ -62,7 +64,7 @@ public sealed class EmailVerificationService(ISecretHasher secretHasher)
             return VerificationCheck.TooManyAttempts;
         }
 
-        if (string.IsNullOrWhiteSpace(code) || !secretHasher.Verify(code, verification.CodeHash))
+        if (string.IsNullOrWhiteSpace(code) || !codeHasher.Verify(code, verification.CodeHash))
         {
             verification.RegisterFailedAttempt();
             return verification.Attempts >= MaxAttempts

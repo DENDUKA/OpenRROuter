@@ -1,5 +1,7 @@
 using Dapper;
+using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 
@@ -28,7 +30,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 capacity_weight = excluded.capacity_weight,
                 enabled = excluded.enabled,
                 status = excluded.status,
-                in_flight_requests = excluded.in_flight_requests,
                 last_checked_at_utc = excluded.last_checked_at_utc,
                 last_health_latency_ms = excluded.last_health_latency_ms,
                 last_health_error_code = excluded.last_health_error_code;
@@ -86,10 +87,46 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         return (items, hasMore);
     }
 
-    public async Task AddLeaseAsync(RouterLease lease, CancellationToken ct = default)
+    public async Task<RouterNodeLease?> TryAcquireLeaseAsync(
+        IReadOnlyCollection<string> candidateNodeIds,
+        RouterLease lease,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(lease);
+        if (candidateNodeIds.Count == 0)
+            return null;
+
         using var connection = connectionFactory.CreateConnection();
+        connection.Open();
+        using var transaction = connection.BeginTransaction();
+        var node = await connection.QuerySingleOrDefaultAsync<LeaseCandidate>(new CommandDefinition(
+            """
+            with candidate as (
+                select id, endpoint_url, control_token
+                from control.router_nodes
+                where id = any(@CandidateNodeIds)
+                  and enabled = true
+                  and status = 'Healthy'
+                order by in_flight_requests::numeric / capacity_weight, in_flight_requests, name
+                for update skip locked
+                limit 1
+            ), leased_node as (
+                update control.router_nodes node
+                set in_flight_requests = node.in_flight_requests + 1
+                from candidate
+                where node.id = candidate.id
+                returning node.id as Id, candidate.endpoint_url as EndpointUrl, candidate.control_token as ControlToken
+            )
+            select * from leased_node;
+            """,
+            new { CandidateNodeIds = candidateNodeIds.ToArray() }, transaction, cancellationToken: ct)).ConfigureAwait(false);
+
+        if (node is null)
+        {
+            transaction.Commit();
+            return null;
+        }
+
         await connection.ExecuteAsync(new CommandDefinition(
             """
             insert into control.router_leases
@@ -97,64 +134,91 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             values
                 (@Id, @NodeId, @RequestId, @ExpiresAtUtc, @CreatedAtUtc);
             """,
-            lease,
-            cancellationToken: ct)).ConfigureAwait(false);
+            lease with { NodeId = node.Id }, transaction, cancellationToken: ct)).ConfigureAwait(false);
+        transaction.Commit();
+        return new RouterNodeLease(lease.Id, node.Id, new Uri(node.EndpointUrl), node.ControlToken);
     }
 
-    public async Task<RouterLease?> RemoveLeaseAsync(string leaseId, CancellationToken ct = default)
+    public async Task<bool> ReleaseLeaseAsync(string leaseId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return await connection.QuerySingleOrDefaultAsync<RouterLeaseEntity>(new CommandDefinition(
+        return await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
             """
-            delete from control.router_leases
-            where id = @LeaseId
-            returning
-                id as Id,
-                node_id as NodeId,
-                request_id as RequestId,
-                expires_at_utc as ExpiresAtUtc,
-                created_at_utc as CreatedAtUtc;
+            with released as (
+                delete from control.router_leases
+                where id = @LeaseId
+                returning node_id
+            ), decremented as (
+                update control.router_nodes node
+                set in_flight_requests = greatest(node.in_flight_requests - 1, 0)
+                from released
+                where node.id = released.node_id
+                returning node.id
+            )
+            select exists(select 1 from released);
             """,
             new { LeaseId = leaseId },
-            cancellationToken: ct)).ConfigureAwait(false) is { } entity
-                ? ControlPlanePersistenceMapper.ToDomain(entity)
-                : null;
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
-    public async Task<IReadOnlyCollection<RouterLease>> RemoveExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
+    public async Task<int> ReleaseExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        return (await connection.QueryAsync<RouterLeaseEntity>(new CommandDefinition(
-                """
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            with expired as (
                 delete from control.router_leases
                 where expires_at_utc <= @NowUtc
-                returning
-                    id as Id,
-                    node_id as NodeId,
-                    request_id as RequestId,
-                    expires_at_utc as ExpiresAtUtc,
-                    created_at_utc as CreatedAtUtc;
-                """,
-                new { NowUtc = nowUtc },
-                cancellationToken: ct)).ConfigureAwait(false))
-            .Select(ControlPlanePersistenceMapper.ToDomain)
-            .ToArray();
+                returning node_id
+            ), counts as (
+                select node_id, count(*)::int as lease_count
+                from expired
+                group by node_id
+            ), decremented as (
+                update control.router_nodes node
+                set in_flight_requests = greatest(node.in_flight_requests - counts.lease_count, 0)
+                from counts
+                where node.id = counts.node_id
+                returning node.id
+            )
+            select count(*)::int from expired;
+            """,
+            new { NowUtc = nowUtc },
+            cancellationToken: ct)).ConfigureAwait(false);
     }
 
-    public async Task ReleaseNodesAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct = default)
+    public async Task<bool> ApplyHealthAsync(
+        string nodeId,
+        RouterNodeStatus status,
+        DateTimeOffset checkedAtUtc,
+        int? latencyMs,
+        string? errorCode,
+        CancellationToken ct = default)
     {
-        if (nodeIds.Count == 0)
-            return;
-
         using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
             """
             update control.router_nodes
-            set in_flight_requests = greatest(in_flight_requests - 1, 0)
-            where id = any(@NodeIds);
+            set status = case
+                    when enabled = false then 'Disabled'
+                    when @Status = 'Disabled' then 'Unhealthy'
+                    else @Status
+                end,
+                last_checked_at_utc = @CheckedAtUtc,
+                last_health_latency_ms = @LatencyMs,
+                last_health_error_code = @ErrorCode
+            where id = @NodeId;
             """,
-            new { NodeIds = nodeIds.ToArray() },
+            new
+            {
+                NodeId = nodeId,
+                Status = status.ToString(),
+                CheckedAtUtc = checkedAtUtc,
+                LatencyMs = latencyMs,
+                ErrorCode = string.IsNullOrWhiteSpace(errorCode) ? null : errorCode.Trim()
+            },
             cancellationToken: ct)).ConfigureAwait(false);
+        return affected > 0;
     }
 
     public async Task SaveIntegrationKeyMappingAsync(string apiKeyId, string nodeId, string routerKeyId, CancellationToken ct = default)
@@ -231,4 +295,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
         """;
 
     private const string NodeByIdSql = NodeSelectSql + "\nwhere id = @NodeId;";
+
+    private sealed record LeaseCandidate(string Id, string EndpointUrl, string ControlToken);
 }

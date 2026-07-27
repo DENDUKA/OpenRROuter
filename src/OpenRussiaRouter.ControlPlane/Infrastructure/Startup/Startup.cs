@@ -31,6 +31,11 @@ public static class Startup
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<RouterNodeSnapshotOptions>()
+            .Bind(configuration.GetSection("RouterNodeSnapshot"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         services.AddOptions<CapabilityReplicaOptions>()
             .Bind(configuration.GetSection("CapabilityReplica"))
             .ValidateDataAnnotations()

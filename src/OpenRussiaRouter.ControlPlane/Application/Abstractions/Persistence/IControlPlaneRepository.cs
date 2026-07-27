@@ -1,4 +1,6 @@
+using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
+using OpenRussiaRouter.ControlPlane.Domain;
 
 namespace OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
 
@@ -12,13 +14,22 @@ public interface IControlPlaneRepository
 
     Task<(IReadOnlyCollection<RouterNode> Items, bool HasMore)> ListNodesAsync(int limit, string? afterName = null, CancellationToken ct = default);
 
-    Task AddLeaseAsync(RouterLease lease, CancellationToken ct = default);
+    Task<RouterNodeLease?> TryAcquireLeaseAsync(
+        IReadOnlyCollection<string> candidateNodeIds,
+        RouterLease lease,
+        CancellationToken ct = default);
 
-    Task<RouterLease?> RemoveLeaseAsync(string leaseId, CancellationToken ct = default);
+    Task<bool> ReleaseLeaseAsync(string leaseId, CancellationToken ct = default);
 
-    Task<IReadOnlyCollection<RouterLease>> RemoveExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default);
+    Task<int> ReleaseExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default);
 
-    Task ReleaseNodesAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct = default);
+    Task<bool> ApplyHealthAsync(
+        string nodeId,
+        RouterNodeStatus status,
+        DateTimeOffset checkedAtUtc,
+        int? latencyMs,
+        string? errorCode,
+        CancellationToken ct = default);
 
     Task SaveIntegrationKeyMappingAsync(string apiKeyId, string nodeId, string routerKeyId, CancellationToken ct = default);
 

@@ -183,6 +183,34 @@ public sealed class RouterControlPlaneServiceTests
         summary.InFlightRequests.Should().Be(0);
     }
 
+    [Fact]
+    public async Task ReleaseExpiredLeases_MultipleLeasesOnOneNode_DecrementsByExactCount()
+    {
+        var service = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now);
+        await Task.WhenAll(Enumerable.Range(0, 8)
+            .Select(index => service.SelectRouterNodeAsync(null, $"req-{index}", now)));
+
+        await service.ReleaseExpiredLeasesAsync(now.AddMinutes(6));
+
+        var summary = (await service.ListNodesForHealthChecksAsync()).Should().ContainSingle().Which;
+        summary.InFlightRequests.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ApplyHealth_DisabledNode_RemainsDisabled()
+    {
+        var service = CreateService();
+        var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, DateTimeOffset.UtcNow);
+        await service.DisableNodeAsync(node.Id);
+
+        await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, DateTimeOffset.UtcNow);
+
+        (await service.GetRouterNodeAsync(node.Id))!.Status.Should().Be(RouterNodeStatus.Disabled);
+    }
+
     // ── Capability-aware routing ──────────────────────────────────────────────
 
     [Fact]

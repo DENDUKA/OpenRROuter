@@ -69,17 +69,19 @@
 - desc: `WebApp/Program.cs:366-371` — `UseForwardedHeaders` с пустыми `KnownNetworks`/`KnownProxies`, поэтому `Connection.RemoteIpAddress` переписывается клиентским заголовком. Лимитер (`Program.cs:351`) партиционируется ровно по нему → атакующий получает по 60 запросов в минуту на каждое выдуманное значение на анонимном `POST /webhook/{provider}`. Фикс: прописать подсеть Caddy в `KnownNetworks`/`KnownProxies` либо `ForwardLimit = 1`.
 
 ## T-007 — Гонка на in_flight_requests: read-modify-write всей строки ноды
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:15:12+04:00
 - desc: `ControlPlane/Application/Services/RouterControlPlaneService.cs:141-142, 160-163`. `node.Lease()` инкрементит объект в памяти, а `UpsertNodeAsync` перезаписывает ВСЕ колонки строки. Два параллельных `SelectRouterNode` теряют инкремент; параллельный `ApplyHealth`/`UpdateNode` затирает `in_flight`, `enabled`, `status`, `control_token` устаревшими значениями — задизейбленная нода «воскресает». Корень CONTROL-004. Фикс: атомарный SQL `update ... set in_flight_requests = in_flight_requests + 1 where id = @Id returning ...`; health-путь — точечный `update` только health-колонок. Делать вместе с T-008 и T-018.
 
 ---
 
 ## T-008 — ReleaseExpiredLeasesAsync не атомарна и декрементит на 1 за ноду
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:15:12+04:00
 - desc: `RouterControlPlaneService.cs:180-188` + `ControlPlaneRepository.cs:138-152`. DELETE и UPDATE на разных соединениях без транзакции, вызывается на горячем пути `SelectRouterNodeAsync:100` с токеном клиентского запроса. Клиент отвалился между вызовами — лизы удалены, счётчик не уменьшен. Плюс `Distinct()` + `in_flight_requests - 1`: 10 протухших лизов на ноде уменьшают счётчик на 1. Фикс: DELETE+UPDATE одним CTE с `greatest(in_flight - c, 0)`; в фоне использовать `stoppingToken`, а не токен gRPC-вызова.
 
 ## T-009 — Сломанная keyset-пагинация в AuthRepository: пропуск и дублирование строк
@@ -137,9 +139,10 @@
 - desc: `ChatCompletionHandler.cs:51, 216` → `GatewayPipeline.cs:49, 57`. `AuthorizeAndAcquireLeaseAsync` вызывается внутри `while(true)` и всегда делает `AuthenticateAsync` + `CheckBalanceAndModelAsync`, хотя от ноды зависит только `SelectRouterNodeAsync`. При 5 попытках — 10 лишних gRPC round-trip'ов. Фикс: разделить на `AuthorizeAsync` (один раз до цикла) и `AcquireLeaseAsync(excluded)` (в цикле). Это мемоизация внутри одного запроса, НЕ кеш между запросами.
 
 ## T-018 — SelectRouterNode читает всю таблицу нод на каждый чат-запрос
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:15:12+04:00
 - desc: `RouterControlPlaneService.cs:100-133`. На каждый запрос: DELETE протухших лизов + `ListNodesAsync(1000)` + материализация в `List` + цепочка `Where/OrderBy` + `UpsertNodeAsync` + `AddLeaseAsync` — 4 round-trip'а в Postgres, плюс decimal-деление в сортировке. Фикс: выбор ноды одним SQL с `order by ... limit 1 for update skip locked` и инкрементом в том же запросе (закрывает и T-007); метаданные нод — in-memory снапшот по паттерну `CollectorSnapshotStore`, обновляемый воркером раз в 5-10 с. ВАЖНО: в снапшот НЕЛЬЗЯ класть `in_flight_requests` — это мутабельный счётчик, иначе кеш законсервирует гонку T-007.
 
 ## T-019 — Лейбл client_ip в Prometheus-счётчике: неограниченная кардинальность

@@ -12,7 +12,7 @@ Seq-логирование + OTel-метрики → `Startup.ConfigureServices`
 `MapGrpcService<GrpcRouterControlPlaneService>` + контроллеры + `/health`.
 
 - Все опции — `ValidateDataAnnotations().ValidateOnStart()`: секции `RouterHealthChecks`,
-  `RouterNodeProviderCache`, `RouterLeaseCleanup`, `CapabilityReplica`. Невалидный конфиг роняет старт.
+  `RouterNodeProviderCache`, `RouterLeaseCleanup`, `RouterNodeSnapshot`, `CapabilityReplica`. Невалидный конфиг роняет старт.
 - gRPC-клиенты: **Auth** (`GrpcServices:Auth`, дефолт `http://localhost:5001`) и **Collector**
   (`GrpcServices:Collector`, `:5005`) — keep-alive + `GrpcDeadlineInterceptor`.
 - **`ConnectionStrings:ControlPlaneDb`** (именно так, не `ControlDb`). Пустая строка ⇒
@@ -34,31 +34,36 @@ Seq-логирование + OTel-метрики → `Startup.ConfigureServices`
 | Слой | Где | Что |
 |---|---|---|
 | Domain | `Domain/` | `RouterNode` (логика статуса/лизинга/валидации внутри: `Lease()`, `Release()`, `ApplyHealth()`, `Update()`, `UpdateControlToken()`, `Disable()`/`Enable()`), `RouterLease` (record), `RouterNodeStatus` |
-| Application | `Application/Services` | только `RouterControlPlaneService` (фасад) и `NodeModelCapabilityStore` |
+| Application | `Application/Services` | `RouterControlPlaneService` (фасад), `NodeModelCapabilityStore`, `RouterNodeSnapshotStore` |
 | Application | `Application/Abstractions` | `IControlPlaneRepository`, `IRouterNodeProvider`, `IRouterNodeHealthProvider` |
 | Application | `Application/Contracts` | DTO admin API нод + `RouterNodeProviderException` |
-| Application | `Application/Options` | `RouterHealthCheckOptions`, `RouterLeaseCleanupOptions`, `RouterNodeProviderCacheOptions`, `CapabilityReplicaOptions` |
+| Application | `Application/Options` | `RouterHealthCheckOptions`, `RouterLeaseCleanupOptions`, `RouterNodeSnapshotOptions`, `RouterNodeProviderCacheOptions`, `CapabilityReplicaOptions` |
 | Application | `Application/Extensions` | `AddControlPlaneInfrastructure()` / `AddControlPlaneApplicationServices()` |
 | Infrastructure | `Infrastructure/Grpc` | `GrpcRouterControlPlaneService` — gRPC-фасад + оркестрация key-sync |
 | Infrastructure | `Infrastructure/Http` | `RouterNodeProvider` (admin API 9Router), `CachedRouterNodeProvider` + `RouterNodeProviderCacheStore`, `RouterNodeHealthProvider`, `HealthController` |
-| Infrastructure | `Infrastructure/Workers` | `RouterHealthCheckWorker`, `RouterLeaseCleanupWorker`, `CapabilityReplicaRefresher` (**воркеры живут здесь, не в Application/Services**) |
+| Infrastructure | `Infrastructure/Workers` | `RouterHealthCheckWorker`, `RouterLeaseCleanupWorker`, `RouterNodeSnapshotRefresher`, `CapabilityReplicaRefresher` (**воркеры живут здесь, не в Application/Services**) |
 | Infrastructure | `Infrastructure/Persistence` | Dapper-entity, `ControlPlanePersistenceMapper`, connection factory |
 | Infrastructure | `Infrastructure/Repository` | `ControlPlaneRepository` (PG) + `InMemoryControlPlaneRepository` |
 
 ## Выбор ноды — `RouterControlPlaneService.SelectRouterNodeAsync` ([файл](Application/Services/RouterControlPlaneService.cs))
 
 Алгоритм (hot-path):
-1. `ReleaseExpiredLeasesAsync(nowUtc)` — снять протухшие лизы (TTL `DefaultLeaseTtl` = 5 мин);
-2. кандидаты = **все** ноды (`ListNodesAsync(MaxNodePageSize = 1000)`), отфильтрованные
-   `Enabled && Status == Healthy`;
-3. **capability-фильтр**: если `modelId` задан **и** `!capabilityStore.IsEmpty` → оставить только
+1. кандидаты = последний полный **in-memory снимок метаданных** (`RouterNodeSnapshotRefresher`, 10 с),
+   отфильтрованный `Enabled && Status == Healthy`; если снимок ещё пуст после старта, один раз
+   читается репозиторий;
+2. **capability-фильтр**: если `modelId` задан **и** `!capabilityStore.IsEmpty` → оставить только
    `capabilityStore.NodeSupportsModel(nodeId, modelId)`. Пустой store (сразу после старта, до первого
    `CapabilityReplicaRefresher`) — **fallback на least-load без фильтра**, первые запросы не отклоняются;
-4. вычесть `excludedNodeIds` (retry/failover от ApiGateway, сравнение case-insensitive);
-5. при `preferredNodeId` — оставить только её, **сверив и `ControlToken`** (ordinal);
-6. сортировка least-load: `InFlightRequests / CapacityWeight`, затем `InFlightRequests`, затем `Name`;
-7. `node.Lease()` (++inflight, upsert строки) + `RouterLease` в БД, вернуть
-   `RouterNodeLease{LeaseId, NodeId, EndpointUrl, ControlToken}`.
+3. вычесть `excludedNodeIds` (retry/failover от ApiGateway, сравнение case-insensitive);
+4. при `preferredNodeId` — оставить только её, **сверив и `ControlToken`** (ordinal);
+5. передать только ID кандидатов в `TryAcquireLeaseAsync`. PostgreSQL в одной транзакции повторно
+   проверяет `enabled/status`, берёт строку `FOR UPDATE SKIP LOCKED`, выбирает least-load по живому
+   `in_flight_requests / capacity_weight`, инкрементирует счётчик и вставляет лизу.
+
+Снимок никогда не хранит `in_flight_requests`: нагрузка — исключительно состояние БД. Обычное
+освобождение лизы и cleanup протухших лиз выполняются CTE-операциями с `greatest(..., 0)`;
+cleanup группирует удалённые лизы по ноде и уменьшает счётчик ровно на их число. Health обновляет
+только health-поля и не может затереть нагрузку; отключённая нода остаётся `Disabled`.
 
 Пустой список кандидатов → `InvalidOperationException`, gRPC-фасад превращает его в
 `ErrorCode = ErrorCodes.RouterUnavailable` (не в gRPC-ошибку).
@@ -87,7 +92,8 @@ Seq-логирование + OTel-метрики → `Startup.ConfigureServices`
 `RouterHealthCheckWorker` ([файл](Infrastructure/Workers/RouterHealthCheckWorker.cs)) — каждые
 `RouterHealthChecks:Interval` последовательно обходит enabled-ноды: `healthClient.CheckAsync` →
 `controlPlane.ApplyHealthAsync(...)`. **Нет cooldown/anti-flapping** — статус меняется мгновенно
-(CONTROL-002). Отдельный `RouterLeaseCleanupWorker` чистит протухшие лизы.
+(CONTROL-002). Отдельный `RouterLeaseCleanupWorker` чистит протухшие лизы; `RouterNodeSnapshotRefresher`
+раз в `RouterNodeSnapshot:RefreshInterval` заменяет снимок метаданных только после полного успешного чтения.
 
 `RouterNodeHealthProvider` ([файл](Infrastructure/Http/RouterNodeHealthProvider.cs)):
 GET `{EndpointUrl}{HealthPath}`, **только заголовок `NodeTokenHeader` (`X-ORR-Node-Token`) с control-токеном**
@@ -167,6 +173,7 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 | `RouterHealthChecks:NodeTokenHeader` | `X-ORR-Node-Token` | единственный заголовок health-запроса |
 | `RouterNodeProviderCache:Enabled` / `Ttl` | `true` / 30с | кеш чтений admin API нод |
 | `RouterLeaseCleanup:Enabled` / `Interval` | `true` / 30с | prod: 1мин |
+| `RouterNodeSnapshot:Enabled` / `RefreshInterval` | `true` / 10с | hot-path читает только этот снимок; пустой снимок имеет стартовый DB fallback |
 | `CapabilityReplica:Enabled` / `RefreshInterval` | `true` / 1мин | опрос коллектора |
 | `GrpcServices:Auth` / `:Collector` / `:CallDeadlineSeconds` | `:5001` / `:5005` / 30 | `Collector` есть в `appsettings.json`, `Auth` — только дефолт в коде |
 | `ConnectionStrings:ControlPlaneDb` | пусто | пусто ⇒ in-memory репозиторий |
@@ -181,22 +188,18 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 | `control_token` в БД = имя секрета | `control_token` = **реальное значение токена**, шлётся напрямую `Bearer` (историческое имя колонки `token_secret_name` переименовано миграцией 002) |
 | `RouterHealthChecks:NodeTokens` резолвит токен | Такой логики нет — провайдеры берут `node.ControlToken` |
 | Валидация `control_token`/endpoint где-то в инфраструктуре | Уже в доменной сущности `RouterNode` (endpoint — только http/https, http разрешён для ClusterIP) — **не флагать как пропуск** |
-| Воркеры лежат в `Application/Services` | Все три — в `Infrastructure/Workers` |
+| Воркеры лежат в `Application/Services` | Все четыре — в `Infrastructure/Workers` |
 | Capability-store можно спрашивать публичным `ModelId` | Только `RouterModelId` |
 | В капабилити-сторе `ConcurrentDictionary` / lock-free чтение | Обычный `Dictionary` под `lock` |
 
 ## Подводные камни
 
-- **In-flight счётчик дрейфует.** `ReleaseExpiredLeasesAsync` дедуплицирует `node_id` и уменьшает
-  счётчик **на единицу за ноду за цикл**, сколько бы лизов ни протухло → пачка протухших лизов
-  оставляет счётчик завышенным. Плюс он персистится в БД и рестартом **не сбрасывается**
-  (CONTROL-004 про recovery лизов — как раз про это).
-- **Read-modify-write всей строки ноды.** Любой `Lease()`/`Release()`/`ApplyHealth()` читает
-  сущность и делает `UpsertNodeAsync` целиком — конкурентные операции (health-чек vs лизинг)
-  могут затирать поля друг друга.
-- **Hot-path бьёт в БД:** каждый `SelectRouterNode` = delete протухших лизов + upsert по нодам +
-  чтение всех нод (limit 1000) + upsert + insert лиза. Пагинация в `ListNodesAsync` есть,
-  но выбор ноды ей не пользуется.
+- **Не возвращай read-modify-write для нагрузки.** Лизинг, release и expiry cleanup обязаны идти
+  через атомарные методы репозитория; `UpsertNodeAsync` намеренно не перезаписывает
+  `in_flight_requests`, а health пишется точечным `ApplyHealthAsync`.
+- **Снимок метаданных может устареть.** Это допустимо только как предварительный фильтр: SQL при
+  выдаче лизы повторно проверяет `enabled` и `Healthy`, поэтому stale snapshot не выдаст лизу
+  отключённой или нездоровой ноде.
 - **`DeleteRouterNode` с живыми лизами.** У `router_leases.node_id` FK был без `on delete
   cascade` (миграция 001). Миграция 006 добавила `ON DELETE CASCADE`, а `RemoveNodeAsync`
   дополнительно удаляет лизы явно перед удалением ноды (как страховка и для in-memory
@@ -210,6 +213,7 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 `tests/OpenRussiaRouter.ControlPlane.Tests` — unit на `InMemoryControlPlaneRepository` + фейковые
 провайдеры (`RouterControlPlaneServiceTests`, `GrpcRouterControlPlaneServiceTests`,
 `CapabilityReplicaRefresherTests`, `RouterHealthCheckWorkerTests`, `RouterLeaseCleanupWorkerTests`,
+`RouterNodeSnapshotRefresherTests`,
 `CachedRouterNodeProviderTests`, `RouterNodeProviderClientTests`, `HttpRouterNodeHealthClientTests`) и
 Postgres-интеграционные на Testcontainers (`ControlPlaneRepositoryPostgresTests`,
 `GrpcRouterControlPlaneServicePostgresIntegrationTests`, `PostgresTestDatabase`). Переопределение

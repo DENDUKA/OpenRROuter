@@ -35,6 +35,7 @@ public static class ControlPlaneExtensions
         IConfiguration configuration)
     {
         services.AddSingleton<NodeModelCapabilityStore>();
+        services.AddSingleton<RouterNodeSnapshotStore>();
         services.AddSingleton<RouterControlPlaneService>();
         services.AddHttpClient<IRouterNodeHealthProvider, RouterNodeHealthProvider>();
         services.AddSingleton<RouterNodeProviderCacheStore>();
@@ -42,6 +43,7 @@ public static class ControlPlaneExtensions
         services.AddTransient<IRouterNodeProvider, CachedRouterNodeProvider>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
+        services.AddHostedService<RouterNodeSnapshotRefresher>();
         services.AddHostedService<CapabilityReplicaRefresher>();
 
         return services;

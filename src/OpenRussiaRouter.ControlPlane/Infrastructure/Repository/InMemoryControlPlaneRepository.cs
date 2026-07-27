@@ -1,11 +1,14 @@
 using System.Collections.Concurrent;
+using OpenRussiaRouter.Contracts.ControlPlane;
 using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
+using OpenRussiaRouter.ControlPlane.Domain;
 using OpenRussiaRouter.ControlPlane.Domain.Entities;
 
 namespace OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
 
 public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
 {
+    private readonly object _gate = new();
     private readonly ConcurrentDictionary<string, RouterLease> _leases = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, RouterNode> _nodes = new(StringComparer.Ordinal);
     // key: "apiKeyId|nodeId"
@@ -13,20 +16,26 @@ public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
 
     public Task UpsertNodeAsync(RouterNode node, CancellationToken ct = default)
     {
-        _nodes[node.Id] = node;
+        lock (_gate)
+        {
+            _nodes[node.Id] = node;
+        }
         return Task.CompletedTask;
     }
 
     public Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default)
     {
-        if (!_nodes.TryRemove(nodeId, out _))
-            return Task.FromResult(false);
+        lock (_gate)
+        {
+            if (!_nodes.TryRemove(nodeId, out _))
+                return Task.FromResult(false);
 
-        var nodeLeases = _leases.Values.Where(l => l.NodeId == nodeId).ToArray();
-        foreach (var lease in nodeLeases)
-            _leases.TryRemove(lease.Id, out _);
+            var nodeLeases = _leases.Values.Where(l => l.NodeId == nodeId).ToArray();
+            foreach (var lease in nodeLeases)
+                _leases.TryRemove(lease.Id, out _);
 
-        return Task.FromResult(true);
+            return Task.FromResult(true);
+        }
     }
 
     public Task<RouterNode?> GetNodeAsync(string nodeId, CancellationToken ct = default) =>
@@ -47,33 +56,81 @@ public sealed class InMemoryControlPlaneRepository : IControlPlaneRepository
         return Task.FromResult<(IReadOnlyCollection<RouterNode>, bool)>((items, hasMore));
     }
 
-    public Task AddLeaseAsync(RouterLease lease, CancellationToken ct = default)
+    public Task<RouterNodeLease?> TryAcquireLeaseAsync(
+        IReadOnlyCollection<string> candidateNodeIds,
+        RouterLease lease,
+        CancellationToken ct = default)
     {
-        _leases[lease.Id] = lease;
-        return Task.CompletedTask;
+        lock (_gate)
+        {
+            var candidateIds = new HashSet<string>(candidateNodeIds, StringComparer.Ordinal);
+            var node = _nodes.Values
+                .Where(candidate => candidateIds.Contains(candidate.Id) && candidate.Enabled && candidate.Status == RouterNodeStatus.Healthy)
+                .OrderBy(candidate => (decimal)candidate.InFlightRequests / candidate.CapacityWeight)
+                .ThenBy(candidate => candidate.InFlightRequests)
+                .ThenBy(candidate => candidate.Name, StringComparer.Ordinal)
+                .FirstOrDefault();
+            if (node is null)
+                return Task.FromResult<RouterNodeLease?>(null);
+
+            node.Lease();
+            _leases[lease.Id] = lease with { NodeId = node.Id };
+            return Task.FromResult<RouterNodeLease?>(new RouterNodeLease(lease.Id, node.Id, node.EndpointUrl, node.ControlToken));
+        }
     }
 
-    public Task<RouterLease?> RemoveLeaseAsync(string leaseId, CancellationToken ct = default) =>
-        Task.FromResult(_leases.TryRemove(leaseId, out var lease) ? lease : null);
-
-    public Task<IReadOnlyCollection<RouterLease>> RemoveExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
+    public Task<bool> ReleaseLeaseAsync(string leaseId, CancellationToken ct = default)
     {
-        var expired = _leases.Values.Where(lease => lease.ExpiresAtUtc <= nowUtc).ToArray();
-        foreach (var lease in expired)
-            _leases.TryRemove(lease.Id, out _);
+        lock (_gate)
+        {
+            if (!_leases.TryRemove(leaseId, out var lease))
+                return Task.FromResult(false);
 
-        return Task.FromResult<IReadOnlyCollection<RouterLease>>(expired);
+            if (_nodes.TryGetValue(lease.NodeId, out var node))
+                node.Release();
+            return Task.FromResult(true);
+        }
     }
 
-    public Task ReleaseNodesAsync(IReadOnlyCollection<string> nodeIds, CancellationToken ct = default)
+    public Task<int> ReleaseExpiredLeasesAsync(DateTimeOffset nowUtc, CancellationToken ct = default)
     {
-        foreach (var nodeId in nodeIds)
+        lock (_gate)
+        {
+            var expired = _leases.Values.Where(lease => lease.ExpiresAtUtc <= nowUtc).ToArray();
+            foreach (var group in expired.GroupBy(lease => lease.NodeId, StringComparer.Ordinal))
+            {
+                foreach (var lease in group)
+                    _leases.TryRemove(lease.Id, out _);
+
+                if (_nodes.TryGetValue(group.Key, out var node))
+                {
+                    foreach (var _ in group)
+                        node.Release();
+                }
+            }
+
+            return Task.FromResult(expired.Length);
+        }
+    }
+
+    public Task<bool> ApplyHealthAsync(
+        string nodeId,
+        RouterNodeStatus status,
+        DateTimeOffset checkedAtUtc,
+        int? latencyMs,
+        string? errorCode,
+        CancellationToken ct = default)
+    {
+        lock (_gate)
         {
             if (_nodes.TryGetValue(nodeId, out var node))
-                node.Release();
-        }
+            {
+                node.ApplyHealth(status, checkedAtUtc, latencyMs, errorCode);
+                return Task.FromResult(true);
+            }
 
-        return Task.CompletedTask;
+            return Task.FromResult(false);
+        }
     }
 
     public Task SaveIntegrationKeyMappingAsync(string apiKeyId, string nodeId, string routerKeyId, CancellationToken ct = default)

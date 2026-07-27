@@ -35,6 +35,12 @@ public class TopUpsModel(BillingProvider billingProvider, AuthProvider authProvi
             UsersById = users.ToDictionary(u => u.Id, StringComparer.Ordinal);
 
             var matchingUserIds = MatchUsers(users, UserQuery);
+            if (matchingUserIds is { Count: 0 })
+            {
+                // A supplied user filter that matches nobody must never be treated as an
+                // unfiltered request: that would disclose every user's financial history.
+                return;
+            }
 
             var (items, totalCount) = await billingProvider.ListAllTopUpsAsync(
                 pageNumber: PageNumber,

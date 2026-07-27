@@ -21,6 +21,8 @@ public sealed class PublicProviderLogoController(BillingProvider billingProvider
         if (provider?.LogoBytes is { Length: > 0 } && provider.LogoContentType is not null)
         {
             Response.Headers.CacheControl = "public, max-age=604800";
+            Response.Headers.XContentTypeOptions = "nosniff";
+            Response.Headers.ContentDisposition = "inline";
             return File(provider.LogoBytes, provider.LogoContentType);
         }
 

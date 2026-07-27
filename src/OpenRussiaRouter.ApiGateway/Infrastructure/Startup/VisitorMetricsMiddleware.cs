@@ -13,7 +13,7 @@ public sealed class VisitorMetricsMiddleware
     private static readonly Counter<long> RequestCounter =
         Meter.CreateCounter<long>(
             "orr_http_requests_total",
-            description: "Total HTTP requests with client IP");
+            description: "Total HTTP requests by method, path and status");
 
     private static readonly Histogram<double> RequestDuration =
         Meter.CreateHistogram<double>(
@@ -36,7 +36,6 @@ public sealed class VisitorMetricsMiddleware
     {
         var path = NormalizePath(context.Request.Path.Value ?? "/");
         var method = context.Request.Method;
-        var clientIp = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
         var sw = Stopwatch.StartNew();
         Exception? error = null;
@@ -58,7 +57,6 @@ public sealed class VisitorMetricsMiddleware
 
             var tags = new KeyValuePair<string, object?>[]
             {
-                new("client_ip", clientIp),
                 new("method", method),
                 new("path", path),
                 new("status", status)

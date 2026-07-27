@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Dapper;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
@@ -10,6 +11,8 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
 public sealed class BillingRepository(IBillingDbConnectionFactory connectionFactory) : IBillingRepository
 {
+    private readonly ConcurrentDictionary<string, (int Count, DateTimeOffset ExpiresAt)> _topUpsCountCache = new(StringComparer.Ordinal);
+    private static readonly TimeSpan TopUpsCountCacheTtl = TimeSpan.FromSeconds(60);
     public async Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -46,11 +49,23 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
               and (@MaxAmountUsd::numeric is null or amount <= @MaxAmountUsd::numeric)
             """;
 
-        var countSql = $"select count(*) from billing.ledger_entries {baseWhere};";
-        var totalCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            countSql,
-            new { UserIds = userIds, MinAmountUsd = minAmountUsd, MaxAmountUsd = maxAmountUsd },
-            cancellationToken: ct)).ConfigureAwait(false);
+        var cacheKey = $"topups:{userIds is null ? "*" : string.Join(",", userIds.OrderBy(id => id, StringComparer.Ordinal))}:{minAmountUsd}:{maxAmountUsd}";
+        var now = DateTimeOffset.UtcNow;
+        var totalCount = 0;
+
+        if (_topUpsCountCache.TryGetValue(cacheKey, out var cached) && cached.ExpiresAt > now)
+        {
+            totalCount = cached.Count;
+        }
+        else
+        {
+            var countSql = $"select count(*) from billing.ledger_entries {baseWhere};";
+            totalCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+                countSql,
+                new { UserIds = userIds, MinAmountUsd = minAmountUsd, MaxAmountUsd = maxAmountUsd },
+                cancellationToken: ct)).ConfigureAwait(false);
+            _topUpsCountCache[cacheKey] = (totalCount, now + TopUpsCountCacheTtl);
+        }
 
         var dataSql = LedgerEntrySelectSql + baseWhere +
             " order by created_at_utc desc, id desc offset @Offset limit @Limit;";
@@ -105,6 +120,8 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
                 entry.IsUserPayment
             },
             cancellationToken: ct)).ConfigureAwait(false));
+
+        _topUpsCountCache.Clear();
     }
 
     public async Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
@@ -1135,6 +1152,7 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
         await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
         var outcome = await ConfirmPaymentAtomicAsync(connection, transaction, eventRow, evt, nowUtc, ct).ConfigureAwait(false);
         await transaction.CommitAsync(ct).ConfigureAwait(false);
+        _topUpsCountCache.Clear();
         return outcome;
     }
 

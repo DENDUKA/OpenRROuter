@@ -205,9 +205,7 @@ Polly внутри вызова и outbox снаружи.
   либо генерит новый. Этот же id = `requestId` = PK в outbox.
 - [VisitorMetricsMiddleware](Infrastructure/Startup/VisitorMetricsMiddleware.cs) — `orr_http_requests_total`,
   `orr_http_request_duration_seconds`, `orr_http_response_size_bytes`. Путь нормализуется
-  (`NormalizePath`), чтобы не плодить серии. **В `orr_http_requests_total` есть лейбл `client_ip`** —
-  исключение из общего правила «никаких IP в лейблах» из корневого CLAUDE.md; при росте трафика это
-  первый кандидат на кардинальность.
+  (`NormalizePath`), чтобы не плодить серии. Лейблы: `method`, `path`, `status`.
 
 ## Конфигурация
 

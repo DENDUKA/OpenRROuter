@@ -35,6 +35,21 @@ public static class GeminiSchemaPatcher
         }
     }
 
+    /// <summary>
+    /// Inlines $ref/$defs on an already-parsed <paramref name="node"/> for Gemini models.
+    /// Returns true if the node was modified.
+    /// </summary>
+    public static bool SanitizeIfGeminiModel(JsonNode node, string routerModelId, string originalModelId)
+    {
+        if (!IsGeminiModel(routerModelId, originalModelId))
+            return false;
+
+        if (node is JsonObject obj)
+            return SanitizeKnownSchemaRoots(obj);
+
+        return false;
+    }
+
     private static bool IsGeminiModel(string routerModelId, string originalModelId)
     {
         return routerModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase) || originalModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace OpenRussiaRouter.ApiGateway.OpenAi;
 
@@ -11,6 +12,28 @@ public static class ChatCompletionRequestReader
         using var reader = new StreamReader(body, leaveOpen: false);
         var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
         return new ChatCompletionRequestBody(json, Read(json));
+    }
+
+    /// <summary>
+    /// Reads the request body into a <see cref="JsonNode"/> (single parse) and extracts metadata.
+    /// Prefer this over <see cref="ReadBodyAsync"/> when the caller needs to patch the JSON tree
+    /// (avoids redundant parse/serialize cycles).
+    /// </summary>
+    public static async Task<ChatCompletionRequestBodyNode> ReadBodyNodeAsync(
+        Stream body,
+        CancellationToken cancellationToken)
+    {
+        using var reader = new StreamReader(body, leaveOpen: false);
+        var json = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var node = JsonNode.Parse(json);
+            return new ChatCompletionRequestBodyNode(node, json, Read(json));
+        }
+        catch (JsonException)
+        {
+            return new ChatCompletionRequestBodyNode(null, json, new ChatCompletionRequestMetadata(null, false));
+        }
     }
 
     public static async Task<ChatCompletionRequestMetadata> ReadAsync(
@@ -80,6 +103,11 @@ public static class ChatCompletionRequestReader
 }
 
 public sealed record ChatCompletionRequestBody(string Json, ChatCompletionRequestMetadata Metadata);
+
+/// <summary>
+/// Request body backed by a parsed <see cref="JsonNode"/> — single parse, all patchers mutate the same DOM.
+/// </summary>
+public sealed record ChatCompletionRequestBodyNode(JsonNode? Node, string RawJson, ChatCompletionRequestMetadata Metadata);
 
 public sealed record ChatCompletionRequestMetadata(string? Model, bool Stream, ChatCompletionReasoningMetadata Reasoning)
 {

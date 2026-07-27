@@ -110,6 +110,89 @@ public static class ReasoningRequestPatcher
         return InjectEffort(requestJson, selectedEffort);
     }
 
+    /// <summary>
+    /// Normalizes reasoning on an already-parsed <paramref name="node"/>, mutating it in place.
+    /// This avoids redundant parse/serialize cycles when chained with other patchers.
+    /// </summary>
+    public static ReasoningPatchResult TryNormalizeInPlace(
+        JsonNode node,
+        ChatCompletionReasoningMetadata reasoning,
+        bool supportsReasoning,
+        IReadOnlyList<string> allowedEfforts,
+        string? defaultEffort = null)
+    {
+        var normalizedAllowed = NormalizeAllowedEfforts(allowedEfforts);
+        var normalizedDefault = NormalizeOrNull(defaultEffort);
+        if (normalizedDefault is not null && normalizedAllowed.Count > 0
+            && !normalizedAllowed.Contains(normalizedDefault, StringComparer.Ordinal))
+        {
+            normalizedDefault = null;
+        }
+
+        if (!reasoning.HasReasoningEffort && !reasoning.HasReasoningObject)
+        {
+            if (supportsReasoning && normalizedDefault is not null)
+            {
+                InjectEffortInPlace(node, normalizedDefault);
+            }
+            return ReasoningPatchResult.InPlaceSuccess();
+        }
+
+        if (reasoning.HasUnsupportedMaxTokens || reasoning.HasUnsupportedEnabled)
+        {
+            return ReasoningPatchResult.Error(
+                ErrorCodes.UnsupportedReasoning,
+                "reasoning.max_tokens/enabled not supported yet, use reasoning.effort");
+        }
+
+        var flatEffort = NormalizeOrNull(reasoning.ReasoningEffort);
+        var nestedEffort = NormalizeOrNull(reasoning.ReasoningObjectEffort);
+
+        if (flatEffort is not null && nestedEffort is not null && !string.Equals(flatEffort, nestedEffort, StringComparison.Ordinal))
+        {
+            return ReasoningPatchResult.Error(
+                ErrorCodes.ConflictingParameters,
+                "reasoning_effort and reasoning.effort must match");
+        }
+
+        var selectedEffort = flatEffort ?? nestedEffort;
+        if (selectedEffort is null)
+        {
+            if (supportsReasoning && normalizedDefault is not null)
+            {
+                InjectEffortInPlace(node, normalizedDefault);
+            }
+            return ReasoningPatchResult.InPlaceSuccess();
+        }
+
+        if (!supportsReasoning)
+        {
+            return ReasoningPatchResult.Error(
+                ErrorCodes.UnsupportedReasoning,
+                "Model does not support reasoning");
+        }
+
+        if (!normalizedAllowed.Contains(selectedEffort, StringComparer.Ordinal))
+        {
+            if (normalizedDefault is not null)
+            {
+                InjectEffortInPlace(node, normalizedDefault);
+                return ReasoningPatchResult.InPlaceSuccess();
+            }
+
+            var allowedList = normalizedAllowed.Count == 0
+                ? "none configured"
+                : string.Join(", ", normalizedAllowed);
+
+            return ReasoningPatchResult.Error(
+                ErrorCodes.UnsupportedReasoningEffort,
+                $"Model supports reasoning efforts: {allowedList}");
+        }
+
+        InjectEffortInPlace(node, selectedEffort);
+        return ReasoningPatchResult.InPlaceSuccess();
+    }
+
     private static ReasoningPatchResult InjectEffort(string requestJson, string effort)
     {
         try
@@ -127,6 +210,15 @@ public static class ReasoningRequestPatcher
         catch (JsonException)
         {
             return ReasoningPatchResult.Success(requestJson);
+        }
+    }
+
+    private static void InjectEffortInPlace(JsonNode node, string effort)
+    {
+        if (node is JsonObject obj)
+        {
+            obj.Remove("reasoning");
+            obj["reasoning_effort"] = effort;
         }
     }
 
@@ -152,12 +244,14 @@ public static class ReasoningRequestPatcher
 
 public sealed record ReasoningPatchResult(
     bool IsSuccess,
-    string PatchedJson,
+    string? PatchedJson,
     string? ErrorCode = null,
     string? ErrorMessage = null)
 {
     public static ReasoningPatchResult Success(string patchedJson) => new(true, patchedJson);
 
-    public static ReasoningPatchResult Error(string errorCode, string errorMessage, string requestJson) =>
+    public static ReasoningPatchResult InPlaceSuccess() => new(true, null);
+
+    public static ReasoningPatchResult Error(string errorCode, string errorMessage, string? requestJson = null) =>
         new(false, requestJson, errorCode, errorMessage);
 }

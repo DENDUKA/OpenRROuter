@@ -11,10 +11,6 @@ namespace OpenRussiaRouter.WebApp.Services.Markup;
 /// </summary>
 public static class MarkdownRenderer
 {
-    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
-        .UseAdvancedExtensions()
-        .Build();
-
     /// <summary>
     /// Strict pipeline: raw HTML is escaped by Markdig at parse time instead of being scrubbed
     /// afterwards by regex. The regex pass below is a scrubber, not an HTML parser, so it cannot
@@ -45,7 +41,7 @@ public static class MarkdownRenderer
             return string.Empty;
         }
 
-        var html = global::Markdig.Markdown.ToHtml(markdown, Pipeline);
+        var html = global::Markdig.Markdown.ToHtml(markdown, StrictPipeline);
         return Sanitize(html);
     }
 

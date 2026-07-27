@@ -4,8 +4,10 @@
 > `/add-task` (добавить) и `/start-task` (взять в работу в отдельном агенте).
 > Файл коммитится в git — это общее состояние бэклога, а не локальный черновик.
 
-<!-- Формат одной задачи (легенду не удалять):
-## T-NNN — <заголовок>
+<!-- Формат одной задачи (легенду не удалять).
+Идентификатор — <PREFIX>-NNN. Каждая крупная задача берёт свой префикс и свою нумерацию
+с 001, чтобы несвязанные пачки не смешивались: T- — аудит репозитория, VS- — сессии визитов.
+## <PREFIX>-NNN — <заголовок>
 - status: todo | in_progress | done | blocked
 - priority: low | medium | high
 - created:  <ISO8601>
@@ -19,6 +21,12 @@
 > 65 задач: P0 (T-001..T-007) — критично, P1 (T-008..T-020) — высокий,
 > P2 (T-021..T-053) — средний, P3 (T-054..T-065) — низкий.
 > Рекомендуемый порядок: T-002+T-003 → T-001,T-004,T-010,T-029 → T-005,T-006 → T-007+T-008+T-018.
+
+> Источник: схлопывание визитов в сессии (`/admin/sessions`), 2026-07-28.
+> План — `C:\Users\denis\.claude\plans\admin-visitors-lucky-hickey.md` (там же DDL и SQL компактора).
+> 10 задач: VS-001..VS-010.
+> Порядок: VS-001 → VS-002 → VS-003 → VS-004 (критический путь); параллельно
+> VS-005 → VS-006 → VS-007 и VS-008; VS-009 после VS-004; VS-010 последней.
 
 ---
 
@@ -114,33 +122,42 @@
 - desc: `AuthService/Infrastructure/Security/Sha256SecretHasher.cs:17`. Один хешер применяется и к API-ключам (36 байт энтропии — ок), и к 6-значным кодам из `EmailVerificationService.cs:77`. Пространство 10^6 — при утечке дампа `auth.password_resets` радужная таблица считается за миллисекунды → захват аккаунтов через сброс пароля. Фикс: PBKDF2 для кодов (`Pbkdf2PasswordHasher` уже есть) либо HMAC с серверным ключом / привязка `user_id` как соли.
 
 ## T-013 — XSS в описаниях моделей: markdown-пайплайн пропускает сырой HTML
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:10:00+04:00
 - desc: `WebApp/Services/Markup/MarkdownRenderer.cs:14-16, 48`; вывод — `Pages/ModelDetails.cshtml:70`. У `Pipeline` нет `DisableHtml()` (в отличие от соседнего `StrictPipeline:23`), защищает только regex-скраббер, требующий пробела перед атрибутом — `<div/onclick=alert(1)>` и entity-кодированный `javascript:` проходят. Источник — описания из OpenRouter (сторонний фид), рендерятся анонимным посетителям. Фикс: `DisableHtml()` и в `Render()`, либо настоящий санитайзер (HtmlSanitizer/AngleSharp).
 
 ## T-014 — SVG-логотип провайдера отдаётся без nosniff, content-type берётся от клиента
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:15:00+04:00
 - desc: `WebApp/Controllers/PublicProviderLogoController.cs:21-24` + `Pages/Admin/Providers.cshtml.cs:101-117`. При загрузке валидируется только клиентский `ContentType`, `image/svg+xml` разрешён, содержимое не проверяется. На отдаче нет `X-Content-Type-Options: nosniff` — в отличие от соседних `PublicToolLogoController.cs:23` и `PublicToolImageController.cs:27`. SVG со скриптом выполняется в origin приложения. Фикс: `nosniff` + `Content-Disposition: inline`, тип определять по magic bytes.
 
 ## T-015 — Двойная запись ответа при исчерпании нод (non-stream путь)
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T12:00:00+04:00
+- completed: 2026-07-27T12:10:00+04:00
 - desc: `ChatCompletionHandler.cs:55-65`, `ImageGenerationHandler.cs:50-59`, `TextToSpeechHandler.cs:67-76`. `AuthorizeAndAcquireLeaseAsync` при `lease == null` уже сам записал 503 (`GatewayPipeline.cs:85`), поток отфлашен → `HasStarted = true`. Присвоение `StatusCode` кидает `InvalidOperationException`, ловится внешним catch. Клиент получает generic 503 вместо реальной ошибки ноды + ложный warning в логах на каждом failover. Стриминговый путь этого лишён (`PassThroughErrorAsync` проверяет `HasStarted`). Фикс: проверка `HasStarted` перед записью либо флаг `suppressErrorWrite`.
 
 ## T-016 — Тело запроса пересериализуется 3-5 раз за попытку ретрая
-- status: todo
+- status: done
+- completed: 2026-07-27T23:59:00+04:00
 - priority: high
 - created: 2026-07-26T19:30:00Z
 - desc: `ChatCompletionHandler.cs:37, 69, 89, 228, 248-252`. `ReadBodyAsync` читает тело в `string` (LOH на длинном контексте), далее на КАЖДОЙ итерации ретрая `SseRequestPatcher.PatchModel`, `ReasoningRequestPatcher.InjectEffort`, `GeminiSchemaPatcher`, `InjectStreamOptions` — каждый делает свой `JsonNode.Parse` + `ToJsonString`. До 5 полных парсов мегабайтного JSON на запрос, ×5 при `MaxRouterAttempts`. Фикс: один `JsonNode` в `ReadBodyAsync`, все патчи к одному DOM, одна сериализация.
 
 ## T-017 — Полная реавторизация Auth+Billing на каждой попытке ретрая
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:15:00+04:00
 - desc: `ChatCompletionHandler.cs:51, 216` → `GatewayPipeline.cs:49, 57`. `AuthorizeAndAcquireLeaseAsync` вызывается внутри `while(true)` и всегда делает `AuthenticateAsync` + `CheckBalanceAndModelAsync`, хотя от ноды зависит только `SelectRouterNodeAsync`. При 5 попытках — 10 лишних gRPC round-trip'ов. Фикс: разделить на `AuthorizeAsync` (один раз до цикла) и `AcquireLeaseAsync(excluded)` (в цикле). Это мемоизация внутри одного запроса, НЕ кеш между запросами.
 
 ## T-018 — SelectRouterNode читает всю таблицу нод на каждый чат-запрос
@@ -151,13 +168,17 @@
 - desc: `RouterControlPlaneService.cs:100-133`. На каждый запрос: DELETE протухших лизов + `ListNodesAsync(1000)` + материализация в `List` + цепочка `Where/OrderBy` + `UpsertNodeAsync` + `AddLeaseAsync` — 4 round-trip'а в Postgres, плюс decimal-деление в сортировке. Фикс: выбор ноды одним SQL с `order by ... limit 1 for update skip locked` и инкрементом в том же запросе (закрывает и T-007); метаданные нод — in-memory снапшот по паттерну `CollectorSnapshotStore`, обновляемый воркером раз в 5-10 с. ВАЖНО: в снапшот НЕЛЬЗЯ класть `in_flight_requests` — это мутабельный счётчик, иначе кеш законсервирует гонку T-007.
 
 ## T-019 — Лейбл client_ip в Prometheus-счётчике: неограниченная кардинальность
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T12:00:00+04:00
+- completed: 2026-07-27T12:05:00+04:00
 - desc: `ApiGateway/Infrastructure/Startup/VisitorMetricsMiddleware.cs:59-67`. `orr_http_requests_total` содержит `client_ip` и пишется на каждый запрос публичного эндпоинта; каждый новый IP создаёт временную серию, живущую в памяти процесса до перезапуска (`Counter<long>` в OTel не вытесняется) → OOM гейтвея и взорванный Prometheus под ботовым трафиком. Прямо противоречит правилу из корневого CLAUDE.md про кардинальность `LimitMetrics`. Фикс: убрать `client_ip`, оставить `method/path/status`.
 
 ## T-020 — Рассылка блокирует HTTP-запрос навсегда
-- status: todo
+- status: done
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:15:00+04:00
 - priority: high
 - created: 2026-07-26T19:30:00Z
 - desc: `WebApp/Email/EmailBroadcastService.cs:43`, `EmailDispatchQueue.cs:14-19`, `Pages/Admin/Broadcast.cshtml.cs:42`. `EnqueueBatchAsync` пишет по одному в `Channel.CreateBounded(10_000, FullMode = Wait)` и вызывается без токена отмены (`ct = default`). Воркер дренит ~1 msg/s — при >10 000 адресатов или упавшем транспорте POST виснет на часы и не отменяется при закрытии вкладки. Всё в памяти теряется при рестарте. Фикс: прокинуть `HttpContext.RequestAborted`, постановку батча — в фон/outbox-таблицу.
@@ -165,9 +186,10 @@
 ---
 
 ## T-021 — count(*) по всей ledger_entries на каждой странице /admin/topups
-- status: todo
+- status: in_progress
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
 - desc: `BillingRepository.cs:49`. Индекса по `type` нет, таблица растёт на строку с каждого API-запроса → seq scan + offset-пагинация (`:56`). Фикс: миграция `create index ... on billing.ledger_entries (type, created_at_utc desc)` + заменить точный `count(*)` на keyset-курсор или кешируемое приближение.
 
 ## T-022 — Нет составного индекса под фактический ORDER BY в ListUsageAsync
@@ -465,3 +487,68 @@
 - started: 2026-07-27T22:00:00+04:00
 - completed: 2026-07-27T22:05:00+04:00
 - desc: `ControlPlaneRepository.cs:43-48` — комментарий утверждает, что у лиз есть FK с каскадом, но в `db/migrations/control/001_initial.sql` у `control.router_leases.node_id` каскада нет. При живых лизах DELETE падает `PostgresException`, не ловится в `GrpcRouterControlPlaneService.cs:159` (там только `KeyNotFoundException`) — админка получает gRPC `Unknown`. `InMemoryControlPlaneRepository.cs:25-27` лизы удаляет, поэтому unit-тесты кейс не ловят. Фикс: миграция с `on delete cascade` либо явное удаление лиз в одной транзакции; комментарий привести в соответствие.
+
+---
+
+## VS-001 — Миграция: таблица analytics.visit_sessions
+- status: done
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- started: 2026-07-27T23:38:50+04:00
+- completed: 2026-07-27T23:41:30+04:00
+- desc: Новый файл `db/migrations/analytics/003_visit_sessions.sql` (`002_site_visits.sql` не трогать — применённые миграции иммутабельны). Катает BillingService автоматически, каталог сканируется целиком, правки в его `Program.cs` не нужны. DDL — в разделе «Технические детали» плана. Колонки: `id`, `visitor_hash`, `distinct_id`, `started_at_utc`, `ended_at_utc`, `duration_seconds`, `page_view_count`, `entry_path`, `exit_path`, `referrer_host`, `referrer_kind`, `utm_source/medium/campaign`, `device_class`, `is_authenticated`, `pages jsonb not null default '[]'::jsonb`, `environment`, `created_at_utc`; check-констрейнты `ended_at_utc >= started_at_utc` и `page_view_count > 0`. Индексы: **unique (visitor_hash, started_at_utc)** — он же арбитр `on conflict`; `(started_at_utc)`; partial `(started_at_utc) where device_class <> 'bot'`; partial `(distinct_id) where distinct_id is not null`. Новых индексов на `site_visits` НЕ добавлять: существующий `ix_analytics_site_visits_visitor_time` покрывает оба запроса компактора, а сама таблица после включения фичи держит ~35 минут трафика. GIN на `pages` не нужен — внутри jsonb никто не ищет.
+
+## VS-002 — Чистая логика сессионизации и агрегации + unit-тесты
+- status: in_progress
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- started: 2026-07-27T23:41:42+04:00
+- desc: `src/OpenRussiaRouter.BuildingBlocks/Analytics/`: `CompactableVisit` (DTO строки визита), `VisitSessionizer.Split(IEnumerable<CompactableVisit>, TimeSpan gap, bool splitOnUtcDayBoundary = true)` → список слайсов, `VisitSessionAggregator.Aggregate(slice, maxPages)` → `VisitSessionRow`. Граница сессии: разрыв **строго больше** gap ИЛИ смена календарных суток UTC (второе обязательно — иначе бот, стучащийся раз в 5 минут, даёт вечно открытую сессию, которая каждый прогон пересчитывается и растит `pages` без предела). Контракт зафиксировать в XML-doc и тестах: вход сортируется внутри метода по `(OccurredAt, Id)`; разрыв **ровно** gap — та же сессия; сутки сравниваются по `OccurredAt.UtcDateTime.Date`; пустой вход → пустой список. Агрегация: `entry/exit_path` — первый/последний по времени, `utm_*` — **первый непустой**, `distinct_id` — **последний непустой** (посетитель мог залогиниться в середине сессии), `is_authenticated` = OR, `referrer_host/kind`/`device_class`/`environment` — из первого визита, `duration_seconds` = end − start, `pages` обрезается до `MaxPagesPerSession`, а `page_view_count` считается по ВСЕМ визитам (не по обрезанным). Тесты `tests/OpenRussiaRouter.BuildingBlocks.Tests/Analytics/VisitSessionizerTests.cs` и `VisitSessionAggregatorTests.cs` — БД не нужна; кейсы в разделе «Verification» плана (в т.ч. пауза ровно 30:00 → одна сессия, несортированный вход даёт тот же результат, переход через 00:00 UTC).
+
+## VS-003 — VisitSessionCompactor: транзакция, advisory-лок, insert+delete
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `src/OpenRussiaRouter.BuildingBlocks/Analytics/VisitSessionCompactor.cs`, метод `CompactOnceAsync(DateTimeOffset nowUtc, string? after, CancellationToken)` → `CompactionResult(int Sessions, int DeletedVisits, string? LastVisitorHash)`. Cutoff = `now - (SessionGap + SafetyLag)`; SafetyLag закрывает задержку очереди и перекос часов реплик WebApp (`occurred_at_utc` ставит приложение, а не `default now()`). Одна итерация = одна транзакция на одном соединении: `pg_try_advisory_xact_lock(@ns, @id)` (константы в C#, не `hashtext()` — он нестабилен между мажорами; **только xact-версия**, `pg_advisory_lock` на пуле Npgsql течёт) → выбор батча `visitor_hash` с keyset `visitor_hash > @after` (иначе посетитель с вечно открытой сессией занимает начало батча и прогресса нет) → выборка ВСЕХ строк этих посетителей, включая свежее cutoff (разрыв между последней старой и первой новой строкой решает, закрыта ли хвостовая сессия; фильтр по cutoff здесь порезал бы живые сессии на фрагменты) → `VisitSessionizer`+`Aggregator` в C# → оставить только сессии с `ended_at_utc < cutoff` → array-unnest insert с `on conflict (visitor_hash, started_at_utc) do update` (merge, НЕ `do nothing`: при `do nothing` поздний флаш молча потерялся бы, а `delete` всё равно отработал) → `delete from analytics.site_visits where id = any(@ids)`. Гвард `select to_regclass('analytics.visit_sessions')`: миграция не применена → один warning и выход, а не исключение каждый тик (fail-open контракт всей `Analytics/`). SQL целиком — в разделе «Технические детали» плана. Тесты — `tests/OpenRussiaRouter.BuildingBlocks.Tests/Analytics/VisitSessionCompactorPostgresTests.cs` на Testcontainers (пакет `Testcontainers.PostgreSql` в этом тест-проекте уже есть, паттерн «Docker нет → тихо return» — см. `PostgresProductAnalyticsTests`); кейсы — в «Verification» плана.
+
+## VS-004 — Воркер, опции и регистрация в BillingService
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `VisitSessionCompactionWorker : BackgroundService` рядом с компактором; скелет — как у `WebApp/Services/Payments/PaymentReconciliationWorker.cs` (startup-задержка, `while` + `catch (OperationCanceledException) { break; }` + `catch (Exception) → LogError`, `Task.Delay(interval)`), внутри — цикл до `MaxIterationsPerRun` или пока `Sessions == 0`, с переносом `LastVisitorHash` в `@after`. Каждая итерация — **своя короткая транзакция**: длинная держала бы `xmin` и блокировала autovacuum на `site_visits`. Опции — вложенный класс `Compaction` в существующем `SiteVisitOptions` (новую корневую секцию не плодить): `Enabled=true`, `IntervalMinutes=5`, `SessionGapMinutes=30`, `SafetyLagMinutes=5`, `VisitorBatchSize=500`, `MaxIterationsPerRun=20`, `MaxPagesPerSession=200`, `SplitOnUtcDayBoundary=true`. Новый метод `AddSiteVisitCompaction(IServiceCollection, IConfiguration)` в `SiteVisitServiceCollectionExtensions.cs` — **отдельно от `AddSiteVisitTracking`** (тот WebApp-only, вызывается в каждой реплике); гейт тот же: Postgres-синк сконфигурирован (`ProductAnalytics.Enabled` + `Provider == "Postgres"` + непустой `ConnectionString`) и `Compaction.Enabled`. Вызов — в `BillingService/Infrastructure/Startup/Startup.cs` рядом с `AddProductAnalytics`: Billing владеет БД `orr_analytics`, катает её миграции, `NpgsqlDataSource` аналитической БД у него уже зарегистрирован, и он идёт в одной реплике. Секцию `SiteVisits` добавить в `BillingService/appsettings.json`. Тест регистрации по образцу `ProductAnalyticsRegistrationTests`: без синка / при `Enabled=false` hosted service не регистрируется. Первый прод-прогон — с уменьшенным `VisitorBatchSize` и наблюдением за размером таблицы и autovacuum: накопленная история схлопывается за часы, а не одним махом.
+
+## VS-005 — VisitSessionReader: read-side для админки
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `src/OpenRussiaRouter.WebApp/Services/SiteStats/VisitSessionReader.cs` — зеркалит `SiteVisitReader.cs`: nullable `NpgsqlDataSource` + `UserPseudonymizer`, свойство `IsEnabled`, тот же disabled-режим (пустой результат вместо исключения, страница рисует баннер). `QueryAsync(VisitSessionQuery)` → `VisitSessionQueryResult`: фильтры `userId` (→ `distinct_id` → свежайший `visitor_hash`), `visitorHash`, `from`/`to` по `started_at_utc`, `includeBots` (по умолчанию `and device_class <> 'bot'`), пагинация 50, сортировка `started_at_utc desc`; `pages` в списке **не выбирать**, только агрегатные колонки. `GetByIdAsync(long id)` → `VisitSessionDetails` с распарсенным `pages` (`System.Text.Json`). DTO `VisitSessionEntry.cs`/`VisitSessionQuery.cs` рядом по образцу `VisitHistoryEntry.cs`. Регистрация — `AddSingleton<VisitSessionReader>` в `WebApp/Program.cs` фабрикой с nullable-зависимостями, ровно как уже сделано для `SiteVisitReader`.
+
+## VS-006 — Страница /admin/sessions: список сессий
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `WebApp/Pages/Admin/Sessions.cshtml(.cs)` — голый `@page`, маршрут выводится из пути файла → `/admin/sessions` (кебаб-кейс сам не появится). Layout `_AdminLayout`, `[Authorize(Roles = "Admin")]`, наследует `PageModelBase`. Карточка фильтра (User ID / Visitor hash / From / To / чекбокс «Show bots» — боты схлопываются наравне со всеми, но по умолчанию скрыты), пагинация и хелперы `BuildPageUrl`/`HasActiveFilter`/`ParseDate` — переносятся из `Pages/Admin/Visitors.cshtml(.cs)` как есть. Колонки: `Started | Duration | Visitor | Entry → Exit | Pages | Source / UTM | Device | Auth`; строка кликабельна на `/admin/sessions/{id}`. Имена пользователей по `distinct_id` — тем же способом, что `VisitorsModel.BuildUserNameMapAsync`. Пункт `Sessions` в сайдбаре — `Pages/Shared/_AdminLayout.cshtml` рядом с существующим `Visitors` (~строка 111). Локализация НЕ нужна: страницы админки в этом проекте написаны английскими литералами, `.resx` для них не заводятся. Тесты — `tests/OpenRussiaRouter.WebApp.Tests`, по образцу `VisitorsPageTests.cs` (ParseDate / HasActiveFilter / BuildPageUrl / арифметика пагинации).
+
+## VS-007 — Страница /admin/sessions/{id}: детализация сессии
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `WebApp/Pages/Admin/SessionDetails.cshtml(.cs)` с **явной** директивой `@page "/admin/sessions/{id:long}"` (параметры маршрута сами не появятся). Шапка с параметрами сессии (visitor_hash, время начала/конца, длительность, устройство, источник, UTM, auth + имя пользователя) и таблица `pages`: время, `+мм:сс` от начала сессии, путь. Ссылки «все сессии этого посетителя» (`/admin/sessions?visitorHash=`) и на сырой хвост (`/admin/visitors?visitorHash=`). Если `page_view_count > pages.Length` — подпись «показаны первые N из M» (обрезка детектируется именно так, отдельной колонки-флага нет). Несуществующий id → `NotFound()`, а не 200 с пустой страницей (тот же дефект, что чинила T-064).
+
+## VS-008 — Фолбэк резолва visitor_hash в SiteVisitReader
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: `WebApp/Services/SiteStats/SiteVisitReader.cs`, `FindVisitorHashByDistinctIdAsync` ищет только в `analytics.site_visits` — после включения компакта `/admin/visitors?userId=` перестанет находить посетителя уже через ~40 минут, то есть ломается главный сценарий страницы «кто это был до регистрации». Добавить фолбэк на `analytics.visit_sessions` (`where distinct_id = :distinctId order by started_at_utc desc limit 1`), если в `site_visits` ничего не нашлось. Зависит от VS-001.
+
+## VS-009 — Перецелить панели Grafana на visit_sessions
+- status: todo
+- priority: medium
+- created: 2026-07-28T00:30:00Z
+- desc: Секция «Посетители сайта» дашборда `ORR Users`, **одинаковые правки в двух файлах**: `deploy/compose/grafana/dashboards/users.json` и `infra/kustomize/base/infra/dashboards/users.json` (10 панелей, все сейчас читают `analytics.site_visits` и после компакта показывают только последние ~35 минут). Замены: «Уникальных посетителей» — `count(distinct visitor_hash)` по `started_at_utc`; «Просмотров страниц» и «Просмотры по дням» — `sum(page_view_count)` вместо `count(*)`; «Доля залогиненных» — `distinct visitor_hash where distinct_id is not null` по `visit_sessions`; «Доля ботов» — `sum(page_view_count) filter (where device_class='bot') / sum(page_view_count)`; «Новые/вернувшиеся» и «Посетители и регистрации по дням» — `date_trunc('day', started_at_utc)`; «Каналы привлечения» / «Страницы входа» / «UTM-метки» — `distinct on (visitor_hash) ... order by visitor_hash, started_at_utc` по `visit_sessions`, поля `entry_path`/`referrer_kind`/`utm_*` берутся прямо из строки (дешевле, чем сейчас: агрегат уже посчитан). В `description` секции — там уже есть блок про ограничения NAT/XFF — дописать, что последние ~35 минут ещё не схлопнуты и в панели не попадают (метрики дневные, для них незаметно). Делать после VS-004, когда в таблице появятся данные.
+
+## VS-010 — Документация и запись известных пробелов
+- status: todo
+- priority: low
+- created: 2026-07-28T00:30:00Z
+- desc: `BuildingBlocks/CLAUDE.md` — в раздел «Трафик сайта» дописать компактор: правило границы сессии, где живёт воркер и почему в BillingService, ключи `SiteVisits:Compaction:*`. `WebApp/CLAUDE.md` — раздел про `/admin/sessions` и `/admin/sessions/{id}`, оговорка что `/admin/visitors` теперь показывает только несхлопнутый хвост, строки в карте маршрутов. `BillingService/CLAUDE.md` — воркер компакта в списке hosted services. Корневой `CLAUDE.md` — новые страницы в карте WebApp; в разделе «Лимиты, метрики, продуктовая аналитика» — что `site_visits` теперь эфемерна, а долгоживущее хранилище трафика это `analytics.visit_sessions`. В `TODO.md` — два пункта: (1) у `analytics.visit_sessions` нет retention; (2) `IProductAnalyticsErasure.PurgeUserAsync` её не чистит, как сегодня не чистит и `site_visits` — пре-существующий пробел, в объём этой работы не входит. Туда же записать известное искажение: флаш очереди с задержкой больше `SafetyLag` вставит визит в уже схлопнутую сессию — при совпадении с `started_at_utc` домержится через `on conflict`, иначе появится сессия-фрагмент из одного просмотра (документировать рядом с оговорками про NAT и `X-Forwarded-For`).

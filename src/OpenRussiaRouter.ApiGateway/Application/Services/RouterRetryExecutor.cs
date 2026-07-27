@@ -41,20 +41,27 @@ public sealed class RouterRetryExecutor(
         Func<GatewayAuthorizedContext, RouterProxyResponse, DateTimeOffset, DateTimeOffset, CancellationToken, Task> onSuccess,
         CancellationToken cancellationToken)
     {
+        // Шаг 1: аутентификация + проверка баланса — один раз до retry-цикла.
+        var authorization = await pipeline.AuthorizeAsync(
+            context, model, requestId, cancellationToken);
+        if (authorization is null)
+            return;
+
         HashSet<string>? excludedNodes = null;
         RouterProxyResponse? lastResponse = null;
         var attempts = 0;
 
         while (true)
         {
-            var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(
-                context, model, requestId, excludedNodes, cancellationToken);
+            // Шаг 2: выбор ноды — на каждой итерации с учётом исключённых.
+            var auth = await pipeline.AcquireLeaseAsync(
+                context, authorization, requestId, excludedNodes, cancellationToken);
 
-            // Если auth == null на первой попытке — pipeline уже записал ошибку в ответ.
-            // На последующих — ноды кончились.
+            // Если auth == null — ноды кончились; если был
+            // последний ответ от ноды — пытаемся отдать его клиенту.
             if (auth is null)
             {
-                if (lastResponse != null)
+                if (lastResponse != null && !context.Response.HasStarted)
                 {
                     context.Response.StatusCode = lastResponse.StatusCode;
                     context.Response.ContentType = lastResponse.ContentType;
@@ -140,7 +147,7 @@ public sealed class RouterRetryExecutor(
 
                 if (++attempts >= MaxRouterAttempts)
                 {
-                    if (lastResponse != null)
+                    if (lastResponse != null && !context.Response.HasStarted)
                     {
                         context.Response.StatusCode = lastResponse.StatusCode;
                         context.Response.ContentType = lastResponse.ContentType;

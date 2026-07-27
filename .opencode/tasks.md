@@ -55,9 +55,10 @@
 - desc: `WebApp/Pages/Admin/Index.cshtml.cs:84, 88`. `ToString("F2")` без `InvariantCulture`; `UseRequestLocalization` ставит `CurrentCulture = ru` → сохраняется `"1,00"`. Читается через `GetDecimalSettingAsync:124` и `BillingProvider.cs:877` с `NumberStyles.Number, InvariantCulture` → запятая как разделитель тысяч → `1.00` становится `100`, бонус `20%` → `2000%`. Фикс: `InvariantCulture` в оба `ToString("F2")`; на чтении `NumberStyles.Float` без `AllowThousands`. ВАЖНО: проверить прод — не испорчены ли уже значения в `billing.platform_settings`.
 
 ## T-005 — Статус usage_missing нарушает CHECK-констрейнт, usage-события теряются
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T12:19:43Z
 - desc: `ChatCompletionHandler.cs:126, 308` и `TextToSpeechHandler.cs:116` пишут `status = "usage_missing"`, а `db/migrations/gateway/002_usage_outbox_status_check.sql:32` разрешает только `'pending','processing','completed','failed'`. INSERT падает, исключение глотается в `RecordUsageAsync` (`ChatCompletionHandler.cs:415`), клиент получает 200, событие исчезает. Статус уже знают `BillingApplicationService.cs:800` и `Admin/Requests.cshtml.cs:178` — рассинхрон схемы и кода. Фикс: новая миграция `db/migrations/gateway/003_*.sql`, добавляющая `'usage_missing'` в констрейнт. Существующие миграции не редактировать.
 
 ## T-006 — Rate-limit платёжного вебхука обходится подделкой X-Forwarded-For

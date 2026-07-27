@@ -33,7 +33,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
 
         var ev = CreateEvent("req-1");
@@ -45,6 +45,32 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
         count.Should().Be(1);
     }
 
+    [Theory]
+    [Trait("Category", "PostgreSQL")]
+    [InlineData("pending")]
+    [InlineData("processing")]
+    [InlineData("completed")]
+    [InlineData("failed")]
+    [InlineData("usage_missing")]
+    public async Task EnqueueAsync_AllowedStatus_Persists(string status)
+    {
+        if (_database is null)
+        {
+            return;
+        }
+
+        _database.ApplyMigrations();
+        var repo = CreateRepository();
+        await repo.EnqueueAsync(CreateEvent("req-" + status) with { Status = status }, CancellationToken.None);
+
+        using var connection = new NpgsqlConnection(_database.ConnectionString);
+        var persisted = await connection.ExecuteScalarAsync<string>(
+            "select status from gateway.usage_outbox where request_id = @RequestId;",
+            new { RequestId = "req-" + status });
+
+        persisted.Should().Be(status);
+    }
+
     [Fact]
     [Trait("Category", "PostgreSQL")]
     public async Task ClaimPendingAsync_NotReady_ReturnsEmpty()
@@ -54,7 +80,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
         await repo.EnqueueAsync(CreateEvent("req-1"), CancellationToken.None);
 
@@ -73,7 +99,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
         await repo.EnqueueAsync(CreateEvent("req-1"), CancellationToken.None);
 
@@ -93,7 +119,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
 
         var ev = CreateEvent("req-1") with { Usage = new TokenUsage(11, 7, 3) };
@@ -118,7 +144,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
         await repo.EnqueueAsync(CreateEvent("req-1"), CancellationToken.None);
 
@@ -138,7 +164,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
         await repo.EnqueueAsync(CreateEvent("req-1"), CancellationToken.None);
 
@@ -166,7 +192,7 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             return;
         }
 
-        _database.ApplyMigration();
+        _database.ApplyMigrations();
         var repo = CreateRepository();
         await repo.EnqueueAsync(CreateEvent("req-1"), CancellationToken.None);
 
@@ -236,16 +262,20 @@ public sealed class PostgresUsageOutboxRepositoryTests : IAsyncLifetime
             }
         }
 
-        public void ApplyMigration()
+        public void ApplyMigrations()
         {
             using var connection = new NpgsqlConnection(ConnectionString);
-            var migrationPath = Path.Combine(
+            var migrationDirectory = Path.Combine(
                 FindRepositoryRoot(),
                 "db",
                 "migrations",
-                "gateway",
-                "001_usage_outbox.sql");
-            connection.Execute(File.ReadAllText(migrationPath));
+                "gateway");
+
+            foreach (var migrationPath in Directory.EnumerateFiles(migrationDirectory, "*.sql")
+                         .OrderBy(static path => path, StringComparer.Ordinal))
+            {
+                connection.Execute(File.ReadAllText(migrationPath));
+            }
         }
 
         public async ValueTask DisposeAsync()

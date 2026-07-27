@@ -14,6 +14,67 @@ public sealed class AuthRepositoryPostgresTests
 {
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task ListUsersAsync_UsesCreatedAtAndIdAsTheCursorKey()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyAuthMigration();
+        database.TruncateAuth();
+        var repository = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
+        var createdAt = DateTimeOffset.UtcNow;
+        var oldest = new UserAccount("z-user", "oldest@example.com", UserRole.User, null, createdAt);
+        var middle = new UserAccount("a-user", "middle@example.com", UserRole.User, null, createdAt.AddMinutes(1));
+        var newest = new UserAccount("m-user", "newest@example.com", UserRole.User, null, createdAt.AddMinutes(2));
+
+        await AddUserAsync(repository, oldest);
+        await AddUserAsync(repository, middle);
+        await AddUserAsync(repository, newest);
+
+        var firstPage = await repository.ListUsersAsync(limit: 2);
+        var secondPage = await repository.ListUsersAsync(limit: 2, afterUserId: firstPage.Items.Last().Id);
+
+        firstPage.Items.Select(user => user.Id).Should().Equal("m-user", "a-user");
+        secondPage.Items.Select(user => user.Id).Should().Equal("z-user");
+        firstPage.Items.Concat(secondPage.Items).Select(user => user.Id)
+            .Should().OnlyHaveUniqueItems().And.Equal("m-user", "a-user", "z-user");
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task ListApiKeysAsync_UsesCreatedAtAndIdAsTheCursorKey()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyAuthMigration();
+        database.TruncateAuth();
+        var repository = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
+        var createdAt = DateTimeOffset.UtcNow;
+        var user = new UserAccount("pagination-user", "pagination@example.com", UserRole.User, null, createdAt);
+        await AddUserAsync(repository, user);
+
+        await repository.AddApiKeyAsync(new ApiKey("z-key", user.Id, "oldest", "sk-or-oldest", "hash-oldest", createdAt));
+        await repository.AddApiKeyAsync(new ApiKey("a-key", user.Id, "middle", "sk-or-middle", "hash-middle", createdAt.AddMinutes(1)));
+        await repository.AddApiKeyAsync(new ApiKey("m-key", user.Id, "newest", "sk-or-newest", "hash-newest", createdAt.AddMinutes(2)));
+
+        var firstPage = await repository.ListApiKeysAsync(user.Id, limit: 2);
+        var secondPage = await repository.ListApiKeysAsync(user.Id, limit: 2, afterApiKeyId: firstPage.Items.Last().Id);
+
+        firstPage.Items.Select(key => key.Id).Should().Equal("m-key", "a-key");
+        secondPage.Items.Select(key => key.Id).Should().Equal("z-key");
+        firstPage.Items.Concat(secondPage.Items).Select(key => key.Id)
+            .Should().OnlyHaveUniqueItems().And.Equal("m-key", "a-key", "z-key");
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task UpdateUser_DisplayCurrency_PersistsAndReadsProfileFields()
     {
         await using var database = await PostgresTestDatabase.StartAsync();
@@ -198,5 +259,20 @@ public sealed class AuthRepositoryPostgresTests
         updated.FailedLoginCount.Should().Be(0);
         updated.LockedUntilUtc.Should().BeNull();
         (await repository.GetPasswordResetAsync(user.Id)).Should().BeNull();
+    }
+
+    private static async Task AddUserAsync(AuthRepository repository, UserAccount user)
+    {
+        var invite = new Invite(
+            $"invite-{user.Id}",
+            user.Email,
+            user.Role,
+            $"token-{user.Id}",
+            user.CreatedAtUtc.AddDays(1),
+            "admin-1",
+            user.CreatedAtUtc);
+        await repository.AddInviteAsync(invite);
+        invite.MarkUsed(user.CreatedAtUtc);
+        await repository.AddUserAndMarkInviteUsedAsync(user, invite);
     }
 }

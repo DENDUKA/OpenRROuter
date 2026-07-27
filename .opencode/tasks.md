@@ -85,9 +85,10 @@
 - desc: `RouterControlPlaneService.cs:180-188` + `ControlPlaneRepository.cs:138-152`. DELETE и UPDATE на разных соединениях без транзакции, вызывается на горячем пути `SelectRouterNodeAsync:100` с токеном клиентского запроса. Клиент отвалился между вызовами — лизы удалены, счётчик не уменьшен. Плюс `Distinct()` + `in_flight_requests - 1`: 10 протухших лизов на ноде уменьшают счётчик на 1. Фикс: DELETE+UPDATE одним CTE с `greatest(in_flight - c, 0)`; в фоне использовать `stoppingToken`, а не токен gRPC-вызова.
 
 ## T-009 — Сломанная keyset-пагинация в AuthRepository: пропуск и дублирование строк
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:27:34+04:00
 - desc: `AuthRepository.cs:109` и `:186`. Курсор фильтрует `where id > @AfterUserId` (по возрастанию), а сортировка — `order by created_at_utc desc, id desc`. Ключ курсора не совпадает с ключом сортировки → вторая страница возвращает произвольное подмножество. То же в `ListApiKeysAsync`. Фикс: `(created_at_utc, id) < (@AfterCreatedAt, @AfterId)` — как уже правильно сделано в `BillingRepository.ListUsageAsync:427`. Нужен тест на две страницы без пропусков и дублей.
 
 ## T-010 — Recovery-воркер игнорирует Payments:AutoReverseChargeback

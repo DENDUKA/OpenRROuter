@@ -5,6 +5,12 @@
 8080)** + HTTP `/health`. Layered: Domain → Application → Infrastructure. Своей HTTP-API,
 кроме health, нет.
 
+## Keyset pagination
+
+`ListUsersAsync` and `ListApiKeysAsync` accept an id-only cursor, but PostgreSQL resolves it to
+`(created_at_utc, id)` and compares that tuple lexicographically. This key must stay aligned with
+`order by created_at_utc desc, id desc`; the API-key cursor is also scoped to `user_id`.
+
 ## Bootstrap
 
 [Program.cs](Program.cs): `AddSeqLogging("auth-service")` → `AddOpenTelemetryMetrics(..., "Npgsql")` →

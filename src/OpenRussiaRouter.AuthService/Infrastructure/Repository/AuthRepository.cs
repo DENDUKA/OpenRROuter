@@ -106,7 +106,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         var afterCondition = "";
         if (afterUserId != null)
         {
-            afterCondition = " where id > @AfterUserId ";
+            afterCondition = " where row(created_at_utc, id) < (select created_at_utc, id from auth.users where id = @AfterUserId) ";
             parameters.Add("AfterUserId", afterUserId);
         }
 
@@ -183,7 +183,7 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         var afterCondition = "";
         if (afterApiKeyId != null)
         {
-            afterCondition = " and id > @AfterApiKeyId ";
+            afterCondition = " and row(created_at_utc, id) < (select created_at_utc, id from auth.api_keys where id = @AfterApiKeyId and user_id = @UserId) ";
             parameters.Add("AfterApiKeyId", afterApiKeyId);
         }
 

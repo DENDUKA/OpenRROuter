@@ -506,12 +506,14 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         }
     }
 
-    public Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
+    public Task<bool> HasUserHadPaidTopUpAsync(string userId, string? excludePaymentId = null, CancellationToken ct = default)
     {
         lock (_paymentSync)
         {
+            var excludeKey = excludePaymentId is null ? null : $"payment:{excludePaymentId}";
             var hasPaid = _ledgerByIdempotencyKey.Values
-                .Any(e => e.UserId == userId && e.IsUserPayment);
+                .Any(e => e.UserId == userId && e.IsUserPayment
+                    && (excludeKey is null || e.IdempotencyKey != excludeKey));
             return Task.FromResult(hasPaid);
         }
     }
@@ -644,7 +646,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             _payments[payment.Id] = payment;
             var ledger = _ledgerByIdempotencyKey.GetOrAdd($"payment:{payment.Id}", _ => new LedgerEntry(
                 Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.ExternalTopUp,
-                payment.CreditedUsd, $"payment:{payment.Id}", $"External payment {payment.Id}", nowUtc));
+                payment.CreditedUsd, $"payment:{payment.Id}", $"External payment {payment.Id}", nowUtc,
+                IsUserPayment: true));
             MarkEventProcessedUnsafe(paymentEvent, nowUtc);
             return Task.FromResult(new ConfirmOutcome(true, payment, ledger.Id, BalanceUnsafe(payment.UserId), null));
         }

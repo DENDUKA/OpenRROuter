@@ -99,6 +99,70 @@ public sealed class PaymentApplicationServiceTests
         (await service.GetBalanceAsync("user-1")).Amount.Should().Be(10);
     }
 
+    [Fact]
+    public async Task GrantFirstTopUpBonus_OnFirstConfirmedPayment_GrantsBonus()
+    {
+        // T-001 regression: confirmation inserts the ExternalTopUp ledger entry with is_user_payment=true
+        // BEFORE GrantFirstTopUpBonusAsync runs, so the "first paid top-up" check must exclude the
+        // current payment (idempotency_key = 'payment:{paymentId}') — otherwise the bonus is never granted.
+        var (service, _) = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        var first = await CreatePaymentWithBonus(service, "first-bonus-token", 20m, now);
+
+        var outcome = await service.ConfirmPaymentByProviderAsync(Paid(first, "first-paid-event"), now);
+        outcome.Confirmed.Should().BeTrue();
+
+        var grant = await service.GrantFirstTopUpBonusAsync(first.Id, now);
+
+        grant.Granted.Should().BeTrue();
+        grant.ErrorCode.Should().BeNull();
+        grant.LedgerEntryId.Should().NotBeNull();
+        // 10 (credited) + 2 (20% bonus) = 12
+        (await service.GetBalanceAsync("user-1")).Amount.Should().Be(12m);
+    }
+
+    [Fact]
+    public async Task GrantFirstTopUpBonus_OnSecondConfirmedPayment_DoesNotGrant()
+    {
+        var (service, _) = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        var first = await CreatePaymentWithBonus(service, "first-bonus-token", 20m, now);
+        await service.ConfirmPaymentByProviderAsync(Paid(first, "first-paid-event"), now);
+        (await service.GrantFirstTopUpBonusAsync(first.Id, now)).Granted.Should().BeTrue();
+
+        // Second payment for the same user — bonus must NOT be granted.
+        var second = await CreatePaymentWithBonus(service, "second-bonus-token", 20m, now);
+        await service.ConfirmPaymentByProviderAsync(Paid(second, "second-paid-event"), now);
+
+        var grant = await service.GrantFirstTopUpBonusAsync(second.Id, now);
+
+        grant.Granted.Should().BeFalse();
+        grant.ErrorCode.Should().Be("not_first_paid_top_up");
+        grant.LedgerEntryId.Should().BeNull();
+        // 10 (first) + 2 (first bonus) + 10 (second, no bonus) = 22
+        (await service.GetBalanceAsync("user-1")).Amount.Should().Be(22m);
+    }
+
+    [Fact]
+    public async Task GrantFirstTopUpBonus_IsIdempotent_PerPaymentId()
+    {
+        var (service, _) = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        var payment = await CreatePaymentWithBonus(service, "idempotent-token", 20m, now);
+        await service.ConfirmPaymentByProviderAsync(Paid(payment, "paid-event"), now);
+
+        var first = await service.GrantFirstTopUpBonusAsync(payment.Id, now);
+        var second = await service.GrantFirstTopUpBonusAsync(payment.Id, now);
+
+        first.Granted.Should().BeTrue();
+        // Re-delivery of the same payment must be a no-op (Granted=false, no error code, no second entry).
+        second.Granted.Should().BeFalse();
+        second.ErrorCode.Should().BeNull();
+        second.LedgerEntryId.Should().BeNull();
+        // Only one bonus entry credited.
+        (await service.GetBalanceAsync("user-1")).Amount.Should().Be(12m);
+    }
+
     private static (BillingApplicationService Service, InMemoryBillingRepository Repository) CreateService()
     {
         var repository = new InMemoryBillingRepository();
@@ -115,6 +179,10 @@ public sealed class PaymentApplicationServiceTests
 
     private static Task<Payment> CreatePayment(BillingApplicationService service, string token) =>
         service.CreatePaymentAsync("user-1", "mock", 10, "USD", 10, "USD", token, DateTimeOffset.UtcNow);
+
+    private static Task<Payment> CreatePaymentWithBonus(
+        BillingApplicationService service, string token, decimal bonusPercent, DateTimeOffset nowUtc) =>
+        service.CreatePaymentAsync("user-1", "mock", 10, "USD", 10, "USD", token, nowUtc, bonusPercent: bonusPercent);
 
     private static PaymentEventInput Paid(Payment payment, string eventId) =>
         new(payment.Provider, payment.ProviderPaymentId, payment.OrderId, "paid", payment.ProviderAmount,

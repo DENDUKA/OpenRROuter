@@ -101,7 +101,7 @@ public interface IBillingRepository
     Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default);
 
     Task<string?> HasPromo1EntryAsync(string userId, CancellationToken ct = default);
-    Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default);
+    Task<bool> HasUserHadPaidTopUpAsync(string userId, string? excludePaymentId = null, CancellationToken ct = default);
     Task<bool> HasFirstTopUpBonusEntryAsync(string paymentId, CancellationToken ct = default);
     Task UpdatePaymentBonusAsync(string paymentId, decimal bonusPercent, decimal bonusUsd, CancellationToken ct = default);
     Task<(string? LedgerEntryId, decimal Amount)?> GetFirstTopUpBonusForPaymentAsync(string paymentId, CancellationToken ct = default);

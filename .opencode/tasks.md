@@ -23,9 +23,11 @@
 ---
 
 ## T-001 — Бонус за первое пополнение не выдаётся никогда
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-26T23:39:10+04:00
+- completed: 2026-07-26T23:45:01+04:00
 - desc: `BillingApplicationService.cs:777`. `ConfirmPaymentAtomicAsync` (`BillingRepository.cs:1277`) вставляет леджер с `isUserPayment: true` ДО того, как `PaymentWebhookProcessor.cs:139` вызывает `GrantFirstTopUpBonusAsync`. Внутри `HasUserHadPaidTopUpAsync` (`BillingRepository.cs:1024`) считает все строки `is_user_payment = true`, включая только что созданную → всегда `true` → `"not_first_paid_top_up"`. Промо мертво в проде. Фикс: передать `paymentId` и добавить `and idempotency_key <> 'payment:' || @PaymentId`, либо начислять бонус внутри транзакции подтверждения. Обязательны unit-тесты: бонус выдаётся на первом платеже и не выдаётся на втором.
 
 ## T-002 — RPC, печатающие деньги, не защищены s2s-аутентификацией
@@ -195,9 +197,10 @@
 - desc: `BillingApplicationService.cs:107` (`GetBalanceAsync`) → `:295` (`RecordUsageWithTransactionAsync`). `CheckBalanceAndModelAsync` читает `sum(amount)` (`BillingRepository.cs:114`) без блокировки и проверяет только `<= 0`, списание — отдельной транзакцией минутами позже. N параллельных запросов при балансе $0.000001 все проходят. Плюс полная агрегация леджера пользователя на каждый запрос, растущая линейно. Фикс: денормализовать баланс в `billing.user_balances` с `update ... returning` внутри транзакции списания. ВНИМАНИЕ: баланс кешировать НЕЛЬЗЯ ни при каких условиях.
 
 ## T-029 — AcquireStalePaymentsAsync теряет bonus_percent/bonus_usd
-- status: todo
+- status: in_progress
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T11:10:53+04:00
 - desc: `BillingRepository.cs:1198-1205`. Select-лист CTE `updated` перечислен вручную и обрывается на `canceled_at_utc` — `bonus_percent`/`bonus_usd` (миграция 016) отсутствуют, хотя `PaymentEntity` их имеет (`:31-32`). Dapper молча оставляет `null`, и `GrantFirstTopUpBonusAsync:770` бракует платёж с `"no_bonus_snapshot"` — реконсиляция теряет бонус даже после починки T-001. Фикс: заменить ручной список на `PaymentSelectSql`-совместимый.
 
 ## T-030 — Расхождение порога длины пароля: 8 в фасаде против 12 в хешере
@@ -219,9 +222,10 @@
 - desc: `ExternalLoginService.cs:38-51`. Ветка линковки по email проверяет только `Status == UserStatus.Disabled`. Аккаунт, зарегистрированный через `/signup` и не подтвердивший email, получает полноценную сессию через Google/Yandex и навсегда остаётся `PendingVerification` (`Activate()` не вызывается) — после чего `LoginService.cs:41-44` отбивает его же вход по паролю, а `RequestPasswordResetAsync:170` отказывает в сбросе. Фикс: при линковке по email активировать аккаунт, раз провайдер подтвердил владение почтой.
 
 ## T-033 — Бонус первого пополнения считается без округления до 6 знаков
-- status: todo
+- status: in_progress
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T11:11:02+04:00
 - desc: `BillingApplicationService.cs:781` — `payment.CreditedUsd.Amount * payment.BonusPercent.Value / 100m` без округления. Значение уходит в `numeric(18,6)` леджера и в `numeric(12,6)` `payments.bonus_usd`, округление делает Postgres, а `UpdatePaymentBonusAsync` пишет неокруглённое → колонки расходятся в 6-м знаке. Заодно в проекте намешаны `AwayFromZero` (`CreatePaymentAsync:553`) и `ToEven` (`UsageCostCalculator.cs:27`). Фикс: `decimal.Round(..., 6, ...)` + единая политика округления денег.
 
 ## T-034 — TOCTOU на лимите числа API-ключей

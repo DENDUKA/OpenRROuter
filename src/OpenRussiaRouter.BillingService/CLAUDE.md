@@ -78,8 +78,11 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hoste
 - **Промо**: `GrantStartBalanceAsync` (тип `Promo1`, ключ `promo1:{userId}`, отказ при сумме `<=0`
   или `>100`, повтор возвращает существующую запись), `GrantFirstTopUpBonusAsync` (тип
   `FirstTopUpBonus`, ключ `first_top_up_bonus:{paymentId}`; требует `Payment.Status=Paid` и снапшот
-  `BonusPercent`, проверяет «первое оплаченное пополнение» через `HasUserHadPaidTopUpAsync`,
-  затем `UpdatePaymentBonusAsync`).
+  `BonusPercent`, проверяет «первое оплаченное пополнение» через
+  `HasUserHadPaidTopUpAsync(userId, excludePaymentId: payment.Id)` — текущий платёж исключается по
+  индексу `idempotency_key='payment:{paymentId}'`, иначе `ConfirmPaymentAtomicAsync` уже вставил
+  `ExternalTopUp` с `is_user_payment=true` ДО бонуса и «первое пополнение» было бы всегда
+  «не первым»; затем `UpdatePaymentBonusAsync`.
 - **Каталог**: `UpsertModelAsync` требует `ModelId`/`DisplayName`/`RouterModelId`/`PriceVersion`,
   `Price.EnsureValid()`, нормализует reasoning-efforts через `ReasoningEffort`
   (канон: `none|minimal|low|medium|high|xhigh`; при `SupportsReasoning=false` списки должны быть
@@ -192,6 +195,9 @@ gRPC-вызовы, но проверяет лишь список мутирую�
 - `admin_bypass_disabled` в proto означает «админу разрешено дёрнуть **выключенную** модель»
   (в фасаде параметр называется `adminBypassEnabled`) — читается наоборот, чем кажется.
 - Repository pattern с двумя реализациями — **новый метод в обе** (PG + in-memory).
+  `InMemoryBillingRepository.ConfirmPaymentAtomicAsync` обязан ставить `IsUserPayment=true` на
+  `ExternalTopUp`-записи (как `BillingRepository.InsertLedgerAsync`), иначе `HasUserHadPaidTopUpAsync`
+  и тесты «первого пополнения» расходятся с PG.
 - Префикс `016` в миграциях занят **тремя** файлами; сортировка — по полному имени файла
   (`SqlMigrationLoader`), так что это работает, но следующий файл нужно называть `024_…`.
   Применённые миграции неизменяемы.

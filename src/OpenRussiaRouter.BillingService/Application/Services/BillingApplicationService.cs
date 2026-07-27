@@ -774,7 +774,7 @@ public sealed partial class BillingApplicationService(
         if (existing)
             return new GrantFirstTopUpBonusResult(false, null, null);
 
-        var hasPaidBefore = await repository.HasUserHadPaidTopUpAsync(payment.UserId, ct).ConfigureAwait(false);
+        var hasPaidBefore = await repository.HasUserHadPaidTopUpAsync(payment.UserId, payment.Id, ct).ConfigureAwait(false);
         if (hasPaidBefore)
             return new GrantFirstTopUpBonusResult(false, null, "not_first_paid_top_up");
 

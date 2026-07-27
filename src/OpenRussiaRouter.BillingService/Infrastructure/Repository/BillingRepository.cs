@@ -1022,15 +1022,16 @@ public sealed class BillingRepository(IBillingDbConnectionFactory connectionFact
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
-    public async Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
+    public async Task<bool> HasUserHadPaidTopUpAsync(string userId, string? excludePaymentId = null, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         var count = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
             """
             select count(*) from billing.ledger_entries
-            where user_id = @UserId and is_user_payment = true;
+            where user_id = @UserId and is_user_payment = true
+              and (@ExcludePaymentId::text is null or idempotency_key <> 'payment:' || @ExcludePaymentId::text);
             """,
-            new { UserId = userId },
+            new { UserId = userId, ExcludePaymentId = excludePaymentId },
             cancellationToken: ct)).ConfigureAwait(false);
         return count > 0;
     }

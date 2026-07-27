@@ -1089,7 +1089,7 @@ public sealed class GrpcBillingService(
     {
         var result = await billing.Repository.HasUserHadPaidTopUpAsync(
             request.UserId,
-            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            ct: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         return new HasUserHadPaidTopUpResponse { HasPaidTopUp = result };
     }
 

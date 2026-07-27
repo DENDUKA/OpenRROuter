@@ -5,6 +5,7 @@ using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BillingService.Infrastructure.Repository;
+using OpenRussiaRouter.BillingService.Infrastructure.Workers;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
@@ -127,6 +128,29 @@ public sealed class PaymentRecoveryTests
 
         processed.Should().Be(1);
         (await repo.GetPaymentAsync(payment.Id))!.Status.Should().Be(PaymentStatus.Canceled);
+        (await repo.ListUnprocessedEventsAsync(10)).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Recovery_ChargebackWithAutoReverseEnabled_ReversesCreditedBalance()
+    {
+        var (service, repo) = CreateService();
+        var now = DateTimeOffset.UtcNow;
+        var payment = await service.CreatePaymentAsync("user-chargeback", "mock", 10, "USD", 10, "USD", "tok-chargeback", now);
+        await service.ConfirmPaymentByProviderAsync(new PaymentEventInput(
+            "mock", null, payment.OrderId, "paid", 10, "USD", null, "evt-paid", "{}", true), now);
+
+        InjectEvent(repo, new PaymentEvent(
+            "evt-chargeback", payment.Id, "mock", "provider-evt-chargeback", null, "chargeback",
+            payment.OrderId, null, null, "provider chargeback", "{}", true, false, 0, now, null));
+        var worker = new PaymentEventRecoveryWorker(repo,
+            Options.Create(new PaymentOptions { AutoReverseChargeback = true }),
+            NullLogger<PaymentEventRecoveryWorker>.Instance);
+
+        await worker.ProcessBatchAsync(CancellationToken.None);
+
+        (await repo.GetPaymentAsync(payment.Id))!.Status.Should().Be(PaymentStatus.ChargedBack);
+        (await repo.GetBalanceAsync(payment.UserId)).Amount.Should().Be(0);
         (await repo.ListUnprocessedEventsAsync(10)).Should().BeEmpty();
     }
 

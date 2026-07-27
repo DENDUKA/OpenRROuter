@@ -1,11 +1,13 @@
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Application.Services;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Workers;
 
 public sealed class PaymentEventRecoveryWorker(
     IBillingRepository repository,
+    IOptions<PaymentOptions> paymentOptions,
     ILogger<PaymentEventRecoveryWorker> logger) : BackgroundService
 {
     private const int BatchSize = 20;
@@ -26,7 +28,7 @@ public sealed class PaymentEventRecoveryWorker(
         try
         {
             var processed = await repository.AcquireUnprocessedEventsAsync(
-                BatchSize, DateTimeOffset.UtcNow, ct: ct).ConfigureAwait(false);
+                BatchSize, DateTimeOffset.UtcNow, paymentOptions.Value.AutoReverseChargeback, ct).ConfigureAwait(false);
             if (processed == 0)
                 return;
 

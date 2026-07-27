@@ -92,9 +92,10 @@
 - desc: `AuthRepository.cs:109` и `:186`. Курсор фильтрует `where id > @AfterUserId` (по возрастанию), а сортировка — `order by created_at_utc desc, id desc`. Ключ курсора не совпадает с ключом сортировки → вторая страница возвращает произвольное подмножество. То же в `ListApiKeysAsync`. Фикс: `(created_at_utc, id) < (@AfterCreatedAt, @AfterId)` — как уже правильно сделано в `BillingRepository.ListUsageAsync:427`. Нужен тест на две страницы без пропусков и дублей.
 
 ## T-010 — Recovery-воркер игнорирует Payments:AutoReverseChargeback
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- completed: 2026-07-27T18:31:14+04:00
 - desc: `BillingService/Infrastructure/Workers/PaymentEventRecoveryWorker.cs:28` — `autoReverseChargeback` не передаётся в `AcquireUnprocessedEventsAsync` и берёт дефолт `false`, тогда как прямой путь (`BillingApplicationService.cs:616`) читает флаг из опций. Chargeback, попавший в recovery, не сторнируется: платёж уходит в `ChargedBack`, деньги остаются у пользователя. Фикс: заинжектить `IOptions<PaymentOptions>` и прокинуть флаг. Нужен тест на recovery-путь.
 
 ## T-011 — /admin/topups: фильтр с 0 совпадений показывает все чужие пополнения

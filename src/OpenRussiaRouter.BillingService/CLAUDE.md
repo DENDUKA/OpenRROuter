@@ -213,7 +213,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
   `price_version` пишется в usage для аудита, но прошлые цены не сохраняются.
 - **`InsertPaymentEventAsync` пишет событие отдельным соединением, до транзакции применения** —
   именно поэтому существует `PaymentEventRecoveryWorker`: он добирает `processed=false`
-  (`for update skip locked`, батч 20, раз в 30 с) и доводит побочные эффекты до конца.
+  (`for update skip locked`, батч 20, раз в 30 с) и доводит побочные эффекты до конца. Воркер обязан передавать `Payments:AutoReverseChargeback` в `AcquireUnprocessedEventsAsync`, иначе recovery-путь расходится с прямой обработкой вебхука.
 - **Spend-лимиты считаются по `usage_records`**: сутки — от 00:00 UTC, неделя — от понедельника UTC
   (`GetUtcDayStart`/`GetUtcWeekStart`). Превышение — `spent >= limit`. Бесплатные модели лимиты
   не проверяют.

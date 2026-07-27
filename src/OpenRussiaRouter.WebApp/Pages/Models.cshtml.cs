@@ -6,6 +6,7 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Collector;
 using OpenRussiaRouter.WebApp.Services.ControlPlane; // NodeModelCatalogResult, NodeModelCatalogEntry
 using OpenRussiaRouter.WebApp.Services.Currency;
+using OpenRussiaRouter.WebApp.Services.Markup;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
@@ -16,8 +17,13 @@ public class ModelsModel(
     AuthProvider authProvider,
     IMemoryCache memoryCache,
     IStringLocalizer<SharedResource> localizer,
-    ILogger<ModelsModel> logger) : PageModelBase
+    ILogger<ModelsModel> logger) : CatalogPageModelBase
 {
+    protected override AuthProvider AuthProvider => authProvider;
+    protected override CurrencyFormatter CurrencyFormatter => currencyFormatter;
+    protected override ILogger Logger => logger;
+    protected override string LogContext => "catalog";
+
     private const string CatalogCacheKey = "public-models-node-catalog";
     private const string ProvidersCacheKey = "public-models-providers";
     private static readonly TimeSpan ProvidersCacheDuration = TimeSpan.FromHours(1);
@@ -30,10 +36,6 @@ public class ModelsModel(
     public string? ErrorMessage { get; private set; }
     public bool CatalogMetadataUnavailable { get; private set; }
     public IReadOnlyDictionary<string, bool> ProviderHasLogo { get; private set; } = new Dictionary<string, bool>();
-
-    /// <summary>Display currency for catalog prices: profile choice for signed-in users, USD for anonymous.</summary>
-    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
-    public string CurrencySymbol => Currency.Symbol();
 
     public IReadOnlyList<FilterCategory> ProviderCategories { get; private set; } = [];
     public IReadOnlyList<FilterCategory> CapabilityCategories { get; private set; } = [];
@@ -97,12 +99,7 @@ public class ModelsModel(
         }
     }
 
-    public static string GetInitials(string name)
-    {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0) return "AI";
-        return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
-    }
+    public static string GetInitials(string name) => CatalogFormatting.GetInitials(name);
 
     private static readonly Dictionary<string, string> KnownProviderIcons = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -130,32 +127,6 @@ public class ModelsModel(
         iconPath = null!;
         return false;
     }
-
-    public string FormatPrice(decimal usdPrice) =>
-        currencyFormatter.Format(usdPrice, Currency);
-
-    private async Task<DisplayCurrency> ResolveCurrencyAsync()
-    {
-        var userId = CurrentUser?.UserId;
-        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Usd;
-        try
-        {
-            var user = await authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
-            return DisplayCurrencyExtensions.Parse(user?.DisplayCurrency);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to load currency for catalog. UserId={UserId}", userId);
-            return DisplayCurrency.Usd;
-        }
-    }
-
-    public static string FormatContext(int? tokens) =>
-        tokens is > 0
-            ? tokens >= 1_000_000 ? $"{tokens / 1_000_000M:0.#}M"
-              : tokens >= 1_000 ? $"{tokens / 1_000}K"
-              : tokens.ToString()!
-            : "—";
 
     private async Task<NodeModelCatalogResult> GetCachedCatalogAsync(CancellationToken cancellationToken)
     {
@@ -214,7 +185,7 @@ public class ModelsModel(
             provider,
             model.ProviderId,
             capability,
-            FormatContext(model.ContextLength),
+                CatalogFormatting.FormatContext(model.ContextLength),
             tags);
     }
 

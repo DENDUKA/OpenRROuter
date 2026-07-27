@@ -3,6 +3,7 @@ using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
+using OpenRussiaRouter.WebApp.Services.Markup;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
@@ -11,8 +12,12 @@ public class ProviderDetailsModel(
     CurrencyFormatter currencyFormatter,
     AuthProvider authProvider,
     IStringLocalizer<SharedResource> localizer,
-    ILogger<ProviderDetailsModel> logger) : PageModelBase
+    ILogger<ProviderDetailsModel> logger) : CatalogPageModelBase
 {
+    protected override AuthProvider AuthProvider => authProvider;
+    protected override CurrencyFormatter CurrencyFormatter => currencyFormatter;
+    protected override ILogger Logger => logger;
+    protected override string LogContext => "provider details";
     [BindProperty(SupportsGet = true)]
     public string Id { get; set; } = "";
 
@@ -22,9 +27,6 @@ public class ProviderDetailsModel(
     public string? Description => System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru"
         ? Provider?.DescriptionRu
         : Provider?.DescriptionEn;
-
-    public DisplayCurrency Currency { get; private set; } = DisplayCurrency.Usd;
-    public string CurrencySymbol => Currency.Symbol();
 
     public async Task OnGetAsync()
     {
@@ -65,7 +67,7 @@ public class ProviderDetailsModel(
                         m.OutputPrice,
                         m.CachePrice,
                         m.ModelType,
-                        m.ContextLength is > 0 ? FormatContext(m.ContextLength.Value) : "—",
+                        m.ContextLength is > 0 ? CatalogFormatting.FormatContext(m.ContextLength.Value) : "—",
                         tags);
                 })
                 .ToList();
@@ -77,36 +79,7 @@ public class ProviderDetailsModel(
         }
     }
 
-    public static string GetInitials(string name)
-    {
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (parts.Length == 0) return "AI";
-        return string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
-    }
-
-    public string FormatPrice(decimal usdPrice) =>
-        currencyFormatter.Format(usdPrice, Currency);
-
-    private async Task<DisplayCurrency> ResolveCurrencyAsync()
-    {
-        var userId = CurrentUser?.UserId;
-        if (string.IsNullOrEmpty(userId)) return DisplayCurrency.Usd;
-        try
-        {
-            var user = await authProvider.GetUserAsync(userId, HttpContext.RequestAborted);
-            return DisplayCurrencyExtensions.Parse(user?.DisplayCurrency);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to load currency for provider details. UserId={UserId}", userId);
-            return DisplayCurrency.Usd;
-        }
-    }
-
-    private static string FormatContext(int tokens) =>
-        tokens >= 1_000_000 ? $"{tokens / 1_000_000M:0.#}M"
-        : tokens >= 1_000 ? $"{tokens / 1_000}K"
-        : tokens.ToString();
+    public static string GetInitials(string name) => CatalogFormatting.GetInitials(name);
 
     public sealed record ProviderModelRow(
         string Id,

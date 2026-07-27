@@ -370,6 +370,26 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
     KnownProxies = { }
 });
 
+// Security headers: HSTS (enforces HTTPS, excluded on localhost by ASP.NET Core default),
+// Content-Security-Policy (mitigation for T-013 markup XSS),
+// X-Frame-Options + frame-ancestors for clickjacking protection,
+// X-Content-Type-Options: nosniff for MIME-type confusion,
+// Referrer-Policy: strict-origin-when-cross-origin.
+app.UseHsts();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers["Content-Security-Policy"] =
+        "default-src 'self'; " +
+        "style-src 'self' 'unsafe-inline'; " +
+        "img-src 'self' data:; " +
+        "script-src 'self' 'unsafe-inline'; " +
+        "frame-ancestors 'none'";
+    await next();
+});
+
 // TS-004: fail-fast in Production if the active payment provider is mock or unconfigured.
 // In Development the mock is the expected active provider, so the guard is a no-op there.
 PaymentStartupGuard.Validate(app.Services, app.Environment);

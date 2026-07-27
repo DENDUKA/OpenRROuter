@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
-using OpenRussiaRouter.BillingService.Infrastructure.Auth;
+using OpenRussiaRouter.BillingService.Infrastructure.Startup;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
 
 namespace OpenRussiaRouter.BillingService.Tests.Application;
 
@@ -18,12 +19,12 @@ public sealed class ServiceAuthPolicyCoverageTests
     {
         var options = LoadShippedServiceAuthOptions();
 
-        var missing = ServiceAuthInterceptor.ProtectedMethods
+        var missing = Startup.ProtectedBillingMethods
             .Where(m => !options.MethodPolicies.TryGetValue(m, out var callers) || callers.Length == 0)
             .ToArray();
 
         missing.Should().BeEmpty(
-            "every method in ServiceAuthInterceptor.ProtectedMethods needs a ServiceAuth:MethodPolicies entry");
+            "every method in ProtectedBillingMethods needs a ServiceAuth:MethodPolicies entry");
     }
 
     [Fact]
@@ -32,7 +33,7 @@ public sealed class ServiceAuthPolicyCoverageTests
         var options = LoadShippedServiceAuthOptions();
 
         var stale = options.MethodPolicies.Keys
-            .Where(k => !ServiceAuthInterceptor.ProtectedMethods.Contains(k))
+            .Where(k => !Startup.ProtectedBillingMethods.Contains(k))
             .ToArray();
 
         stale.Should().BeEmpty(

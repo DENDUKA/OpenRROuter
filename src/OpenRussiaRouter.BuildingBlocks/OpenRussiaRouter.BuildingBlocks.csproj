@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Grpc.AspNetCore" />
     <PackageReference Include="Grpc.Net.Client" />
     <PackageReference Include="Npgsql" />
     <PackageReference Include="OpenTelemetry.Instrumentation.Process" />

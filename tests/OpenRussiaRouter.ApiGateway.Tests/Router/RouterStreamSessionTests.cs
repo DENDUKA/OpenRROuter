@@ -110,6 +110,47 @@ public sealed class RouterStreamSessionTests
         output.Should().Contain("data: {\"choices\":[]}");
     }
 
+    [Fact]
+    public async Task CopyToAsync_HandlesDataLineWithoutSpace()
+    {
+        var sseBody =
+            "data:{\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}\n\n" +
+            "data:[DONE]\n\n";
+
+        await using var session = CreateSession(sseBody);
+        var destination = new MemoryStream();
+
+        await session.CopyToAsync(destination, CancellationToken.None);
+
+        destination.Position = 0;
+        var output = new StreamReader(destination).ReadToEnd();
+        output.Should().Contain("data: {\"choices\":[{\"delta\":{\"content\":\"Hello\"}}]}");
+        output.Should().Contain("data: [DONE]");
+    }
+
+    [Fact]
+    public async Task CopyToAsync_HandlesMixedDataLines_WithAndWithoutSpace()
+    {
+        var sseBody =
+            "data: {\"choices\":[{\"delta\":{\"content\":\"A\"}}]}\n\n" +
+            "data:{\"choices\":[{\"delta\":{\"content\":\"B\"}}]}\n\n" +
+            "data:{\"usage\":{\"prompt_tokens\":5,\"completion_tokens\":10}}\n\n" +
+            "data:[DONE]\n\n";
+
+        await using var session = CreateSession(sseBody);
+        var destination = new MemoryStream();
+
+        var usage = await session.CopyToAsync(destination, CancellationToken.None);
+
+        destination.Position = 0;
+        var output = new StreamReader(destination).ReadToEnd();
+        output.Should().Contain("data: {\"choices\":[{\"delta\":{\"content\":\"A\"}}]}");
+        output.Should().Contain("data: {\"choices\":[{\"delta\":{\"content\":\"B\"}}]}");
+        output.Should().Contain("data: [DONE]");
+        usage.InputTokens.Should().Be(5);
+        usage.OutputTokens.Should().Be(10);
+    }
+
     private static RouterStreamSession CreateSession(string sseBody)
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK)

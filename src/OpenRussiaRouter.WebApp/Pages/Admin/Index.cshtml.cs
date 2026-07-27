@@ -81,11 +81,11 @@ public class IndexModel(BillingProvider billingProvider, ILogger<IndexModel> log
             await billingProvider.SetPlatformSettingAsync(
                 PlatformSettingKeys.PromotionsStartBalanceEnabled, StartBalanceEnabled.ToString(), HttpContext.RequestAborted);
             await billingProvider.SetPlatformSettingAsync(
-                PlatformSettingKeys.PromotionsStartBalanceAmountUsd, StartBalanceAmountUsd.ToString("F2"), HttpContext.RequestAborted);
+                PlatformSettingKeys.PromotionsStartBalanceAmountUsd, StartBalanceAmountUsd.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), HttpContext.RequestAborted);
             await billingProvider.SetPlatformSettingAsync(
                 PlatformSettingKeys.PromotionsFirstTopUpEnabled, FirstTopUpEnabled.ToString(), HttpContext.RequestAborted);
             await billingProvider.SetPlatformSettingAsync(
-                PlatformSettingKeys.PromotionsFirstTopUpPercent, FirstTopUpPercent.ToString("F2"), HttpContext.RequestAborted);
+                PlatformSettingKeys.PromotionsFirstTopUpPercent, FirstTopUpPercent.ToString("F2", System.Globalization.CultureInfo.InvariantCulture), HttpContext.RequestAborted);
             SaveMessage = "Promotion settings saved.";
         }
         catch (Exception ex)
@@ -121,7 +121,7 @@ public class IndexModel(BillingProvider billingProvider, ILogger<IndexModel> log
     private async Task<decimal> GetDecimalSettingAsync(string key, decimal defaultValue)
     {
         var raw = await billingProvider.GetPlatformSettingAsync(key, HttpContext.RequestAborted);
-        return decimal.TryParse(raw, System.Globalization.NumberStyles.Number,
+        return decimal.TryParse(raw, System.Globalization.NumberStyles.Float,
             System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : defaultValue;
     }
 }

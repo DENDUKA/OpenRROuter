@@ -2,12 +2,10 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.Application.Services;
-using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.ApiGateway.OpenAi;
 using OpenRussiaRouter.ApiGateway.Router;
 using OpenRussiaRouter.BuildingBlocks.Errors;
-using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 
@@ -16,13 +14,10 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 /// Проксирует запрос image generation на ноду F9Router.
 /// </summary>
 public sealed class ImageGenerationHandler(
-    IGatewayPipeline pipeline,
-    IControlPlaneProvider controlPlaneProvider,
+    RouterRetryExecutor retryExecutor,
     IRouterProxyProvider routerProxy,
     ILogger<ImageGenerationHandler> logger)
 {
-    private const int MaxRouterAttempts = 5;
-
     public async Task HandleAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
@@ -39,59 +34,15 @@ public sealed class ImageGenerationHandler(
                 return;
             }
 
-            HashSet<string>? excludedNodes = null;
-            RouterProxyResponse? lastResponse = null;
-            var attempts = 0;
-
-            while (true)
-            {
-                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, model, requestId, excludedNodes, context.RequestAborted);
-
-                if (auth is null)
+            await retryExecutor.ExecuteAsync(
+                context,
+                model,
+                requestId,
+                patchBody: auth => SseRequestPatcher.PatchModel(json, auth.RouterModelId),
+                sendRequest: (auth, patchedJson, ct) =>
+                    routerProxy.SendImageGenerationAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, ct),
+                onSuccess: (auth, response, startedAt, completedAt, ct) =>
                 {
-                    if (lastResponse != null)
-                    {
-                        context.Response.StatusCode = lastResponse.StatusCode;
-                        context.Response.ContentType = lastResponse.ContentType;
-                        await context.Response.WriteAsync(lastResponse.Body);
-                    }
-                    return;
-                }
-
-                try
-                {
-                    var patchedJson = SseRequestPatcher.PatchModel(json, auth.RouterModelId);
-                    var startedAt = DateTimeOffset.UtcNow;
-
-                    var response = await routerProxy.SendImageGenerationAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-                    var completedAt = DateTimeOffset.UtcNow;
-
-                    bool isError = response.StatusCode >= 400;
-
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(
-                        auth.Lease.LeaseId,
-                        isError ? "failed" : "completed",
-                        CancellationToken.None);
-
-                    if (isError)
-                    {
-                        logger.LogWarning("Image generation downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", response.StatusCode, auth.Lease.NodeId, response.Body);
-
-                        excludedNodes ??= new HashSet<string>();
-                        excludedNodes.Add(auth.Lease.NodeId);
-                        lastResponse = response;
-
-                        if (++attempts >= MaxRouterAttempts)
-                        {
-                            context.Response.StatusCode = lastResponse.StatusCode;
-                            context.Response.ContentType = lastResponse.ContentType;
-                            await context.Response.WriteAsync(lastResponse.Body);
-                            return;
-                        }
-
-                        continue;
-                    }
-
                     logger.LogInformation(
                         "Image generation completed. Model: {Model}, Node: {NodeId}, DurationMs: {DurationMs}",
                         model, auth.Lease.NodeId,
@@ -99,15 +50,9 @@ public sealed class ImageGenerationHandler(
 
                     context.Response.StatusCode = response.StatusCode;
                     context.Response.ContentType = response.ContentType;
-                    await context.Response.WriteAsync(response.Body);
-                    return;
-                }
-                catch
-                {
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                    throw;
-                }
-            }
+                    return context.Response.WriteAsync(response.Body, ct);
+                },
+                context.RequestAborted);
         }
         catch (OperationCanceledException)
         {

@@ -41,7 +41,7 @@
 | `POST /v1/chat/completions` | `ChatCompletionHandler.HandleAsync` (при `"stream":true` в теле сам уходит в streaming-путь) | `gateway-chat` | outbox, токены из тела/финального SSE-чанка |
 | `POST /v1/chat/completions/stream` | `ChatCompletionHandler.HandleStreamAsync` | `gateway-chat` | outbox, токены из финального SSE-чанка |
 | `POST /v1/images/generations` | [ImageGenerationHandler](Application/Endpoints/ImageGenerationHandler.cs) | `gateway-chat` | **usage не пишется — картинки не биллятся** |
-| `POST /v1/audio/speech` | [TextToSpeechHandler](Application/Endpoints/TextToSpeechHandler.cs) | `gateway-chat` | outbox, `output_tokens` = `input.Length` (UTF-16 code units) |
+| `POST /v1/audio/speech` | [TextToSpeechHandler](Application/Endpoints/TextToSpeechHandler.cs) | `gateway-chat` | outbox, `output_tokens` = кол-во Unicode code points (`EnumerateRunes().Count()`) |
 | `GET /v1/models` | [ModelsHandler](Application/Endpoints/ModelsHandler.cs) | — | — |
 | `GET /health`, `GET /ready` | инлайн-лямбды | — | — |
 
@@ -155,7 +155,7 @@
 
 [RouterStreamSession](Router/RouterStreamSession.cs) — `CopyToAsync` построчно читает SSE, пересобирает
 кадры как `data: <payload>\n\n` с флашем на каждый, обрабатывает `data: [DONE]`, и по пути забирает
-usage из последнего чанка с ненулевыми токенами. **Всё, что не начинается с `data: `, отбрасывается**
+usage из последнего чанка с ненулевыми токенами. **Всё, что не начинается с `data:` (опционально с пробелом), отбрасывается**
 (`event:`, комментарии, кастомные поля не доедут до клиента).
 
 [RouterUsageExtractor](Router/RouterUsageExtractor.cs) — тонкая обёртка над `TokenUsageExtractor`

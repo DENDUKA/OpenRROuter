@@ -150,9 +150,10 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 | `control.router_leases` | id, node_id → router_nodes(id), request_id, expires_at_utc, created_at_utc |
 | `control.integration_key_sync` | PK `(api_key_id, node_id)`, router_key_id, pushed_at_utc; FK на ноду с `on delete cascade` |
 
-Миграции — `db/migrations/control/` (**5 файлов**): `001_initial`, `002_rename_token_secret_name`
+Миграции — `db/migrations/control/` (**6 файлов**): `001_initial`, `002_rename_token_secret_name`
 (`token_secret_name` → `control_token`), `003_add_missing_indexes` (индекс по `name`),
-`004_integration_key_sync`, `005_fix_node_indexes` (составной `(enabled, status)` вместо двух отдельных).
+`004_integration_key_sync`, `005_fix_node_indexes` (составной `(enabled, status)` вместо двух отдельных),
+`006_add_cascade_on_leases_fk` (`ON DELETE CASCADE` для `router_leases.node_id`).
 
 Статус и in-flight хранятся в строке ноды: `ControlPlanePersistenceMapper.ToDomain` восстанавливает
 `InFlightRequests` **реплеем `Lease()`** и статус через `ApplyHealth`/`Disable`.
@@ -196,11 +197,11 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 - **Hot-path бьёт в БД:** каждый `SelectRouterNode` = delete протухших лизов + upsert по нодам +
   чтение всех нод (limit 1000) + upsert + insert лиза. Пагинация в `ListNodesAsync` есть,
   но выбор ноды ей не пользуется.
-- **`DeleteRouterNode` с живыми лизами падает.** У `router_leases.node_id` FK **без**
-  `on delete cascade` (миграция 001), хотя комментарий в `ControlPlaneRepository.RemoveNodeAsync`
-  утверждает обратное; исключение Npgsql не ловится (обработан только `KeyNotFoundException`),
-  клиент получит gRPC `Unknown`. In-memory репозиторий, наоборот, лизы удаляет — unit-тесты
-  этот кейс не поймают.
+- **`DeleteRouterNode` с живыми лизами.** У `router_leases.node_id` FK был без `on delete
+  cascade` (миграция 001). Миграция 006 добавила `ON DELETE CASCADE`, а `RemoveNodeAsync`
+  дополнительно удаляет лизы явно перед удалением ноды (как страховка и для in-memory
+  репозитория). gRPC-фасад ловит `KeyNotFoundException` (нода не найдена) и отдаёт
+  `ValidationFailed`.
 - **Отключённая нода** (`Disable()`) принудительно получает `Status = Disabled`, и `ApplyHealth`
   для неё всегда возвращает `Disabled` — health-чек её не «оживит», нужен `EnableRouterNode`.
 

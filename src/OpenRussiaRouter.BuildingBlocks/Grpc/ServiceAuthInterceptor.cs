@@ -1,39 +1,24 @@
 using System.Security.Cryptography;
 using System.Text;
+using Grpc.AspNetCore.Server;
 using Grpc.Core;
 using Grpc.Core.Interceptors;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace OpenRussiaRouter.ContentService.Infrastructure.Auth;
+namespace OpenRussiaRouter.BuildingBlocks.Grpc;
 
 /// <summary>
-/// Server-side gRPC interceptor enforcing s2s authentication on the admin ContentService methods.
-/// See <see cref="ServiceAuthOptions"/> for the configuration model.
+/// Server-side gRPC interceptor that enforces s2s authentication on mutating service methods.
+/// The set of protected methods is configured per-service via <see cref="ServiceAuthServerOptions"/>.
 /// </summary>
 public sealed class ServiceAuthInterceptor(
     IOptions<ServiceAuthOptions> options,
+    IOptions<ServiceAuthServerOptions> serverOptions,
     ILogger<ServiceAuthInterceptor> logger) : Interceptor
 {
-    /// <summary>
-    /// The admin surface. Owned in code so that a missing config policy fails closed rather than
-    /// silently opening a method. ListToolImages is here too: it leaks draft asset names.
-    /// </summary>
-    public static readonly IReadOnlySet<string> ProtectedMethods = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "ListToolsForAdmin",
-        "GetToolForAdmin",
-        "UpsertTool",
-        "DeleteTool",
-        "SetToolPublished",
-        "ListToolImages",
-        "UploadToolImage",
-        "DeleteToolImage",
-        "UpsertToolCategory",
-        "DeleteToolCategory"
-    };
-
     private readonly ServiceAuthOptions auth = options.Value;
+    private readonly IReadOnlySet<string> protectedMethods = serverOptions.Value.ProtectedMethods;
 
     public override async Task<TResponse> UnaryServerHandler<TRequest, TResponse>(
         TRequest request,
@@ -77,9 +62,9 @@ public sealed class ServiceAuthInterceptor(
     {
         var methodName = NormalizeMethodName(context.Method);
 
-        if (!ProtectedMethods.Contains(methodName))
+        if (!protectedMethods.Contains(methodName))
         {
-            // Public catalog reads stay open.
+            // Methods outside the code-owned mutating set are read-only and remain open.
             return;
         }
 
@@ -143,6 +128,7 @@ public sealed class ServiceAuthInterceptor(
                 $"Caller '{declaredCaller}' is not permitted to invoke {methodName}."));
         }
 
+        // Stash the verified caller on the HttpContext.Items for downstream log enrichment.
         var httpContext = context.GetHttpContext();
         if (httpContext is not null)
         {
@@ -152,7 +138,8 @@ public sealed class ServiceAuthInterceptor(
 
     private static string NormalizeMethodName(string fullMethod)
     {
-        // fullMethod looks like "/openrussiarouter.content.v1.ContentService/UpsertTool".
+        // fullMethod looks like "/service.v1.Service/MethodName".
+        // We want the trailing method name, so split on the LAST '/'.
         var slash = fullMethod.LastIndexOf('/');
         return slash >= 0 && slash < fullMethod.Length - 1
             ? fullMethod[(slash + 1)..]

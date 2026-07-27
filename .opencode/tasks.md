@@ -47,9 +47,11 @@
 - desc: `BillingService/appsettings.json:26` — `"apigateway": "test-s2s-token-12345"`, активен везде, где env `ServiceAuth__Tokens__apigateway` не задан. Вместе с T-002 — полный обход s2s-защиты Billing. Фикс: пустая строка по умолчанию + fail-fast при старте вне Development, если токен не задан (по образцу `PaymentStartupGuard`). Делать одним коммитом с T-002.
 
 ## T-004 — Промо-настройки сохраняются в культуре запроса → сумма искажается в 100 раз
-- status: todo
+- status: done
 - priority: high
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:10:00+04:00
 - desc: `WebApp/Pages/Admin/Index.cshtml.cs:84, 88`. `ToString("F2")` без `InvariantCulture`; `UseRequestLocalization` ставит `CurrentCulture = ru` → сохраняется `"1,00"`. Читается через `GetDecimalSettingAsync:124` и `BillingProvider.cs:877` с `NumberStyles.Number, InvariantCulture` → запятая как разделитель тысяч → `1.00` становится `100`, бонус `20%` → `2000%`. Фикс: `InvariantCulture` в оба `ToString("F2")`; на чтении `NumberStyles.Float` без `AllowThousands`. ВАЖНО: проверить прод — не испорчены ли уже значения в `billing.platform_settings`.
 
 ## T-005 — Статус usage_missing нарушает CHECK-констрейнт, usage-события теряются
@@ -215,9 +217,11 @@
 - desc: `AuthAccountApplicationService.cs:53` (`MinPasswordLength = 8`) vs `Pbkdf2PasswordHasher.cs:56` (бросает `ArgumentException` при `< 12`). В `RegisterUserAsync:77`, `ResetPasswordAsync:219`, `ChangePasswordAsync:254` исключение не перехвачено, `GrpcAuthService.RegisterUser` тоже не ловит → клиент получает `Unknown`/500 вместо `weak_password`. Фикс: свести порог в одно место (рекомендуется 12).
 
 ## T-031 — Sha256SecretHasher.Verify падает FormatException на некорректном хеше
-- status: todo
+- status: done
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T16:00:00+04:00
+- completed: 2026-07-27T16:05:00+04:00
 - desc: `Sha256SecretHasher.cs:31` — `Convert.FromBase64String` на обоих аргументах; проверка на `:23` отсекает только пустую строку. Любая не-base64 строка в `code_hash`/`token_hash` даёт `FormatException`, вылетающий из `EmailVerificationService.Check` наверх вместо безопасного отказа. Фикс: `Convert.TryFromBase64String` и `return false` при неудаче.
 
 ## T-032 — Внешний логин выдаёт сессию аккаунту в статусе PendingVerification
@@ -241,9 +245,11 @@
 - desc: `AuthAccountApplicationService.cs:274-281` — `CountApiKeysAsync` → проверка `>= user.MaxApiKeys` → `AddApiKeyAsync` тремя отдельными соединениями без транзакции; параллельные запросы обходят лимит. В `db/migrations/auth/001_initial.sql` ограничения нет. Фикс: `insert ... select ... where (select count(*) ...) < @Max` одним statement, 0 затронутых строк = `ApiKeyLimitReached`.
 
 ## T-035 — SSE-парсер требует ровно "data: " с пробелом
-- status: todo
+- status: done
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-28T00:10:00+04:00
 - desc: `RouterStreamSession.cs:40-43` — `StartsWith("data: ")` + `Substring(6)`, тогда как `TokenUsageExtractor.cs:63-66` в том же репозитории обрабатывает `"data:"` + `TrimStart()`. Спецификация SSE допускает `data:{...}` без пробела → апстрим, отдающий такой формат, для стрима вернёт клиенту ПУСТОЙ поток, при этом usage из non-stream-ответа того же апстрима извлечётся нормально. Фикс: матчить `"data:"` + `TrimStart()`, привести к поведению `TokenUsageExtractor`.
 
 ## T-036 — Image/TTS не ретраят обрыв соединения: 500 вместо failover
@@ -253,15 +259,19 @@
 - desc: `ImageGenerationHandler.cs:105-109`, `TextToSpeechHandler.cs:137-141` — только `catch { release("failed"); throw; }`, тогда как `ChatCompletionHandler.cs:146` ловит `HttpRequestException`/`IOException` и уходит на другую ноду. Протухший pooled HTTP/2-коннект или краш ноды дают клиенту 500 без единой попытки failover. Фикс: единая обработка исключений во всех хендлерах (см. T-056 про вынос retry-цикла).
 
 ## T-037 — TTS биллит UTF-16 code units вместо символов
-- status: todo
+- status: done
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-28T00:00:00+04:00
+- completed: 2026-07-28T00:10:00+04:00
 - desc: `TextToSpeechHandler.cs:113-115` — комментарий обещает «количество символов Unicode», а `input.Length` считает UTF-16 code units: эмодзи и любой символ вне BMP идёт за 2. Расходится и с комментарием, и с биллингом OpenAI. Фикс: `new StringInfo(input).LengthInTextElements` или `input.EnumerateRunes().Count()`; поправить комментарий.
 
 ## T-038 — Фильтры дат в /admin/visitors зависят от культуры и таймзоны сервера
-- status: todo
+- status: done
 - priority: medium
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T12:00:00+04:00
+- completed: 2026-07-27T12:10:00+04:00
 - desc: `Visitors.cshtml.cs:123-124` — `DateTimeOffset.TryParse` без `InvariantCulture` и без `DateTimeStyles.AssumeUniversal | AdjustToUniversal`. Документация страницы обещает UTC `yyyy-MM-dd`, а строка разбирается в культуре запроса и offset получается локальным для сервера → окно в `SiteVisitReader.ApplyTimeWindow` смещено. Фикс: `TryParseExact("yyyy-MM-dd", InvariantCulture, AssumeUniversal | AdjustToUniversal)`.
 
 ## T-039 — GeminiSchemaPatcher рекурсивно обходит весь запрос, включая messages
@@ -357,33 +367,43 @@
 ---
 
 ## T-054 — Нет ни одного security-заголовка на уровне приложения
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T19:00:00+04:00
+- completed:2026-07-27T19:15:00+04:00
 - desc: `WebApp/Program.cs:377-408` — нет `UseHsts`, нет middleware с `Content-Security-Policy`, `X-Frame-Options`/`frame-ancestors`, `Referrer-Policy`, глобального `X-Content-Type-Options`. При cookie-аутентификации с `SameSite=Lax` админка открыта для clickjacking, отсутствие CSP снимает второй эшелон защиты для T-013. Фикс: middleware с базовым набором заголовков + `UseHsts()` вне Development.
 
 ## T-055 — lastFailedSession не диспозится на нескольких путях выхода
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started:  2026-07-27T18:45:00+04:00
+- completed:2026-07-27T18:50:00+04:00
 - desc: `ChatCompletionHandler.cs:238-245` (return при ошибке reasoning-патча), `:320-321` и `:357-358` (rethrow). Если первая нода вернула ошибку и сессия сохранена в `lastFailedSession`, а на следующей итерации сработал патч-error или исключение — `HttpResponseMessage` не освобождается, соединение висит в пуле `StreamingHttpClient` до GC. Фикс: `try/finally` вокруг `ExecuteStreamingAsync` или диспоз в `finally` внешнего `try`.
 
 ## T-056 — Дублирование retry-цикла в 4 хендлерах и расхождение MaxRouterAttempts
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T23:59:00+04:00
+- completed: 2026-07-27T12:49:38+04:00
 - desc: `ChatCompletionHandler.cs:49-185` и `:214-360`, `ImageGenerationHandler.cs:46-110`, `TextToSpeechHandler.cs:62-142` — четыре почти идентичные копии цикла «authorize → patch → send → release → exclude → retry» по ~100 строк. Лимит попыток в чате из конфига (`ChatCompletionHandler.cs:29`), в image/TTS захардкожен `const int MaxRouterAttempts = 5` → правка `GatewayRetry:MaxRouterAttempts` в проде затронет только чат. `HandleAsync` — 165 строк с тройной вложенностью. Фикс: `RouterRetryExecutor` с делегатами «патч тела» и «отправка», `IOptions<GatewayRetryOptions>` во все хендлеры. Закрывает и T-036.
 
 ## T-057 — Серверный ServiceAuthInterceptor продублирован в двух сервисах
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T22:50:00+04:00
+- completed: 2026-07-27T13:14:00+04:00
 - desc: `BillingService/Infrastructure/Auth/ServiceAuthInterceptor.cs` (169 строк) и `ContentService/Infrastructure/Auth/ServiceAuthInterceptor.cs` — 6846 vs 6871 байт, расходятся только списком `ProtectedMethods`. Корневой CLAUDE.md фиксирует это как известный факт. Фикс: вынести в BuildingBlocks/Grpc с конфигурируемым списком методов. Делать ПОСЛЕ T-002, чтобы не смешивать рефакторинг с фиксом безопасности.
 
 ## T-058 — EmitAnalytics побайтово повторён в четырёх местах
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T12:00:00+04:00
+- completed: 2026-07-27T12:30:00+04:00
 - desc: `BillingApplicationService.cs:688`, `AuthAccountApplicationService.cs:352`, `ExternalLoginService.cs:84` + мёртвая копия в `GoogleAuthService.cs:93`. Фикс: `IProductAnalytics.EmitSafe` в `BuildingBlocks/Analytics/`, мёртвую копию удалить.
 
 ## T-059 — BillingRepository.cs: 1681 строка
@@ -411,19 +431,27 @@
 - desc: `InMemoryBillingRepository.cs` дублирует контракт PG-репозитория целиком и делает `GetAwaiter().GetResult()` внутри `lock` на строках 746-748 (риск дедлока). Фикс: убрать синхронную блокировку, рассмотреть сокращение in-memory реализации после T-059.
 
 ## T-063 — Дублирование хелперов между page models каталога
-- status: todo
+- status: done
+- priority: low
+- created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T15:00:00+04:00
+- completed: 2026-07-27T15:30:00+04:00
 - priority: low
 - created: 2026-07-26T19:30:00Z
 - desc: `ResolveCurrencyAsync` скопирован дословно в трёх page model'ах (`Models.cshtml.cs:137-158`, `ModelDetails.cshtml.cs:119-158`, `ProviderDetails.cshtml.cs:90-109`), `FormatContext` — в трёх, `GetInitials` — в двух, `ModalityIcon` с одинаковыми SVG-литералами — в `Admin/Models.cshtml.cs:655-662` и `ModelDetails.cshtml.cs`, и уже разошёлся размером иконок (14 vs 16). Фикс: `CatalogPageModelBase` (валюта + `FormatPrice`) + статический `CatalogFormatting`/`ModalityIcons` в `Services/Markup`.
 
 ## T-064 — /models/{provider}/{slug}: пустой catch и soft-404 с кодом 200
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T12:25:26+04:00
+- completed: 2026-07-27T12:26:45+04:00
 - desc: `ModelDetails.cshtml.cs:111-116` — пустой `catch {}` без логирования делает падение Billing неотличимым от «модели нет». При `ModelData == null` страница возвращает 200 OK и рисует заголовок, синтезированный из URL (`:54`) → любой `/models/foo/bar` даёт валидную страницу. Плюс два последовательных вызова `GetModelAsync` вместо одного. Фикс: логировать исключение, `NotFound()` при `ModelData == null`.
 
 ## T-065 — RemoveNodeAsync: комментарий обещает ON DELETE CASCADE, которого нет
-- status: todo
+- status: done
 - priority: low
 - created: 2026-07-26T19:30:00Z
+- started: 2026-07-27T22:00:00+04:00
+- completed: 2026-07-27T22:05:00+04:00
 - desc: `ControlPlaneRepository.cs:43-48` — комментарий утверждает, что у лиз есть FK с каскадом, но в `db/migrations/control/001_initial.sql` у `control.router_leases.node_id` каскада нет. При живых лизах DELETE падает `PostgresException`, не ловится в `GrpcRouterControlPlaneService.cs:159` (там только `KeyNotFoundException`) — админка получает gRPC `Unknown`. `InMemoryControlPlaneRepository.cs:25-27` лизы удаляет, поэтому unit-тесты кейс не ловят. Фикс: миграция с `on delete cascade` либо явное удаление лиз в одной транзакции; комментарий привести в соответствие.

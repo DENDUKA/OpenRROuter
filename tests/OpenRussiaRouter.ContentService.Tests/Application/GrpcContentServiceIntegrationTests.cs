@@ -6,7 +6,8 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ContentService.Application.Services;
-using OpenRussiaRouter.ContentService.Infrastructure.Auth;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
+using OpenRussiaRouter.ContentService.Infrastructure.Startup;
 using OpenRussiaRouter.Contracts.Grpc.Content.V1;
 using ContentGrpc = OpenRussiaRouter.Contracts.Grpc.Content.V1;
 
@@ -219,7 +220,7 @@ public sealed class GrpcContentServiceIntegrationTests
                 services.PostConfigure<ServiceAuthOptions>(opts =>
                 {
                     opts.Tokens["webappadmin"] = AdminToken;
-                    foreach (var method in ServiceAuthInterceptor.ProtectedMethods)
+                    foreach (var method in Startup.ProtectedContentMethods)
                     {
                         opts.MethodPolicies[method] = ["webappadmin"];
                     }

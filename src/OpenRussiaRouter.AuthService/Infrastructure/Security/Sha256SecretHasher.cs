@@ -25,10 +25,20 @@ public sealed class Sha256SecretHasher : ISecretHasher
             return false;
         }
 
+        byte[] hashBytes;
+        try
+        {
+            hashBytes = Convert.FromBase64String(hash);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+
         var computed = Hash(rawSecret);
         return CryptographicOperations.FixedTimeEquals(
             Convert.FromBase64String(computed),
-            Convert.FromBase64String(hash));
+            hashBytes);
     }
 }
 

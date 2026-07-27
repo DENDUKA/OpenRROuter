@@ -19,7 +19,7 @@
 | `Migrations/` | применение сырых `.sql` на старте сервиса | `PostgresSqlMigrationRunner`, `SqlMigrationLoader`, `SqlMigration`, `RepositoryMigrationPath`, `WebApplicationMigrationExtensions` |
 | `Analytics/` | продуктовые события + трафик сайта, обе очереди и оба воркера | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure`, `SiteVisit`, `VisitorIdHasher`, `SiteVisitQueue`/`FlushWorker` |
 | `Metrics/` | Prometheus-экспорт и общий счётчик лимитов | `OpenTelemetryExtensions` (`AddOpenTelemetryMetrics`, `MapOpenTelemetryEndpoints`, `DefaultMeterName`), `LimitMetrics` |
-| `Grpc/` | клиентские интерсепторы | `GrpcDeadlineInterceptor`, `ServiceAuthClientInterceptor` |
+| `Grpc/` | клиентские и серверные интерсепторы | `GrpcDeadlineInterceptor`, `ServiceAuthClientInterceptor`, `ServiceAuthInterceptor` (серверный, конфигурируется через `ServiceAuthServerOptions.ProtectedMethods` per-service) |
 | `Logging/` | Serilog + Seq, логирование необработанных исключений | `SeqLoggingExtensions` (`AddSeqLogging`, `UseLoggedExceptionHandler`) |
 | `Telemetry/` | correlation id | `CorrelationIds` |
 | `Reasoning/` | перевод reasoning-опций ноды 9Router в канон ORR | `NodeReasoningMapper` |
@@ -181,9 +181,10 @@ ApiGateway зовёт это через свою обёртку `RouterUsageExtr
   s2s-аутентификация: копирует существующие заголовки в новую `Metadata` (не мутирует вызывающего)
   и добавляет `x-orr-caller` + `x-orr-s2s-token`. Ставится **поверх** deadline-интерсептора:
   в ApiGateway — на клиенте Billing, в WebApp — на клиентах Billing и Content.
-  **Серверной половины здесь нет**: `ServiceAuthInterceptor` живёт отдельно в
-  `BillingService/Infrastructure/Auth/` и `ContentService/Infrastructure/Auth/` (две копии),
-  так что имена заголовков синхронизируются руками.
+- `ServiceAuthInterceptor` ([файл](Grpc/ServiceAuthInterceptor.cs)) — серверная половина s2s-аутентификации.
+  Конфигурируется через `ServiceAuthOptions` (токены и политики из `appsettings.json`) и
+  `ServiceAuthServerOptions` (набор защищённых методов, определяется per-service). Каждый сервис
+  регистрирует свой `ProtectedMethods` через `services.Configure<ServiceAuthServerOptions>(o => o.ProtectedMethods = ...)`.
 
 ## Логирование, correlation id, прочее
 

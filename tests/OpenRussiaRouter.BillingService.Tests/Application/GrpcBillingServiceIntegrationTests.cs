@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using OpenRussiaRouter.BillingService.Infrastructure.Auth;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.Contracts.Grpc.Billing.V1;
 
 namespace OpenRussiaRouter.BillingService.Tests.Application;

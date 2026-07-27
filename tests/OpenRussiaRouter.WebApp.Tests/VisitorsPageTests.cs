@@ -21,13 +21,20 @@ public sealed class VisitorsPageTests
 
     [Theory]
     [InlineData("2024-01-15")]
-    [InlineData("2024-01-15T10:30:00Z")]
-    [InlineData("2024-01-15T10:30:00+03:00")]
+    [InlineData("2024-12-31")]
     public void ParseDate_Valid_ReturnsOffset(string value)
     {
         var parsed = Pages.Admin.VisitorsModel.ParseDate(value);
         parsed.Should().NotBeNull();
         parsed!.Value.Year.Should().Be(2024);
+    }
+
+    [Theory]
+    [InlineData("2024-01-15T10:30:00Z")]
+    [InlineData("2024-01-15T10:30:00+03:00")]
+    public void ParseDate_FullIso_ReturnsNull(string value)
+    {
+        Pages.Admin.VisitorsModel.ParseDate(value).Should().BeNull();
     }
 
     [Fact]

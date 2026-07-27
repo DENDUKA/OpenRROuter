@@ -874,10 +874,10 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
             cancellationToken: cancellationToken);
         return (
             response.StartBalanceEnabled,
-            decimal.TryParse(response.StartBalanceAmountUsd, System.Globalization.NumberStyles.Number,
+            decimal.TryParse(response.StartBalanceAmountUsd, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var sbAmt) ? sbAmt : 1.00m,
             response.FirstTopUpEnabled,
-            decimal.TryParse(response.FirstTopUpPercent, System.Globalization.NumberStyles.Number,
+            decimal.TryParse(response.FirstTopUpPercent, System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out var ftPct) ? ftPct : 20.00m
         );
     }

@@ -39,6 +39,13 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   на оставшихся антифоргери-куках. `SetApplicationName("OpenRussiaRouter.WebApp")` фиксирует
   дискриминатор. В unit-тестах (`WebAppFactory`) путь пуст — антифоргери там глобально выключен.
 - `PaymentStartupGuard.Validate(...)` сразу после `builder.Build()`.
+- **Security headers** (`Program.cs`): сразу после `UseForwardedHeaders` — `UseHsts()`
+  (HSTS, работает только для HTTPS, localhost исключён ASP.NET Core по умолчанию)
+  + inline middleware с `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: strict-origin-when-cross-origin`,
+  `Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'`.
+  Это первый эшелон защиты clickjacking и второй эшелон для T-013 (XSS через markdown).
+  `UseHsts` автоматически неактивен в Development.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
   `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`. `UseRateLimiter()` — **до** маппинга.
 

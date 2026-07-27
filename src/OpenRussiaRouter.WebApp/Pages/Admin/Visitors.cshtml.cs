@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.BuildingBlocks.Analytics;
@@ -121,7 +122,14 @@ public class VisitorsModel(
     }
 
     internal static DateTimeOffset? ParseDate(string? value) =>
-        DateTimeOffset.TryParse(value, out var parsed) ? parsed : null;
+        DateTimeOffset.TryParseExact(
+            value,
+            "yyyy-MM-dd",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var parsed)
+            ? parsed
+            : null;
 
     /// <summary>
     /// Builds <see cref="UserNamesByDistinctId"/>. Failures (auth unreachable, pseudonymizer

@@ -40,7 +40,13 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
     public async Task<bool> RemoveNodeAsync(string nodeId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
-        // leases have FK with ON DELETE CASCADE, so deleting the node removes them too
+        // Delete leases first: FK has no ON DELETE CASCADE (migration 001).
+        // Once the migration to add CASCADE is applied, this explicit delete becomes
+        // a harmless no-op but remains safe to keep for clarity.
+        await connection.ExecuteAsync(new CommandDefinition(
+            "delete from control.router_leases where node_id = @NodeId;",
+            new { NodeId = nodeId },
+            cancellationToken: ct)).ConfigureAwait(false);
         var affected = await connection.ExecuteAsync(new CommandDefinition(
             "delete from control.router_nodes where id = @NodeId;",
             new { NodeId = nodeId },

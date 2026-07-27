@@ -153,6 +153,7 @@ public static class ApiGatewayExtensions
     {
         services.Configure<GatewayRetryOptions>(configuration.GetSection("GatewayRetry"));
         services.AddScoped<IGatewayPipeline, GatewayPipeline>();
+        services.AddScoped<RouterRetryExecutor>();
         services.AddScoped<ChatCompletionHandler>();
         services.AddScoped<ImageGenerationHandler>();
         services.AddScoped<TextToSpeechHandler>();

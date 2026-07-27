@@ -1,12 +1,10 @@
-namespace OpenRussiaRouter.BillingService.Infrastructure.Auth;
+namespace OpenRussiaRouter.BuildingBlocks.Grpc;
 
 /// <summary>
 /// Configuration for the s2s (service-to-service) authentication interceptor.
 ///
-/// The interceptor guards <c>mutating</c> gRPC methods on <c>BillingService</c>. Read methods
-/// (e.g. <c>GetBalance</c>, <c>ListPublicModels</c>, <c>GetFxQuote</c>) are intentionally
-/// left open: they do not modify the ledger and existing clients (ApiGateway, WebApp) need
-/// them in their current shape.
+/// The interceptor guards <c>mutating</c> gRPC methods. Read methods are intentionally
+/// left open: they do not modify state and existing clients need them in their current shape.
 ///
 /// Two layers of defence:
 /// <list type="number">
@@ -22,7 +20,8 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Auth;
 /// </list>
 ///
 /// <see cref="MethodPolicies"/> is a per-method allowlist of caller ids. The interceptor owns
-/// the mutating-method list in code, so a missing policy for one of those methods fails closed.
+/// the mutating-method list (via <see cref="ServiceAuthServerOptions.ProtectedMethods"/>),
+/// so a missing policy for one of those methods fails closed.
 /// Methods outside that code-owned list are treated as <b>read-only</b> (no s2s required).
 /// </summary>
 public sealed class ServiceAuthOptions

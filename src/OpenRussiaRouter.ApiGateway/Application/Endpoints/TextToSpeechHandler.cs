@@ -3,11 +3,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.Application.Services;
 using OpenRussiaRouter.ApiGateway.Billing;
-using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.ApiGateway.Router;
 using OpenRussiaRouter.BuildingBlocks.Errors;
-using OpenRussiaRouter.BuildingBlocks.Telemetry;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
 namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
@@ -16,17 +14,14 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 /// Обработчик POST /v1/audio/speech.
 /// Проксирует TTS-запрос на ноду F9Router.
 /// Полная совместимость с OpenAI TTS API: model, input, voice, response_format, speed, и т.д.
-/// Биллинг: количество символов Unicode входного текста = output_tokens.
+/// Биллинг: количество символов Unicode (code points) входного текста = output_tokens.
 /// </summary>
 public sealed class TextToSpeechHandler(
-    IGatewayPipeline pipeline,
+    RouterRetryExecutor retryExecutor,
     IUsageOutboxRepository outboxRepository,
-    IControlPlaneProvider controlPlaneProvider,
     IRouterProxyProvider routerProxy,
     ILogger<TextToSpeechHandler> logger)
 {
-    private const int MaxRouterAttempts = 5;
-
     public async Task HandleAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
@@ -55,63 +50,17 @@ public sealed class TextToSpeechHandler(
                 return;
             }
 
-            HashSet<string>? excludedNodes = null;
-            RouterProxyResponse? lastResponse = null;
-            var attempts = 0;
-
-            while (true)
-            {
-                // Авторизация по модели (без voice) — BillingService знает только model
-                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, model, requestId, excludedNodes, context.RequestAborted);
-
-                if (auth is null)
+            await retryExecutor.ExecuteAsync(
+                context,
+                model,
+                requestId,
+                patchBody: auth => PatchModelAndVoice(json, auth.RouterModelId, voice),
+                sendRequest: (auth, patchedJson, ct) =>
+                    routerProxy.SendTextToSpeechAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, ct),
+                onSuccess: async (auth, response, startedAt, completedAt, ct) =>
                 {
-                    if (lastResponse != null)
-                    {
-                        context.Response.StatusCode = lastResponse.StatusCode;
-                        context.Response.ContentType = lastResponse.ContentType;
-                        await context.Response.WriteAsync(lastResponse.Body);
-                    }
-                    return;
-                }
-
-                try
-                {
-                    // Патч JSON: заменяем model на routerModelId И добавляем voice
-                    var patchedJson = PatchModelAndVoice(json, auth.RouterModelId, voice);
-                    var startedAt = DateTimeOffset.UtcNow;
-
-                    var response = await routerProxy.SendTextToSpeechAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-                    var completedAt = DateTimeOffset.UtcNow;
-
-                    bool isError = response.StatusCode >= 400;
-
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(
-                        auth.Lease.LeaseId,
-                        isError ? "failed" : "completed",
-                        CancellationToken.None);
-
-                    if (isError)
-                    {
-                        logger.LogWarning("TTS downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", response.StatusCode, auth.Lease.NodeId, response.Body);
-
-                        excludedNodes ??= new HashSet<string>();
-                        excludedNodes.Add(auth.Lease.NodeId);
-                        lastResponse = response;
-
-                        if (++attempts >= MaxRouterAttempts)
-                        {
-                            context.Response.StatusCode = lastResponse.StatusCode;
-                            context.Response.ContentType = lastResponse.ContentType;
-                            await context.Response.WriteAsync(lastResponse.Body);
-                            return;
-                        }
-
-                        continue;
-                    }
-
-                    // Биллинг: количество символов Unicode = output_tokens
-                    var characters = (long)input.Length;
+                    // Биллинг: количество символов Unicode (code points) = output_tokens
+                    var characters = (long)input.EnumerateRunes().Count();
                     var usage = new TokenUsage(InputTokens: 0, OutputTokens: characters, CacheTokens: 0);
                     var status = characters > 0 ? "completed" : "usage_missing";
 
@@ -126,20 +75,14 @@ public sealed class TextToSpeechHandler(
                     context.Response.ContentType = response.ContentType;
                     if (response.BodyBytes is { Length: > 0 } bytes)
                     {
-                        await context.Response.BodyWriter.WriteAsync(bytes, context.RequestAborted);
+                        await context.Response.BodyWriter.WriteAsync(bytes, ct);
                     }
                     else
                     {
-                        await context.Response.WriteAsync(response.Body);
+                        await context.Response.WriteAsync(response.Body, ct);
                     }
-                    return;
-                }
-                catch
-                {
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                    throw;
-                }
-            }
+                },
+                context.RequestAborted);
         }
         catch (OperationCanceledException)
         {

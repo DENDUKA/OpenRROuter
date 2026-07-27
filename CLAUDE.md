@@ -179,11 +179,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 - **gRPC-контракты**: `.proto` в `src/OpenRussiaRouter.Contracts/Protos/` —
   `auth.proto`, `billing.proto`, `control-plane.proto`, `collector.proto`, `content.proto`.
 - **gRPC-инфраструктура**: в `BuildingBlocks/Grpc/` лежат `GrpcDeadlineInterceptor`
-  (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах и клиентская половина
-  межсервисной аутентификации `ServiceAuthClientInterceptor`. **Серверный
-  `ServiceAuthInterceptor` в BuildingBlocks не живёт** — он продублирован двумя копиями в
-  `BillingService/Infrastructure/Auth/` и `ContentService/Infrastructure/Auth/`; на серверах
-  ApiGateway, AuthService, ControlPlane и CollectorService s2s-проверки нет вообще.
+  (`GrpcServices:CallDeadlineSeconds`, дефолт 30) на всех клиентах, клиентская половина
+  межсервисной аутентификации `ServiceAuthClientInterceptor` и серверный
+  `ServiceAuthInterceptor` с `ServiceAuthOptions`/`ServiceAuthServerOptions`. Каждый сервис
+  конфигурирует свой набор защищённых методов через `ServiceAuthServerOptions.ProtectedMethods`
+  в DI. На серверах ApiGateway, AuthService, ControlPlane и CollectorService s2s-проверки нет.
   Structured gRPC error details пока нет (PLATFORM-002).
 - **Correlation ID**: заголовок `X-Correlation-Id` → `CorrelationIdReader` → контекст Serilog.
 - **Конфигурация gRPC-адресов**: секция `GrpcServices` в `appsettings.json` потребителя

@@ -16,9 +16,11 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 
 /// <summary>
 /// Обработчики POST /v1/chat/completions и POST /v1/chat/completions/stream.
-/// Нестриминговый путь: YARP proxy. Стриминговый: ResponseHeadersRead + одна ретрай-нода.
+/// Нестриминговый путь: RouterRetryExecutor (общий с image/TTS).
+/// Стриминговый: ResponseHeadersRead + ретрай до первого успешного чанка.
 /// </summary>
 public sealed class ChatCompletionHandler(
+    RouterRetryExecutor retryExecutor,
     IGatewayPipeline pipeline,
     IUsageOutboxRepository outboxRepository,
     IControlPlaneProvider controlPlaneProvider,
@@ -42,86 +44,35 @@ public sealed class ChatCompletionHandler(
                 return;
             }
 
-            HashSet<string>? excludedNodes = null;
-            RouterProxyResponse? lastResponse = null;
-            var attempts = 0;
-
-            while (true)
-            {
-                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, excludedNodes, context.RequestAborted);
-                
-                // If auth is null on the first try, pipeline already wrote the error response.
-                // If it's null on a subsequent try, it means no more nodes are available.
-                if (auth is null)
-                {
-                    if (lastResponse != null)
-                    {
-                        // We exhausted nodes and had a previous error. Return it.
-                        context.Response.StatusCode = lastResponse.StatusCode;
-                        context.Response.ContentType = lastResponse.ContentType;
-                        await context.Response.WriteAsync(lastResponse.Body);
-                    }
-                    return;
-                }
-
-                try
+            await retryExecutor.ExecuteAsync(
+                context,
+                body.Metadata.Model ?? "",
+                requestId,
+                patchBody: auth =>
                 {
                     var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
+
                     var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
                         patchedJson,
                         body.Metadata.Reasoning,
                         auth.SupportsReasoning,
                         auth.AllowedReasoningEfforts ?? [],
                         auth.DefaultReasoningEffort);
-                    if (!reasoningPatch.IsSuccess)
-                    {
-                        // Release must succeed even if client disconnected — don't cancel.
-                        await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                        await GatewayErrors.WriteAsync(
-                            context,
-                            "invalid_request_error",
-                            reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
-                            reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
-                            requestId);
-                        return;
-                    }
 
-                    patchedJson = GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                    if (!reasoningPatch.IsSuccess)
+                        throw new RoutingValidationException(
+                            reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
+                            reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed);
+
+                    return GeminiSchemaPatcher.SanitizeIfGeminiModel(
                         reasoningPatch.PatchedJson,
                         auth.RouterModelId,
                         body.Metadata.Model ?? "");
-                    var startedAt = DateTimeOffset.UtcNow;
-
-                    var response = await routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);
-                    var completedAt = DateTimeOffset.UtcNow;
-
-                    bool isError = response.StatusCode >= 400;
-
-                    // Release must succeed even if client disconnected — don't cancel.
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(
-                        auth.Lease.LeaseId,
-                        isError ? "failed" : "completed",
-                        CancellationToken.None);
-
-                    if (isError)
-                    {
-                        logger.LogWarning("Chat completion downstream error. StatusCode: {StatusCode}, Node: {NodeId}, Body: {Body}", response.StatusCode, auth.Lease.NodeId, response.Body);
-                        
-                        excludedNodes ??= new HashSet<string>();
-                        excludedNodes.Add(auth.Lease.NodeId);
-                        lastResponse = response;
-
-                        if (++attempts >= MaxRouterAttempts)
-                        {
-                            context.Response.StatusCode = lastResponse.StatusCode;
-                            context.Response.ContentType = lastResponse.ContentType;
-                            await context.Response.WriteAsync(lastResponse.Body);
-                            return;
-                        }
-
-                        continue;
-                    }
-
+                },
+                sendRequest: (auth, patchedJson, ct) =>
+                    routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, ct),
+                onSuccess: async (auth, response, startedAt, completedAt, ct) =>
+                {
                     var hasUsage = RouterUsageExtractor.TryExtract(response.Body, out var usage) && usage.TotalTokens > 0;
                     var status = hasUsage ? "completed" : "usage_missing";
 
@@ -134,55 +85,9 @@ public sealed class ChatCompletionHandler(
 
                     context.Response.StatusCode = response.StatusCode;
                     context.Response.ContentType = response.ContentType;
-                    await context.Response.WriteAsync(response.Body);
-                    return;
-                }
-                catch (OperationCanceledException)
-                {
-                    // Release must succeed even if client disconnected — don't cancel.
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                    throw;
-                }
-                catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
-                {
-                    // Connection broke before/while receiving the response (e.g. node
-                    // crashed mid-stream, stale pooled HTTP/2 connection, network reset).
-                    // Treat like a 5xx downstream error: release, exclude the node, retry.
-                    logger.LogWarning(ex,
-                        "Chat completion request to node {NodeId} failed before response. RequestId: {RequestId}",
-                        auth.Lease.NodeId, requestId);
-
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-
-                    excludedNodes ??= new HashSet<string>();
-                    excludedNodes.Add(auth.Lease.NodeId);
-
-                    if (++attempts >= MaxRouterAttempts)
-                    {
-                        if (lastResponse != null)
-                        {
-                            context.Response.StatusCode = lastResponse.StatusCode;
-                            context.Response.ContentType = lastResponse.ContentType;
-                            await context.Response.WriteAsync(lastResponse.Body);
-                        }
-                        else
-                        {
-                            await GatewayErrors.WriteAsync(
-                                context, "service_unavailable", ErrorCodes.RouterUnavailable,
-                                "Upstream node connection failed", requestId);
-                        }
-                        return;
-                    }
-
-                    continue;
-                }
-                catch
-                {
-                    // Release must succeed even if client disconnected — don't cancel.
-                    await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                    throw;
-                }
-            }
+                    await context.Response.WriteAsync(response.Body, ct);
+                },
+                context.RequestAborted);
         }
         catch (OperationCanceledException)
         {
@@ -236,6 +141,11 @@ public sealed class ChatCompletionHandler(
                     {
                         // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                        if (lastFailedSession != null)
+                        {
+                            await lastFailedSession.DisposeAsync();
+                            lastFailedSession = null;
+                        }
                         await GatewayErrors.WriteAsync(
                             context,
                             "invalid_request_error",
@@ -318,6 +228,10 @@ public sealed class ChatCompletionHandler(
                 {
                     // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                    if (lastFailedSession != null)
+                    {
+                        await lastFailedSession.DisposeAsync();
+                    }
                     throw;
                 }
                 catch (Exception ex) when (ex is HttpRequestException || ex is IOException)
@@ -355,6 +269,10 @@ public sealed class ChatCompletionHandler(
                 {
                     // Release must succeed even if client disconnected — don't cancel.
                     await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                    if (lastFailedSession != null)
+                    {
+                        await lastFailedSession.DisposeAsync();
+                    }
                     throw;
                 }
             }

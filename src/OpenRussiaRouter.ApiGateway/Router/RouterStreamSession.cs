@@ -37,10 +37,10 @@ public sealed class RouterStreamSession : IAsyncDisposable
             var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
             if (line is null) break;
 
-            if (!line.StartsWith("data: ", StringComparison.Ordinal))
+            if (!line.StartsWith("data:", StringComparison.Ordinal))
                 continue;
 
-            var data = line.Substring(6);
+            var data = line["data:".Length..].TrimStart();
 
             if (data == "[DONE]")
             {

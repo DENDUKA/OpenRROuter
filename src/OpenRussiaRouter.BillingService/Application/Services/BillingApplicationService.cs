@@ -686,22 +686,7 @@ public sealed partial class BillingApplicationService(
     private static partial Regex HexColorRegex();
 
     private void EmitAnalytics(string eventName, Action emit)
-    {
-        if (productAnalytics is null)
-            return;
-
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                emit();
-            }
-            catch (Exception ex)
-            {
-                logger.LogWarning(ex, "Analytics emission failed for event {EventName}.", eventName);
-            }
-        });
-    }
+        => productAnalytics.EmitSafe(logger, eventName, emit);
 
     private void EmitApiRequestCompleted(UsageEvent usageEvent)
     {

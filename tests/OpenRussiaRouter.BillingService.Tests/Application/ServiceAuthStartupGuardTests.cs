@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Infrastructure.Auth;
+using OpenRussiaRouter.BuildingBlocks.Grpc;
 
 namespace OpenRussiaRouter.BillingService.Tests.Application;
 

@@ -6,4 +6,5 @@ public sealed record RouterProxyResponse(
     string Body,
     string? ProviderName = null,
     string? ProviderAccount = null,
-    byte[]? BodyBytes = null);
+    byte[]? BodyBytes = null,
+    Stream? BodyStream = null);

@@ -59,7 +59,8 @@ public sealed class SiteVisitReader
         var hasHashFilter = !string.IsNullOrWhiteSpace(query.VisitorHash);
 
         // Resolve visitor_hash from userId: compute distinct_id, then take the most recent
-        // visit that carries it — its visitor_hash anchors the anonymous part of the journey.
+        // visit (or, once it has been compacted away, session) that carries it — its
+        // visitor_hash anchors the anonymous part of the journey.
         if (hasUserFilter)
         {
             try
@@ -101,10 +102,22 @@ public sealed class SiteVisitReader
         return new SiteVisitQueryResult(items, total, resolvedVisitorHash, resolvedDistinctId);
     }
 
-    private static async Task<string?> FindVisitorHashByDistinctIdAsync(
+    /// <summary>
+    /// Resolves the visitor behind a <c>distinct_id</c>, newest first. Looks in
+    /// <c>analytics.site_visits</c> and, when that finds nothing, falls back to
+    /// <c>analytics.visit_sessions</c>.
+    /// </summary>
+    /// <remarks>
+    /// The fallback is what keeps <c>/admin/visitors?userId=</c> working at all: the compaction
+    /// worker deletes raw visits once their session is closed, so <c>site_visits</c> holds only
+    /// the last ~35 minutes of traffic and every older user would otherwise resolve to nothing.
+    /// The raw table is still queried first — it is the only place a still-open session lives,
+    /// and its <c>visitor_hash</c> is the freshest one available.
+    /// </remarks>
+    private async Task<string?> FindVisitorHashByDistinctIdAsync(
         NpgsqlDataSource ds, string distinctId, CancellationToken ct)
     {
-        const string sql = """
+        const string visitsSql = """
             select visitor_hash
             from analytics.site_visits
             where distinct_id = :distinctId
@@ -112,6 +125,42 @@ public sealed class SiteVisitReader
             limit 1
             """;
 
+        const string sessionsSql = """
+            select visitor_hash
+            from analytics.visit_sessions
+            where distinct_id = :distinctId
+            order by started_at_utc desc
+            limit 1
+            """;
+
+        var fromVisits = await QueryVisitorHashAsync(ds, visitsSql, distinctId, ct).ConfigureAwait(false);
+        if (!string.IsNullOrEmpty(fromVisits))
+        {
+            return fromVisits;
+        }
+
+        try
+        {
+            return await QueryVisitorHashAsync(ds, sessionsSql, distinctId, ct).ConfigureAwait(false);
+        }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UndefinedTable)
+        {
+            // Analytics is fail-open: a database that is one migration behind must degrade to
+            // "no visitor found" (exactly what the pre-compaction reader returned) instead of
+            // failing the admin page. A to_regclass pre-check would cost an extra round trip on
+            // every lookup to guard a state that ends the moment the migration is applied;
+            // catching the one error code that means "table absent" pays only in that state and
+            // leaves every other Postgres failure visible.
+            _logger.LogWarning(ex,
+                "analytics.visit_sessions is missing, visitor resolution is limited to the "
+                + "uncompacted tail of analytics.site_visits. Apply the analytics migrations.");
+            return null;
+        }
+    }
+
+    private static async Task<string?> QueryVisitorHashAsync(
+        NpgsqlDataSource ds, string sql, string distinctId, CancellationToken ct)
+    {
         await using var conn = await ds.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var cmd = new NpgsqlCommand(sql, conn);
         cmd.Parameters.Add(new NpgsqlParameter("distinctId", distinctId));

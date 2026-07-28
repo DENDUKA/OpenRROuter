@@ -1,0 +1,196 @@
+@page
+@model Admin.SessionsModel
+@{ Layout = "~/Pages/Shared/_AdminLayout.cshtml"; ViewData["Title"] = "Sessions - Admin"; }
+
+<div class="adm-section-head">
+    <h2>Visit Sessions</h2>
+    <p>Page views collapsed into sessions — one row per visit. The last ~35 minutes of traffic are not compacted yet and stay on <a href="/admin/visitors">Visitors</a>.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
+}
+
+@if (!Model.AnalyticsEnabled)
+{
+    <div class="alert alert-warning" role="alert">
+        Analytics sink is not configured on this environment. Site visits are not being recorded.
+    </div>
+}
+else
+{
+    <div class="adm-card">
+        <div class="adm-card-header">Filter</div>
+        <div class="adm-card-body">
+            <form method="get" class="d-flex gap-2 align-items-end flex-wrap mb-1" style="font-weight:normal">
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.8rem">User ID</label>
+                    <input type="text" name="userId" value="@Model.UserId" placeholder="resolve by signed-in user" class="form-control" style="min-width:260px" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.8rem">Visitor hash</label>
+                    <input type="text" name="visitorHash" value="@Model.VisitorHash" placeholder="HMAC(ip + ua)" class="form-control" style="min-width:260px" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.8rem">From (UTC)</label>
+                    <input type="text" name="from" value="@Model.From" placeholder="yyyy-MM-dd" class="form-control" style="width:140px" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.8rem">To (UTC)</label>
+                    <input type="text" name="to" value="@Model.To" placeholder="yyyy-MM-dd" class="form-control" style="width:140px" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-size:.8rem" for="bots">Bots</label>
+                    <div>
+                        <input type="checkbox" id="bots" name="bots" value="true" checked="@Model.IncludeBots" />
+                        <label for="bots" style="font-size:.85rem;font-weight:normal">Show bots</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+                @if (Model.HasActiveFilter())
+                {
+                    <a href="/admin/sessions" class="btn btn-sm btn-secondary">Clear</a>
+                }
+            </form>
+        </div>
+    </div>
+
+    @if (Model.ResolvedVisitorHash != null || Model.ResolvedDistinctId != null)
+    {
+        <div class="adm-card">
+            <div class="adm-card-body" style="font-weight:normal">
+                @if (Model.ResolvedDistinctId != null)
+                {
+                    <span class="badge badge-secondary" style="margin-right:8px">distinct_id: <code>@Model.ResolvedDistinctId</code></span>
+                }
+                @if (Model.ResolvedVisitorHash != null)
+                {
+                    <span class="badge badge-info">visitor_hash: <code>@Model.ResolvedVisitorHash</code></span>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="adm-card">
+        <div class="adm-card-header">
+            <span>Sessions</span>
+            <span class="text-muted" style="font-weight:normal;margin-left:8px">@Model.TotalCount total</span>
+        </div>
+        <div class="adm-card-body">
+            @if (Model.Records.Count == 0)
+            {
+                <p class="text-muted">No sessions found.</p>
+            }
+            else
+            {
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Started</th>
+                            <th>Duration</th>
+                            <th>Visitor</th>
+                            <th>Entry &rarr; Exit</th>
+                            <th>Pages</th>
+                            <th>Source / UTM</th>
+                            <th>Device</th>
+                            <th>Auth</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Model.Records)
+                        {
+                            var detailsUrl = $"/admin/sessions/{s.Id}";
+                            <tr style="cursor:pointer" onclick="location.href='@detailsUrl'" title="Open session details">
+                                <td style="white-space:nowrap">
+                                    <a href="@detailsUrl" title="@s.StartedAtUtc.ToString("O")">
+                                        <small>@s.StartedAtUtc.ToLocalTime().ToString("g")</small>
+                                    </a>
+                                </td>
+                                <td style="white-space:nowrap"><small>@Admin.SessionsModel.FormatDuration(s.DurationSeconds)</small></td>
+                                <td>
+                                    <a href="/admin/sessions?visitorHash=@Uri.EscapeDataString(s.VisitorHash)" title="Filter by this visitor" onclick="event.stopPropagation()">
+                                        <code>@(s.VisitorHash.Length > 12 ? s.VisitorHash[..12] + "&hellip;" : s.VisitorHash)</code>
+                                    </a>
+                                </td>
+                                <td>
+                                    <code>@s.EntryPath</code>
+                                    @if (!string.Equals(s.EntryPath, s.ExitPath, StringComparison.Ordinal))
+                                    {
+                                        <br />
+                                        <small class="text-muted">&rarr; <code>@s.ExitPath</code></small>
+                                    }
+                                </td>
+                                <td><span class="badge badge-secondary">@s.PageViewCount</span></td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(s.ReferrerHost))
+                                    {
+                                        <small class="text-muted">
+                                            &larr; @s.ReferrerHost
+                                            @if (s.ReferrerKind != "external" && s.ReferrerKind != "internal")
+                                            {
+                                                <span class="badge badge-secondary">@s.ReferrerKind</span>
+                                            }
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <small class="text-muted">&larr; @s.ReferrerKind</small>
+                                    }
+                                    @if (!string.IsNullOrEmpty(s.UtmSource) || !string.IsNullOrEmpty(s.UtmMedium) || !string.IsNullOrEmpty(s.UtmCampaign))
+                                    {
+                                        <br />
+                                        <small>
+                                            @s.UtmSource@(!string.IsNullOrEmpty(s.UtmMedium) ? $"/{s.UtmMedium}" : "")@(!string.IsNullOrEmpty(s.UtmCampaign) ? $" ({s.UtmCampaign})" : "")
+                                        </small>
+                                    }
+                                </td>
+                                <td><span class="badge @(s.DeviceClass == "bot" ? "badge-warning" : "badge-secondary")">@s.DeviceClass</span></td>
+                                <td>
+                                    @{
+                                        var userName = Model.GetUserName(s);
+                                    }
+                                    @if (s.IsAuthenticated)
+                                    {
+                                        <span class="badge badge-success" title="@s.DistinctId">signed-in@(userName is null ? "" : $" ({userName})")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">anon</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="d-flex gap-2 align-items-center mt-3 mb-2">
+                        @if (Model.HasPreviousPage)
+                        {
+                            <a href="@Model.BuildPageUrl(Model.PageNumber - 1)" class="btn btn-sm btn-secondary">&larr; Prev</a>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-secondary" disabled>&larr; Prev</button>
+                        }
+
+                        <span class="text-muted" style="font-size:.85rem">
+                            Page @(Model.PageNumber + 1) of @Model.TotalPages
+                        </span>
+
+                        @if (Model.HasNextPage)
+                        {
+                            <a href="@Model.BuildPageUrl(Model.PageNumber + 1)" class="btn btn-sm btn-primary">Next &rarr;</a>
+                        }
+                        else
+                        {
+                            <button class="btn btn-sm btn-primary" disabled>Next &rarr;</button>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+}

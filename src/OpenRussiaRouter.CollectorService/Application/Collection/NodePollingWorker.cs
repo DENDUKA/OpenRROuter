@@ -50,11 +50,14 @@ public sealed class NodePollingWorker(
         var activeModels = await activeBillingModelProvider.ListActiveModelsAsync(cancellationToken).ConfigureAwait(false);
         var flatMeasurements = quotaResults.SelectMany(r => r.Measurements).ToList();
         var quotaStatuses = quotaResults.SelectMany(r => r.Statuses).ToList();
+
+        var catalogsByNodeId = catalogResults.ToDictionary(c => c.NodeId, c => c, StringComparer.Ordinal);
+
         var enrichedMeasurements = new List<QuotaMeasurement>(flatMeasurements.Count);
 
         foreach (var measurement in flatMeasurements)
         {
-            var nodeCatalog = catalogResults.FirstOrDefault(c => c.NodeId == measurement.NodeId);
+            catalogsByNodeId.TryGetValue(measurement.NodeId, out var nodeCatalog);
             List<string> modelIds = [];
 
             if (measurement.ModelIds.Count > 0)
@@ -74,12 +77,12 @@ public sealed class NodePollingWorker(
             enrichedMeasurements.Add(measurement with { ModelIds = modelIds });
         }
 
-        var activeModelMeasurements = BuildActiveModelMeasurements(catalogResults, flatMeasurements, activeModels);
+        var activeModelMeasurements = BuildActiveModelMeasurements(catalogsByNodeId, flatMeasurements, activeModels);
         quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now, activeModelMeasurements, quotaStatuses));
     }
 
     private static IReadOnlyList<ActiveModelQuotaMeasurement> BuildActiveModelMeasurements(
-        IReadOnlyList<NodeCatalogResult> catalogResults,
+        IReadOnlyDictionary<string, NodeCatalogResult> catalogsByNodeId,
         IReadOnlyList<QuotaMeasurement> flatMeasurements,
         IReadOnlyList<ActiveBillingModel> activeModels)
     {
@@ -90,8 +93,15 @@ public sealed class NodePollingWorker(
             .GroupBy(model => model.RouterModelId, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
 
+        var quotasByNodeAndConnection = flatMeasurements
+            .Where(m => m.Percent.HasValue)
+            .ToLookup(
+                m => (NodeId: m.NodeId, ConnectionId: m.ConnectionId),
+                m => m,
+                new NodeConnectionComparer());
+
         var measurements = new List<ActiveModelQuotaMeasurement>();
-        foreach (var nodeCatalog in catalogResults.Where(c => !c.Unreachable))
+        foreach (var nodeCatalog in catalogsByNodeId.Values.Where(c => !c.Unreachable))
         {
             foreach (var observation in nodeCatalog.Observations)
             {
@@ -102,12 +112,7 @@ public sealed class NodePollingWorker(
                 if (matchedModels.Count == 0)
                     continue;
 
-                var connectionQuotas = flatMeasurements
-                    .Where(measurement =>
-                        string.Equals(measurement.NodeId, nodeCatalog.NodeId, StringComparison.Ordinal) &&
-                        string.Equals(measurement.ConnectionId, observation.ConnectionId, StringComparison.OrdinalIgnoreCase) &&
-                        measurement.Percent.HasValue)
-                    .ToList();
+                var connectionQuotas = quotasByNodeAndConnection[new(nodeCatalog.NodeId, observation.ConnectionId)].ToList();
                 if (connectionQuotas.Count == 0)
                     continue;
 
@@ -197,6 +202,18 @@ public sealed class NodePollingWorker(
         if (!string.IsNullOrWhiteSpace(quotaProvider))
             return quotaProvider;
         return "unknown";
+    }
+
+    private sealed class NodeConnectionComparer : IEqualityComparer<(string NodeId, string ConnectionId)>
+    {
+        public bool Equals((string NodeId, string ConnectionId) x, (string NodeId, string ConnectionId) y) =>
+            string.Equals(x.NodeId, y.NodeId, StringComparison.Ordinal) &&
+            string.Equals(x.ConnectionId, y.ConnectionId, StringComparison.OrdinalIgnoreCase);
+
+        public int GetHashCode((string NodeId, string ConnectionId) obj) =>
+            HashCode.Combine(
+                StringComparer.Ordinal.GetHashCode(obj.NodeId),
+                StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ConnectionId));
     }
 
     /// <summary>

@@ -157,6 +157,7 @@ public static class ApiGatewayExtensions
         services.AddScoped<ChatCompletionHandler>();
         services.AddScoped<ImageGenerationHandler>();
         services.AddScoped<TextToSpeechHandler>();
+        services.AddMemoryCache();
         services.AddScoped<ModelsHandler>();
 
         return services;
@@ -189,7 +190,8 @@ public static class ApiGatewayExtensions
             (TextToSpeechHandler handler, HttpContext ctx) => handler.HandleAsync(ctx))
             .RequireRateLimiting(GatewayRateLimiting.PolicyName);
         app.MapGet("/v1/models",
-            (ModelsHandler handler, HttpContext ctx) => handler.HandleAsync(ctx));
+            (ModelsHandler handler, HttpContext ctx) => handler.HandleAsync(ctx))
+            .RequireRateLimiting(GatewayRateLimiting.ModelsPolicyName);
         app.MapGet("/health",
             () => Results.Json(new { status = "healthy" }));
         app.MapGet("/ready",

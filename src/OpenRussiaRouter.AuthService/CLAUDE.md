@@ -50,7 +50,7 @@ DI-расширения — [AuthServiceExtensions.cs](Application/Extensions/Au
 Все методы возвращают result-record'ы (`RegisterResult`, `VerifyEmailResult`, `PasswordChangeResult`, …)
 с `ErrorCode` из `AuthErrorCodes`; исключения бросают только API-ключевые мутаторы и `UpdateUserAsync`.
 
-- **Self-serve signup** (`RegisterUserAsync`): пароль ≥ `MinPasswordLength` (8) иначе `WeakPassword`;
+- **Self-serve signup** (`RegisterUserAsync`): пароль ≥ `MinPasswordLength` (12) иначе `WeakPassword`;
   email через `EmailValidator.Normalize` (иначе `InvalidEmail`); дубль → `EmailAlreadyRegistered`;
   создаётся `UserAccount.CreateForEmailSignup` в статусе **`PendingVerification`** + `EmailVerification`
   одной транзакцией. Возвращает **сырой 6-значный код** (`RawCode`) — рассылает его WebApp, в БД только хеш.
@@ -98,7 +98,7 @@ DI-расширения — [AuthServiceExtensions.cs](Application/Extensions/Au
   (нужен для пуша ключа на ноды 9Router). Plaintext отдаётся вызывающему один раз.
 - Сессионный токен: `orr_session_<base64url(32)>`, инвайт-токен: `orr_invite_<base64url(32)>`.
 - `Pbkdf2PasswordHasher`: `pbkdf2-sha256.210000.<salt>.<hash>`, `FixedTimeEquals`,
-  **`HashPassword` требует ≥ 12 символов** (см. подводные камни).
+  **`HashPassword` требует ≥ 12 символов** (консистентно с фасадом).
 - `Sha256SecretHasher`: SHA-256 → base64, сравнение `FixedTimeEquals`. Одним и тем же хешером
   хешируются API-ключи, инвайт-токены и 6-значные коды.
 - `EmailVerificationService`: код = `RandomNumberGenerator.GetInt32(100000, 1000000)`,
@@ -178,10 +178,9 @@ DI-расширения — [AuthServiceExtensions.cs](Application/Extensions/Au
 
 ## Подводные камни
 
-- **Порог длины пароля различается**: фасад пропускает ≥ 8 (`MinPasswordLength`), а
-  `Pbkdf2PasswordHasher.HashPassword` бросает `ArgumentException` при < 12. Пароль 8–11 символов
-  проходит валидацию фасада и падает в хешере; в `RegisterUser` / `ResetPassword` / `ChangePassword`
-  это исключение не перехвачено. WebApp страхует своей валидацией `MinLength(12)`.
+- **Порог длины пароля — 12 символов**: фасад (`MinPasswordLength = 12`) и `Pbkdf2PasswordHasher.HashPassword` (≥ 12)
+  консистентны. Пароли < 12 символов отклоняются фасадом с `WeakPassword` до вызова хешера.
+  WebApp также страхует своей валидацией `MinLength(12)`.
 - **Сессии не персистятся**: `UserSession` — просто record, токен минтится и уезжает в
   `LoginResponse`. Таблицы сессий нет, RPC валидации/отзыва сессии нет; WebApp кладёт токен
   в claim `session_token` и дальше опирается на свою cookie-аутентификацию.

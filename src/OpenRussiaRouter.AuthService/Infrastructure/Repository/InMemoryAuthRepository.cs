@@ -95,6 +95,18 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         return Task.CompletedTask;
     }
 
+    public Task<bool> TryAddApiKeyAsync(ApiKey apiKey, int maxApiKeys, CancellationToken ct = default)
+    {
+        lock (_gate)
+        {
+            var currentCount = _apiKeys.Count(k => k.UserId == apiKey.UserId && !k.IsDeleted);
+            if (currentCount >= maxApiKeys)
+                return Task.FromResult(false);
+            _apiKeys.Add(apiKey);
+            return Task.FromResult(true);
+        }
+    }
+
     public Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default)
     {
         lock (_gate) { return Task.FromResult(_apiKeys.SingleOrDefault(k => k.Id == apiKeyId)); }

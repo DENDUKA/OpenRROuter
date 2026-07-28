@@ -276,6 +276,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
             int enriched = 0;
             int reasoningEnriched = 0;
             var notFound = new List<string>();
+            var modelsToUpdate = new List<ModelInfo>();
 
             // Build node catalog lookup by upstream model id
             var nodeCatalogByUpstream = nodeCatalog.Entries
@@ -358,8 +359,15 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
                 if (enrichedModel != model)
                 {
-                    await _billingClient.UpsertModelAsync(enrichedModel);
+                    modelsToUpdate.Add(enrichedModel);
                 }
+            }
+
+            if (modelsToUpdate.Count > 0)
+            {
+                var (upsertedCount, failedIds) = await _billingClient.UpsertModelsAsync(modelsToUpdate, HttpContext.RequestAborted);
+                if (failedIds.Count > 0)
+                    _logger.LogWarning("Enrich: {FailedCount} model(s) failed to upsert: {FailedIds}", failedIds.Count, string.Join(", ", failedIds));
             }
 
             var msg = $"Enriched {enriched} model(s) from OpenRouter.";

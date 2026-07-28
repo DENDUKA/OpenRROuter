@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.Contracts.Auth;
 using System.Threading.Tasks;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -9,6 +10,7 @@ public class IndexModel : PageModelBase
 {
     private readonly BillingProvider _billingProvider;
     private readonly AuthProvider _authProvider;
+    private readonly ILogger<IndexModel> _logger;
 
     public bool HasBalance { get; set; }
     public bool HasApiKey { get; set; }
@@ -21,50 +23,64 @@ public class IndexModel : PageModelBase
     public bool HasPaidTopUp { get; set; }
     public bool FirstTopUpBonusAvailable { get; set; }
 
-    public IndexModel(BillingProvider billingProvider, AuthProvider authProvider)
+    public IndexModel(BillingProvider billingProvider, AuthProvider authProvider, ILogger<IndexModel> logger)
     {
         _billingProvider = billingProvider;
         _authProvider = authProvider;
+        _logger = logger;
     }
 
     public async Task OnGetAsync()
     {
-        try
-        {
-            Providers = await _billingProvider.ListModelProvidersAsync(HttpContext.RequestAborted);
-        }
-        catch
-        {
-            // Ignore — fallback to empty strip
-        }
+        var ct = HttpContext.RequestAborted;
 
-        try
-        {
-            (StartBalanceEnabled, StartBalanceAmountUsd, FirstTopUpEnabled, FirstTopUpPercent) =
-                await _billingProvider.GetPromotionSettingsAsync(HttpContext.RequestAborted);
-        }
-        catch
-        {
-            // Ignore — promo blocks hidden on error
-        }
+        // Fire all tasks eagerly to maximize parallelism
+        var providersTask = _billingProvider.ListModelProvidersAsync(ct);
+        var promoTask = _billingProvider.GetPromotionSettingsAsync(ct);
+
+        // Await each with its own error handling
+        try { Providers = await providersTask; }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to load providers for landing page"); }
+
+        try { (StartBalanceEnabled, StartBalanceAmountUsd, FirstTopUpEnabled, FirstTopUpPercent) = await promoTask; }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to load promotion settings for landing page"); }
 
         var user = CurrentUser;
         if (user != null)
         {
-            try 
+            // Fire user-specific tasks eagerly
+            var balanceTask = _billingProvider.GetBalanceAsync(user.UserId);
+            var keysTask = _authProvider.ListApiKeysAsync(user.UserId);
+            var hasPaidTopUpTask = _billingProvider.HasUserHadPaidTopUpAsync(user.UserId, ct);
+
+            try
             {
-                var balance = await _billingProvider.GetBalanceAsync(user.UserId);
+                var balance = await balanceTask;
                 HasBalance = balance.Amount > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load balance for user {UserId} on landing page", user.UserId);
+            }
 
-                var keys = await _authProvider.ListApiKeysAsync(user.UserId);
+            try
+            {
+                var keys = await keysTask;
                 HasApiKey = keys.Count > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load API keys for user {UserId} on landing page", user.UserId);
+            }
 
-                HasPaidTopUp = await _billingProvider.HasUserHadPaidTopUpAsync(user.UserId, HttpContext.RequestAborted);
+            try
+            {
+                HasPaidTopUp = await hasPaidTopUpTask;
                 FirstTopUpBonusAvailable = FirstTopUpEnabled && !HasPaidTopUp;
             }
-            catch 
+            catch (Exception ex)
             {
-                // Ignore
+                _logger.LogWarning(ex, "Failed to check paid top-up status for user {UserId} on landing page", user.UserId);
             }
         }
     }

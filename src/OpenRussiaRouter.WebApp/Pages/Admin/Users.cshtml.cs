@@ -85,8 +85,14 @@ public class UsersModel(AuthProvider authProvider, BillingProvider billingProvid
         try
         {
             Users = await _authClient.ListUsersAsync();
+
+            // Limit concurrent gRPC calls to BillingService to avoid blasting it with
+            // thousands of parallel requests when the user base is large.
+            const int maxConcurrency = 10;
+            using var throttle = new SemaphoreSlim(maxConcurrency, maxConcurrency);
             var balanceTasks = Users.Select(async user =>
             {
+                await throttle.WaitAsync();
                 try
                 {
                     var b = await _billingClient.GetBalanceAsync(user.Id);
@@ -96,6 +102,10 @@ public class UsersModel(AuthProvider authProvider, BillingProvider billingProvid
                 {
                     _logger.LogWarning(ex, "Failed to load balance for user. UserId={UserId}", user.Id);
                     return (user.Id, Amount: 0m);
+                }
+                finally
+                {
+                    throttle.Release();
                 }
             });
             var balances = await Task.WhenAll(balanceTasks);

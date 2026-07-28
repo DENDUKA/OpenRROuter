@@ -21,17 +21,26 @@ public sealed class RouterHealthCheckWorker(
             return;
 
         var nodes = await controlPlane.ListNodesForHealthChecksAsync(cancellationToken).ConfigureAwait(false);
-        foreach (var node in nodes.Where(candidate => candidate.Enabled))
-        {
-            var result = await healthClient.CheckAsync(node, cancellationToken).ConfigureAwait(false);
-            await controlPlane.ApplyHealthAsync(
-                node.Id,
-                result.Status,
-                DateTimeOffset.UtcNow,
-                result.LatencyMs,
-                result.ErrorCode,
-                cancellationToken).ConfigureAwait(false);
-        }
+        var enabledNodes = nodes.Where(candidate => candidate.Enabled).ToList();
+
+        await Parallel.ForEachAsync(
+            enabledNodes,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = options.CurrentValue.MaxConcurrency,
+                CancellationToken = cancellationToken
+            },
+            async (node, ct) =>
+            {
+                var result = await healthClient.CheckAsync(node, ct).ConfigureAwait(false);
+                await controlPlane.ApplyHealthAsync(
+                    node.Id,
+                    result.Status,
+                    DateTimeOffset.UtcNow,
+                    result.LatencyMs,
+                    result.ErrorCode,
+                    ct).ConfigureAwait(false);
+            }).ConfigureAwait(false);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -51,7 +60,14 @@ public sealed class RouterHealthCheckWorker(
                 logger.LogWarning(exception, "Router health check round failed with error: {ErrorMessage}", exception.Message);
             }
 
-            await Task.Delay(options.CurrentValue.Interval, stoppingToken).ConfigureAwait(false);
+            try
+            {
+                await Task.Delay(options.CurrentValue.Interval, stoppingToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
     }
 }

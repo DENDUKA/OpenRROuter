@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Text;
 using OpenRussiaRouter.BuildingBlocks.Usage;
 
@@ -7,6 +8,8 @@ public sealed class RouterStreamSession : IAsyncDisposable
 {
     private readonly HttpResponseMessage _response;
     private bool _disposed;
+
+    private static readonly Encoding Utf8 = Encoding.UTF8;
 
     internal RouterStreamSession(HttpResponseMessage response)
     {
@@ -29,7 +32,7 @@ public sealed class RouterStreamSession : IAsyncDisposable
     public async Task<TokenUsage> CopyToAsync(Stream destination, CancellationToken cancellationToken)
     {
         var stream = await _response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        using var reader = new StreamReader(stream, Encoding.UTF8, leaveOpen: true);
+        using var reader = new StreamReader(stream, Utf8, leaveOpen: true);
         TokenUsage usage = default;
 
         while (!cancellationToken.IsCancellationRequested)
@@ -40,27 +43,52 @@ public sealed class RouterStreamSession : IAsyncDisposable
             if (!line.StartsWith("data:", StringComparison.Ordinal))
                 continue;
 
-            var data = line["data:".Length..].TrimStart();
+            var dataStart = "data:".Length;
+            while (dataStart < line.Length && line[dataStart] == ' ')
+                dataStart++;
+
+            var data = line.Substring(dataStart);
 
             if (data == "[DONE]")
             {
-                await destination.WriteAsync("data: [DONE]\n\n"u8.ToArray(), cancellationToken).ConfigureAwait(false);
-                await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+                await WriteSseLineAsync(destination, "[DONE]", cancellationToken).ConfigureAwait(false);
                 break;
             }
 
-            if (RouterUsageExtractor.TryExtract(data, out var chunkUsage) &&
+            // Fast path: skip expensive JSON parse when the chunk carries no usage.
+            // Only the final chunk (with stream_options.include_usage) contains "usage".
+            if (data.Contains("\"usage\"", StringComparison.Ordinal) &&
+                TokenUsageExtractor.TryExtractJson(data, out var chunkUsage) &&
                 (chunkUsage.InputTokens > 0 || chunkUsage.OutputTokens > 0))
             {
                 usage = chunkUsage;
             }
 
-            var bytes = Encoding.UTF8.GetBytes("data: " + data + "\n\n");
-            await destination.WriteAsync(bytes, cancellationToken).ConfigureAwait(false);
-            await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+            await WriteSseLineAsync(destination, data, cancellationToken).ConfigureAwait(false);
         }
 
+        await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
         return usage;
+    }
+
+    private static async Task WriteSseLineAsync(Stream destination, string data, CancellationToken cancellationToken)
+    {
+        var prefixByteCount = Utf8.GetByteCount("data: ");
+        var dataByteCount = Utf8.GetByteCount(data);
+        var suffixByteCount = Utf8.GetByteCount("\n\n");
+        var totalLength = prefixByteCount + dataByteCount + suffixByteCount;
+        var buffer = ArrayPool<byte>.Shared.Rent(totalLength);
+        try
+        {
+            Utf8.GetBytes("data: ", 0, 6, buffer, 0);
+            Utf8.GetBytes(data, 0, data.Length, buffer, prefixByteCount);
+            Utf8.GetBytes("\n\n", 0, 2, buffer, prefixByteCount + dataByteCount);
+            await destination.WriteAsync(buffer, 0, totalLength, cancellationToken).ConfigureAwait(false);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+        }
     }
 
     public ValueTask DisposeAsync()

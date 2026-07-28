@@ -310,6 +310,15 @@ public sealed class ProductAnalyticsEmissionTests
         public Task<int> CountApiKeysAsync(string userId, CancellationToken ct = default) =>
             Task.FromResult(ApiKeys.Count(key => key.UserId == userId && !key.IsDeleted));
 
+        public Task<bool> TryAddApiKeyAsync(ApiKey apiKey, int maxApiKeys, CancellationToken ct = default)
+        {
+            var currentCount = ApiKeys.Count(key => key.UserId == apiKey.UserId && !key.IsDeleted);
+            if (currentCount >= maxApiKeys)
+                return Task.FromResult(false);
+            ApiKeys.Add(apiKey);
+            return Task.FromResult(true);
+        }
+
         public Task<bool> RenameApiKeyAsync(string userId, string apiKeyId, string name, CancellationToken ct = default) => Task.FromResult(false);
 
         public Task<bool> DisableApiKeyAsync(string userId, string apiKeyId, DateTimeOffset disabledAtUtc, CancellationToken ct = default) => Task.FromResult(false);

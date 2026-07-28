@@ -1510,7 +1510,7 @@
       "id": 50,
       "type": "stat",
       "title": "Уникальных посетителей",
-      "description": "analytics.site_visits — визиты на сайт, включая незарегистрированных. Посетитель = HMAC от (IP + User-Agent), кук нет и сырой IP не хранится. Из этого следуют два ограничения: люди за одним NAT считаются как один посетитель, а X-Forwarded-For задаётся клиентом, поэтому число можно накрутить. Боты исключены.",
+      "description": "analytics.visit_sessions — сессии посетителей сайта, включая незарегистрированных. Посетитель = HMAC от (IP + User-Agent), кук нет и сырой IP не хранится. Из этого следуют два ограничения: люди за одним NAT считаются как один посетитель, а X-Forwarded-For задаётся клиентом, поэтому число можно накрутить. Боты исключены. Ещё одно ограничение: сырые визиты схлопываются в сессии фоновым компактором, поэтому последние ~35 минут трафика ещё не схлопнуты и в панели не попадают — метрики здесь дневные, для них это незаметно. Совсем свежий хвост смотреть на /admin/visitors.",
       "datasource": {
         "type": "postgres",
         "uid": "orranalytics"
@@ -1531,7 +1531,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "select count(distinct visitor_hash)::int as value\nfrom analytics.site_visits\nwhere device_class <> 'bot'\n  and $__timeFilter(occurred_at_utc)"
+          "rawSql": "select count(distinct visitor_hash)::int as value\nfrom analytics.visit_sessions\nwhere device_class <> 'bot'\n  and $__timeFilter(started_at_utc)"
         }
       ],
       "fieldConfig": {
@@ -1585,7 +1585,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "select count(*)::int as value\nfrom analytics.site_visits\nwhere device_class <> 'bot'\n  and $__timeFilter(occurred_at_utc)"
+          "rawSql": "select coalesce(sum(page_view_count), 0)::int as value\nfrom analytics.visit_sessions\nwhere device_class <> 'bot'\n  and $__timeFilter(started_at_utc)"
         }
       ],
       "fieldConfig": {
@@ -1639,7 +1639,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with visitors as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where device_class <> 'bot'\n    and $__timeFilter(occurred_at_utc)\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect round(\n         100.0 * count(*) filter (where s.visitor_hash is not null) / nullif(count(*), 0)\n       , 1) as value\nfrom visitors v\nleft join signed s on s.visitor_hash = v.visitor_hash"
+          "rawSql": "with visitors as (\n  select distinct visitor_hash\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n    and $__timeFilter(started_at_utc)\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.visit_sessions\n  where distinct_id is not null\n)\nselect round(\n         100.0 * count(*) filter (where s.visitor_hash is not null) / nullif(count(*), 0)\n       , 1) as value\nfrom visitors v\nleft join signed s on s.visitor_hash = v.visitor_hash"
         }
       ],
       "fieldConfig": {
@@ -1711,7 +1711,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "select round(\n         100.0 * count(*) filter (where device_class = 'bot') / nullif(count(*), 0)\n       , 1) as value\nfrom analytics.site_visits\nwhere $__timeFilter(occurred_at_utc)"
+          "rawSql": "select round(\n         100.0 * coalesce(sum(page_view_count) filter (where device_class = 'bot'), 0)\n         / nullif(sum(page_view_count), 0)\n       , 1) as value\nfrom analytics.visit_sessions\nwhere $__timeFilter(started_at_utc)"
         }
       ],
       "fieldConfig": {
@@ -1783,7 +1783,7 @@
           "format": "time_series",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with vd as (\n  select distinct visitor_hash, date_trunc('day', occurred_at_utc) as day\n  from analytics.site_visits\n  where device_class <> 'bot'\n),\nfirsts as (select visitor_hash, min(day) as first_day from vd group by 1)\nselect vd.day                                              as time,\n       count(*)                                            as \"Уникальных\",\n       count(*) filter (where f.first_day = vd.day)        as \"Новых\",\n       count(*) filter (where f.first_day < vd.day)        as \"Вернувшихся\"\nfrom vd\njoin firsts f on f.visitor_hash = vd.visitor_hash\nwhere $__timeFilter(vd.day)\ngroup by 1\norder by 1"
+          "rawSql": "with vd as (\n  select distinct visitor_hash, date_trunc('day', started_at_utc) as day\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n),\nfirsts as (select visitor_hash, min(day) as first_day from vd group by 1)\nselect vd.day                                              as time,\n       count(*)                                            as \"Уникальных\",\n       count(*) filter (where f.first_day = vd.day)        as \"Новых\",\n       count(*) filter (where f.first_day < vd.day)        as \"Вернувшихся\"\nfrom vd\njoin firsts f on f.visitor_hash = vd.visitor_hash\nwhere $__timeFilter(vd.day)\ngroup by 1\norder by 1"
         }
       ],
       "fieldConfig": {
@@ -1894,7 +1894,7 @@
           "format": "time_series",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "select date_trunc('day', occurred_at_utc)                   as time,\n       count(*) filter (where device_class <> 'bot')       as \"Просмотров\",\n       count(*) filter (where device_class = 'bot')        as \"Ботами\"\nfrom analytics.site_visits\nwhere $__timeFilter(occurred_at_utc)\ngroup by 1\norder by 1"
+          "rawSql": "select date_trunc('day', started_at_utc)                                             as time,\n       coalesce(sum(page_view_count) filter (where device_class <> 'bot'), 0)   as \"Просмотров\",\n       coalesce(sum(page_view_count) filter (where device_class = 'bot'), 0)    as \"Ботами\"\nfrom analytics.visit_sessions\nwhere $__timeFilter(started_at_utc)\ngroup by 1\norder by 1"
         }
       ],
       "fieldConfig": {
@@ -1967,7 +1967,7 @@
       "id": 56,
       "type": "timeseries",
       "title": "Посетители и регистрации по дням",
-      "description": "Уникальные посетители (site_visits) против подтверждённых регистраций (событие «user verified» в analytics.events, та же база). Конверсия считается за день: посетитель и его регистрация в разные дни попадут в разные точки — смотреть на тренд, а не на отдельный день.",
+      "description": "Уникальные посетители (visit_sessions) против подтверждённых регистраций (событие «user verified» в analytics.events, та же база). Конверсия считается за день: посетитель и его регистрация в разные дни попадут в разные точки — смотреть на тренд, а не на отдельный день.",
       "datasource": {
         "type": "postgres",
         "uid": "orranalytics"
@@ -1988,7 +1988,7 @@
           "format": "time_series",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with visitors as (\n  select date_trunc('day', occurred_at_utc) as d, count(distinct visitor_hash) as n\n  from analytics.site_visits\n  where device_class <> 'bot'\n  group by 1\n),\nsignups as (\n  select date_trunc('day', occurred_at_utc) as d, count(distinct distinct_id) as n\n  from analytics.events\n  where event_name = 'user verified'\n  group by 1\n)\nselect coalesce(v.d, s.d)                                        as time,\n       coalesce(v.n, 0)                                          as \"Посетителей\",\n       coalesce(s.n, 0)                                          as \"Регистраций\",\n       round(100.0 * coalesce(s.n, 0) / nullif(v.n, 0), 1)       as \"Конверсия %\"\nfrom visitors v\nfull join signups s on s.d = v.d\nwhere $__timeFilter(coalesce(v.d, s.d))\norder by 1"
+          "rawSql": "with visitors as (\n  select date_trunc('day', started_at_utc) as d, count(distinct visitor_hash) as n\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n  group by 1\n),\nsignups as (\n  select date_trunc('day', occurred_at_utc) as d, count(distinct distinct_id) as n\n  from analytics.events\n  where event_name = 'user verified'\n  group by 1\n)\nselect coalesce(v.d, s.d)                                        as time,\n       coalesce(v.n, 0)                                          as \"Посетителей\",\n       coalesce(s.n, 0)                                          as \"Регистраций\",\n       round(100.0 * coalesce(s.n, 0) / nullif(v.n, 0), 1)       as \"Конверсия %\"\nfrom visitors v\nfull join signups s on s.d = v.d\nwhere $__timeFilter(coalesce(v.d, s.d))\norder by 1"
         }
       ],
       "fieldConfig": {
@@ -2125,7 +2125,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, referrer_kind, referrer_host, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect ft.referrer_kind                                                             as \"Тип\",\n       coalesce(ft.referrer_host, 'нет referer')                                    as \"Источник\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.occurred_at_utc)\ngroup by 1, 2\norder by 3 desc\nlimit 50"
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, referrer_kind, referrer_host, started_at_utc\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n  order by visitor_hash, started_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.visit_sessions\n  where distinct_id is not null\n)\nselect ft.referrer_kind                                                             as \"Тип\",\n       coalesce(ft.referrer_host, 'нет referer')                                    as \"Источник\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.started_at_utc)\ngroup by 1, 2\norder by 3 desc\nlimit 50"
         }
       ],
       "fieldConfig": {
@@ -2255,7 +2255,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash) visitor_hash, path, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n)\nselect path      as \"Страница входа\",\n       count(*)  as \"Посетителей\"\nfrom first_touch\nwhere $__timeFilter(occurred_at_utc)\ngroup by 1\norder by 2 desc\nlimit 25"
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash) visitor_hash, entry_path, started_at_utc\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n  order by visitor_hash, started_at_utc\n)\nselect entry_path  as \"Страница входа\",\n       count(*)    as \"Посетителей\"\nfrom first_touch\nwhere $__timeFilter(started_at_utc)\ngroup by 1\norder by 2 desc\nlimit 25"
         }
       ],
       "fieldConfig": {
@@ -2304,7 +2304,7 @@
           "format": "table",
           "rawQuery": true,
           "editorMode": "code",
-          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, utm_source, utm_medium, utm_campaign, occurred_at_utc\n  from analytics.site_visits\n  where device_class <> 'bot'\n  order by visitor_hash, occurred_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.site_visits\n  where distinct_id is not null\n)\nselect coalesce(ft.utm_source, '—')                                                 as \"Источник\",\n       coalesce(ft.utm_medium, '—')                                                 as \"Канал\",\n       coalesce(ft.utm_campaign, '—')                                               as \"Кампания\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.occurred_at_utc)\n  and (ft.utm_source is not null or ft.utm_campaign is not null)\ngroup by 1, 2, 3\norder by 4 desc\nlimit 50"
+          "rawSql": "with first_touch as (\n  select distinct on (visitor_hash)\n         visitor_hash, utm_source, utm_medium, utm_campaign, started_at_utc\n  from analytics.visit_sessions\n  where device_class <> 'bot'\n  order by visitor_hash, started_at_utc\n),\nsigned as (\n  select distinct visitor_hash\n  from analytics.visit_sessions\n  where distinct_id is not null\n)\nselect coalesce(ft.utm_source, '—')                                                 as \"Источник\",\n       coalesce(ft.utm_medium, '—')                                                 as \"Канал\",\n       coalesce(ft.utm_campaign, '—')                                               as \"Кампания\",\n       count(*)                                                                     as \"Посетителей\",\n       count(*) filter (where s.visitor_hash is not null)                           as \"Стали пользователями\",\n       round(100.0 * count(*) filter (where s.visitor_hash is not null)\n             / nullif(count(*), 0), 1)                                              as \"Конверсия %\"\nfrom first_touch ft\nleft join signed s on s.visitor_hash = ft.visitor_hash\nwhere $__timeFilter(ft.started_at_utc)\n  and (ft.utm_source is not null or ft.utm_campaign is not null)\ngroup by 1, 2, 3\norder by 4 desc\nlimit 50"
         }
       ],
       "fieldConfig": {

@@ -18,6 +18,18 @@ public interface IBillingRepository
 
     Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default);
 
+    /// <summary>
+    /// Atomically debits <paramref name="amount"/> from the denormalized balance.
+    /// Returns the new balance if the debit succeeded (balance was sufficient), or null if insufficient.
+    /// </summary>
+    Task<decimal?> TryDebitBalanceAsync(string userId, decimal amount, CancellationToken ct = default);
+
+    /// <summary>
+    /// Adds <paramref name="amount"/> (positive or negative) to the denormalized balance.
+    /// Used for top-ups, bonuses, corrections, refunds.
+    /// </summary>
+    Task AddBalanceAsync(string userId, decimal amount, CancellationToken ct = default);
+
     Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default);
 
     Task UpsertApiKeySpendLimitAsync(ApiKeySpendLimit limit, CancellationToken ct = default);
@@ -98,6 +110,7 @@ public interface IBillingRepository
     Task DeleteTagAsync(string id, CancellationToken ct = default);
 
     Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default);
+    Task<IReadOnlyDictionary<string, string>> GetPlatformSettingsAsync(IReadOnlyCollection<string> keys, CancellationToken ct = default);
     Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default);
 
     Task<string?> HasPromo1EntryAsync(string userId, CancellationToken ct = default);
@@ -116,7 +129,7 @@ public interface IBillingRepository
     Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default);
     Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);
 
-    Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default);
+    Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(bool includeLogo = true, CancellationToken ct = default);
     Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default);
     Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default);
     Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);

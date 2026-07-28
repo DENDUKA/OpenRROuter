@@ -23,4 +23,6 @@ public sealed class ApiKeyEntity
     public DateTimeOffset? DisabledAtUtc { get; set; }
 
     public DateTimeOffset? DeletedAtUtc { get; set; }
+
+    public UserRole? UserRole { get; set; }
 }

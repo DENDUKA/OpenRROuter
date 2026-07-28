@@ -110,6 +110,35 @@ public sealed class ExternalLoginServiceTests
         result.ErrorCode.Should().Be("user_disabled");
     }
 
+    [Fact]
+    public async Task LoginOrRegister_Google_PendingVerificationEmailUser_ActivatesAccount()
+    {
+        var pendingUser = UserAccount.CreateForEmailSignup(
+            "user-pending", "pending@example.com", UserRole.User,
+            "pbkdf2-sha256.210000.abc.def", DateTimeOffset.UtcNow);
+        await _repo.AddUserWithEmailVerificationAsync(pendingUser, new EmailVerification(
+            pendingUser.Id, "hash", DateTimeOffset.UtcNow.AddMinutes(15),
+            DateTimeOffset.UtcNow, 0));
+
+        var sut = new ExternalLoginService(_repo, _secretGenerator);
+
+        var result = await sut.LoginOrRegisterAsync("google", "google-sub-pending", "pending@example.com", DateTimeOffset.UtcNow);
+
+        result.Succeeded.Should().BeTrue();
+        result.Session.Should().NotBeNull();
+        result.Session!.UserId.Should().Be("user-pending");
+
+        var user = await _repo.GetUserAsync("user-pending");
+        user!.Status.Should().Be(UserStatus.Active);
+
+        var verification = await _repo.GetEmailVerificationAsync("user-pending");
+        verification.Should().BeNull();
+
+        var link = await _repo.GetExternalLoginAsync("google", "google-sub-pending");
+        link.Should().NotBeNull();
+        link!.UserId.Should().Be("user-pending");
+    }
+
     private static Invite MakeDummyInvite() => new(
         "invite-dummy", "dummy@example.com", UserRole.User,
         "dummy-token-hash",

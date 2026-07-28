@@ -23,6 +23,7 @@ public static class Startup
         "CreateVirtualTopUp",
         "UpsertApiKeyLimitSettings",
         "UpsertModelPrice",
+        "UpsertModels",
         "UpsertTag",
         "DeleteTag",
         "CreatePayment",
@@ -53,6 +54,10 @@ public static class Startup
         services.AddBillingInfrastructure(connectionString);
         services.AddBillingApplicationServices();
         services.AddProductAnalytics(configuration);
+        // Visit compaction lives here, not in WebApp: Billing owns orr_analytics, applies its
+        // migrations and runs as a single replica. Must follow AddProductAnalytics — it shares
+        // that call's NpgsqlDataSource singleton.
+        services.AddSiteVisitCompaction(configuration);
         services.Configure<ExchangeRateOptions>(configuration.GetSection("ExchangeRates"));
         services.Configure<PaymentOptions>(configuration.GetSection("Payments"));
         services.Configure<ServiceAuthOptions>(configuration.GetSection("ServiceAuth"));

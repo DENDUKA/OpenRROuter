@@ -33,8 +33,13 @@ public static class AlertWebhookEndpoint
     /// <summary>Header carrying the shared secret configured as <c>Alerting:WebhookToken</c>.</summary>
     public const string TokenHeader = "X-Alert-Token";
 
+    /// <summary>Rate-limit policy name applied to this endpoint.</summary>
+    public const string RateLimitPolicy = "alert-webhook";
+
     public static void Map(IEndpointRouteBuilder endpoints) =>
-        endpoints.MapPost("/internal/alerts/grafana", HandleAsync).AllowAnonymous();
+        endpoints.MapPost("/internal/alerts/grafana", HandleAsync)
+            .AllowAnonymous()
+            .RequireRateLimiting(RateLimitPolicy);
 
     private static async Task<IResult> HandleAsync(
         HttpContext http,
@@ -65,9 +70,17 @@ public static class AlertWebhookEndpoint
         }
 
         string rawBody;
-        using (var reader = new StreamReader(http.Request.Body, Encoding.UTF8, leaveOpen: true))
+        try
         {
+            using var reader = new StreamReader(
+                new LimitedStream(http.Request.Body, MaxBodyBytes),
+                leaveOpen: true);
             rawBody = await reader.ReadToEndAsync(ct);
+        }
+        catch (PayloadTooLargeException)
+        {
+            logger.LogWarning("Alert webhook rejected: streamed body exceeds {Max}.", MaxBodyBytes);
+            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
         }
 
         if (rawBody.Length == 0)

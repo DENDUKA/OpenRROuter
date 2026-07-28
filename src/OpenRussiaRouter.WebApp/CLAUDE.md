@@ -68,7 +68,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Services/Enrichment` | `OpenRouterCatalogClient` (обогащение каталога моделей), `ReasoningEnrichmentWorker` |
 | `Services/Legal` | `LegalDocumentService` — рендер `docs/mandatory/*.md` в страницы `/legal/*` |
 | `Services/Markup` | `MarkdownRenderer` (санитизация недоверенного markdown), `MonogramSvg` (фолбэк-логотип) |
-| `Services/SiteStats` | `SiteVisitTrackingMiddleware` (запись визитов в `analytics.site_visits`), `SiteVisitReader` (чтение истории для `/admin/visitors`) |
+| `Services/SiteStats` | `SiteVisitTrackingMiddleware` (запись визитов в `analytics.site_visits`), `SiteVisitReader` (несхлопнутый хвост для `/admin/visitors`), `VisitSessionReader` + DTO `VisitSessionEntry`/`VisitSessionQuery` (сессии для `/admin/sessions`) |
 | `Services/State` | `UserSession`, `ClaimsExtensions` (`GetUserId`, `GetSessionToken`); рядом `Services/ApiBaseUrlResolver.cs`, `Services/ColorContrast.cs` |
 | `Email/` | Очередь + воркер + два транспорта (SMTP/Brevo API), шаблоны, рассылки |
 | `Resources/` | `.ru.resx`/`.en.resx`: `SharedResource` + per-page ресурсы, путь зеркалит путь страницы (`Resources/Pages/Workspace/Credits.*.resx`) |
@@ -86,7 +86,7 @@ PascalCase-путь файла. Источник истины — директи
 | Публичные | `/` (лендинг, `Pages/Index`), `/models`, `/models/{provider}/{slug}`, `/providers`, `/providers/{id}`, `/tools`, `/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/error` |
 | Аутентификация | `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`, `/invite/{token}`, `/logout`, `/login/externalcallback` |
 | Кабинет (`[Authorize]`) | `/workspace` (редирект на `/workspace/apikeys`), `/workspace/apikeys`, `/workspace/apikeys/limits`, `/workspace/activity`, `/workspace/credits`, `/workspace/paymentsuccess`, `/workspace/settings` |
-| Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest`, `/admin/visitors` |
+| Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest`, `/admin/visitors`, `/admin/sessions` (голый `@page`, путь из имени файла `Admin/Sessions.cshtml`), `/admin/sessions/{id:long}` (явная директива `@page "/admin/sessions/{id:long}"` в `Admin/SessionDetails.cshtml` — иначе путь был бы `/admin/sessiondetails`) |
 | Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`) |
 | Контроллеры | `POST /preferences/currency` (`[Authorize]`), `POST /preferences/language` (анонимно, ставит culture-cookie), `GET /providers/logo/{id}`, `GET /tools/logo/{id}` (фолбэк — монограмма), `GET /tools/image/{id:guid}`, `GET /admin/providers/logo/{id}`, `POST /admin/gatewaytest/stream` (SSE) |
 | Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, OTel-эндпоинты |
@@ -190,6 +190,10 @@ BillingService своей котировкой.
   middleware вообще не регистрируется (`Program.cs` проверяет наличие `SiteVisitQueue` в DI).
 - Схема — `db/migrations/analytics/002_site_visits.sql`, применяет **BillingService**
   (он владеет базой `orr_analytics`).
+- **`site_visits` — эфемерный буфер**: компакт в BillingService (`VisitSessionCompactionWorker`,
+  BuildingBlocks) схлопывает визиты в `analytics.visit_sessions` и **удаляет исходные строки**,
+  так что в таблице держится ~35 минут трафика. Долгоживущее хранилище трафика —
+  `visit_sessions`; всё, что читает историю визитов дольше получаса, обязано смотреть туда.
 
 ## История визитов в админке ([Visitors.cshtml](Pages/Admin/Visitors.cshtml))
 
@@ -197,11 +201,20 @@ BillingService своей котировкой.
 [`SiteVisitReader`](Services/SiteStats/SiteVisitReader.cs), который инжектит уже
 зарегистрированный `NpgsqlDataSource` (тот же, что пишет flush-воркер) и `UserPseudonymizer`.
 
+- ⚠️ **Страница показывает только несхлопнутый хвост** (~35 минут): всё старше уже переехало в
+  `analytics.visit_sessions`, а исходные строки удалены. Оставлена намеренно — это сырой поток для
+  отладки самого трекинга. Историю за период смотрят на `/admin/sessions`.
 - **Сценарий «кто это до регистрации»**: админ передаёт `?userId=` → ридер вычисляет
   `distinct_id = pseudonymizer.ComputeDistinctId(userId)`, находит самый свежий визит с этим
   `distinct_id`, берёт оттуда `visitor_hash`, и тащит **все** визиты с этим `visitor_hash`
   (анонимные до регистрации + залогиненные после). Альтернатива — прямой фильтр
   `?visitorHash=`. Дополнительно `?from=`/`?to=` (UTC, `yyyy-MM-dd`).
+- **Резолв `visitor_hash` по `distinct_id` — с фолбэком на `visit_sessions`.** Сначала
+  `site_visits` (там самый свежий хеш, и только там живёт ещё открытая сессия), при пустом
+  результате — `analytics.visit_sessions` (`order by started_at_utc desc limit 1`). Без фолбэка
+  фильтр `?userId=` перестал бы находить кого-либо старше ~40 минут. Отсутствие таблицы
+  (`PostgresException`, `SqlState == UndefinedTable`) гасится в warning + `null` — миграция может
+  быть не применена.
 - **Пагинация**: `?p=0..N`, `PageSize = 50`, `BuildPageUrl` сохраняет все фильтры.
 - **Disabled-режим**: если аналитический sink не сконфигурирован (нет `NpgsqlDataSource` в DI),
   `SiteVisitReader.IsEnabled = false` и страница рисует жёлтый баннер «Analytics sink is not
@@ -211,6 +224,33 @@ BillingService своей котировкой.
   только когда есть фильтр по `userId` — для анонимных запросов остаётся только `visitor_hash`.
 - Сетку колонок и пагинацию см. в `Pages/Admin/TopUps.cshtml` — паттерн общий для админских
   страниц с постраничным списком.
+
+## Сессии посетителей в админке ([Sessions.cshtml](Pages/Admin/Sessions.cshtml))
+
+`/admin/sessions` + деталь `/admin/sessions/{id:long}` — read-сторона `analytics.visit_sessions`,
+той таблицы, куда компакт BillingService складывает схлопнутые визиты. Ридер —
+[`VisitSessionReader`](Services/SiteStats/VisitSessionReader.cs), зеркалит `SiteVisitReader`:
+nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disabled-режим (пустой
+результат вместо исключения, страница рисует жёлтый баннер). Регистрация — `AddSingleton` фабрикой
+с nullable-зависимостями в `Program.cs`.
+
+- **Это основная страница истории трафика**, `/admin/visitors` — только сырой хвост. Фильтры:
+  `?userId=` (через `distinct_id` → свежайший `visitor_hash` → все сессии этого посетителя),
+  `?visitorHash=`, `?from=`/`?to=` (UTC, `yyyy-MM-dd`, по `started_at_utc`), `?bots=true`
+  (**имя параметра `bots`**, не `includeBots`), `?p=` — пагинация по 50, сортировка
+  `started_at_utc desc`. Хелперы `ParseDate`/`HasActiveFilter`/`BuildPageUrl` — те же, что на
+  `/admin/visitors`.
+- **Боты схлопываются наравне со всеми** (иначе «доля ботов» в Grafana станет несчитаемой), но в
+  листинге по умолчанию скрыты (`device_class <> 'bot'`).
+- **`pages` в листинге не выбирается** — это единственная неограниченная колонка таблицы; она
+  читается только в `GetByIdAsync`. Неразбираемый jsonb деградирует в пустой список страниц +
+  warning, шапка сессии остаётся.
+- **Деталь**: несуществующий id → `NotFound()`, а не 200 с пустой страницей. Обрезка списка
+  страниц определяется как `page_view_count > pages.Length` (флага в схеме нет) и показывается
+  подписью «первые N из M». Ссылки ведут на все сессии посетителя (`/admin/sessions?visitorHash=`)
+  и на сырой хвост (`/admin/visitors?visitorHash=`).
+- **Локализации нет** — админские страницы в проекте написаны английскими литералами, `.resx` для
+  них не заводятся.
 
 ## Фильтр пополнений в админке ([TopUps.cshtml](Pages/Admin/TopUps.cshtml))
 
@@ -232,7 +272,7 @@ BillingService своей котировкой.
 | `Email:*` | транспорт, SMTP-хост/порт/SSL, отправитель, `BatchDelayMs`; секреты (`BrevoApiKey`, SMTP-логин/пароль) — только env/secret |
 | `Support:{Inbox,TelegramUrl}` | получатель формы `/support` и альтернативный канал |
 | `ProductAnalytics:*` | синк `orr_analytics` (`Enabled`, `ConnectionString`, `IdentitySalt`, `Environment`, размеры очереди) |
-| `SiteVisits:{Enabled,QueueCapacity,BatchSize}` | трекинг визитов |
+| `SiteVisits:{Enabled,QueueCapacity,BatchSize}` | трекинг визитов; вложенная секция `SiteVisits:Compaction:*` здесь не читается — компакт хостит BillingService |
 | `ExchangeRates:*` | display-only курсы ЦБ РФ + фолбэки |
 | `Payments:*` | `ActiveProvider`, `Min/MaxTopUpUsd`, `Mock.SharedSecret`, `Rollypay.*`, `Reconciliation.*` |
 | `Alerting:{WebhookToken,EmailTo}` | алерт-вебхук; **в `appsettings.json` отсутствуют** |

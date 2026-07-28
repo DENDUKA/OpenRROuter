@@ -477,8 +477,8 @@ public sealed partial class BillingApplicationService(
     public Task DeleteTagAsync(string id, CancellationToken ct = default)
         => repository.DeleteTagAsync(Preconditions.RequireValue(id, nameof(id)), ct);
 
-    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default)
-        => repository.ListModelProvidersAsync(ct);
+    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(bool includeLogo = true, CancellationToken ct = default)
+        => repository.ListModelProvidersAsync(includeLogo, ct);
 
     public Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default)
         => repository.GetModelProviderAsync(Preconditions.RequireValue(id, nameof(id)).ToLowerInvariant(), ct);
@@ -527,6 +527,9 @@ public sealed partial class BillingApplicationService(
 
     public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
         => repository.GetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), ct);
+
+    public Task<IReadOnlyDictionary<string, string>> GetPlatformSettingsAsync(IReadOnlyCollection<string> keys, CancellationToken ct = default)
+        => repository.GetPlatformSettingsAsync(keys ?? throw new ArgumentNullException(nameof(keys)), ct);
 
     public Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default)
         => repository.SetPlatformSettingAsync(Preconditions.RequireValue(key, nameof(key)), value ?? string.Empty, ct);
@@ -777,6 +780,11 @@ public sealed partial class BillingApplicationService(
         await repository.UpdatePaymentBonusAsync(paymentId, payment.BonusPercent.Value, bonusUsd, ct).ConfigureAwait(false);
 
         return new GrantFirstTopUpBonusResult(true, entry.Id, null);
+    }
+
+    public async Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
+    {
+        return await repository.HasUserHadPaidTopUpAsync(userId, ct: ct).ConfigureAwait(false);
     }
 
     private static int MapStatusToStatusCode(string? status)

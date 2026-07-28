@@ -162,6 +162,29 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             cancellationToken: ct)).ConfigureAwait(false);
     }
 
+    public async Task<bool> TryAddApiKeyAsync(ApiKey apiKey, int maxApiKeys, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(apiKey);
+        using var connection = connectionFactory.CreateConnection();
+        var rowsAffected = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            with active_count as (
+                select count(*) as cnt
+                from auth.api_keys
+                where user_id = @UserId and deleted_at_utc is null
+            )
+            insert into auth.api_keys
+                (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, disabled_at_utc)
+            select
+                @Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @DisabledAtUtc
+            from active_count
+            where cnt < @MaxApiKeys;
+            """,
+            new { apiKey.Id, apiKey.UserId, apiKey.Name, apiKey.Prefix, apiKey.SecretHash, apiKey.RawKey, apiKey.CreatedAtUtc, apiKey.LastUsedAtUtc, apiKey.DisabledAtUtc, MaxApiKeys = maxApiKeys },
+            cancellationToken: ct)).ConfigureAwait(false);
+        return rowsAffected > 0;
+    }
+
     public async Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -288,7 +311,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
                 ak.raw_key as RawKey,
                 ak.created_at_utc as CreatedAtUtc,
                 ak.last_used_at_utc as LastUsedAtUtc,
-                ak.disabled_at_utc as DisabledAtUtc
+                ak.disabled_at_utc as DisabledAtUtc,
+                u.role as "UserRole"
             from auth.api_keys ak
             inner join auth.users u on u.id = ak.user_id
             where ak.secret_hash = @SecretHash

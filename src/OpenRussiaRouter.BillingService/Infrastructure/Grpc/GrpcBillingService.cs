@@ -52,47 +52,45 @@ public sealed class GrpcBillingService(
         ServerCallContext context)
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
-        var publicModels = await billing.ListPublicModelsAsync(ct).ConfigureAwait(false);
-        var pricesById = (await billing.ListAllModelsAsync(ct).ConfigureAwait(false))
-            .ToDictionary(model => model.ModelId, StringComparer.Ordinal);
+        var allModels = await billing.ListAllModelsAsync(ct).ConfigureAwait(false);
 
         var response = new ListPublicModelsResponse();
         response.Models.AddRange(
-            publicModels.Select(model =>
-            {
-                var price = pricesById.GetValueOrDefault(model.Id);
-
-                var modelResponse = new Contracts.Grpc.Billing.V1.PublicModel
+            allModels
+                .Where(model => model.Enabled)
+                .Select(model =>
                 {
-                    Id = model.Id,
-                    DisplayName = model.DisplayName,
-                    UpstreamModelId = price?.RouterModelId ?? string.Empty,
-                    InputPricePer1MUsd = price?.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    OutputPricePer1MUsd = price?.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    CachePricePer1MUsd = price?.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty,
-                    ContextLength = price?.ContextLength ?? 0,
-                    Modalities = price?.Modalities ?? string.Empty,
-                    InputModalities = price?.InputModalities ?? string.Empty,
-                    OutputModalities = price?.OutputModalities ?? string.Empty,
-                    DescriptionRu = price?.DescriptionRu ?? string.Empty,
-                    DescriptionEn = price?.DescriptionEn ?? string.Empty,
-                    Provider = price?.Provider ?? string.Empty,
-                    ProviderId = price?.ProviderId ?? string.Empty,
-                    SupportsReasoning = model.SupportsReasoning,
-                    ModelType = price?.ModelType ?? "text",
-                    Priority = price?.Priority ?? 0,
-                    DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
-                };
-                if (model.AllowedReasoningEfforts is not null)
-                {
-                    modelResponse.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
-                }
-                if (price?.TagIds != null)
-                {
-                    modelResponse.TagIds.AddRange(price.TagIds);
-                }
-                return modelResponse;
-            }));
+                    var modelResponse = new Contracts.Grpc.Billing.V1.PublicModel
+                    {
+                        Id = model.ModelId,
+                        DisplayName = model.DisplayName,
+                        UpstreamModelId = model.RouterModelId,
+                        InputPricePer1MUsd = model.Price.InputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                        OutputPricePer1MUsd = model.Price.OutputPerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                        CachePricePer1MUsd = model.Price.CachePerMillion.Amount.ToString(CultureInfo.InvariantCulture),
+                        ContextLength = model.ContextLength ?? 0,
+                        Modalities = model.Modalities ?? string.Empty,
+                        InputModalities = model.InputModalities ?? string.Empty,
+                        OutputModalities = model.OutputModalities ?? string.Empty,
+                        DescriptionRu = model.DescriptionRu ?? string.Empty,
+                        DescriptionEn = model.DescriptionEn ?? string.Empty,
+                        Provider = model.Provider ?? string.Empty,
+                        ProviderId = model.ProviderId ?? string.Empty,
+                        SupportsReasoning = model.SupportsReasoning,
+                        ModelType = model.ModelType ?? "text",
+                        Priority = model.Priority,
+                        DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+                    };
+                    if (model.AllowedReasoningEfforts is not null)
+                    {
+                        modelResponse.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
+                    }
+                    if (model.TagIds is not null)
+                    {
+                        modelResponse.TagIds.AddRange(model.TagIds);
+                    }
+                    return modelResponse;
+                }));
         return response;
     }
 
@@ -310,6 +308,55 @@ public sealed class GrpcBillingService(
             logger.LogWarning(ex, "UpsertModelPrice failed. ModelId: {ModelId}; PriceVersion: {PriceVersion}", request.ModelId, request.PriceVersion);
             return new UpsertModelPriceResponse { ErrorCode = ErrorCodes.ValidationFailed };
         }
+    }
+
+    public override async Task<UpsertModelsResponse> UpsertModels(
+        UpsertModelsRequest request,
+        ServerCallContext context)
+    {
+        var response = new UpsertModelsResponse();
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+
+        foreach (var model in request.Models)
+        {
+            try
+            {
+                await billing.UpsertModelAsync(new ModelPrice(
+                    model.ModelId,
+                    model.DisplayName,
+                    model.UpstreamModelId,
+                    model.PriceVersion,
+                    new ModelTokenPrice(
+                        MoneyAmount.Usd(decimal.Parse(model.InputPricePer1MUsd, CultureInfo.InvariantCulture)),
+                        MoneyAmount.Usd(decimal.Parse(model.OutputPricePer1MUsd, CultureInfo.InvariantCulture)),
+                        MoneyAmount.Usd(decimal.Parse(model.CachePricePer1MUsd, CultureInfo.InvariantCulture))),
+                    model.Enabled,
+                    DescriptionRu: string.IsNullOrEmpty(model.DescriptionRu) ? null : model.DescriptionRu,
+                    DescriptionEn: string.IsNullOrEmpty(model.DescriptionEn) ? null : model.DescriptionEn,
+                    ContextLength: model.ContextLength == 0 ? null : (int?)model.ContextLength,
+                    Modalities: string.IsNullOrEmpty(model.Modalities) ? null : model.Modalities,
+                    InputModalities: string.IsNullOrEmpty(model.InputModalities) ? null : model.InputModalities,
+                    OutputModalities: string.IsNullOrEmpty(model.OutputModalities) ? null : model.OutputModalities,
+                    DescriptionSource: string.IsNullOrEmpty(model.DescriptionSource) ? null : model.DescriptionSource,
+                    TagIds: model.TagIds.Count > 0 ? model.TagIds.ToList() : null,
+                    Provider: string.IsNullOrEmpty(model.Provider) ? null : model.Provider,
+                    ProviderId: string.IsNullOrEmpty(model.ProviderId) ? null : model.ProviderId,
+                    ModelType: string.IsNullOrEmpty(model.ModelType) ? "text" : model.ModelType,
+                    SupportsReasoning: model.SupportsReasoning,
+                    AllowedReasoningEfforts: model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToList() : null,
+                    DefaultReasoningEffort: string.IsNullOrEmpty(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort,
+                    Priority: model.Priority),
+                    ct).ConfigureAwait(false);
+                response.UpsertedCount++;
+            }
+            catch (Exception ex) when (ex is ArgumentException or FormatException or OverflowException)
+            {
+                logger.LogWarning(ex, "UpsertModels: model {ModelId} failed", model.ModelId);
+                response.FailedModelIds.Add(model.ModelId);
+            }
+        }
+
+        return response;
     }
 
     public override async Task<ListBillingAnomaliesResponse> ListBillingAnomalies(
@@ -978,7 +1025,7 @@ public sealed class GrpcBillingService(
     {
         var response = new ListProvidersResponse();
         response.Providers.AddRange(
-            (await billing.ListModelProvidersAsync(context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
+            (await billing.ListModelProvidersAsync(request.HasLogo, context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false))
             .Select(p => new Contracts.Grpc.Billing.V1.ModelProvider
             {
                 Id = p.Id,
@@ -1087,9 +1134,9 @@ public sealed class GrpcBillingService(
         HasUserHadPaidTopUpRequest request,
         ServerCallContext context)
     {
-        var result = await billing.Repository.HasUserHadPaidTopUpAsync(
+        var result = await billing.HasUserHadPaidTopUpAsync(
             request.UserId,
-            ct: context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
+            context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
         return new HasUserHadPaidTopUpResponse { HasPaidTopUp = result };
     }
 
@@ -1098,17 +1145,28 @@ public sealed class GrpcBillingService(
         ServerCallContext context)
     {
         var ct = context?.CancellationToken ?? CancellationToken.None;
-        var sbEnabled = await billing.Repository.GetPlatformSettingAsync("promotions.start_balance.enabled", ct).ConfigureAwait(false) ?? "false";
-        var sbAmount = await billing.Repository.GetPlatformSettingAsync("promotions.start_balance.amount_usd", ct).ConfigureAwait(false) ?? "1.00";
-        var ftEnabled = await billing.Repository.GetPlatformSettingAsync("promotions.first_top_up.enabled", ct).ConfigureAwait(false) ?? "false";
-        var ftPercent = await billing.Repository.GetPlatformSettingAsync("promotions.first_top_up.percent", ct).ConfigureAwait(false) ?? "20.00";
+
+        var keys = (IReadOnlyCollection<string>)new[]
+        {
+            "promotions.start_balance.enabled",
+            "promotions.start_balance.amount_usd",
+            "promotions.first_top_up.enabled",
+            "promotions.first_top_up.percent"
+        };
+
+        var settings = await billing.GetPlatformSettingsAsync(keys, ct).ConfigureAwait(false);
+
+        settings.TryGetValue("promotions.start_balance.enabled", out var sbEnabled);
+        settings.TryGetValue("promotions.start_balance.amount_usd", out var sbAmount);
+        settings.TryGetValue("promotions.first_top_up.enabled", out var ftEnabled);
+        settings.TryGetValue("promotions.first_top_up.percent", out var ftPercent);
 
         return new GetPromotionSettingsResponse
         {
-            StartBalanceEnabled = bool.TryParse(sbEnabled, out var sb) && sb,
-            StartBalanceAmountUsd = sbAmount,
-            FirstTopUpEnabled = bool.TryParse(ftEnabled, out var ft) && ft,
-            FirstTopUpPercent = ftPercent
+            StartBalanceEnabled = bool.TryParse(sbEnabled ?? "false", out var sb) && sb,
+            StartBalanceAmountUsd = sbAmount ?? "1.00",
+            FirstTopUpEnabled = bool.TryParse(ftEnabled ?? "false", out var ft) && ft,
+            FirstTopUpPercent = ftPercent ?? "20.00"
         };
     }
 

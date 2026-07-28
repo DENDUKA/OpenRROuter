@@ -213,7 +213,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`,
 `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`,
 `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
-`/admin/gatewaytest`, `/admin/visitors`.
+`/admin/gatewaytest`, `/admin/visitors`, `/admin/sessions`, `/admin/sessions/{id}`.
 
 ## Платежи и пополнение баланса
 
@@ -258,10 +258,22 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   визита заполняется тот же `distinct_id`, что в `analytics.events`, поэтому воронка
   «визит → регистрация» считается внутри одной БД. Детали и ограничения —
   в [WebApp/CLAUDE.md](src/OpenRussiaRouter.WebApp/CLAUDE.md).
+- **`analytics.site_visits` — эфемерный буфер, долгоживущее хранилище трафика это
+  `analytics.visit_sessions`.** `VisitSessionCompactionWorker` (BuildingBlocks, хостит
+  **BillingService** — владелец БД `orr_analytics`, одна реплика) схлопывает визиты одного
+  посетителя в строку-сессию (граница = разрыв **строго больше** `SessionGap` **или** смена
+  календарных суток UTC) и **удаляет исходные строки**; в `site_visits` остаётся
+  `SessionGap + SafetyLag` ≈ 35 минут трафика. Всё, что считает трафик за период — панели Grafana,
+  страница `/admin/sessions`, резолв `visitor_hash` по `distinct_id` — обязано читать
+  `visit_sessions`; `/admin/visitors` намеренно остался сырым хвостом для отладки трекинга.
+  Ключи — `SiteVisits:Compaction:*`, механика — в
+  [BuildingBlocks/CLAUDE.md](src/OpenRussiaRouter.BuildingBlocks/CLAUDE.md).
 - Дашборды Grafana и конфиг Prometheus для прода — в `deploy/compose/grafana/`
   и `deploy/compose/prometheus.prod.yml`. Дашборды: `ORR Limits` (лимиты и квоты),
   `ORR Product Analytics` (псевдонимные события), `ORR Users` (рост, retention, посетители
-  сайта; строится по `auth`+`billing` и по `analytics.site_visits`).
+  сайта; строится по `auth`+`billing` и по `analytics.visit_sessions` — секция «Посетители сайта»
+  перецелена с `site_visits`, поэтому последние ~35 минут ещё не схлопнутого трафика в панели
+  не попадают; метрики дневные, для них незаметно).
 - **Алерты Grafana уходят почтой не по SMTP.** На прод-хосте закрыт исходящий SMTP
   (25/465/587/2525), открыт только 443, поэтому native SMTP contact point не работает.
   Схема: правила `deploy/compose/grafana/provisioning/alerting/{rules,policies,contactpoints}.yaml`

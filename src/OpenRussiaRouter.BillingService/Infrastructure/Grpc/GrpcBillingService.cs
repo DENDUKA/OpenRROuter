@@ -530,7 +530,6 @@ public sealed class GrpcBillingService(
             apiKeyIdFilter: string.IsNullOrEmpty(request.ApiKeyIdFilter) ? null : request.ApiKeyIdFilter,
             afterCursor: string.IsNullOrEmpty(request.AfterCursor) ? null : request.AfterCursor,
             pageSize: request.PageSize > 0 ? request.PageSize : null,
-            offset: request.Offset > 0 ? request.Offset : 0,
             ct: ct).ConfigureAwait(false);
 
         var response = new ListActivityByTokenResponse { HasMore = hasMore, TotalCount = totalCount };

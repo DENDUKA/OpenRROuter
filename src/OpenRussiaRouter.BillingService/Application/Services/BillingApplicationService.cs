@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -23,6 +24,10 @@ public sealed partial class BillingApplicationService(
     IProductAnalytics? productAnalytics = null)
 {
     public IBillingRepository Repository => repository;
+
+    // Maps (pageNumber, filterKey) → last element's cursor for keyset pagination in ListAllTopUpsAsync.
+    // Cleared when ledger entries change (same time as _topUpsCountCache in the repository).
+    private readonly ConcurrentDictionary<(int Page, string FilterKey), (DateTimeOffset CreatedAtUtc, string Id)> _topUpsPageKeysetCache = new();
     public async Task<LedgerEntry> CreateVirtualTopUpAsync(
         string adminId,
         string userId,
@@ -35,7 +40,7 @@ public sealed partial class BillingApplicationService(
         _ = Preconditions.RequireValue(adminId, nameof(adminId));
         ValidatePositiveUsd(amount, nameof(amount));
 
-        return await repository.AddLedgerEntryAsync(new LedgerEntry(
+        var result = await repository.AddLedgerEntryAsync(new LedgerEntry(
             Guid.NewGuid().ToString("N"),
             Preconditions.RequireValue(userId, nameof(userId)),
             LedgerEntryType.VirtualTopUp,
@@ -44,6 +49,8 @@ public sealed partial class BillingApplicationService(
             Preconditions.RequireValue(reason, nameof(reason)),
             nowUtc,
             false), ct).ConfigureAwait(false);
+        _topUpsPageKeysetCache.Clear();
+        return result;
     }
 
     public async Task UpsertModelAsync(ModelPrice model, CancellationToken ct = default)
@@ -371,8 +378,59 @@ public sealed partial class BillingApplicationService(
         CancellationToken ct = default)
     {
         var limit = Math.Min(pageSize, paginationOptions.Value.MaxPageSize);
-        var offset = Math.Max(0, pageNumber) * limit;
-        return await repository.ListAllTopUpsAsync(offset, limit, userIds, minAmountUsd, maxAmountUsd, ct).ConfigureAwait(false);
+        var page = Math.Max(0, pageNumber);
+        var filterKey = $"{string.Join(",", (userIds ?? []).OrderBy(id => id, StringComparer.Ordinal))}:{minAmountUsd}:{maxAmountUsd}";
+
+        DateTimeOffset? afterCreatedAt = null;
+        string? afterId = null;
+
+        if (page > 0)
+        {
+            // Walk backwards from page-1 to find a cached cursor, or fetch intermediate pages.
+            for (var p = page - 1; p >= 0; p--)
+            {
+                if (_topUpsPageKeysetCache.TryGetValue((p, filterKey), out var cached))
+                {
+                    afterCreatedAt = cached.CreatedAtUtc;
+                    afterId = cached.Id;
+                    break;
+                }
+            }
+
+            // If no cached cursor found, fetch pages sequentially from 0 to build the chain.
+            if (afterCreatedAt is null)
+            {
+                for (var p = 0; p < page; p++)
+                {
+                    var result = await repository.ListAllTopUpsAsync(
+                        limit, userIds, minAmountUsd, maxAmountUsd,
+                        afterCreatedAt, afterId, ct).ConfigureAwait(false);
+
+                    if (result.Items.Count == 0)
+                        break;
+
+                    var resultArray = result.Items.ToArray();
+                    var last = resultArray[^1];
+                    afterCreatedAt = last.CreatedAtUtc;
+                    afterId = last.Id;
+                    _topUpsPageKeysetCache[(p, filterKey)] = (last.CreatedAtUtc, last.Id);
+                }
+            }
+        }
+
+        var (items, totalCount) = await repository.ListAllTopUpsAsync(
+            limit, userIds, minAmountUsd, maxAmountUsd,
+            afterCreatedAt, afterId, ct).ConfigureAwait(false);
+
+        // Cache the last element of this page for future keyset lookups.
+        if (items.Count > 0)
+        {
+            var itemsArray = items.ToArray();
+            var last = itemsArray[^1];
+            _topUpsPageKeysetCache[(page, filterKey)] = (last.CreatedAtUtc, last.Id);
+        }
+
+        return (items, totalCount);
     }
 
     public async Task<(IReadOnlyCollection<BillingAnomaly> Items, bool HasMore)> ListAnomaliesAsync(string? afterCursor = null, CancellationToken ct = default)
@@ -395,7 +453,6 @@ public sealed partial class BillingApplicationService(
         string? apiKeyIdFilter = null,
         string? afterCursor = null,
         int? pageSize = null,
-        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
@@ -405,7 +462,7 @@ public sealed partial class BillingApplicationService(
         ParseCursor(afterCursor, out var afterCreatedAtUtc, out var afterRequestId);
 
         return await repository.ListActivityByTokenAsync(
-            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, offset, ct).ConfigureAwait(false);
+            apiKeyIds, limit, fromUtc, toUtc, modelIdFilter, apiKeyIdFilter, afterCreatedAtUtc, afterRequestId, ct).ConfigureAwait(false);
     }
 
     public async Task<ActivitySummary> GetActivitySummaryAsync(
@@ -740,6 +797,7 @@ public sealed partial class BillingApplicationService(
             nowUtc,
             false), ct).ConfigureAwait(false);
 
+        _topUpsPageKeysetCache.Clear();
         return new GrantStartBalanceResult(true, entry.Id, null);
     }
 
@@ -779,6 +837,7 @@ public sealed partial class BillingApplicationService(
 
         await repository.UpdatePaymentBonusAsync(paymentId, payment.BonusPercent.Value, bonusUsd, ct).ConfigureAwait(false);
 
+        _topUpsPageKeysetCache.Clear();
         return new GrantFirstTopUpBonusResult(true, entry.Id, null);
     }
 

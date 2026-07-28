@@ -47,10 +47,12 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     }
 
     public Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
-        int offset, int limit,
+        int limit,
         IReadOnlyList<string>? userIds = null,
         decimal? minAmountUsd = null,
         decimal? maxAmountUsd = null,
+        DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterId = null,
         CancellationToken ct = default)
     {
         var query = _ledgerByIdempotencyKey.Values
@@ -66,13 +68,21 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         if (maxAmountUsd.HasValue)
             query = query.Where(e => e.Amount.Amount <= maxAmountUsd.Value);
 
+        if (afterCreatedAtUtc.HasValue && afterId is not null)
+        {
+            query = query.Where(e =>
+                e.CreatedAtUtc < afterCreatedAtUtc.Value ||
+                (e.CreatedAtUtc == afterCreatedAtUtc.Value &&
+                 string.Compare(e.Id, afterId, StringComparison.Ordinal) < 0));
+        }
+
         var all = query
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
             .ToList();
 
         var totalCount = all.Count;
-        var items = all.Skip(offset).Take(limit).ToList();
+        var items = all.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, totalCount));
     }
 
@@ -254,14 +264,15 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
 
         if (ledgerEntry is not null)
         {
-            // T-028: Atomic balance debit. Amount is negative for charges.
+            // T-069: Check idempotency BEFORE debit to match PG behavior.
+            // On idempotent repeat, TryAdd returns false — balance must not change.
             lock (_paymentSync)
             {
                 var current = _userBalances.GetValueOrDefault(ledgerEntry.UserId);
-                if (current + ledgerEntry.Amount.Amount >= 0)
+                if (current + ledgerEntry.Amount.Amount >= 0
+                    && _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry))
                 {
                     _userBalances[ledgerEntry.UserId] = current + ledgerEntry.Amount.Amount;
-                    _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry);
                 }
             }
         }
@@ -278,7 +289,6 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
-        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
@@ -303,14 +313,18 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         }
 
         // Match the PG impl: TotalCount counts all rows passing the same filters (cursor included),
-        // then offset/limit page the ordered result.
+        // then keyset+limit page the ordered result.
         var ordered = query
             .OrderByDescending(a => a.CreatedAtUtc)
             .ThenByDescending(a => a.RequestId)
             .ToList();
-        var totalCount = ordered.Count;
 
-        var items = ordered.Skip(offset).Take(limit + 1).ToList();
+        // T-067: Only compute TotalCount on the first page (no cursor) to match PG impl.
+        // On subsequent pages return -1 to indicate count was not computed.
+        var isFirstPage = !afterCreatedAtUtc.HasValue;
+        var totalCount = isFirstPage ? ordered.Count : -1;
+
+        var items = ordered.Take(limit + 1).ToList();
         var hasMore = items.Count > limit;
         if (hasMore) items = items.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore, totalCount));

@@ -348,7 +348,8 @@ message ListActivityByTokenRequest {
   string api_key_id_filter = 5;
   string after_cursor = 6;
   int32 page_size = 7;
-  int32 offset = 8;
+  reserved 8;
+  reserved "offset";
 }
 
 message ActivityByTokenRecord {

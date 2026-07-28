@@ -628,3 +628,41 @@
 - started: 2026-07-28T10:57:05+04:00
 - completed: 2026-07-28T11:00:48+04:00
 - desc: `BuildingBlocks/CLAUDE.md` — в раздел «Трафик сайта» дописать компактор: правило границы сессии, где живёт воркер и почему в BillingService, ключи `SiteVisits:Compaction:*`. `WebApp/CLAUDE.md` — раздел про `/admin/sessions` и `/admin/sessions/{id}`, оговорка что `/admin/visitors` теперь показывает только несхлопнутый хвост, строки в карте маршрутов. `BillingService/CLAUDE.md` — воркер компакта в списке hosted services. Корневой `CLAUDE.md` — новые страницы в карте WebApp; в разделе «Лимиты, метрики, продуктовая аналитика» — что `site_visits` теперь эфемерна, а долгоживущее хранилище трафика это `analytics.visit_sessions`. В `TODO.md` — два пункта: (1) у `analytics.visit_sessions` нет retention; (2) `IProductAnalyticsErasure.PurgeUserAsync` её не чистит, как сегодня не чистит и `site_visits` — пре-существующий пробел, в объём этой работы не входит. Туда же записать известное искажение: флаш очереди с задержкой больше `SafetyLag` вставит визит в уже схлопнутую сессию — при совпадении с `started_at_utc` домержится через `on conflict`, иначе появится сессия-фрагмент из одного просмотра (документировать рядом с оговорками про NAT и `X-Forwarded-For`).
+
+---
+
+> Источник: код-ревью БД-слоя (Supabase Postgres best practices), 2026-07-28.
+> 4 задачи среднего приоритета, оставленные «на потом» как требующие контрактных решений.
+> T-066..T-069. Могут выполняться независимо.
+
+## T-066 — ListActivityByTokenAsync: keyset-курсор и OFFSET одновременно
+- status: done
+- priority: medium
+- created: 2026-07-28T13:01:03+04:00
+- started: 2026-07-30T00:00:00+04:00
+- completed: 2026-07-28T13:18:49+04:00
+- desc: `src/OpenRussiaRouter.BillingService/Infrastructure/Repository/BillingRepository.Usage.cs`, метод `ListActivityByTokenAsync` (~строки 238-296). В запросе есть и keyset-курсор `(a.created_at_utc, a.request_id) < (@AfterCreatedAtUtc, @AfterRequestId)`, и `offset @Offset limit @Limit`. При ненулевом offset преимущество keyset теряется — Postgres всё равно сканирует O(offset) строк. Таблица `billing.activity_by_token` растёт на строку за каждый API-запрос. Фикс: убрать `offset` и оставить только keyset (сервис уже декларирует keyset-пагинацию в CLAUDE.md). Проверить, что вызывающие стороны (gRPC + WebApp `/workspace/activity`) не передают `offset`, либо адаптировать их. Связанная закрытая T-023 касалась только `count(*)`, не комбинации keyset+OFFSET.
+
+## T-067 — count(*) на каждую страницу activity-листинга (незавершённое T-023)
+- status: done
+- priority: medium
+- created: 2026-07-28T13:01:03+04:00
+- started: 2026-07-29T00:00:00+04:00
+- completed: 2026-07-29T00:00:00+04:00
+- desc: `BillingRepository.Usage.cs:283` — `ListActivityByTokenAsync` через `QueryMultipleAsync` выполняет второй запрос `select count(*) from billing.activity_by_token a {whereClause}` на каждое пролистывание кабинета `/workspace/activity`. T-023 закрыта, но `count(*)` в коде остался (возможно, был добавлен только `ConfigureAwait(false)`). Таблица write-heavy (строка на каждый chat-completion); индекс `(api_key_id, created_at_utc)` делает count index-only, но это всё равно скан диапазона. Фикс по образцу T-023: считать `TotalCount` только на первой странице (когда курсор не задан), либо `count(*) over ()` в основном запросе, либо приблизительный count. Согласовать с T-066 — оба правят один метод.
+
+## T-068 — ListAllTopUpsAsync: OFFSET-пагинация осталась (незавершённое T-021)
+- status: done
+- priority: medium
+- created: 2026-07-28T13:01:03+04:00
+- started: 2026-07-30T12:00:00+04:00
+- completed: 2026-07-30T12:30:00+04:00
+- desc: `BillingRepository.Ledger.cs:67` — `ListAllTopUpsAsync` (админский `/admin/topups`) использует `offset @Offset limit @Limit`. T-021 закрыта: миграция 024 добавила индекс `ix_billing_ledger_entries_type_created_at_id (type, created_at_utc DESC, id DESC)`, закрывающий filter+sort. Но keyset-конверсия, заявленная в desc T-021 («заменить точный count(*) на keyset-курсор»), не сделана — OFFSET на глубоких страницах дорог. Фундамент для keyset уже есть (индекс + `created_at_utc desc, id desc`). Фикс: перевести на keyset `(created_at_utc, id) < (@AfterCreatedAt, @AfterId)` по образцу `ListTopUpsAsync` в том же файле; согласованный кеш `_topUpsCountCache` оставить для total. Примечание: `_topUpsCountCache.Clear()` после фикса T-027 (убрали ложную инвалидацию из usage-пути) снова работает корректно.
+
+## T-069 — RecordUsageWithTransactionAsync: дебет баланса не идемпотентен на уровне репозитория
+- status: done
+- priority: medium
+- created: 2026-07-28T13:01:03+04:00
+- started: 2026-07-28T18:00:00+04:00
+- completed: 2026-07-28T18:10:00+04:00
+- desc: `BillingRepository.Usage.cs:196-231`, метод `RecordUsageWithTransactionAsync`. Внутри транзакции сначала `update billing.user_balances set balance_amount = balance_amount + @Amount ... returning balance_amount` (дебет), затем `insert billing.ledger_entries ... on conflict (idempotency_key) do nothing`. Если метод вызвать дважды с одним `requestId`, первый вызов дебетует и вставляет ledger; второй — дебетует снова (UPDATE без guard по idempotency_key), но `insert ... on conflict do nothing` не вставляет дубликат ledger. Баланс при этом списывается дважды. Идемпотентность сейчас обеспечивает только фасад `BillingApplicationService.RecordUsageAsync` (pre-check через `GetUsageAsync`) + дедуп outbox'ом gateway — но сам метод репозитория нельзя безопасно ретраить. T-028 добавила атомарный дебет `user_balances`, но не связала его с идемпотентностью ledger. Фикс: либо вставлять ledger первой и дебетовать только при реальном insert (через CTE `insert ... returning` → `update balances` только когда строка вставлена), либо добавить явный guard/комментарий-предупреждение, что метод не retry-safe и должен вызываться только через фасад с pre-check.

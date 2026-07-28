@@ -191,48 +191,61 @@ public sealed partial class BillingRepository
 
         if (ledgerEntry is not null)
         {
-            // T-028: Atomic balance debit. Amount is negative for charges.
-            // If insufficient balance, skip ledger entry and record usage at zero cost.
+            // T-069: Three-step CTE ensures atomicity and idempotency:
+            // 1) balance_ok: check if balance is sufficient (read-only gate)
+            // 2) ledger: insert the entry ONLY if balance_ok returned a row (cross-join);
+            //    ON CONFLICT DO NOTHING makes the insert a no-op on idempotent repeat
+            // 3) balance: debit ONLY if ledger actually inserted a row (EXISTS check)
+            //
+            // This guarantees: (a) double-calling with the same requestId debits only once,
+            // (b) insufficient balance produces neither ledger entry nor debit.
             var newBalance = await connection.ExecuteScalarAsync<decimal?>(new CommandDefinition(
                 """
-                update billing.user_balances
-                set balance_amount = balance_amount + @Amount, updated_at_utc = now()
-                where user_id = @UserId and balance_amount + @Amount >= 0
-                returning balance_amount;
+                with balance_ok as (
+                    select 1 from billing.user_balances
+                    where user_id = @UserId and balance_amount + @Amount >= 0
+                ),
+                ledger as (
+                    insert into billing.ledger_entries
+                        (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc, is_user_payment)
+                    select @Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment
+                    from balance_ok
+                    on conflict (idempotency_key) do nothing
+                    returning id
+                ),
+                balance as (
+                    update billing.user_balances
+                    set balance_amount = balance_amount + @Amount, updated_at_utc = now()
+                    where user_id = @UserId and exists (select 1 from ledger)
+                    returning balance_amount
+                )
+                select balance_amount from balance;
                 """,
-                new { UserId = ledgerEntry.UserId, Amount = ledgerEntry.Amount.Amount },
+                new
+                {
+                    ledgerEntry.Id,
+                    ledgerEntry.UserId,
+                    Type = ledgerEntry.Type.ToString(),
+                    ledgerEntry.Amount.Amount,
+                    Currency = ledgerEntry.Amount.Currency.ToString(),
+                    ledgerEntry.IdempotencyKey,
+                    ledgerEntry.Reason,
+                    ledgerEntry.CreatedAtUtc,
+                    ledgerEntry.IsUserPayment
+                },
                 transaction,
                 cancellationToken: ct)).ConfigureAwait(false);
 
-            if (newBalance.HasValue)
+            // T-069: newBalance is null when (a) balance was insufficient, or
+            // (b) ledger insert conflicted (idempotent repeat). In both cases,
+            // the caller should treat this as "no ledger entry created".
+            if (!newBalance.HasValue)
             {
-                await connection.ExecuteAsync(new CommandDefinition(
-                    """
-                    insert into billing.ledger_entries
-                        (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc, is_user_payment)
-                    values
-                        (@Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment)
-                    on conflict (idempotency_key) do nothing;
-                    """,
-                    new
-                    {
-                        ledgerEntry.Id,
-                        ledgerEntry.UserId,
-                        Type = ledgerEntry.Type.ToString(),
-                        ledgerEntry.Amount.Amount,
-                        Currency = ledgerEntry.Amount.Currency.ToString(),
-                        ledgerEntry.IdempotencyKey,
-                        ledgerEntry.Reason,
-                        ledgerEntry.CreatedAtUtc,
-                        ledgerEntry.IsUserPayment
-                    },
-                    transaction,
-                    cancellationToken: ct)).ConfigureAwait(false);
+                ledgerEntry = null;
             }
         }
 
         await transaction.CommitAsync(ct).ConfigureAwait(false);
-        _topUpsCountCache.Clear();
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
@@ -244,7 +257,6 @@ public sealed partial class BillingRepository
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
-        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
@@ -254,7 +266,6 @@ public sealed partial class BillingRepository
         var parameters = new DynamicParameters();
         parameters.Add("ApiKeyIds", apiKeyIds.ToArray());
         parameters.Add("Limit", limit + 1);
-        parameters.Add("Offset", offset);
 
         var conditions = new List<string> { "a.api_key_id = any(@ApiKeyIds)" };
 
@@ -276,11 +287,17 @@ public sealed partial class BillingRepository
 
         var whereClause = "where " + string.Join(" and ", conditions);
 
+        // T-067: Only run count(*) on first page (no cursor). On write-heavy
+        // activity_by_token the full count scan is expensive on every pagination request.
+        var isFirstPage = !afterCreatedAtUtc.HasValue;
         var multiSql = ActivityByTokenSelectSql +
             whereClause + "\n" +
             "order by a.created_at_utc desc, a.request_id desc\n" +
-            "offset @Offset limit @Limit;\n" +
-            $"select count(*) from billing.activity_by_token a {whereClause};";
+            "limit @Limit;\n";
+        if (isFirstPage)
+        {
+            multiSql += $"select count(*) from billing.activity_by_token a {whereClause};";
+        }
 
         using var multi = await connection.QueryMultipleAsync(new CommandDefinition(multiSql, parameters, cancellationToken: ct)).ConfigureAwait(false);
 
@@ -288,7 +305,9 @@ public sealed partial class BillingRepository
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();
 
-        var totalCount = await multi.ReadSingleAsync<int>().ConfigureAwait(false);
+        var totalCount = isFirstPage
+            ? await multi.ReadSingleAsync<int>().ConfigureAwait(false)
+            : -1;
 
         var hasMore = items.Length > limit;
         if (hasMore) items = items.Take(limit).ToArray();

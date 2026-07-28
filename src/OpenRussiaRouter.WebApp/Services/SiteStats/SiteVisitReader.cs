@@ -180,8 +180,16 @@ public sealed class SiteVisitReader
         (sql, var parameters) = ApplyTimeWindow(sql, query, new List<NpgsqlParameter>());
         if (filterColumn is not null && !string.IsNullOrEmpty(filterValue))
         {
-            sql += $" and {filterColumn} = :{filterColumn}";
-            parameters.Add(new NpgsqlParameter(filterColumn, filterValue));
+            // Hard-coded column name: filterColumn is an internal flag, never user input.
+            // Using string interpolation for a SQL identifier here would be a latent
+            // injection vector if a future caller passed something through.
+            if (filterColumn != "visitor_hash")
+            {
+                throw new InvalidOperationException(
+                    "Unsupported filter column: " + filterColumn);
+            }
+            sql += " and visitor_hash = :visitor_hash";
+            parameters.Add(new NpgsqlParameter("visitor_hash", filterValue));
         }
 
         await using var conn = await ds.OpenConnectionAsync(ct).ConfigureAwait(false);
@@ -211,8 +219,14 @@ public sealed class SiteVisitReader
         (sql, parameters) = ApplyTimeWindow(sql, query, parameters);
         if (filterColumn is not null && !string.IsNullOrEmpty(filterValue))
         {
-            sql += $" and {filterColumn} = :{filterColumn}";
-            parameters.Add(new NpgsqlParameter(filterColumn, filterValue));
+            // Same whitelist guard as in CountVisitsAsync.
+            if (filterColumn != "visitor_hash")
+            {
+                throw new InvalidOperationException(
+                    "Unsupported filter column: " + filterColumn);
+            }
+            sql += " and visitor_hash = :visitor_hash";
+            parameters.Add(new NpgsqlParameter("visitor_hash", filterValue));
         }
 
         sql += " order by occurred_at_utc desc limit :limit offset :offset";

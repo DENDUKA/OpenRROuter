@@ -30,10 +30,12 @@ public sealed partial class BillingRepository
     }
 
     public async Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
-        int offset, int limit,
+        int limit,
         IReadOnlyList<string>? userIds = null,
         decimal? minAmountUsd = null,
         decimal? maxAmountUsd = null,
+        DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterId = null,
         CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -64,12 +66,24 @@ public sealed partial class BillingRepository
             _topUpsCountCache[cacheKey] = (totalCount, now + TopUpsCountCacheTtl);
         }
 
-        var dataSql = LedgerEntrySelectSql + baseWhere +
-            " order by created_at_utc desc, id desc offset @Offset limit @Limit;";
+        var keysetClause = afterCreatedAtUtc is not null && afterId is not null
+            ? " and (created_at_utc, id) < (@AfterCreatedAtUtc, @AfterId)"
+            : "";
+
+        var dataSql = LedgerEntrySelectSql + baseWhere + keysetClause +
+            " order by created_at_utc desc, id desc limit @Limit;";
 
         var items = (await connection.QueryAsync<LedgerEntryEntity>(new CommandDefinition(
                 dataSql,
-                new { UserIds = userIds, MinAmountUsd = minAmountUsd, MaxAmountUsd = maxAmountUsd, Offset = offset, Limit = limit },
+                new
+                {
+                    UserIds = userIds,
+                    MinAmountUsd = minAmountUsd,
+                    MaxAmountUsd = maxAmountUsd,
+                    AfterCreatedAtUtc = afterCreatedAtUtc,
+                    AfterId = afterId,
+                    Limit = limit
+                },
                 cancellationToken: ct)).ConfigureAwait(false))
             .Select(BillingPersistenceMapper.ToDomain)
             .ToArray();

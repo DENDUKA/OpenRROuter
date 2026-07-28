@@ -85,8 +85,8 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-се�
   - после записи (и на идемпотентном повторе) эмитит `ApiRequestCompleted` в продуктовую аналитику
     (fire-and-forget `Task.Run`, ошибки только логируются).
 - **Леджер и пополнения**: `CreateVirtualTopUpAsync` (админское, `VirtualTopUp`), `GetBalanceAsync`,
-  `ListTopUpsAsync` (по пользователю), `ListAllTopUpsAsync` (админский offset-пейджинг + фильтры
-  по userIds и сумме).
+  `ListTopUpsAsync` (по пользователю), `ListAllTopUpsAsync` (админский keyset-пейджинг по
+  `(created_at_utc, id)` + фильтры по userIds и сумме; total кешируется в `_topUpsCountCache`).
 - **Промо**: `GrantStartBalanceAsync` (тип `Promo1`, ключ `promo1:{userId}`, отказ при сумме `<=0`
   или `>100`, повтор возвращает существующую запись), `GrantFirstTopUpBonusAsync` (тип
   `FirstTopUpBonus`, ключ `first_top_up_bonus:{paymentId}`; требует `Payment.Status=Paid` и снапшот
@@ -119,7 +119,7 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-се�
 
 ## Деньги: инварианты
 
-- **Баланс = `billing.user_balances`** — денормализованная таблица `user_balances(user_id PK, balance_amount numeric(18,6))`, синхронизируемая при каждом изменении леджера. Чтение — `O(1)`, запись — атомарный `UPDATE ... SET balance = balance + amount WHERE balance + amount >= 0` внутри транзакции списания (T-028). Кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`.
+- **Баланс = `billing.user_balances`** — денормализованная таблица `user_balances(user_id PK, balance_amount numeric(18,6))`, синхронизируемая при каждом изменении леджера. Чтение — `O(1)`, запись — атомарный `UPDATE ... SET balance = balance + amount WHERE balance + amount >= 0` внутри транзакции списания (T-028). Кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`. Идемпотентность на уровне репозитория (T-069): ledger insert идёт ПЕРВЫМ через CTE с `ON CONFLICT DO NOTHING`; `user_balances` обновляется ТОЛЬКО если insert реально вставил строку (cross-join + `EXISTS`). Двойной вызов с одним `requestId` дебетует баланс ровно один раз.
 - Ключи идемпотентности: `usage:{requestId}`, `payment:{paymentId}`, `refund:{paymentId}`,
   `chargeback:{paymentId}`, `refund_bonus:{paymentId}`, `promo1:{userId}`,
   `first_top_up_bonus:{paymentId}`; админское пополнение — ключ от вызывающего.

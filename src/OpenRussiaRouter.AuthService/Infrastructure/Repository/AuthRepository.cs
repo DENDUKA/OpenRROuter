@@ -166,23 +166,35 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
     {
         ArgumentNullException.ThrowIfNull(apiKey);
         using var connection = connectionFactory.CreateConnection();
-        var rowsAffected = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+        var npgsqlConn = (NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
+
+        var activeCount = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "select count(*) from auth.api_keys where user_id = @UserId and deleted_at_utc is null;",
+            new { apiKey.UserId },
+            transaction,
+            cancellationToken: ct)).ConfigureAwait(false);
+
+        if (activeCount >= maxApiKeys)
+        {
+            await transaction.RollbackAsync(ct).ConfigureAwait(false);
+            return false;
+        }
+
+        await connection.ExecuteAsync(new CommandDefinition(
             """
-            with active_count as (
-                select count(*) as cnt
-                from auth.api_keys
-                where user_id = @UserId and deleted_at_utc is null
-            )
             insert into auth.api_keys
                 (id, user_id, name, prefix, secret_hash, raw_key, created_at_utc, last_used_at_utc, disabled_at_utc)
-            select
-                @Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @DisabledAtUtc
-            from active_count
-            where cnt < @MaxApiKeys;
+            values
+                (@Id, @UserId, @Name, @Prefix, @SecretHash, @RawKey, @CreatedAtUtc, @LastUsedAtUtc, @DisabledAtUtc);
             """,
-            new { apiKey.Id, apiKey.UserId, apiKey.Name, apiKey.Prefix, apiKey.SecretHash, apiKey.RawKey, apiKey.CreatedAtUtc, apiKey.LastUsedAtUtc, apiKey.DisabledAtUtc, MaxApiKeys = maxApiKeys },
+            ToParameters(apiKey),
+            transaction,
             cancellationToken: ct)).ConfigureAwait(false);
-        return rowsAffected > 0;
+
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return true;
     }
 
     public async Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default)

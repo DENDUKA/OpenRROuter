@@ -42,8 +42,14 @@ export default function () {
                 Authorization: `Bearer ${apiKeyForVU()}`,
             },
             timeout: '60s',
+            // Классифицируем ошибки: k6 по умолчанию считает 2xx-3xx успешными, остальное — failed.
+            // 429/503 от шлюза И таймауты TCP — оба попадут в error_code.
         }
     );
+
+    if (res.status !== 200) {
+        console.log(`FAIL status=${res.status} body=${(res.body || '').slice(0, 300)} error=${res.error || ''}`);
+    }
 
     check(res, {
         'status is 200': (r) => r.status === 200,

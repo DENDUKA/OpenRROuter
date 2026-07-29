@@ -1,10 +1,9 @@
-// reasoning_effort:'none' обязателен: gemini-3.5-flash имеет default_effort 'high',
-// и ReasoningRequestPatcher подставит его, если поле отсутствует → лишняя latency/cost.
+// reasoning_effort НЕ добавляем: gemini-3.5-flash не поддерживает reasoning, и наличие этого
+// поля вызывает 400 unsupported_parameter (ReasoningRequestPatcher). Поле отсутствует = норма.
 const BASE = (modelId) => ({
     model: modelId,
     messages: [{ role: 'user', content: 'hi' }],
     max_tokens: 1,
-    reasoning_effort: 'none',
 });
 
 export function nonStreamBody(modelId) {

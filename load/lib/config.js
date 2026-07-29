@@ -8,12 +8,6 @@ const apiKeys = (__ENV.K6_API_KEYS || '')
     .map((s) => s.trim())
     .filter(Boolean);
 
-if (apiKeys.length === 0) {
-    throw new Error(
-        'K6_API_KEYS не задан. Заполните load/.env (см. .env.example) — список sk-or-* ключей через запятую.'
-    );
-}
-
 export const config = {
     baseUrl,
     modelId,
@@ -21,7 +15,13 @@ export const config = {
 };
 
 // Раздаёт ключи round-robin по VU: каждый виртуальный пользователь всегда использует один ключ.
+// Проверка — lazy: сценарии без ключей (напр. models-get) грузятся и без K6_API_KEYS.
 export function apiKeyForVU() {
+    if (apiKeys.length === 0) {
+        throw new Error(
+            'K6_API_KEYS не задан. Заполните load/.env (см. .env.example) — список sk-or-* ключей через запятую.'
+        );
+    }
     const vu = exec.vu.idInTest; // 1-based
     return apiKeys[(vu - 1) % apiKeys.length];
 }

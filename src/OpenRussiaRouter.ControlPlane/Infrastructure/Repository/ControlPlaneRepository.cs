@@ -159,7 +159,6 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                   and enabled = true
                   and status = 'Healthy'
                 order by in_flight_requests::numeric / capacity_weight, in_flight_requests, name
-                for update skip locked
                 limit 1
             ), leased_node as (
                 update control.router_nodes node

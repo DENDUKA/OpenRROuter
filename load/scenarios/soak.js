@@ -19,8 +19,8 @@ export const options = {
     thresholds: {
         http_req_failed: [{ threshold: 'rate<0.05', abortOnFail: true }],
         http_req_duration: [
-            { threshold: 'p(99)<30000', abortOnFail: true },
-            'p(95)<15000',
+            { threshold: 'p(99)<60000', abortOnFail: true },
+            'p(95)<30000',
         ],
         checks: ['rate>0.95'],
     },

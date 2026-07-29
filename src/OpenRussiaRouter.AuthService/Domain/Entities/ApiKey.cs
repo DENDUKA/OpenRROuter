@@ -1,3 +1,4 @@
+using OpenRussiaRouter.AuthService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Common;
 
 namespace OpenRussiaRouter.AuthService.Domain.Entities;
@@ -5,7 +6,7 @@ namespace OpenRussiaRouter.AuthService.Domain.Entities;
 public sealed class ApiKey
 {
 
-    public ApiKey(string id, string userId, string name, string prefix, string secretHash, DateTimeOffset createdAtUtc, string? rawKey = null)
+    public ApiKey(string id, string userId, string name, string prefix, string secretHash, DateTimeOffset createdAtUtc, string? rawKey = null, UserRole? userRole = null)
     {
         Id = Preconditions.RequireValue(id, nameof(id));
         UserId = Preconditions.RequireValue(userId, nameof(userId));
@@ -14,6 +15,7 @@ public sealed class ApiKey
         SecretHash = Preconditions.RequireValue(secretHash, nameof(secretHash));
         CreatedAtUtc = createdAtUtc;
         RawKey = rawKey;
+        UserRole = userRole;
     }
 
     public string Id { get; }
@@ -35,6 +37,8 @@ public sealed class ApiKey
     public DateTimeOffset? DisabledAtUtc { get; private set; }
 
     public DateTimeOffset? DeletedAtUtc { get; private set; }
+
+    public UserRole? UserRole { get; }
 
     public bool IsActive => !DisabledAtUtc.HasValue;
 

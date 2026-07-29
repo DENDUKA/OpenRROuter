@@ -56,13 +56,27 @@ builder.Services.AddSingleton<SiteVisitReader>(sp =>
     return new SiteVisitReader(dataSource, pseudonymizer, logger);
 });
 
+// Session reader for /admin/sessions — read side of analytics.visit_sessions, which the
+// BillingService compactor fills. Same nullable-dependency factory as above: without the
+// analytics sink it resolves to a disabled instance and the page renders a banner.
+builder.Services.AddSingleton<VisitSessionReader>(sp =>
+{
+    var dataSource = sp.GetService<Npgsql.NpgsqlDataSource>();
+    var pseudonymizer = sp.GetService<UserPseudonymizer>();
+    var logger = sp.GetRequiredService<ILogger<VisitSessionReader>>();
+    return new VisitSessionReader(dataSource, pseudonymizer, logger);
+});
+
 builder.Services.AddLocalization(o => o.ResourcesPath = "Resources");
 builder.Services.AddRazorPages()
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(o =>
         o.DataAnnotationLocalizerProvider = (_, factory) => factory.Create(typeof(SharedResource)));
 builder.Services.AddControllers();
-builder.Services.AddMemoryCache();
+builder.Services.AddMemoryCache(options =>
+{
+    options.SizeLimit = 100;
+});
 builder.Services.Configure<RequestLocalizationOptions>(o =>
 {
     var cultures = SupportedCultures.All;
@@ -352,6 +366,20 @@ builder.Services.AddRateLimiter(options =>
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true,
+        });
+    });
+
+    options.AddPolicy(AlertWebhookEndpoint.RateLimitPolicy, httpContext =>
+    {
+        // Per-IP fixed window: 30 requests / minute. Alert webhooks are infrequent
+        // (one per Grafana rule firing), so this is generous while still absorbing abuse.
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             AutoReplenishment = true,

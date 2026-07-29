@@ -92,7 +92,8 @@ public static class AuthPersistenceMapper
             CreatedAtUtc = apiKey.CreatedAtUtc,
             LastUsedAtUtc = apiKey.LastUsedAtUtc,
             DisabledAtUtc = apiKey.DisabledAtUtc,
-            DeletedAtUtc = apiKey.DeletedAtUtc
+            DeletedAtUtc = apiKey.DeletedAtUtc,
+            UserRole = apiKey.UserRole
         };
     }
 
@@ -106,7 +107,8 @@ public static class AuthPersistenceMapper
             entity.Prefix,
             entity.SecretHash,
             entity.CreatedAtUtc,
-            entity.RawKey);
+            entity.RawKey,
+            entity.UserRole);
 
         if (entity.LastUsedAtUtc.HasValue)
         {

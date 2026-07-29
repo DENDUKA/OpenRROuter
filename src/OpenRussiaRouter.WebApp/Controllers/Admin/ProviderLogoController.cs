@@ -16,6 +16,8 @@ public sealed class ProviderLogoController(BillingProvider billingProvider) : Co
             return NotFound();
 
         Response.Headers.CacheControl = "public, max-age=604800";
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.ContentDisposition = "inline";
         return File(provider.LogoBytes, provider.LogoContentType);
     }
 }

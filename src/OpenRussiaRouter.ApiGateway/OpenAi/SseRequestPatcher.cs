@@ -25,6 +25,15 @@ public static class SseRequestPatcher
     }
 
     /// <summary>
+    /// Replaces the "model" field value on an already-parsed <paramref name="node"/>.
+    /// </summary>
+    public static void PatchModel(JsonNode node, string routerModelId)
+    {
+        if (node is JsonObject obj)
+            obj["model"] = routerModelId;
+    }
+
+    /// <summary>
     /// Ensures "stream": true and "stream_options": {"include_usage": true} are present
     /// so 9Router returns token usage in the final SSE chunk.
     /// </summary>
@@ -43,5 +52,18 @@ public static class SseRequestPatcher
         }
         catch (JsonException) { /* malformed JSON — return as-is */ }
         return requestJson;
+    }
+
+    /// <summary>
+    /// Ensures "stream": true and "stream_options": {"include_usage": true} on an already-parsed node.
+    /// </summary>
+    public static void InjectStreamOptions(JsonNode node)
+    {
+        if (node is JsonObject obj)
+        {
+            obj["stream"] = true;
+            if (!obj.ContainsKey("stream_options"))
+                obj["stream_options"] = new JsonObject { ["include_usage"] = true };
+        }
     }
 }

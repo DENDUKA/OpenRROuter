@@ -7,7 +7,10 @@ namespace OpenRussiaRouter.WebApp.Tests;
 /// <summary>
 /// Tests for the disabled-sink path of <see cref="SiteVisitReader"/>. The query execution
 /// against a real Postgres sink is covered by integration tests (Testcontainers-skipped at
-/// this suite's level), same as the write-side flush worker.
+/// this suite's level), same as the write-side flush worker. That includes the
+/// <c>site_visits</c> → <c>visit_sessions</c> fallback of the <c>userId</c> filter: both
+/// branches and the missing-table degradation need a live sink, so none of them is asserted
+/// here — a disabled reader returns before touching either table.
 /// </summary>
 public sealed class SiteVisitReaderTests
 {

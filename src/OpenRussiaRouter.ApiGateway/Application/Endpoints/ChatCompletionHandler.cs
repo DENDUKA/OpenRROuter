@@ -36,7 +36,7 @@ public sealed class ChatCompletionHandler(
 
         try
         {
-            var body = await ChatCompletionRequestReader.ReadBodyAsync(context.Request.Body, context.RequestAborted);
+            var body = await ChatCompletionRequestReader.ReadBodyNodeAsync(context.Request.Body, context.RequestAborted);
 
             if (body.Metadata.Stream)
             {
@@ -50,10 +50,14 @@ public sealed class ChatCompletionHandler(
                 requestId,
                 patchBody: auth =>
                 {
-                    var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
+                    // Single-parse path: all patchers mutate the same JsonNode, one serialization per retry.
+                    if (body.Node is null)
+                        return body.RawJson;
 
-                    var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
-                        patchedJson,
+                    SseRequestPatcher.PatchModel(body.Node, auth.RouterModelId);
+
+                    var reasoningPatch = ReasoningRequestPatcher.TryNormalizeInPlace(
+                        body.Node,
                         body.Metadata.Reasoning,
                         auth.SupportsReasoning,
                         auth.AllowedReasoningEfforts ?? [],
@@ -64,10 +68,12 @@ public sealed class ChatCompletionHandler(
                             reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
                             reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed);
 
-                    return GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                        reasoningPatch.PatchedJson,
+                    GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                        body.Node,
                         auth.RouterModelId,
                         body.Metadata.Model ?? "");
+
+                    return body.Node.ToJsonString();
                 },
                 sendRequest: (auth, patchedJson, ct) =>
                     routerProxy.SendChatCompletionAsync(auth.Lease, patchedJson, requestId, auth.ApiKey, ct),
@@ -103,22 +109,28 @@ public sealed class ChatCompletionHandler(
     public async Task HandleStreamAsync(HttpContext context)
     {
         var requestId = CorrelationIdReader.Get(context.Request);
-        var body = await ChatCompletionRequestReader.ReadBodyAsync(context.Request.Body, context.RequestAborted);
+        var body = await ChatCompletionRequestReader.ReadBodyNodeAsync(context.Request.Body, context.RequestAborted);
         await ExecuteStreamingAsync(context, body, requestId);
     }
 
     // GATEWAY-003 + GATEWAY-004: full SSE streaming with one retry before first chunk
-    private async Task ExecuteStreamingAsync(HttpContext context, ChatCompletionRequestBody body, string requestId)
+    private async Task ExecuteStreamingAsync(HttpContext context, ChatCompletionRequestBodyNode body, string requestId)
     {
         try
         {
+            // Шаг 1: аутентификация + проверка баланса — один раз до retry-цикла.
+            var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+            if (authorization is null)
+                return;
+
             HashSet<string>? excludedNodes = null;
             RouterStreamSession? lastFailedSession = null;
             var attempts = 0;
 
             while (true)
             {
-                var auth = await pipeline.AuthorizeAndAcquireLeaseAsync(context, body.Metadata.Model, requestId, excludedNodes, context.RequestAborted);
+                // Шаг 2: выбор ноды — на каждой итерации с учётом исключённых.
+                var auth = await pipeline.AcquireLeaseAsync(context, authorization, requestId, excludedNodes, context.RequestAborted);
                 if (auth is null)
                 {
                     if (lastFailedSession != null)
@@ -130,36 +142,78 @@ public sealed class ChatCompletionHandler(
 
                 try
                 {
-                    var patchedJson = SseRequestPatcher.PatchModel(body.Json, auth.RouterModelId);
-                    var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
-                        patchedJson,
-                        body.Metadata.Reasoning,
-                        auth.SupportsReasoning,
-                        auth.AllowedReasoningEfforts ?? [],
-                        auth.DefaultReasoningEffort);
-                    if (!reasoningPatch.IsSuccess)
+                    // Single-parse path: all patchers mutate the same JsonNode, one serialization per retry.
+                    string patchedJson;
+                    if (body.Node is not null)
                     {
-                        // Release must succeed even if client disconnected — don't cancel.
-                        await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                        if (lastFailedSession != null)
-                        {
-                            await lastFailedSession.DisposeAsync();
-                            lastFailedSession = null;
-                        }
-                        await GatewayErrors.WriteAsync(
-                            context,
-                            "invalid_request_error",
-                            reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
-                            reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
-                            requestId);
-                        return;
-                    }
+                        SseRequestPatcher.PatchModel(body.Node, auth.RouterModelId);
 
-                    patchedJson = SseRequestPatcher.InjectStreamOptions(
+                        var reasoningPatch = ReasoningRequestPatcher.TryNormalizeInPlace(
+                            body.Node,
+                            body.Metadata.Reasoning,
+                            auth.SupportsReasoning,
+                            auth.AllowedReasoningEfforts ?? [],
+                            auth.DefaultReasoningEffort);
+                        if (!reasoningPatch.IsSuccess)
+                        {
+                            // Release must succeed even if client disconnected — don't cancel.
+                            await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                            if (lastFailedSession != null)
+                            {
+                                await lastFailedSession.DisposeAsync();
+                                lastFailedSession = null;
+                            }
+                            await GatewayErrors.WriteAsync(
+                                context,
+                                "invalid_request_error",
+                                reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
+                                reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
+                                requestId);
+                            return;
+                        }
+
                         GeminiSchemaPatcher.SanitizeIfGeminiModel(
-                            reasoningPatch.PatchedJson,
+                            body.Node,
                             auth.RouterModelId,
-                            body.Metadata.Model ?? ""));
+                            body.Metadata.Model ?? "");
+
+                        SseRequestPatcher.InjectStreamOptions(body.Node);
+                        patchedJson = body.Node.ToJsonString();
+                    }
+                    else
+                    {
+                        // Fallback: malformed JSON, use raw string with legacy string-based patchers.
+                        patchedJson = SseRequestPatcher.PatchModel(body.RawJson, auth.RouterModelId);
+
+                        var reasoningPatch = ReasoningRequestPatcher.TryNormalize(
+                            patchedJson,
+                            body.Metadata.Reasoning,
+                            auth.SupportsReasoning,
+                            auth.AllowedReasoningEfforts ?? [],
+                            auth.DefaultReasoningEffort);
+                        if (!reasoningPatch.IsSuccess)
+                        {
+                            await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
+                            if (lastFailedSession != null)
+                            {
+                                await lastFailedSession.DisposeAsync();
+                                lastFailedSession = null;
+                            }
+                            await GatewayErrors.WriteAsync(
+                                context,
+                                "invalid_request_error",
+                                reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
+                                reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
+                                requestId);
+                            return;
+                        }
+
+                        patchedJson = SseRequestPatcher.InjectStreamOptions(
+                            GeminiSchemaPatcher.SanitizeIfGeminiModel(
+                                reasoningPatch.PatchedJson ?? patchedJson,
+                                auth.RouterModelId,
+                                body.Metadata.Model ?? ""));
+                    }
                     var lease = auth.Lease;
 
                     var session = await routerProxy.BeginStreamChatCompletionAsync(lease, patchedJson, requestId, auth.ApiKey, context.RequestAborted);

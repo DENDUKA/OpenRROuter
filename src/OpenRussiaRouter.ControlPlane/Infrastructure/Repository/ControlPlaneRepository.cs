@@ -147,8 +147,9 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
             return null;
 
         using var connection = connectionFactory.CreateConnection();
-        connection.Open();
-        using var transaction = connection.BeginTransaction();
+        var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
+        await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
+        await using var transaction = await npgsqlConn.BeginTransactionAsync(ct).ConfigureAwait(false);
         var node = await connection.QuerySingleOrDefaultAsync<LeaseCandidate>(new CommandDefinition(
             """
             with candidate as (
@@ -173,7 +174,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
 
         if (node is null)
         {
-            transaction.Commit();
+            await transaction.CommitAsync(ct).ConfigureAwait(false);
             return null;
         }
 
@@ -185,7 +186,7 @@ public sealed class ControlPlaneRepository(IControlPlaneDbConnectionFactory conn
                 (@Id, @NodeId, @RequestId, @ExpiresAtUtc, @CreatedAtUtc);
             """,
             lease with { NodeId = node.Id }, transaction, cancellationToken: ct)).ConfigureAwait(false);
-        transaction.Commit();
+        await transaction.CommitAsync(ct).ConfigureAwait(false);
         return new RouterNodeLease(lease.Id, node.Id, new Uri(node.EndpointUrl), node.ControlToken);
     }
 

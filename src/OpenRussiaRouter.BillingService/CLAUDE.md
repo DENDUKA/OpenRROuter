@@ -21,9 +21,21 @@ Layered: Domain → Application → Infrastructure.
 [Startup.cs](Infrastructure/Startup/Startup.cs): `AddGrpc` с глобальным `ServiceAuthInterceptor`,
 `AddControllers`, `AddHealthChecks`, `AddBillingInfrastructure(ConnectionStrings:BillingDb)`,
 `AddBillingApplicationServices`, `AddProductAnalytics`, options `ExchangeRates`/`Payments`/`ServiceAuth`,
-singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hosted-сервиса —
-`FxRateRefresher` и `PaymentEventRecoveryWorker`. Pipeline мапит `GrpcBillingService`, контроллеры,
+singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-сервисы —
+`FxRateRefresher`, `PaymentEventRecoveryWorker` и `VisitSessionCompactionWorker`
+(регистрируется `AddSiteVisitCompaction(configuration)` **после** `AddProductAnalytics`, у которого
+он забирает `NpgsqlDataSource` аналитической БД). Pipeline мапит `GrpcBillingService`, контроллеры,
 `/health` и OpenTelemetry-эндпоинты.
+
+**Компакт визитов живёт здесь, а не в WebApp** — Billing владеет БД `orr_analytics`, катает её
+миграции и идёт в одной реплике (WebApp реплицируется). Воркер схлопывает `analytics.site_visits` в
+`analytics.visit_sessions` и удаляет исходные строки, так что таблица визитов держит ~35 минут
+трафика. Настройки — `SiteVisits:Compaction:*` в `appsettings.json` (`Enabled`, `IntervalMinutes`,
+`SessionGapMinutes`, `SafetyLagMinutes`, `VisitorBatchSize`, `MaxIterationsPerRun`,
+`MaxPagesPerSession`, `SplitOnUtcDayBoundary`); гейт регистрации — сконфигуренный Postgres-синк
+`ProductAnalytics` + `Compaction.Enabled`, **`SiteVisits:Enabled` в гейт не входит**. Механика,
+инварианты и подводные камни — в [BuildingBlocks/CLAUDE.md](../OpenRussiaRouter.BuildingBlocks/CLAUDE.md),
+раздел «Трафик сайта».
 
 `AddBillingInfrastructure` ([BillingServiceExtensions.cs](Application/Extensions/BillingServiceExtensions.cs)):
 **пустая строка подключения → `InMemoryBillingRepository`** (так живёт dev-профиль и часть тестов).
@@ -73,8 +85,8 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hoste
   - после записи (и на идемпотентном повторе) эмитит `ApiRequestCompleted` в продуктовую аналитику
     (fire-and-forget `Task.Run`, ошибки только логируются).
 - **Леджер и пополнения**: `CreateVirtualTopUpAsync` (админское, `VirtualTopUp`), `GetBalanceAsync`,
-  `ListTopUpsAsync` (по пользователю), `ListAllTopUpsAsync` (админский offset-пейджинг + фильтры
-  по userIds и сумме).
+  `ListTopUpsAsync` (по пользователю), `ListAllTopUpsAsync` (админский keyset-пейджинг по
+  `(created_at_utc, id)` + фильтры по userIds и сумме; total кешируется в `_topUpsCountCache`).
 - **Промо**: `GrantStartBalanceAsync` (тип `Promo1`, ключ `promo1:{userId}`, отказ при сумме `<=0`
   или `>100`, повтор возвращает существующую запись), `GrantFirstTopUpBonusAsync` (тип
   `FirstTopUpBonus`, ключ `first_top_up_bonus:{paymentId}`; требует `Payment.Status=Paid` и снапшот
@@ -104,13 +116,10 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и два hoste
   `promotions.start_balance.enabled|amount_usd`, `promotions.first_top_up.enabled|percent`.
 - Листинги активности/usage/аномалий/admin-записей — с фильтрами по apiKeyIds, датам, моделям,
   провайдерам, нодам и аккаунтам (`GetAdminUsageRecordsAsync` / `GetAdminUsageSummaryAsync`).
-- `Repository` торчит наружу свойством — `GrpcBillingService` дёргает его напрямую в
-  `HasUserHadPaidTopUp` и `GetPromotionSettings`.
 
 ## Деньги: инварианты
 
-- **Баланс = `select sum(amount) from billing.ledger_entries where user_id = …`** — отдельной
-  колонки баланса нет, кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`.
+- **Баланс = `billing.user_balances`** — денормализованная таблица `user_balances(user_id PK, balance_amount numeric(18,6))`, синхронизируемая при каждом изменении леджера. Чтение — `O(1)`, запись — атомарный `UPDATE ... SET balance = balance + amount WHERE balance + amount >= 0` внутри транзакции списания (T-028). Кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`. Идемпотентность на уровне репозитория (T-069): ledger insert идёт ПЕРВЫМ через CTE с `ON CONFLICT DO NOTHING`; `user_balances` обновляется ТОЛЬКО если insert реально вставил строку (cross-join + `EXISTS`). Двойной вызов с одним `requestId` дебетует баланс ровно один раз.
 - Ключи идемпотентности: `usage:{requestId}`, `payment:{paymentId}`, `refund:{paymentId}`,
   `chargeback:{paymentId}`, `refund_bonus:{paymentId}`, `promo1:{userId}`,
   `first_top_up_bonus:{paymentId}`; админское пополнение — ключ от вызывающего.
@@ -170,6 +179,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 | `billing.payments` | статусы через check-constraint, лиза (`lease_owner`/`lease_until_utc`), unique `(provider, provider_payment_id)` и `(user_id, client_token)`, `bonus_percent`/`bonus_usd` (016) |
 | `billing.payment_events` | сырые события провайдера, `processed`/`attempts`, unique `(provider, provider_event_id)` либо `(payment_id, event_type)` |
 | `billing.tags` (011), `billing.model_providers` (020), `billing.platform_settings` (015) | справочники и key/value-настройки |
+| `billing.user_balances` (026) | денормализованный баланс (`user_id PK`, `balance_amount numeric(18,6)`); синхронизируется при каждом INSERT в `ledger_entries` (CTE в `AddLedgerEntryAsync`) и атомарно дебетируется в `RecordUsageWithTransactionAsync` (T-028) |
 
 `UpsertModelAsync` мержит описания хитро: перезаписывает описания/контекст/модальности только когда
 пришёл `description_source`, иначе `COALESCE` — ручные правки не затираются авто-обогащением.
@@ -183,7 +193,8 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 | `Payments:AutoReverseChargeback` | сторнировать ли chargeback автоматически (по умолчанию `false`) |
 | `ExchangeRates:Source` / `MarkupPercent` / `Fallback:RubPerUsd` / `Fallback:RubPerEur` | FX; `MarkupPercent` уменьшает `usdPerUnit` (наценка в пользу платформы) |
 | `ServiceAuth:Tokens` / `ServiceAuth:MethodPolicies` | s2s (см. выше) |
-| `ProductAnalytics:*` | продуктовая аналитика; непустой `ConnectionString` дополнительно включает накат analytics-миграций |
+| `ProductAnalytics:*` | продуктовая аналитика; непустой `ConnectionString` дополнительно включает накат analytics-миграций и регистрацию компакта визитов |
+| `SiteVisits:Compaction:*` | компакт `site_visits` → `visit_sessions` (единственная часть секции `SiteVisits`, которую читает Billing; трекинг визитов — не его дело) |
 | `SqlMigrations:Enabled` | `false` отключает накат analytics-миграций |
 
 ## Подводные камни
@@ -224,7 +235,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
   `ExternalTopUp`-записи (как `BillingRepository.InsertLedgerAsync`), иначе `HasUserHadPaidTopUpAsync`
   и тесты «первого пополнения» расходятся с PG.
 - Префикс `016` в миграциях занят **тремя** файлами; сортировка — по полному имени файла
-  (`SqlMigrationLoader`), так что это работает, но следующий файл нужно называть `024_…`.
+  (`SqlMigrationLoader`), так что это работает, но следующий файл нужно называть `027_…`.
   Применённые миграции неизменяемы.
 - **Select-лист `billing.payments` — общий через `PaymentSelectColumns`** (см. `BillingRepository.cs`).
   `PaymentSelectSql` (для `from billing.payments`) и `PaymentSelectFromUpdatedSql` (для CTE

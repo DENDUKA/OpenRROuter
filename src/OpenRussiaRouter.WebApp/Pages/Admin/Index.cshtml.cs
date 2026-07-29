@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Billing;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
 [Authorize(Roles = "Admin")]
-public class IndexModel(BillingProvider billingProvider, ILogger<IndexModel> logger) : PageModelBase
+public class IndexModel(BillingProvider billingProvider, ApiBaseUrlResolver apiBaseUrlResolver, ILogger<IndexModel> logger) : PageModelBase
 {
     [BindProperty]
     public string PublicApiBaseUrl { get; set; } = "";
@@ -49,6 +50,7 @@ public class IndexModel(BillingProvider billingProvider, ILogger<IndexModel> log
         {
             await billingProvider.SetPlatformSettingAsync(
                 PlatformSettingKeys.PublicApiBaseUrl, value, HttpContext.RequestAborted);
+            apiBaseUrlResolver.InvalidateCache();
             PublicApiBaseUrl = value;
             SaveMessage = "Settings saved.";
         }

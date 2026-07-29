@@ -27,6 +27,7 @@ public class ModelsModel(
     private const string CatalogCacheKey = "public-models-node-catalog";
     private const string ProvidersCacheKey = "public-models-providers";
     private static readonly TimeSpan ProvidersCacheDuration = TimeSpan.FromHours(1);
+    private static readonly SemaphoreSlim ProvidersCacheLock = new(1, 1);
 
     // NOTE: do not store `localizer` in a field — the primary-constructor parameter is
     // captured by the lambda below, and capturing it in a field as well trips CS9124
@@ -58,16 +59,14 @@ public class ModelsModel(
 
             var providers = await GetCachedProvidersAsync(HttpContext.RequestAborted);
             ProviderHasLogo = providers
-                .Where(p => !string.IsNullOrEmpty(p.Id))
-                .ToDictionary(p => p.Id, p => p.LogoBytes is { Length: > 0 }, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(p => p.Id, p => p.HasLogo, StringComparer.OrdinalIgnoreCase);
 
             ProviderCategories = providers
-                .Where(p => !string.IsNullOrEmpty(p.Id))
                 .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(p => new FilterCategory(
                     p.Id,
                     p.DisplayName,
-                    p.LogoBytes is { Length: > 0 } ? $"/providers/logo/{p.Id}" : null))
+                    p.HasLogo ? $"/providers/logo/{p.Id}" : null))
                 .ToList();
 
             CapabilityCategories =
@@ -137,13 +136,39 @@ public class ModelsModel(
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
 
-    private async Task<IReadOnlyList<ProviderInfo>> GetCachedProvidersAsync(CancellationToken cancellationToken)
+    private async Task<IReadOnlyList<CachedProviderInfo>> GetCachedProvidersAsync(CancellationToken cancellationToken)
     {
-        return await memoryCache.GetOrCreateAsync(ProvidersCacheKey, async entry =>
+        if (memoryCache.TryGetValue(ProvidersCacheKey, out IReadOnlyList<CachedProviderInfo>? cached))
         {
-            entry.AbsoluteExpirationRelativeToNow = ProvidersCacheDuration;
-            return await BillingProvider.ListModelProvidersAsync(cancellationToken);
-        }) ?? [];
+            return cached ?? [];
+        }
+
+        await ProvidersCacheLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (memoryCache.TryGetValue(ProvidersCacheKey, out cached))
+            {
+                return cached ?? [];
+            }
+
+            var providers = await BillingProvider.ListModelProvidersAsync(cancellationToken);
+            var projection = providers
+                .Where(p => !string.IsNullOrEmpty(p.Id))
+                .Select(p => new CachedProviderInfo(p.Id, p.DisplayName, p.LogoBytes is { Length: > 0 }))
+                .ToList();
+
+            memoryCache.Set(ProvidersCacheKey, projection, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = ProvidersCacheDuration,
+                Size = 1,
+            });
+
+            return projection;
+        }
+        finally
+        {
+            ProvidersCacheLock.Release();
+        }
     }
 
     private static PublicModelRow MapModel(
@@ -217,4 +242,10 @@ public class ModelsModel(
         string? Color);
 
     public sealed record FilterCategory(string Id, string DisplayName, string? IconUrl);
+
+    /// <summary>
+    /// Lightweight projection of <see cref="ProviderInfo"/> for memory-cache.
+    /// Strips <c>LogoBytes</c> (~256 KiB each) to keep the cached footprint small.
+    /// </summary>
+    public sealed record CachedProviderInfo(string Id, string DisplayName, bool HasLogo);
 }

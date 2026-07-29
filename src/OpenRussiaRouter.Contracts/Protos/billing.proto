@@ -14,6 +14,7 @@ service BillingService {
   rpc GetBalance (GetBalanceRequest) returns (GetBalanceResponse);
   rpc CreateVirtualTopUp (CreateVirtualTopUpRequest) returns (CreateVirtualTopUpResponse);
   rpc UpsertModelPrice (UpsertModelPriceRequest) returns (UpsertModelPriceResponse);
+  rpc UpsertModels (UpsertModelsRequest) returns (UpsertModelsResponse);
   rpc ListUsage (ListUsageRequest) returns (ListUsageResponse);
   rpc ListBillingAnomalies (ListBillingAnomaliesRequest) returns (ListBillingAnomaliesResponse);
   rpc ListModels (ListModelsRequest) returns (ListModelsResponse);
@@ -251,6 +252,16 @@ message UpsertModelPriceResponse {
   string error_code = 3;
 }
 
+message UpsertModelsRequest {
+  repeated UpsertModelPriceRequest models = 1;
+}
+
+message UpsertModelsResponse {
+  int32 upserted_count = 1;
+  repeated string failed_model_ids = 2;
+  string error_code = 3;
+}
+
 message ListBillingAnomaliesRequest {
   string after_cursor = 1;
 }
@@ -337,7 +348,8 @@ message ListActivityByTokenRequest {
   string api_key_id_filter = 5;
   string after_cursor = 6;
   int32 page_size = 7;
-  int32 offset = 8;
+  reserved 8;
+  reserved "offset";
 }
 
 message ActivityByTokenRecord {
@@ -669,6 +681,7 @@ message ModelProvider {
 }
 
 message ListProvidersRequest {
+  bool has_logo = 1;
 }
 
 message ListProvidersResponse {

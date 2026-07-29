@@ -22,6 +22,13 @@ public interface IAuthRepository
 
     Task AddApiKeyAsync(ApiKey apiKey, CancellationToken ct = default);
 
+    /// <summary>
+    /// Atomically checks the API key count against <paramref name="maxApiKeys"/> and inserts
+    /// the key only if the limit has not been reached. Returns true if the key was inserted,
+    /// false if the limit would be exceeded.
+    /// </summary>
+    Task<bool> TryAddApiKeyAsync(ApiKey apiKey, int maxApiKeys, CancellationToken ct = default);
+
     Task<ApiKey?> GetApiKeyAsync(string apiKeyId, CancellationToken ct = default);
 
     Task<(IReadOnlyCollection<ApiKey> Items, bool HasMore)> ListApiKeysAsync(string userId, int limit, string? afterApiKeyId = null, bool includeDeleted = false, CancellationToken ct = default);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Markup;
 
 namespace OpenRussiaRouter.WebApp.Pages.Admin;
 
@@ -98,23 +99,42 @@ public class ProvidersModel(BillingProvider billingProvider, ILogger<ProvidersMo
             var logoFile = Request.Form.Files.GetFile("logoFile");
             if (logoFile is { Length: > 0 })
             {
-                var allowedTypes = new[] { "image/png", "image/jpeg", "image/webp", "image/svg+xml" };
-                if (!allowedTypes.Contains(logoFile.ContentType))
-                {
-                    ModelState.AddModelError("logoFile", "Logo must be PNG, JPEG, WebP, or SVG.");
-                    await LoadProviders();
-                    return Page();
-                }
                 if (logoFile.Length > 256 * 1024)
                 {
                     ModelState.AddModelError("logoFile", "Logo must be at most 256 KiB.");
                     await LoadProviders();
                     return Page();
                 }
+
                 using var ms = new MemoryStream();
                 await logoFile.CopyToAsync(ms);
                 logoBytes = ms.ToArray();
-                logoContentType = logoFile.ContentType;
+
+                // Determine content type from magic bytes, not from the client-supplied
+                // ContentType. The logo endpoint echoes the stored type back to browsers,
+                // so trusting the caller would allow uploading text/html labelled as image/png.
+                var declared = (logoFile.ContentType ?? string.Empty).Trim().ToLowerInvariant();
+                var allowedLogoTypes = new[] { "image/png", "image/jpeg", "image/webp", "image/svg+xml" };
+                if (!allowedLogoTypes.Contains(declared))
+                {
+                    ModelState.AddModelError("logoFile", "Logo must be PNG, JPEG, WebP, or SVG.");
+                    await LoadProviders();
+                    return Page();
+                }
+
+                // SVG has no magic number; raster formats must match their bytes.
+                if (declared != "image/svg+xml")
+                {
+                    var detected = ImageContentTypeDetector.Detect(logoBytes);
+                    if (detected is null || !string.Equals(detected, declared, StringComparison.Ordinal))
+                    {
+                        ModelState.AddModelError("logoFile", "Logo content does not match its declared type.");
+                        await LoadProviders();
+                        return Page();
+                    }
+                }
+
+                logoContentType = declared;
             }
 
             var existingProvider = isNew ? null : await _billingClient.GetModelProviderAsync(Form.Id);

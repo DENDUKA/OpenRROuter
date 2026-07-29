@@ -385,6 +385,11 @@ public sealed class BillingRepositoryPostgresTests
         var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
         var now = DateTimeOffset.UtcNow;
 
+        // T-028: Seed user balance so the atomic debit can succeed.
+        await repository.AddLedgerEntryAsync(new LedgerEntry(
+            "tx-topup-1", "user-1", LedgerEntryType.VirtualTopUp,
+            MoneyAmount.Usd(1m), "test-topup", "seed", now));
+
         var activity = new ActivityByTokenRecord(
             "tx-req-1", "key-1", "sk-...", "gpt-test", "node-1",
             new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.001m), "succeeded", now, now, null, null);
@@ -407,7 +412,7 @@ public sealed class BillingRepositoryPostgresTests
         activities.Should().ContainSingle().Which.RequestId.Should().Be("tx-req-1");
 
         var balance = await repository.GetBalanceAsync("user-1");
-        balance.Amount.Should().Be(-0.001m);
+        balance.Amount.Should().Be(0.999m);
     }
 
     [Fact]
@@ -465,18 +470,18 @@ public sealed class BillingRepositoryPostgresTests
         await repository.AddLedgerEntryAsync(new LedgerEntry(
             "ledger-all-2", "user-2", LedgerEntryType.VirtualTopUp, MoneyAmount.Usd(50), "idem-all-2", "top-up", now));
 
-        var (items, totalCount) = await repository.ListAllTopUpsAsync(offset: 0, limit: 50);
+        var (items, totalCount) = await repository.ListAllTopUpsAsync(limit: 50);
 
         totalCount.Should().Be(2);
         items.Should().HaveCount(2);
 
-        var byUser = (await repository.ListAllTopUpsAsync(0, 50, userIds: ["user-1"])).Items;
+        var byUser = (await repository.ListAllTopUpsAsync(50, userIds: ["user-1"])).Items;
         byUser.Should().ContainSingle().Which.UserId.Should().Be("user-1");
 
-        var byMinAmount = (await repository.ListAllTopUpsAsync(0, 50, minAmountUsd: 75m)).Items;
+        var byMinAmount = (await repository.ListAllTopUpsAsync(50, minAmountUsd: 75m)).Items;
         byMinAmount.Should().ContainSingle().Which.Amount.Amount.Should().Be(100);
 
-        var byMaxAmount = (await repository.ListAllTopUpsAsync(0, 50, maxAmountUsd: 75m)).Items;
+        var byMaxAmount = (await repository.ListAllTopUpsAsync(50, maxAmountUsd: 75m)).Items;
         byMaxAmount.Should().ContainSingle().Which.Amount.Amount.Should().Be(50);
     }
 

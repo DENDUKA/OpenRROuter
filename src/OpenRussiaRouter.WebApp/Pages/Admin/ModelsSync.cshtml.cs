@@ -194,21 +194,34 @@ public class ModelsSyncModel(
         }
 
         var byId = nodes.ToDictionary(n => n.NodeId, StringComparer.Ordinal);
-        var probed = new List<UnreachableNodeDetail>();
 
-        foreach (var nodeId in UnreachableNodeIds)
+        using var probeCts = CancellationTokenSource.CreateLinkedTokenSource(HttpContext.RequestAborted);
+        probeCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        var probeTasks = UnreachableNodeIds.Select(async nodeId =>
         {
             if (!byId.TryGetValue(nodeId, out var node))
             {
-                probed.Add(new UnreachableNodeDetail(nodeId, "(node not found in registry)", string.Empty));
-                continue;
+                return new UnreachableNodeDetail(nodeId, "(node not found in registry)", string.Empty);
             }
 
-            var result = await RouterNodeApiProvider.ProbeProvidersAsync(node, HttpContext.RequestAborted);
-            probed.Add(new UnreachableNodeDetail(nodeId, result.RequestLine, result.ResponseLine));
-        }
+            try
+            {
+                var result = await RouterNodeApiProvider.ProbeProvidersAsync(node, probeCts.Token);
+                return new UnreachableNodeDetail(nodeId, result.RequestLine, result.ResponseLine);
+            }
+            catch (OperationCanceledException)
+            {
+                return new UnreachableNodeDetail(nodeId, "(probe timed out)", string.Empty);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Failed to probe node {NodeId}", nodeId);
+                return new UnreachableNodeDetail(nodeId, "(probe failed)", string.Empty);
+            }
+        });
 
-        UnreachableNodes = probed;
+        UnreachableNodes = await Task.WhenAll(probeTasks);
     }
 
     private async Task LoadDiffAsync(NodeModelCatalogResult? preloadedCatalog = null)

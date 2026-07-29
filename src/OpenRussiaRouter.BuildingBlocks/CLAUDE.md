@@ -17,7 +17,7 @@
 | `Money/` | доллар как единственная валюта | `MoneyAmount`, `Currency` (`Usd = 840`, других значений нет), `MoneyRounding` (единая политика округления денег) |
 | `Usage/` | токены, цены, расчёт стоимости, парсинг usage из ответов LLM | `TokenUsage`, `ModelTokenPrice`, `UsageCostCalculator` (+`IUsageCostCalculator`), `TokenUsageExtractor` |
 | `Migrations/` | применение сырых `.sql` на старте сервиса | `PostgresSqlMigrationRunner`, `SqlMigrationLoader`, `SqlMigration`, `RepositoryMigrationPath`, `WebApplicationMigrationExtensions` |
-| `Analytics/` | продуктовые события + трафик сайта, обе очереди и оба воркера | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure`, `SiteVisit`, `VisitorIdHasher`, `SiteVisitQueue`/`FlushWorker` |
+| `Analytics/` | продуктовые события + трафик сайта, все очереди и воркеры | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure`, `SiteVisit`, `VisitorIdHasher`, `SiteVisitQueue`/`FlushWorker`, `VisitSessionizer`, `VisitSessionAggregator`, `VisitSessionCompactor`, `VisitSessionCompactionWorker` |
 | `Metrics/` | Prometheus-экспорт и общий счётчик лимитов | `OpenTelemetryExtensions` (`AddOpenTelemetryMetrics`, `MapOpenTelemetryEndpoints`, `DefaultMeterName`), `LimitMetrics` |
 | `Grpc/` | клиентские и серверные интерсепторы | `GrpcDeadlineInterceptor`, `ServiceAuthClientInterceptor`, `ServiceAuthInterceptor` (серверный, конфигурируется через `ServiceAuthServerOptions.ProtectedMethods` per-service) |
 | `Logging/` | Serilog + Seq, логирование необработанных исключений | `SeqLoggingExtensions` (`AddSeqLogging`, `UseLoggedExceptionHandler`) |
@@ -155,6 +155,57 @@ ApiGateway зовёт это через свою обёртку `RouterUsageExtr
   синк, соль и `Environment` берутся из `ProductAnalytics`, и без сконфигуренного Postgres-синка
   (включая непустой `IdentitySalt`) регистрация тихо ничего не делает — писать некуда.
   Единственный потребитель — WebApp.
+
+### Схлопывание визитов в сессии (`analytics.visit_sessions`)
+
+`site_visits` — **эфемерный буфер**, а не история: фоновой компакт схлопывает визиты одного
+посетителя в одну строку-сессию и **удаляет исходные строки**. В устоявшемся режиме в таблице
+визитов лежит примерно `SessionGap + SafetyLag` (~35 минут) трафика, всё остальное живёт в
+`analytics.visit_sessions` (миграция `db/migrations/analytics/003_visit_sessions.sql`, детализация
+внутри `pages jsonb` — массив `{"t":<utc>,"p":<path>}`).
+
+- **Граница сессии** (`VisitSessionizer.Split(visits, gap, splitOnUtcDayBoundary)`): разрыв
+  **строго больше** `gap` (ровно `gap` — та же сессия) **ИЛИ** смена календарных суток UTC.
+  Второе условие обязательно и выключать его в проде нельзя: бот, стучащийся раз в 5 минут,
+  иначе даёт вечно открытую сессию, которая каждый прогон пересчитывается и растит `pages`
+  без предела. Вход сортируется внутри метода по `(OccurredAt, Id)`; сутки сравниваются по
+  `OccurredAt.UtcDateTime.Date`.
+- **Агрегация** (`VisitSessionAggregator.Aggregate(slice, maxPages)`): `entry/exit_path` — первый
+  и последний по времени, `utm_*` — **первый непустой**, `distinct_id` — **последний непустой**
+  (логин мог случиться в середине сессии), `is_authenticated` = OR, `referrer_*`/`device_class`/
+  `environment` — из первого визита. `pages` режется до `MaxPagesPerSession`, а `page_view_count`
+  считается по **всем** визитам — обрезка детектируется как `page_view_count > длина pages`,
+  отдельного флага нет.
+- **`VisitSessionCompactor.CompactOnceAsync(nowUtc, after, ct)`** → `CompactionResult(Sessions,
+  DeletedVisits, LastVisitorHash)`. Cutoff = `now - (SessionGap + SafetyLag)`; пишутся только
+  сессии, закончившиеся раньше cutoff. Один проход = одна короткая транзакция:
+  `pg_try_advisory_xact_lock` (координаты — **литеральные константы в C#**, не `hashtext()`: он
+  нестабилен между мажорами PG; только `_xact_`-версия — сессионный лок на пуле Npgsql течёт) →
+  keyset-батч `visitor_hash > @after` → выборка **всех** строк этих посетителей, включая свежее
+  cutoff (иначе живая сессия порежется на фрагменты) → сессионизация в C# → array-unnest insert с
+  `on conflict (visitor_hash, started_at_utc) do update` (merge, **не** `do nothing`) → точечный
+  `delete ... where id = any(@ids)`. Гвард `to_regclass` на обе таблицы: миграция не применена →
+  один warning и выход, а не исключение на каждом тике (fail-open контракт всей `Analytics/`).
+- **`VisitSessionCompactionWorker`** живёт **в BillingService** (`AddSiteVisitCompaction` →
+  `BillingService/Infrastructure/Startup/Startup.cs`), а не в WebApp: Billing владеет БД
+  `orr_analytics`, катает её миграции, `NpgsqlDataSource` аналитической БД у него уже
+  зарегистрирован и он идёт **в одной реплике** (WebApp реплицируется — там N претендентов на
+  один компакт). Advisory-лок всё равно ставится: rolling update, «включили ещё где-то».
+  Прогон делает до `MaxIterationsPerRun` проходов, каждый — своя транзакция: одна длинная
+  держала бы `xmin` и блокировала autovacuum на той самой таблице, которую воркер опустошает.
+- **`AddSiteVisitCompaction(configuration)` — отдельно от `AddSiteVisitTracking`.** Гейт — тот же
+  Postgres-синк (`ProductAnalytics.Enabled` + `Provider="Postgres"` + непустой `ConnectionString`),
+  **но без `IdentitySalt`** (компактор ничего не хеширует) и **без `SiteVisits:Enabled`**
+  (выключенный трекинг не должен оставлять уже записанные визиты несхлопнутыми). Мусорные значения
+  опций клампятся в `BuildCompactionSettings`, а не валят старт хоста.
+- Ключи `SiteVisits:Compaction:*` — `Enabled=true`, `IntervalMinutes=5` (пол — 1 минута),
+  `SessionGapMinutes=30`, `SafetyLagMinutes=5`, `VisitorBatchSize=500`, `MaxIterationsPerRun=20`,
+  `MaxPagesPerSession=200`, `SplitOnUtcDayBoundary=true`.
+- **Известное искажение**: флаш очереди с задержкой больше `SafetyLag` попадает в уже схлопнутую
+  сессию — совпал `started_at_utc`, домержится через `on conflict`, не совпал — появится
+  сессия-фрагмент из одного просмотра. Стоит рядом с ограничениями NAT/`X-Forwarded-For`
+  (см. `TODO.md`, раздел «Трафик сайта: сессии»), и по той же причине `SafetyLag` не уменьшают
+  без нужды.
 
 ## Метрики
 

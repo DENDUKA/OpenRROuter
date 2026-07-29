@@ -5,16 +5,6 @@ namespace OpenRussiaRouter.ApiGateway.OpenAi;
 
 public static class GeminiSchemaPatcher
 {
-    private static readonly HashSet<string> SchemaPropertyNames = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "parameters",
-        "schema",
-        "input_schema",
-        "inputSchema",
-        "parameters_json_schema",
-        "parametersJsonSchema"
-    };
-
     public static string SanitizeIfGeminiModel(string requestJson, string routerModelId, string originalModelId)
     {
         if (!IsGeminiModel(routerModelId, originalModelId))
@@ -35,6 +25,21 @@ public static class GeminiSchemaPatcher
         }
     }
 
+    /// <summary>
+    /// Inlines $ref/$defs on an already-parsed <paramref name="node"/> for Gemini models.
+    /// Returns true if the node was modified.
+    /// </summary>
+    public static bool SanitizeIfGeminiModel(JsonNode node, string routerModelId, string originalModelId)
+    {
+        if (!IsGeminiModel(routerModelId, originalModelId))
+            return false;
+
+        if (node is JsonObject obj)
+            return SanitizeKnownSchemaRoots(obj);
+
+        return false;
+    }
+
     private static bool IsGeminiModel(string routerModelId, string originalModelId)
     {
         return routerModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase) || originalModelId.Contains("gemini", StringComparison.OrdinalIgnoreCase);
@@ -42,13 +47,13 @@ public static class GeminiSchemaPatcher
 
     private static bool SanitizeKnownSchemaRoots(JsonObject request)
     {
-        var changed = false;
-        var requestDefinitions = CollectDefinitions(request);
+        // Collect $defs only from top-level request definitions (not from messages array).
+        var requestDefinitions = CollectTopLevelDefinitions(request);
 
+        var changed = false;
         changed |= SanitizeSchemaBranch(request["tools"], requestDefinitions);
         changed |= SanitizeSchemaBranch(request["functions"], requestDefinitions);
         changed |= SanitizeSchemaBranch(request["response_format"], requestDefinitions);
-        changed |= SanitizeSchemaRootsByName(request);
 
         return changed;
     }
@@ -139,52 +144,20 @@ public static class GeminiSchemaPatcher
         return false;
     }
 
-    private static bool SanitizeSchemaRootsByName(JsonNode? node)
+    /// <summary>
+    /// Collects $defs/definitions/defs only from the immediate children of <paramref name="root"/>
+    /// without recursing into the entire JSON tree (e.g. messages array).
+    /// This is used for request-level definitions shared across schema branches.
+    /// </summary>
+    private static Dictionary<string, JsonNode> CollectTopLevelDefinitions(JsonObject root)
     {
-        if (node is JsonObject obj)
-        {
-            var changed = false;
+        var definitions = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
 
-            foreach (var property in obj.ToList())
-            {
-                if (property.Value is null)
-                    continue;
+        AddDefinitions(root["$defs"], definitions);
+        AddDefinitions(root["defs"], definitions);
+        AddDefinitions(root["definitions"], definitions);
 
-                changed |= SchemaPropertyNames.Contains(property.Key)
-                    ? SanitizeSchemaRoot(property.Value)
-                    : SanitizeSchemaRootsByName(property.Value);
-            }
-
-            return changed;
-        }
-
-        if (node is JsonArray array)
-        {
-            var changed = false;
-            foreach (var item in array)
-            {
-                changed |= SanitizeSchemaRootsByName(item);
-            }
-
-            return changed;
-        }
-
-        return false;
-    }
-
-    private static bool SanitizeSchemaRoot(JsonNode schema)
-    {
-        if (schema is not JsonObject root)
-            return SanitizeSchemaNode(schema, new Dictionary<string, JsonNode>(), new HashSet<string>(StringComparer.Ordinal), depth: 0);
-
-        var definitions = CollectDefinitions(root);
-        var changed = SanitizeSchemaNode(root, definitions, new HashSet<string>(StringComparer.Ordinal), depth: 0);
-
-        changed |= root.Remove("$defs");
-        changed |= root.Remove("defs");
-        changed |= root.Remove("definitions");
-
-        return changed;
+        return definitions;
     }
 
     private static Dictionary<string, JsonNode> CollectDefinitions(JsonNode root)

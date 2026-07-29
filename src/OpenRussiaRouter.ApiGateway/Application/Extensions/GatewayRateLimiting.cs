@@ -26,10 +26,16 @@ public static class GatewayRateLimiting
     /// <summary>Имя политики, навешиваемой на chat-эндпоинты через <c>RequireRateLimiting</c>.</summary>
     public const string PolicyName = "gateway-chat";
 
+    /// <summary>Имя политики для публичного эндпоинта /v1/models (мягче, чем chat).</summary>
+    public const string ModelsPolicyName = "gateway-models";
+
     public static IServiceCollection AddGatewayRateLimiting(this IServiceCollection services, IConfiguration configuration)
     {
         var options = new GatewayRateLimitingOptions();
         configuration.GetSection("RateLimiting").Bind(options);
+
+        var modelsOptions = new GatewayModelsRateLimitingOptions();
+        configuration.GetSection("RateLimiting:Models").Bind(modelsOptions);
 
         services.AddRateLimiter(limiter =>
         {
@@ -49,6 +55,23 @@ public static class GatewayRateLimiting
                 {
                     PermitLimit = options.PermitLimit,
                     Window = TimeSpan.FromSeconds(options.WindowSeconds),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                });
+            });
+
+            limiter.AddPolicy(ModelsPolicyName, httpContext =>
+            {
+                if (!options.Enabled)
+                {
+                    return RateLimitPartition.GetNoLimiter("__disabled__");
+                }
+
+                var partitionKey = ResolveModelsPartitionKey(httpContext);
+                return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = modelsOptions.PermitLimit,
+                    Window = TimeSpan.FromSeconds(modelsOptions.WindowSeconds),
                     QueueLimit = 0,
                     AutoReplenishment = true,
                 });
@@ -107,6 +130,13 @@ public static class GatewayRateLimiting
         SHA256.HashData(Encoding.UTF8.GetBytes(apiKey), hash);
         return Convert.ToHexString(hash[..8]); // 16 hex-символов — достаточно против коллизий
     }
+
+    private static string ResolveModelsPartitionKey(HttpContext httpContext)
+    {
+        // Для /v1/models партиция per-IP (эндпоинт анонимный, Bearer не требуется).
+        var ip = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return "models:ip:" + ip;
+    }
 }
 
 /// <summary>Опции секции <c>RateLimiting</c> в appsettings.</summary>
@@ -114,5 +144,12 @@ public sealed class GatewayRateLimitingOptions
 {
     public bool Enabled { get; set; } = true;
     public int PermitLimit { get; set; } = 60;
+    public int WindowSeconds { get; set; } = 60;
+}
+
+/// <summary>Опции секции <c>RateLimiting:Models</c> для публичного /v1/models.</summary>
+public sealed class GatewayModelsRateLimitingOptions
+{
+    public int PermitLimit { get; set; } = 100;
     public int WindowSeconds { get; set; } = 60;
 }

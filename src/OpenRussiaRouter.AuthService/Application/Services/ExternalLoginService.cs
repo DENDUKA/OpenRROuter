@@ -40,13 +40,18 @@ public sealed class ExternalLoginService(
             {
                 if (byEmail.Status == UserStatus.Disabled)
                     return LoginResult.Failed(AuthErrorCodes.UserDisabled);
+                if (byEmail.Status == UserStatus.PendingVerification)
+                {
+                    await repository.ActivateUserAndDeleteVerificationAsync(byEmail.Id, ct).ConfigureAwait(false);
+                    byEmail.Activate();
+                }
                 var link = new ExternalLogin(
                     Guid.NewGuid().ToString("N"),
                     byEmail.Id,
                     provider,
                     providerSub,
                     nowUtc);
-                await repository.AddExternalLoginAsync(link, ct);
+                await repository.AddExternalLoginAsync(link, ct).ConfigureAwait(false);
                 user = byEmail;
             }
             else

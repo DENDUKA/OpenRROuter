@@ -10,6 +10,7 @@ namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBillingTestHooks
 {
     private readonly ConcurrentDictionary<string, LedgerEntry> _ledgerByIdempotencyKey = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, decimal> _userBalances = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ApiKeySpendLimit> _apiKeySpendLimits = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, ModelPrice> _models = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, UsageRecord> _usageByRequestId = new(StringComparer.Ordinal);
@@ -20,8 +21,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     private readonly Dictionary<string, PaymentEvent> _paymentEvents = new(StringComparer.Ordinal);
     private readonly object _paymentSync = new();
 
-    public Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default) =>
-        Task.FromResult(_ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry));
+    public Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default)
+    {
+        var result = _ledgerByIdempotencyKey.GetOrAdd(entry.IdempotencyKey, entry);
+        // T-028: Keep denormalized balance in sync — only when the entry was actually inserted
+        // (not on idempotent conflict), to avoid double-crediting.
+        if (ReferenceEquals(result, entry))
+        {
+            _userBalances.AddOrUpdate(entry.UserId, entry.Amount.Amount, (_, old) => old + entry.Amount.Amount);
+        }
+        return Task.FromResult(result);
+    }
 
     public Task<(IReadOnlyCollection<LedgerEntry> Items, bool HasMore)> ListTopUpsAsync(string userId, int limit, CancellationToken ct = default)
     {
@@ -37,10 +47,12 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     }
 
     public Task<(IReadOnlyCollection<LedgerEntry> Items, int TotalCount)> ListAllTopUpsAsync(
-        int offset, int limit,
+        int limit,
         IReadOnlyList<string>? userIds = null,
         decimal? minAmountUsd = null,
         decimal? maxAmountUsd = null,
+        DateTimeOffset? afterCreatedAtUtc = null,
+        string? afterId = null,
         CancellationToken ct = default)
     {
         var query = _ledgerByIdempotencyKey.Values
@@ -56,24 +68,46 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         if (maxAmountUsd.HasValue)
             query = query.Where(e => e.Amount.Amount <= maxAmountUsd.Value);
 
+        if (afterCreatedAtUtc.HasValue && afterId is not null)
+        {
+            query = query.Where(e =>
+                e.CreatedAtUtc < afterCreatedAtUtc.Value ||
+                (e.CreatedAtUtc == afterCreatedAtUtc.Value &&
+                 string.Compare(e.Id, afterId, StringComparison.Ordinal) < 0));
+        }
+
         var all = query
             .OrderByDescending(e => e.CreatedAtUtc)
             .ThenByDescending(e => e.Id)
             .ToList();
 
         var totalCount = all.Count;
-        var items = all.Skip(offset).Take(limit).ToList();
+        var items = all.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<LedgerEntry>)items, totalCount));
     }
 
     public Task<MoneyAmount> GetBalanceAsync(string userId, CancellationToken ct = default)
     {
-        var amount = _ledgerByIdempotencyKey.Values
-            .Where(entry => entry.UserId == userId)
-            .Select(entry => entry.Amount.Amount)
-            .DefaultIfEmpty(0m)
-            .Sum();
+        var amount = _userBalances.GetValueOrDefault(userId);
         return Task.FromResult(MoneyAmount.Usd(amount));
+    }
+
+    public Task<decimal?> TryDebitBalanceAsync(string userId, decimal amount, CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var current = _userBalances.GetValueOrDefault(userId);
+            if (current < amount)
+                return Task.FromResult<decimal?>(null);
+            _userBalances[userId] = current - amount;
+            return Task.FromResult<decimal?>(current - amount);
+        }
+    }
+
+    public Task AddBalanceAsync(string userId, decimal amount, CancellationToken ct = default)
+    {
+        _userBalances.AddOrUpdate(userId, amount, (_, old) => old + amount);
+        return Task.CompletedTask;
     }
 
     public Task<ApiKeySpendLimit?> GetApiKeySpendLimitAsync(string userId, string apiKeyId, CancellationToken ct = default)
@@ -230,7 +264,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
 
         if (ledgerEntry is not null)
         {
-            _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry);
+            // T-069: Check idempotency BEFORE debit to match PG behavior.
+            // On idempotent repeat, TryAdd returns false — balance must not change.
+            lock (_paymentSync)
+            {
+                var current = _userBalances.GetValueOrDefault(ledgerEntry.UserId);
+                if (current + ledgerEntry.Amount.Amount >= 0
+                    && _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry))
+                {
+                    _userBalances[ledgerEntry.UserId] = current + ledgerEntry.Amount.Amount;
+                }
+            }
         }
 
         return Task.CompletedTask;
@@ -245,7 +289,6 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         string? apiKeyIdFilter = null,
         DateTimeOffset? afterCreatedAtUtc = null,
         string? afterRequestId = null,
-        int offset = 0,
         CancellationToken ct = default)
     {
         if (apiKeyIds.Count == 0)
@@ -270,14 +313,18 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         }
 
         // Match the PG impl: TotalCount counts all rows passing the same filters (cursor included),
-        // then offset/limit page the ordered result.
+        // then keyset+limit page the ordered result.
         var ordered = query
             .OrderByDescending(a => a.CreatedAtUtc)
             .ThenByDescending(a => a.RequestId)
             .ToList();
-        var totalCount = ordered.Count;
 
-        var items = ordered.Skip(offset).Take(limit + 1).ToList();
+        // T-067: Only compute TotalCount on the first page (no cursor) to match PG impl.
+        // On subsequent pages return -1 to indicate count was not computed.
+        var isFirstPage = !afterCreatedAtUtc.HasValue;
+        var totalCount = isFirstPage ? ordered.Count : -1;
+
+        var items = ordered.Take(limit + 1).ToList();
         var hasMore = items.Count > limit;
         if (hasMore) items = items.Take(limit).ToList();
         return Task.FromResult(((IReadOnlyCollection<ActivityByTokenRecord>)items, hasMore, totalCount));
@@ -490,6 +537,17 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<string?> GetPlatformSettingAsync(string key, CancellationToken ct = default)
         => Task.FromResult(_platformSettings.TryGetValue(key, out var value) ? value : null);
 
+    public Task<IReadOnlyDictionary<string, string>> GetPlatformSettingsAsync(IReadOnlyCollection<string> keys, CancellationToken ct = default)
+    {
+        var result = new Dictionary<string, string>(keys.Count, StringComparer.Ordinal);
+        foreach (var key in keys)
+        {
+            if (_platformSettings.TryGetValue(key, out var value))
+                result[key] = value;
+        }
+        return Task.FromResult<IReadOnlyDictionary<string, string>>(result);
+    }
+
     public Task SetPlatformSettingAsync(string key, string value, CancellationToken ct = default)
     {
         _platformSettings[key] = value;
@@ -619,97 +677,109 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<ConfirmOutcome> ConfirmPaymentAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
         lock (_paymentSync)
-        {
-            var payment = FindPaymentUnsafe(evt);
-            if (payment is null)
-                return Task.FromResult(new ConfirmOutcome(false, null, null, 0, ErrorCodes.PaymentNotFound));
-            var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
-            if (payment.Status == PaymentStatus.Paid)
-            {
-                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), null));
-            }
-            if (payment.Status != PaymentStatus.Created)
-            {
-                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentInvalidTransition));
-            }
-            if (payment.ProviderAmount != evt.ConfirmedAmount ||
-                !string.Equals(payment.ProviderCurrency, evt.ConfirmedCurrency, StringComparison.OrdinalIgnoreCase))
-            {
-                _anomalies.Add(new BillingAnomaly(Guid.NewGuid().ToString("N"), payment.Id, "payment_amount_mismatch", "Confirmed amount or currency did not match payment.", nowUtc));
-                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-                return Task.FromResult(new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentAmountMismatch));
-            }
+            return Task.FromResult(ConfirmPaymentAtomicUnsafe(evt, nowUtc));
+    }
 
-            payment = payment with { Status = PaymentStatus.Paid, ConfirmedAtUtc = nowUtc, UpdatedAtUtc = nowUtc, LeaseOwner = null, LeaseUntilUtc = null };
-            _payments[payment.Id] = payment;
-            var ledger = _ledgerByIdempotencyKey.GetOrAdd($"payment:{payment.Id}", _ => new LedgerEntry(
-                Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.ExternalTopUp,
-                payment.CreditedUsd, $"payment:{payment.Id}", $"External payment {payment.Id}", nowUtc,
-                IsUserPayment: true));
+    private ConfirmOutcome ConfirmPaymentAtomicUnsafe(PaymentEventInput evt, DateTimeOffset nowUtc)
+    {
+        var payment = FindPaymentUnsafe(evt);
+        if (payment is null)
+            return new ConfirmOutcome(false, null, null, 0, ErrorCodes.PaymentNotFound);
+        var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
+        if (payment.Status == PaymentStatus.Paid)
+        {
             MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-            return Task.FromResult(new ConfirmOutcome(true, payment, ledger.Id, BalanceUnsafe(payment.UserId), null));
+            return new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), null);
         }
+        if (payment.Status != PaymentStatus.Created)
+        {
+            MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+            return new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentInvalidTransition);
+        }
+        if (payment.ProviderAmount != evt.ConfirmedAmount ||
+            !string.Equals(payment.ProviderCurrency, evt.ConfirmedCurrency, StringComparison.OrdinalIgnoreCase))
+        {
+            _anomalies.Add(new BillingAnomaly(Guid.NewGuid().ToString("N"), payment.Id, "payment_amount_mismatch", "Confirmed amount or currency did not match payment.", nowUtc));
+            MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+            return new ConfirmOutcome(false, payment, null, BalanceUnsafe(payment.UserId), ErrorCodes.PaymentAmountMismatch);
+        }
+
+        payment = payment with { Status = PaymentStatus.Paid, ConfirmedAtUtc = nowUtc, UpdatedAtUtc = nowUtc, LeaseOwner = null, LeaseUntilUtc = null };
+        _payments[payment.Id] = payment;
+        var ledger = _ledgerByIdempotencyKey.GetOrAdd($"payment:{payment.Id}", _ => new LedgerEntry(
+            Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.ExternalTopUp,
+            payment.CreditedUsd, $"payment:{payment.Id}", $"External payment {payment.Id}", nowUtc,
+            IsUserPayment: true));
+        // T-028: Keep denormalized balance in sync.
+        _userBalances.AddOrUpdate(payment.UserId, ledger.Amount.Amount, (_, old) => old + ledger.Amount.Amount);
+        MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+        return new ConfirmOutcome(true, payment, ledger.Id, BalanceUnsafe(payment.UserId), null);
     }
 
     public Task<ApplyOutcome> ApplyPaymentEventAtomicAsync(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default)
     {
         lock (_paymentSync)
+            return Task.FromResult(ApplyPaymentEventAtomicUnsafe(evt, nowUtc, autoReverseChargeback));
+    }
+
+    private ApplyOutcome ApplyPaymentEventAtomicUnsafe(PaymentEventInput evt, DateTimeOffset nowUtc, bool autoReverseChargeback)
+    {
+        var payment = FindPaymentUnsafe(evt);
+        if (payment is null)
+            return new ApplyOutcome(false, null, null, ErrorCodes.PaymentNotFound);
+        var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
+        var eventType = evt.EventType.ToLowerInvariant();
+        var target = eventType switch
         {
-            var payment = FindPaymentUnsafe(evt);
-            if (payment is null)
-                return Task.FromResult(new ApplyOutcome(false, null, null, ErrorCodes.PaymentNotFound));
-            var paymentEvent = AddEventUnsafe(payment, evt, nowUtc);
-            var eventType = evt.EventType.ToLowerInvariant();
-            var target = eventType switch
-            {
-                "canceled" => PaymentStatus.Canceled,
-                "expired" => PaymentStatus.Expired,
-                "refunded" => PaymentStatus.Refunded,
-                "chargeback" => PaymentStatus.ChargedBack,
-                _ => (PaymentStatus?)null
-            };
-            var valid = target.HasValue && (payment.Status == PaymentStatus.Created && target is PaymentStatus.Canceled or PaymentStatus.Expired ||
-                payment.Status == PaymentStatus.Paid && target is PaymentStatus.Refunded or PaymentStatus.ChargedBack);
-            if (!valid)
-            {
-                MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-                return Task.FromResult(new ApplyOutcome(false, payment, null, ErrorCodes.PaymentInvalidTransition));
-            }
-
-            payment = payment with
-            {
-                Status = target!.Value,
-                CancelReason = evt.Reason,
-                CanceledAtUtc = target is PaymentStatus.Canceled or PaymentStatus.Expired ? nowUtc : payment.CanceledAtUtc,
-                UpdatedAtUtc = nowUtc,
-                LeaseOwner = null,
-                LeaseUntilUtc = null
-            };
-            _payments[payment.Id] = payment;
-            LedgerEntry? ledger = null;
-            if (target == PaymentStatus.Refunded || (target == PaymentStatus.ChargedBack && autoReverseChargeback))
-            {
-                var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
-                ledger = _ledgerByIdempotencyKey.GetOrAdd($"{prefix}:{payment.Id}", _ => new LedgerEntry(
-                    Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
-                    MoneyAmount.Usd(-payment.CreditedUsd.Amount), $"{prefix}:{payment.Id}",
-                    $"{target} payment {payment.Id}", nowUtc));
-
-                // Reverse first top-up bonus if it exists
-                var bonusKey = $"first_top_up_bonus:{payment.Id}";
-                if (_ledgerByIdempotencyKey.TryGetValue(bonusKey, out var bonusEntry))
-                {
-                    _ledgerByIdempotencyKey.GetOrAdd($"refund_bonus:{payment.Id}", _ => new LedgerEntry(
-                        Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
-                        MoneyAmount.Usd(-bonusEntry.Amount.Amount), $"refund_bonus:{payment.Id}",
-                        $"Reversed first top-up bonus for payment {payment.Id}", nowUtc));
-                }
-            }
+            "canceled" => PaymentStatus.Canceled,
+            "expired" => PaymentStatus.Expired,
+            "refunded" => PaymentStatus.Refunded,
+            "chargeback" => PaymentStatus.ChargedBack,
+            _ => (PaymentStatus?)null
+        };
+        var valid = target.HasValue && (payment.Status == PaymentStatus.Created && target is PaymentStatus.Canceled or PaymentStatus.Expired ||
+            payment.Status == PaymentStatus.Paid && target is PaymentStatus.Refunded or PaymentStatus.ChargedBack);
+        if (!valid)
+        {
             MarkEventProcessedUnsafe(paymentEvent, nowUtc);
-            return Task.FromResult(new ApplyOutcome(true, payment, ledger?.Id, null));
+            return new ApplyOutcome(false, payment, null, ErrorCodes.PaymentInvalidTransition);
         }
+
+        payment = payment with
+        {
+            Status = target!.Value,
+            CancelReason = evt.Reason,
+            CanceledAtUtc = target is PaymentStatus.Canceled or PaymentStatus.Expired ? nowUtc : payment.CanceledAtUtc,
+            UpdatedAtUtc = nowUtc,
+            LeaseOwner = null,
+            LeaseUntilUtc = null
+        };
+        _payments[payment.Id] = payment;
+        LedgerEntry? ledger = null;
+        if (target == PaymentStatus.Refunded || (target == PaymentStatus.ChargedBack && autoReverseChargeback))
+        {
+            var prefix = target == PaymentStatus.Refunded ? "refund" : "chargeback";
+            ledger = _ledgerByIdempotencyKey.GetOrAdd($"{prefix}:{payment.Id}", _ => new LedgerEntry(
+                Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
+                MoneyAmount.Usd(-payment.CreditedUsd.Amount), $"{prefix}:{payment.Id}",
+                $"{target} payment {payment.Id}", nowUtc));
+            // T-028: Keep denormalized balance in sync.
+            _userBalances.AddOrUpdate(payment.UserId, ledger.Amount.Amount, (_, old) => old + ledger.Amount.Amount);
+
+            // Reverse first top-up bonus if it exists
+            var bonusKey = $"first_top_up_bonus:{payment.Id}";
+            if (_ledgerByIdempotencyKey.TryGetValue(bonusKey, out var bonusEntry))
+            {
+                var bonusReverse = _ledgerByIdempotencyKey.GetOrAdd($"refund_bonus:{payment.Id}", _ => new LedgerEntry(
+                    Guid.NewGuid().ToString("N"), payment.UserId, LedgerEntryType.Correction,
+                    MoneyAmount.Usd(-bonusEntry.Amount.Amount), $"refund_bonus:{payment.Id}",
+                    $"Reversed first top-up bonus for payment {payment.Id}", nowUtc));
+                // T-028: Keep denormalized balance in sync.
+                _userBalances.AddOrUpdate(payment.UserId, bonusReverse.Amount.Amount, (_, old) => old + bonusReverse.Amount.Amount);
+            }
+        }
+        MarkEventProcessedUnsafe(paymentEvent, nowUtc);
+        return new ApplyOutcome(true, payment, ledger?.Id, null);
     }
 
     public Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default)
@@ -746,9 +816,9 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             {
                 var input = ToRecoveryInput(evt);
                 if (string.Equals(evt.EventType, "paid", StringComparison.OrdinalIgnoreCase))
-                    ConfirmPaymentAtomicAsync(input, nowUtc, ct).GetAwaiter().GetResult();
+                    ConfirmPaymentAtomicUnsafe(input, nowUtc);
                 else
-                    ApplyPaymentEventAtomicAsync(input, nowUtc, autoReverseChargeback, ct).GetAwaiter().GetResult();
+                    ApplyPaymentEventAtomicUnsafe(input, nowUtc, autoReverseChargeback);
             }
 
             return Task.FromResult(events.Length);
@@ -789,11 +859,11 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             evt.ConfirmedCurrency, evt.Reason, evt.ProviderEventId, null, evt.SignatureOk);
 
     private decimal BalanceUnsafe(string userId) =>
-        _ledgerByIdempotencyKey.Values.Where(e => e.UserId == userId).Sum(e => e.Amount.Amount);
+        _userBalances.GetValueOrDefault(userId);
 
     private readonly Dictionary<string, ModelProvider> _modelProviders = new(StringComparer.Ordinal);
 
-    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(CancellationToken ct = default)
+    public Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(bool includeLogo = true, CancellationToken ct = default)
     {
         IReadOnlyCollection<ModelProvider> providers = _modelProviders.Values
             .OrderBy(p => p.DisplayName, StringComparer.Ordinal)

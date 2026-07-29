@@ -14,9 +14,36 @@ namespace OpenRussiaRouter.ApiGateway.Application.Services;
 /// </summary>
 public interface IGatewayPipeline
 {
+    /// <summary>
+    /// Полный пайплайн (legacy): аутентификация + биллинг + выбор ноды за один вызов.
+    /// Используется там, где retry-цикл не нужен.
+    /// </summary>
     Task<GatewayAuthorizedContext?> AuthorizeAndAcquireLeaseAsync(
         HttpContext context,
         string? model,
+        string requestId,
+        IReadOnlyCollection<string>? excludedNodeIds,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Шаг 1: валидация модели + аутентификация + проверка баланса.
+    /// Вызывается один раз до retry-цикла. При ошибке записывает ошибку в ответ.
+    /// </summary>
+    /// <returns>Результат авторизации или <c>null</c> + ошибка в ответе.</returns>
+    Task<GatewayAuthorizationResult?> AuthorizeAsync(
+        HttpContext context,
+        string? model,
+        string requestId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Шаг 2: выбор ноды с учётом исключённых.
+    /// Вызывается на каждой итерации retry-цикла. При ошибке записывает ошибку в ответ.
+    /// </summary>
+    /// <returns>Полный контекст с лизой или <c>null</c> + ошибка в ответе.</returns>
+    Task<GatewayAuthorizedContext?> AcquireLeaseAsync(
+        HttpContext context,
+        GatewayAuthorizationResult authorization,
         string requestId,
         IReadOnlyCollection<string>? excludedNodeIds,
         CancellationToken cancellationToken);
@@ -32,6 +59,19 @@ public sealed class GatewayPipeline(
         string? model,
         string requestId,
         IReadOnlyCollection<string>? excludedNodeIds,
+        CancellationToken cancellationToken)
+    {
+        var authResult = await AuthorizeAsync(context, model, requestId, cancellationToken);
+        if (authResult is null)
+            return null;
+
+        return await AcquireLeaseAsync(context, authResult, requestId, excludedNodeIds, cancellationToken);
+    }
+
+    public async Task<GatewayAuthorizationResult?> AuthorizeAsync(
+        HttpContext context,
+        string? model,
+        string requestId,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(model))
@@ -69,15 +109,34 @@ public sealed class GatewayPipeline(
             return null;
         }
 
-        // Use RouterModelId (upstream node ID) so ControlPlane capability store can match
-        // against what the node actually reports (e.g. "glm-4.7"), not the billing public ID
-        // (e.g. "ORR/GLM-4.7").
         var (preferredNodeId, preferredNodeControlToken) = ReadPreferredNode(context);
-        var lease = await controlPlaneProvider.SelectRouterNodeAsync(
+
+        return new GatewayAuthorizationResult(
+            apiKey,
+            authResult.UserId!,
+            authResult.ApiKeyId!,
+            authResult.ApiKeyPrefix!,
             balanceResult.RouterModelId,
-            requestId,
             preferredNodeId,
             preferredNodeControlToken,
+            balanceResult.SupportsReasoning,
+            balanceResult.AllowedReasoningEfforts,
+            balanceResult.DefaultReasoningEffort,
+            authResult.IsAdmin);
+    }
+
+    public async Task<GatewayAuthorizedContext?> AcquireLeaseAsync(
+        HttpContext context,
+        GatewayAuthorizationResult authorization,
+        string requestId,
+        IReadOnlyCollection<string>? excludedNodeIds,
+        CancellationToken cancellationToken)
+    {
+        var lease = await controlPlaneProvider.SelectRouterNodeAsync(
+            authorization.RouterModelId,
+            requestId,
+            authorization.PreferredNodeId,
+            authorization.PreferredNodeControlToken,
             excludedNodeIds,
             cancellationToken);
         if (lease is null)
@@ -87,18 +146,18 @@ public sealed class GatewayPipeline(
         }
 
         return new GatewayAuthorizedContext(
-            apiKey,
-            authResult.UserId!,
-            authResult.ApiKeyId!,
-            authResult.ApiKeyPrefix!,
-            balanceResult.RouterModelId,
-            preferredNodeId,
-            preferredNodeControlToken,
+            authorization.ApiKey,
+            authorization.UserId,
+            authorization.ApiKeyId,
+            authorization.ApiKeyPrefix,
+            authorization.RouterModelId,
+            authorization.PreferredNodeId,
+            authorization.PreferredNodeControlToken,
             lease,
-            balanceResult.SupportsReasoning,
-            balanceResult.AllowedReasoningEfforts,
-            balanceResult.DefaultReasoningEffort,
-            authResult.IsAdmin);
+            authorization.SupportsReasoning,
+            authorization.AllowedReasoningEfforts,
+            authorization.DefaultReasoningEffort,
+            authorization.IsAdmin);
     }
 
     private const string AdminTestHeader = "X-ORR-Admin-Test";

@@ -26,9 +26,9 @@ public sealed class ControlPlaneRepositoryPostgresTests
         using var connection = new NpgsqlConnection(connectionString);
         database.Truncate();
         var service = new RouterControlPlaneService(
-            new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(connectionString)),
+            new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(database.ConnectionString)),
             new NodeModelCapabilityStore());
-        var now = DateTimeOffset.UtcNow;
+        var now = new DateTimeOffset(DateTime.UtcNow.Ticks / 10 * 10, TimeSpan.Zero);
         var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now, 15, null);
 
@@ -120,7 +120,7 @@ public sealed class ControlPlaneRepositoryPostgresTests
         var service = new RouterControlPlaneService(
             new ControlPlaneRepository(new ControlPlaneDbConnectionFactory(database.ConnectionString)),
             new NodeModelCapabilityStore());
-        var now = DateTimeOffset.UtcNow;
+        var now = new DateTimeOffset(DateTime.UtcNow.Ticks / 10 * 10, TimeSpan.Zero);
         var node = await service.RegisterNodeAsync("node-a", new Uri("https://router-a.example"), "secret-a", 1, now);
         await service.ApplyHealthAsync(node.Id, RouterNodeStatus.Healthy, now);
         for (var index = 0; index < 3; index++)

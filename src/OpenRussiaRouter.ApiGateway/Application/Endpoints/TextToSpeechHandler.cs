@@ -73,7 +73,14 @@ public sealed class TextToSpeechHandler(
 
                     context.Response.StatusCode = response.StatusCode;
                     context.Response.ContentType = response.ContentType;
-                    if (response.BodyBytes is { Length: > 0 } bytes)
+                    if (response.BodyStream is { } stream)
+                    {
+                        await using (stream)
+                        {
+                            await stream.CopyToAsync(context.Response.Body, ct);
+                        }
+                    }
+                    else if (response.BodyBytes is { Length: > 0 } bytes)
                     {
                         await context.Response.BodyWriter.WriteAsync(bytes, ct);
                     }

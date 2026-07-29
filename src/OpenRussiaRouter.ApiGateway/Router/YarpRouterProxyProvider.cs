@@ -78,7 +78,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         if (error != ForwarderError.None)
         {
             var errorFeature = context.GetForwarderErrorFeature();
-            throw new InvalidOperationException("YARP forwarding failed.", errorFeature?.Exception);
+            ThrowYarpError(errorFeature);
         }
 
         responseBody.Position = 0;
@@ -143,7 +143,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         if (error != ForwarderError.None)
         {
             var errorFeature = context.GetForwarderErrorFeature();
-            throw new InvalidOperationException("YARP forwarding failed.", errorFeature?.Exception);
+            ThrowYarpError(errorFeature);
         }
 
         responseBody.Position = 0;
@@ -178,35 +178,59 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
         context.Request.ContentLength = context.Request.Body.Length;
         context.RequestAborted = cancellationToken;
 
-        await using var responseBody = new MemoryStream();
-        context.Response.Body = responseBody;
-
-        var destinationPrefix = BuildDestinationPrefix(lease.EndpointUrl);
-        var error = await forwarder.SendAsync(context, destinationPrefix, ForwardingHttpClient, RequestConfig).ConfigureAwait(false);
-        if (error != ForwarderError.None)
+        var responseBody = new MemoryStream();
+        try
         {
-            var errorFeature = context.GetForwarderErrorFeature();
-            throw new InvalidOperationException("YARP forwarding failed.", errorFeature?.Exception);
+            context.Response.Body = responseBody;
+
+            var destinationPrefix = BuildDestinationPrefix(lease.EndpointUrl);
+            var error = await forwarder.SendAsync(context, destinationPrefix, ForwardingHttpClient, RequestConfig).ConfigureAwait(false);
+            if (error != ForwarderError.None)
+            {
+                var errorFeature = context.GetForwarderErrorFeature();
+                ThrowYarpError(errorFeature);
+            }
+
+            responseBody.Position = 0;
+            var contentType = context.Response.ContentType ?? "application/json";
+            var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
+            var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
+
+            if (contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+            {
+                // Stream audio directly — caller is responsible for disposing the stream.
+                return new RouterProxyResponse(context.Response.StatusCode, contentType, "", providerName, providerAccount, BodyStream: responseBody);
+            }
+
+            // Non-audio error response — read as string.
+            using var reader = new StreamReader(responseBody, Encoding.UTF8);
+            var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+            return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
         }
-
-        responseBody.Position = 0;
-        var contentType = context.Response.ContentType ?? "application/json";
-        var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
-        var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
-
-        if (contentType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase))
+        catch
         {
-            var bytes = responseBody.ToArray();
-            return new RouterProxyResponse(context.Response.StatusCode, contentType, "", providerName, providerAccount, bytes);
+            await responseBody.DisposeAsync();
+            throw;
         }
-
-        using var reader = new StreamReader(responseBody, Encoding.UTF8);
-        var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
-        return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
     }
 
     private static string BuildDestinationPrefix(Uri baseEndpoint)
     {
         return new Uri(baseEndpoint.GetLeftPart(UriPartial.Authority)).AbsoluteUri;
+    }
+
+    /// <summary>
+    /// Выбрасывает исключение из YARP-ошибки. Если внутреннее исключение — HttpRequestException
+    /// или IOException (обрыв соединения), выбрасывается оно напрямую, чтобы retry-логика
+    /// в RouterRetryExecutor распознала его как транзиентную ошибку и переключилась на другую ноду.
+    /// </summary>
+    private static void ThrowYarpError(IForwarderErrorFeature? errorFeature)
+    {
+        var inner = errorFeature?.Exception;
+
+        if (inner is HttpRequestException or IOException)
+            throw inner;
+
+        throw new InvalidOperationException("YARP forwarding failed.", inner);
     }
 }

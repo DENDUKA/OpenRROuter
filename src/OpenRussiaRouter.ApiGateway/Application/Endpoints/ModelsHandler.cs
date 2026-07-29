@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Caching.Memory;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.Http;
@@ -10,9 +11,14 @@ namespace OpenRussiaRouter.ApiGateway.Application.Endpoints;
 
 /// <summary>Обработчик GET /v1/models — возвращает публичный каталог моделей из BillingService.
 /// Формат ответа выровнен с OpenRouter /v1/models для авто-обнаружения reasoning (top-level
-/// `reasoning` объект + paired `reasoning`/`include_reasoning` в supported_parameters).</summary>
-public sealed class ModelsHandler(IBillingProvider billingProvider)
+/// `reasoning` объект + paired `reasoning`/`include_reasoning` в supported_parameters).
+/// Сериализованный ответ кешируется в IMemoryCache (TTL 60 с) для снижения нагрузки на Billing
+/// при анонимном трафике.</summary>
+public sealed class ModelsHandler(IBillingProvider billingProvider, IMemoryCache cache)
 {
+    private const string CacheKey = "v1_models_response";
+    private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
+
     // Null values are omitted to match OpenRouter's omit-if-absent convention — in particular
     // the top-level `reasoning` field must not appear at all on non-reasoning models (its
     // presence IS the signal that a model can reason).
@@ -23,7 +29,12 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
 
     public async Task HandleAsync(HttpContext context)
     {
-        var requestId = CorrelationIdReader.Get(context.Request);
+        if (cache.TryGetValue<byte[]>(CacheKey, out var cachedBytes))
+        {
+            context.Response.ContentType = "application/json";
+            await context.Response.Body.WriteAsync(cachedBytes, context.RequestAborted);
+            return;
+        }
 
         var models = await billingProvider.ListPublicModelsAsync(context.RequestAborted);
 
@@ -105,7 +116,17 @@ public sealed class ModelsHandler(IBillingProvider billingProvider)
             })
         };
 
+        await using var stream = new MemoryStream();
+        await JsonSerializer.SerializeAsync(stream, responseBody, JsonOptions);
+        var bytes = stream.ToArray();
+
+        cache.Set(CacheKey, bytes, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = CacheTtl,
+            Size = bytes.Length
+        });
+
         context.Response.ContentType = "application/json";
-        await JsonSerializer.SerializeAsync(context.Response.Body, responseBody, JsonOptions);
+        await context.Response.Body.WriteAsync(bytes, context.RequestAborted);
     }
 }

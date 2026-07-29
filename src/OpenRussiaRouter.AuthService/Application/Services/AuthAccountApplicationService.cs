@@ -18,7 +18,7 @@ public sealed class AuthAccountApplicationService(
     ILogger<AuthAccountApplicationService>? logger = null)
 {
     private const int DefaultPageSize = 1000;
-    private const int MinPasswordLength = 8;
+    private const int MinPasswordLength = 12;
 
     public async Task<CreatedInvite> CreateInviteAsync(
         string email,
@@ -35,6 +35,11 @@ public sealed class AuthAccountApplicationService(
 
     public async Task<UserAccount> CompleteInviteAsync(string rawToken, string password, DateTimeOffset nowUtc, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(password) || password.Length < MinPasswordLength)
+        {
+            throw new ArgumentException("Password is too weak.", nameof(password));
+        }
+
         var tokenHash = secretHasher.Hash(rawToken);
         var invite = await repository.GetInviteByTokenHashAsync(tokenHash, ct).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Invite token is invalid.");
@@ -271,14 +276,13 @@ public sealed class AuthAccountApplicationService(
         if (user is not { Status: UserStatus.Active })
             return CreateApiKeyResult.Failed(AuthErrorCodes.UserDisabled);
 
-        var currentKeysCount = await repository.CountApiKeysAsync(userId, ct).ConfigureAwait(false);
-        if (currentKeysCount >= user.MaxApiKeys)
+        var created = apiKeyFactory.Create(userId, name, nowUtc);
+        var inserted = await repository.TryAddApiKeyAsync(created.ApiKey, user.MaxApiKeys, ct).ConfigureAwait(false);
+        if (!inserted)
         {
             return CreateApiKeyResult.Failed(AuthErrorCodes.ApiKeyLimitReached);
         }
 
-        var created = apiKeyFactory.Create(userId, name, nowUtc);
-        await repository.AddApiKeyAsync(created.ApiKey, ct).ConfigureAwait(false);
         EmitAnalytics(
             AnalyticsEvents.ApiKeyCreated,
             () => productAnalytics!.ApiKeyCreated(userId));

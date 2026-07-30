@@ -7,17 +7,17 @@ using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
 
 namespace OpenRussiaRouter.CollectorService.Application.Billing;
 
-public sealed class GrpcActiveBillingModelProvider(
+public sealed class GrpcBillingModelCatalogProvider(
     BillingGrpc.BillingServiceClient client,
     IOptionsMonitor<CollectorOptions> options,
     TimeProvider timeProvider,
-    ILogger<GrpcActiveBillingModelProvider> logger) : IActiveBillingModelProvider
+    ILogger<GrpcBillingModelCatalogProvider> logger) : IBillingModelCatalogProvider
 {
     private readonly SemaphoreSlim refreshLock = new(1, 1);
-    private IReadOnlyList<ActiveBillingModel> cachedModels = [];
+    private IReadOnlyList<BillingCatalogModel> cachedModels = [];
     private DateTimeOffset? cachedAtUtc;
 
-    public async Task<IReadOnlyList<ActiveBillingModel>> ListActiveModelsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<BillingCatalogModel>> ListModels(CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
         if (IsCacheFresh(now))
@@ -34,11 +34,13 @@ public sealed class GrpcActiveBillingModelProvider(
                 new ListModelsRequest(),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
 
+            // Выключенные модели тоже нужны: без них выключенная у нас модель неотличима
+            // от модели, которой в каталоге нет вовсе. Фильтр по Enabled стоит у потребителей.
             var models = response.Models
-                .Where(model => model.Enabled)
-                .Select(model => new ActiveBillingModel(
+                .Select(model => new BillingCatalogModel(
                     model.Id,
-                    string.IsNullOrWhiteSpace(model.UpstreamModelId) ? model.Id : model.UpstreamModelId))
+                    string.IsNullOrWhiteSpace(model.UpstreamModelId) ? model.Id : model.UpstreamModelId,
+                    model.Enabled))
                 .Where(model => !string.IsNullOrWhiteSpace(model.ModelId) &&
                                 !string.IsNullOrWhiteSpace(model.RouterModelId))
                 .DistinctBy(model => model.ModelId, StringComparer.Ordinal)
@@ -51,12 +53,12 @@ public sealed class GrpcActiveBillingModelProvider(
         catch (RpcException ex) when (ex.StatusCode is StatusCode.Cancelled or StatusCode.DeadlineExceeded ||
                                       !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Failed to load active billing models from BillingService");
+            logger.LogWarning(ex, "Failed to load billing model catalog from BillingService");
             return cachedModels;
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Failed to load active billing models from BillingService");
+            logger.LogWarning(ex, "Failed to load billing model catalog from BillingService");
             return cachedModels;
         }
         finally

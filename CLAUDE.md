@@ -268,12 +268,25 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   `visit_sessions`; `/admin/visitors` намеренно остался сырым хвостом для отладки трекинга.
   Ключи — `SiteVisits:Compaction:*`, механика — в
   [BuildingBlocks/CLAUDE.md](src/OpenRussiaRouter.BuildingBlocks/CLAUDE.md).
+- **Метрики нод и провайдеров пишет CollectorService** (`ProviderQuotaMeter`) — остатки квот
+  (`orr_provider_quota*`), их читаемость (`orr_provider_quota_status` + `reason`) и полный срез
+  «что нода отдаёт на подключении» — `orr_node_model_catalog{node_id, provider, connection_id,
+  model_id, router_model_id, billing_state}`, где `billing_state` ∈ `enabled|disabled|absent`
+  (закрытый список `ModelBillingStates`). Это единственный источник «моделей, которых нет
+  в каталоге ORR»: в БД связки нода↔подключение↔модель не существует вообще, она живёт только
+  в in-memory снапшоте коллектора и в этих метриках.
 - Дашборды Grafana и конфиг Prometheus для прода — в `deploy/compose/grafana/`
   и `deploy/compose/prometheus.prod.yml`. Дашборды: `ORR Limits` (лимиты и квоты),
   `ORR Product Analytics` (псевдонимные события), `ORR Users` (рост, retention, посетители
   сайта; строится по `auth`+`billing` и по `analytics.visit_sessions` — секция «Посетители сайта»
   перецелена с `site_visits`, поэтому последние ~35 минут ещё не схлопнутого трафика в панели
-  не попадают; метрики дневные, для них незаметно).
+  не попадают; метрики дневные, для них незаметно), `ORR Nodes & Provider Limits`
+  (`nodes-providers.json` — список нода → подключение провайдера → квоты и модели).
+- **`ORR Nodes & Provider Limits` требует плагина** `marcusolsson-dynamictext-panel@5.5.0`
+  (Business Text; 6.x уже требует Grafana 11, а в compose стоит 10.4.2). Ставится через
+  `GF_INSTALL_PLUGINS` при старте контейнера, разметку строит JS в `options.afterRender`
+  панели — поэтому там же включён `GF_PANELS_DISABLE_SANITIZE_HTML`. Верхняя `bargauge`-панель
+  нативная и остаётся рабочей, даже если плагин не установился.
 - **Алерты Grafana уходят почтой не по SMTP.** На прод-хосте закрыт исходящий SMTP
   (25/465/587/2525), открыт только 443, поэтому native SMTP contact point не работает.
   Схема: правила `deploy/compose/grafana/provisioning/alerting/{rules,policies,contactpoints}.yaml`

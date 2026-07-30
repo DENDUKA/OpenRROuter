@@ -44,9 +44,9 @@ observable-гейджи никогда не создаются и метрик �
 |---|---|
 | `Application/Collection` | `NodePollingWorker`, `NodeCatalogCollector`, `CollectorSnapshotStore`, `CollectorSnapshot`, `NodeCatalogResult`/`ModelObservation`, `CatalogProjection`, `NodeListProvider`, `CollectorOptions`, `CollectorNode` |
 | `Application/NodeAdmin` | `NodeAdminClient` (`INodeAdminClient`) — HTTP к admin API ноды, контракты, `NodeAdminException` |
-| `Application/Billing` | `GrpcActiveBillingModelProvider` (`IActiveBillingModelProvider`), `ActiveBillingModel` — список активных моделей биллинга для привязки квот |
+| `Application/Billing` | `GrpcBillingModelCatalogProvider` (`IBillingModelCatalogProvider`), `BillingCatalogModel` — **весь** каталог моделей биллинга, включая выключенные |
 | `Application/OpenRouter` | `OpenRouterCatalogPoller`, `OpenRouterCatalogClient`, `OpenRouterCatalogStore`/`OpenRouterCatalogSnapshot`, контракты, опции |
-| `Application/Quota` | `NodeQuotaCollector`, `ProviderQuotaMeter`, `QuotaSnapshotStore`, `QuotaMeasurement`, `QuotaStatusMeasurement`+`QuotaUnavailableReasons`, `ActiveModelQuotaMeasurement`, `NodeQuotaResult` |
+| `Application/Quota` | `NodeQuotaCollector`, `ProviderQuotaMeter`, `QuotaSnapshotStore`, `QuotaMeasurement`, `QuotaStatusMeasurement`+`QuotaUnavailableReasons`, `ActiveModelQuotaMeasurement`, `NodeModelCatalogEntry`+`ModelBillingStates`, `NodeQuotaResult` |
 | `Infrastructure/Grpc` | `GrpcCollectorService` — отдаёт снапшоты |
 
 ## Конфигурация ([appsettings.json](appsettings.json))
@@ -124,16 +124,35 @@ observable-гейджи никогда не создаются и метрик �
 с `node_unreachable` (на этом построен алерт в `deploy/compose/grafana/provisioning/alerting/rules.yaml`).
 
 `NodePollingWorker` дополнительно сшивает квоты с админскими моделями Billing
-(`IActiveBillingModelProvider`, матч по `RouterModelId` ↔ `UpstreamId`/`PublicId` наблюдения):
-модель-специфичная квота, иначе общая по connection, иначе среднее — результат
-`ActiveModelQuotaMeasurement`. Сбой Billing не ломает цикл: `GrpcActiveBillingModelProvider`
-отдаёт свой прошлый кеш (или пустой список).
+(`IBillingModelCatalogProvider`, матч по `RouterModelId` ↔ `UpstreamId`/`PublicId` наблюдения —
+общий хелпер `FindCatalogModels`): модель-специфичная квота, иначе общая по connection, иначе
+среднее — результат `ActiveModelQuotaMeasurement`. Сбой Billing не ломает цикл:
+`GrpcBillingModelCatalogProvider` отдаёт свой прошлый кеш (или пустой список).
+
+**`IBillingModelCatalogProvider` отдаёт и выключенные модели** (`BillingCatalogModel.Enabled`) —
+без них выключенная у нас модель неотличима от модели, которой в каталоге нет вовсе.
+Фильтр по `Enabled` стоит у потребителя: `BuildActiveModelMeasurements` обязана его сохранять,
+иначе `orr_active_model_quota_percent` начнёт включать то, что мы не продаём.
+
+`BuildModelCatalog` в том же воркере строит `QuotaSnapshot.ModelCatalog` — по записи на
+(нода, подключение, модель): совпало с каталогом → `enabled`/`disabled` и публичный `ModelId`,
+не совпало → `absent` и routable id ноды. Unreachable-ноды исключаются, дубли (прямой маршрут +
+combo-алиас) схлопываются по `(NodeId, ConnectionId, ModelId)` — метка Prometheus обязана быть
+уникальной.
 
 Метрики (`ProviderQuotaMeter`, observable gauges, meter `OpenRussiaRouter`):
 `orr_provider_quota`, `orr_provider_quota_percent`, `orr_provider_quota_status`,
-`orr_model_active`, `orr_model_quota_percent`, `orr_active_model_quota_percent`.
+`orr_model_active`, `orr_model_quota_percent`, `orr_active_model_quota_percent`,
+`orr_node_model_catalog` (значение всегда 1, смысл в метке `billing_state` ∈
+`enabled|disabled|absent`, закрытый список `ModelBillingStates`; кардинальность =
+ноды × подключения × модели).
 Метки: `node_id`/`provider`/`connection_id`/`account_name`/`quota_name`/`model_id`/
-`router_model_id`/`reason` — все ограниченной кардинальности, **user/api-key сюда не добавлять**.
+`router_model_id`/`reason`/`billing_state` — все ограниченной кардинальности,
+**user/api-key сюда не добавлять**.
+
+`orr_node_model_catalog` — единственный источник для дашборда `ORR Nodes & Provider Limits`
+в части «какие модели нода отдаёт и что из них мы продаём»: в Postgres связки
+нода↔подключение↔модель нет вообще.
 
 ## OpenRouter — `OpenRouterCatalogPoller` ([файл](Application/OpenRouter/OpenRouterCatalogPoller.cs))
 

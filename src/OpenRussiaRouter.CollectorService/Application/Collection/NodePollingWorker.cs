@@ -10,7 +10,7 @@ public sealed class NodePollingWorker(
     INodeListProvider nodeListProvider,
     NodeCatalogCollector collector,
     NodeQuotaCollector quotaCollector,
-    IActiveBillingModelProvider activeBillingModelProvider,
+    IBillingModelCatalogProvider billingModelCatalogProvider,
     CollectorSnapshotStore store,
     QuotaSnapshotStore quotaStore,
     IOptionsMonitor<CollectorOptions> options,
@@ -47,7 +47,7 @@ public sealed class NodePollingWorker(
 
         var quotaResults = await Task.WhenAll(
             routable.Select(node => quotaCollector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
-        var activeModels = await activeBillingModelProvider.ListActiveModelsAsync(cancellationToken).ConfigureAwait(false);
+        var catalogModels = await billingModelCatalogProvider.ListModels(cancellationToken).ConfigureAwait(false);
         var flatMeasurements = quotaResults.SelectMany(r => r.Measurements).ToList();
         var quotaStatuses = quotaResults.SelectMany(r => r.Statuses).ToList();
 
@@ -77,21 +77,87 @@ public sealed class NodePollingWorker(
             enrichedMeasurements.Add(measurement with { ModelIds = modelIds });
         }
 
-        var activeModelMeasurements = BuildActiveModelMeasurements(catalogsByNodeId, flatMeasurements, activeModels);
-        quotaStore.Set(new QuotaSnapshot(enrichedMeasurements, now, activeModelMeasurements, quotaStatuses));
+        var activeModelMeasurements = BuildActiveModelMeasurements(catalogsByNodeId, flatMeasurements, catalogModels);
+        var modelCatalog = BuildModelCatalog(catalogsByNodeId, catalogModels);
+        quotaStore.Set(new QuotaSnapshot(
+            enrichedMeasurements, now, activeModelMeasurements, quotaStatuses, modelCatalog));
     }
 
+    /// <summary>
+    /// Что каждая нода отдаёт на каждом подключении и как это соотносится с каталогом ORR.
+    /// Модели, которых в каталоге нет, остаются в списке со статусом <see cref="ModelBillingStates.Absent"/> —
+    /// именно ради них снят фильтр по Enabled в <see cref="IBillingModelCatalogProvider"/>.
+    /// </summary>
+    private static IReadOnlyList<NodeModelCatalogEntry> BuildModelCatalog(
+        IReadOnlyDictionary<string, NodeCatalogResult> catalogsByNodeId,
+        IReadOnlyList<BillingCatalogModel> catalogModels)
+    {
+        var byRouterModelId = GroupByRouterModelId(catalogModels);
+        var entries = new List<NodeModelCatalogEntry>();
+
+        foreach (var nodeCatalog in catalogsByNodeId.Values.Where(c => !c.Unreachable))
+        {
+            foreach (var observation in nodeCatalog.Observations)
+            {
+                if (string.IsNullOrWhiteSpace(observation.ConnectionId))
+                    continue;
+
+                // Квоты здесь не участвуют, поэтому второго источника имени провайдера нет.
+                var provider = ResolveProvider(observation.Provider, quotaProvider: string.Empty);
+                var matched = FindCatalogModels(byRouterModelId, observation);
+
+                if (matched.Count == 0)
+                {
+                    var routableId = string.IsNullOrWhiteSpace(observation.PublicId)
+                        ? observation.UpstreamId
+                        : observation.PublicId;
+                    if (string.IsNullOrWhiteSpace(routableId))
+                        continue;
+
+                    entries.Add(new NodeModelCatalogEntry(
+                        nodeCatalog.NodeId,
+                        provider,
+                        observation.ConnectionId,
+                        routableId,
+                        routableId,
+                        ModelBillingStates.Absent));
+                    continue;
+                }
+
+                foreach (var model in matched)
+                {
+                    entries.Add(new NodeModelCatalogEntry(
+                        nodeCatalog.NodeId,
+                        provider,
+                        observation.ConnectionId,
+                        model.ModelId,
+                        model.RouterModelId,
+                        model.Enabled ? ModelBillingStates.Enabled : ModelBillingStates.Disabled));
+                }
+            }
+        }
+
+        // Одна и та же модель приходит несколькими наблюдениями (прямой маршрут + combo-алиас),
+        // а метка Prometheus должна быть уникальной — иначе гейдж отдаст дубли серий.
+        return entries
+            .DistinctBy(entry => (entry.NodeId, entry.ConnectionId, entry.ModelId))
+            .ToList();
+    }
+
+    /// <summary>
+    /// Квоты в разрезе активных моделей каталога. Выключенные модели сюда попадать не должны —
+    /// метрика orr_active_model_quota_percent означает «то, что мы продаём».
+    /// </summary>
     private static IReadOnlyList<ActiveModelQuotaMeasurement> BuildActiveModelMeasurements(
         IReadOnlyDictionary<string, NodeCatalogResult> catalogsByNodeId,
         IReadOnlyList<QuotaMeasurement> flatMeasurements,
-        IReadOnlyList<ActiveBillingModel> activeModels)
+        IReadOnlyList<BillingCatalogModel> catalogModels)
     {
+        var activeModels = catalogModels.Where(model => model.Enabled).ToList();
         if (activeModels.Count == 0 || flatMeasurements.Count == 0)
             return [];
 
-        var activeByRouterModelId = activeModels
-            .GroupBy(model => model.RouterModelId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+        var activeByRouterModelId = GroupByRouterModelId(activeModels);
 
         var quotasByNodeAndConnection = flatMeasurements
             .Where(m => m.Percent.HasValue)
@@ -108,7 +174,7 @@ public sealed class NodePollingWorker(
                 if (string.IsNullOrWhiteSpace(observation.ConnectionId))
                     continue;
 
-                var matchedModels = FindActiveModels(activeByRouterModelId, observation);
+                var matchedModels = FindCatalogModels(activeByRouterModelId, observation);
                 if (matchedModels.Count == 0)
                     continue;
 
@@ -153,19 +219,26 @@ public sealed class NodePollingWorker(
             .ToList();
     }
 
-    private static IReadOnlyList<ActiveBillingModel> FindActiveModels(
-        IReadOnlyDictionary<string, List<ActiveBillingModel>> activeByRouterModelId,
+    private static Dictionary<string, List<BillingCatalogModel>> GroupByRouterModelId(
+        IReadOnlyList<BillingCatalogModel> models) =>
+        models
+            .GroupBy(model => model.RouterModelId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.Ordinal);
+
+    /// <summary>Модели каталога, соответствующие наблюдению ноды: матч по RouterModelId ↔ UpstreamId/PublicId.</summary>
+    private static IReadOnlyList<BillingCatalogModel> FindCatalogModels(
+        IReadOnlyDictionary<string, List<BillingCatalogModel>> modelsByRouterModelId,
         ModelObservation observation)
     {
-        var result = new List<ActiveBillingModel>();
+        var result = new List<BillingCatalogModel>();
         if (!string.IsNullOrWhiteSpace(observation.UpstreamId) &&
-            activeByRouterModelId.TryGetValue(observation.UpstreamId, out var upstreamMatches))
+            modelsByRouterModelId.TryGetValue(observation.UpstreamId, out var upstreamMatches))
         {
             result.AddRange(upstreamMatches);
         }
 
         if (!string.IsNullOrWhiteSpace(observation.PublicId) &&
-            activeByRouterModelId.TryGetValue(observation.PublicId, out var publicMatches))
+            modelsByRouterModelId.TryGetValue(observation.PublicId, out var publicMatches))
         {
             result.AddRange(publicMatches);
         }
@@ -177,7 +250,7 @@ public sealed class NodePollingWorker(
 
     private static QuotaMeasurement? FindModelSpecificQuota(
         IReadOnlyList<QuotaMeasurement> connectionQuotas,
-        ActiveBillingModel activeModel,
+        BillingCatalogModel activeModel,
         ModelObservation observation)
     {
         var candidateIds = new[]

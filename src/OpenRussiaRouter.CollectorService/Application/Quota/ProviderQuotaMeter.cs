@@ -73,6 +73,20 @@ public sealed class ProviderQuotaMeter : IDisposable
             unit: "%",
             description: "Remaining quota percentage per model");
 
+        // Полный срез «что нода отдаёт на подключении» с состоянием модели в каталоге ORR.
+        // Кардинальность = ноды × подключения × модели; user/api-key сюда добавлять нельзя.
+        _meter.CreateObservableGauge(
+            "orr_node_model_catalog",
+            () => store.Current.ModelCatalog.Select(entry => new Measurement<int>(
+                1,
+                new KeyValuePair<string, object?>("node_id", entry.NodeId),
+                new KeyValuePair<string, object?>("provider", entry.Provider),
+                new KeyValuePair<string, object?>("connection_id", entry.ConnectionId),
+                new KeyValuePair<string, object?>("model_id", entry.ModelId),
+                new KeyValuePair<string, object?>("router_model_id", entry.RouterModelId),
+                new KeyValuePair<string, object?>("billing_state", entry.BillingState))),
+            description: "Models a node serves per provider connection, labelled by their state in the ORR catalog");
+
         _meter.CreateObservableGauge(
             "orr_active_model_quota_percent",
             () => store.Current.ActiveModelMeasurements.Select(m => new Measurement<double>(

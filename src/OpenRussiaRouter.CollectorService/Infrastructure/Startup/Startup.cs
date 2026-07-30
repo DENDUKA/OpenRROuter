@@ -61,7 +61,7 @@ public static class Startup
                 };
             })
             .AddInterceptor(() => new GrpcDeadlineInterceptor(grpcCallDeadline));
-        services.AddSingleton<IActiveBillingModelProvider, GrpcActiveBillingModelProvider>();
+        services.AddSingleton<IBillingModelCatalogProvider, GrpcBillingModelCatalogProvider>();
 
         services.AddHostedService<NodePollingWorker>();
 

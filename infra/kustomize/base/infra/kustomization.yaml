@@ -23,3 +23,6 @@ configMapGenerator:
       - dashboards/users.json
       - dashboards/limits.json
       - dashboards/analytics.json
+      # Needs the Business Text plugin (GF_INSTALL_PLUGINS in grafana.yaml) and the
+      # control.* foreign schema in orr_billing (migration-job.yaml).
+      - dashboards/nodes-providers.json

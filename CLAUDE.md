@@ -287,6 +287,19 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   `GF_INSTALL_PLUGINS` при старте контейнера, разметку строит JS в `options.afterRender`
   панели — поэтому там же включён `GF_PANELS_DISABLE_SANITIZE_HTML`. Верхняя `bargauge`-панель
   нативная и остаётся рабочей, даже если плагин не установился.
+- **В k8s-оверлее те же дашборды раздаёт `configMapGenerator grafana-dashboards-orr`**
+  (`infra/kustomize/base/infra/kustomization.yaml`, файлы в `base/infra/dashboards/` — это
+  **копии** `deploy/compose/grafana/dashboards/`, kustomize не умеет читать выше своей
+  директории; правишь дашборд — правь обе копии). Для `ORR Nodes & Provider Limits` там же
+  включены `GF_INSTALL_PLUGINS`/`GF_PANELS_DISABLE_SANITIZE_HTML` (`base/infra/grafana.yaml`),
+  а под скачивание плагина grafana добавлена в `allow-external-egress` — иначе под
+  крэшлупит на старте.
+- **Панель нод берёт `control.router_nodes` из датасорса `ORR Billing`.** В compose auth,
+  billing и control лежат в одной БД, в кластере они разнесены, поэтому `db-create`-job
+  (`migration-job.yaml`) прокидывает в `orr_billing` **два** foreign schema через
+  `postgres_fdw`: `auth` (панели ORR Users) и `control` (эта панель). Если сервис-владелец
+  ещё не накатил миграции, job пропускает **только его** схему и следующий синк Argo
+  повторяет.
 - **Алерты Grafana уходят почтой не по SMTP.** На прод-хосте закрыт исходящий SMTP
   (25/465/587/2525), открыт только 443, поэтому native SMTP contact point не работает.
   Схема: правила `deploy/compose/grafana/provisioning/alerting/{rules,policies,contactpoints}.yaml`

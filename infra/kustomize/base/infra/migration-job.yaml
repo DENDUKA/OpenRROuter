@@ -7,9 +7,10 @@ metadata:
     argocd.argoproj.io/hook: PostSync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
-  # Generous: the FDW step below waits for auth-service to apply its migrations, which only
-  # happens once that pod is up — and this hook can run before it.
-  activeDeadlineSeconds: 420
+  # Generous: the FDW step below waits for auth-service and control-plane to apply their
+  # migrations, which only happens once those pods are up — and this hook can run before
+  # them. Two sequential 5-minute waits, so this must stay above 600s.
+  activeDeadlineSeconds: 780
   backoffLimit: 5
   template:
     metadata:
@@ -55,55 +56,76 @@ spec:
               echo "All databases ready."
 
               # ---------------------------------------------------------------------------
-              # Expose auth.* inside orr_billing via postgres_fdw.
+              # Expose auth.* and control.* inside orr_billing via postgres_fdw.
               #
               # The Grafana dashboards are shared verbatim with the compose deployment
-              # (deploy/compose/grafana/dashboards/), where auth and billing live in ONE
-              # database and 12 panels join auth.users against billing.activity_by_token in a
-              # single query. This cluster splits them per service, and Postgres cannot join
-              # across databases — so orr_billing gets auth as a foreign schema instead of the
-              # dashboards getting a cluster-only fork.
+              # (deploy/compose/grafana/dashboards/), where auth, billing and control live in
+              # ONE database: 12 panels join auth.users against billing.activity_by_token in a
+              # single query, and ORR Nodes & Provider Limits reads control.router_nodes off
+              # the same "ORR Billing" datasource. This cluster splits them per service, and
+              # Postgres cannot join across databases — so orr_billing gets those as foreign
+              # schemas instead of the dashboards getting a cluster-only fork.
               # ---------------------------------------------------------------------------
-              echo "Waiting for the auth schema in orr_auth..."
-              i=0
-              while [ "$i" -lt 60 ]; do
-                if psql -h postgres -U orr -d orr_auth -tAc \
-                    "SELECT 1 FROM information_schema.schemata WHERE schema_name='auth'" | grep -q 1; then
-                  break
+              # Wires one foreign schema: wire_fdw <source db> <schema>. Returns 1 when the
+              # source schema is not there yet (owning service has not migrated), so a missing
+              # one only skips its own dashboards instead of the whole step.
+              wire_fdw() {
+                SRC_DB="$1"
+                SCHEMA="$2"
+                SERVER="${SRC_DB}_fdw"
+
+                echo "Waiting for the $SCHEMA schema in $SRC_DB..."
+                i=0
+                while [ "$i" -lt 60 ]; do
+                  if psql -h postgres -U orr -d "$SRC_DB" -tAc \
+                      "SELECT 1 FROM information_schema.schemata WHERE schema_name='$SCHEMA'" | grep -q 1; then
+                    break
+                  fi
+                  i=$((i + 1))
+                  sleep 5
+                done
+
+                if [ "$i" -ge 60 ]; then
+                  echo "$SCHEMA schema not present yet in $SRC_DB — skipping its FDW."
+                  echo "The next Argo sync will retry; Grafana panels over $SCHEMA.* stay empty until then."
+                  return 1
                 fi
-                i=$((i + 1))
-                sleep 5
-              done
 
-              if [ "$i" -ge 60 ]; then
-                echo "auth schema not present yet (auth-service has not migrated) — skipping FDW."
-                echo "The next Argo sync will retry; Grafana panels over auth.* stay empty until then."
-                exit 0
-              fi
+                # Never clobber real tables: the schema we drop below must contain foreign
+                # tables only. relkind 'r' = ordinary table, 'f' = foreign table.
+                NATIVE=$(psql -h postgres -U orr -d orr_billing -tAc \
+                  "SELECT count(*) FROM pg_class c
+                     JOIN pg_namespace n ON n.oid = c.relnamespace
+                    WHERE n.nspname = '$SCHEMA' AND c.relkind = 'r'")
+                if [ "$NATIVE" != "0" ]; then
+                  echo "orr_billing.$SCHEMA holds $NATIVE ordinary table(s) — refusing to replace it."
+                  exit 1
+                fi
 
-              # Never clobber real tables: the schema we drop below must contain foreign
-              # tables only. relkind 'r' = ordinary table, 'f' = foreign table.
-              NATIVE=$(psql -h postgres -U orr -d orr_billing -tAc \
-                "SELECT count(*) FROM pg_class c
-                   JOIN pg_namespace n ON n.oid = c.relnamespace
-                  WHERE n.nspname = 'auth' AND c.relkind = 'r'")
-              if [ "$NATIVE" != "0" ]; then
-                echo "orr_billing.auth holds $NATIVE ordinary table(s) — refusing to replace it."
-                exit 1
-              fi
+                # Explicit `if !` rather than relying on `set -e`: the calls below run inside
+                # a `||` list, where `set -e` is suppressed for the whole function body.
+                echo "Wiring postgres_fdw: orr_billing.$SCHEMA -> $SRC_DB.$SCHEMA"
+                if ! psql -h postgres -U orr -d orr_billing -v ON_ERROR_STOP=1 \
+                  -c "CREATE EXTENSION IF NOT EXISTS postgres_fdw" \
+                  -c "CREATE SERVER IF NOT EXISTS $SERVER
+                        FOREIGN DATA WRAPPER postgres_fdw
+                        OPTIONS (host 'postgres', port '5432', dbname '$SRC_DB')" \
+                  -c "DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER $SERVER" \
+                  -c "CREATE USER MAPPING FOR CURRENT_USER SERVER $SERVER
+                        OPTIONS (user 'orr', password '$PGPASSWORD')" \
+                  -c "DROP SCHEMA IF EXISTS $SCHEMA CASCADE" \
+                  -c "CREATE SCHEMA $SCHEMA" \
+                  -c "IMPORT FOREIGN SCHEMA $SCHEMA FROM SERVER $SERVER INTO $SCHEMA"; then
+                  echo "Failed to wire orr_billing.$SCHEMA -> $SRC_DB.$SCHEMA."
+                  exit 1
+                fi
+                return 0
+              }
 
-              echo "Wiring postgres_fdw: orr_billing.auth -> orr_auth.auth"
-              psql -h postgres -U orr -d orr_billing -v ON_ERROR_STOP=1 \
-                -c "CREATE EXTENSION IF NOT EXISTS postgres_fdw" \
-                -c "CREATE SERVER IF NOT EXISTS orr_auth_fdw
-                      FOREIGN DATA WRAPPER postgres_fdw
-                      OPTIONS (host 'postgres', port '5432', dbname 'orr_auth')" \
-                -c "DROP USER MAPPING IF EXISTS FOR CURRENT_USER SERVER orr_auth_fdw" \
-                -c "CREATE USER MAPPING FOR CURRENT_USER SERVER orr_auth_fdw
-                      OPTIONS (user 'orr', password '$PGPASSWORD')" \
-                -c "DROP SCHEMA IF EXISTS auth CASCADE" \
-                -c "CREATE SCHEMA auth" \
-                -c "IMPORT FOREIGN SCHEMA auth FROM SERVER orr_auth_fdw INTO auth"
+              # `set -e` must not kill the job on the "not migrated yet" path — the next sync
+              # retries, and the other schema may well be wireable already.
+              wire_fdw orr_auth auth || true
+              wire_fdw orr_control control || true
               echo "FDW ready."
           env:
             - name: PGPASSWORD

@@ -1,0 +1,184 @@
+{
+  "uid": "orr-nodes-providers",
+  "title": "ORR Nodes & Provider Limits",
+  "description": "Что каждая нода 9Router реально отдаёт: подключения провайдеров, остаток их лимитов и модели с состоянием в каталоге ORR. Источник — метрики CollectorService (опрос нод раз в минуту) и справочник нод из control.router_nodes.",
+  "tags": [
+    "orr",
+    "nodes",
+    "providers"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "1m",
+  "time": {
+    "from": "now-5m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "bargauge",
+      "title": "Заполнение суммарного остатка по провайдерам",
+      "description": "Остаток одного подключения = min по его квотам (упрёмся в самую узкую). Остатки подключений одного провайдера складываются, потолок = N×100 %, где N — число подключений. Шкала показывает долю от этого потолка, абсолютные значения («142.2 / 200 %») — в панели ниже. Панель нативная: работает даже если плагин Business Text не установился.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "100 * sum by (provider) (min by (provider, connection_id) (orr_provider_quota_percent))\n  / (count by (provider) (count by (provider, connection_id) (orr_provider_quota_percent)) * 100)",
+          "legendFormat": "{{provider}}",
+          "instant": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "max": 100,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#d03b3b",
+                "value": null
+              },
+              {
+                "color": "#fab219",
+                "value": 20
+              },
+              {
+                "color": "#0ca30c",
+                "value": 50
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "basic",
+        "orientation": "horizontal",
+        "showUnfilled": true,
+        "valueMode": "text",
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "marcusolsson-dynamictext-panel",
+      "pluginVersion": "5.5.0",
+      "title": "Ноды, провайдеры и модели",
+      "description": "Список нода → подключение провайдера → его квоты и модели. Цвет модели: зелёный — включена в каталоге ORR, жёлтый — есть в каталоге, но выключена, серый — нода отдаёт, а в каталоге её нет. Подключение, у которого квота не читается, остаётся в списке с причиной (reason) вместо полос.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 26,
+        "w": 24,
+        "x": 0,
+        "y": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_provider_quota_percent",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_provider_quota_status",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "orr_node_model_catalog",
+          "instant": true,
+          "format": "table"
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "postgres",
+            "uid": "orrbilling"
+          },
+          "format": "table",
+          "rawQuery": true,
+          "editorMode": "code",
+          "rawSql": "select id as node_id, name, status, in_flight_requests\nfrom control.router_nodes\nwhere enabled\norder by name"
+        }
+      ],
+      "options": {
+        "renderMode": "data",
+        "content": "<div class=\"orr-root\"></div>",
+        "defaultContent": "Нет данных.",
+        "editors": [
+          "styles",
+          "afterRender"
+        ],
+        "editor": {
+          "language": "html",
+          "format": "auto",
+          "height": 600
+        },
+        "helpers": "",
+        "styles": ".orr-summary { margin: 0 0 12px; }\n.orr-summary-h, .orr-chips-h {\n  font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;\n  color: #8e8e9e; margin-bottom: 6px;\n}\n.orr-sum-row { display: grid; grid-template-columns: 130px 1fr 110px; align-items: center; gap: 10px; margin: 6px 0; }\n.orr-sum-lbl { font-size: 11px; color: #8e8e9e; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.orr-sum-val { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }\n.orr-sum-val i { font-style: normal; font-weight: 400; color: #8e8e9e; }\n\n.orr-node { border: 1px solid #2c3235; border-radius: 3px; margin-bottom: 10px; }\n.orr-node-h {\n  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;\n  padding: 8px 12px; border-bottom: 1px solid #2c3235; background: rgba(127, 127, 140, .08);\n}\n.orr-node-h b { font-size: 12.5px; }\n.orr-node-h .orr-sp { margin-left: auto; font-size: 11px; color: #8e8e9e; }\n.orr-pill { border: 1px solid #2c3235; border-radius: 4px; padding: 2px 8px; font-size: 10.5px; color: #8e8e9e; }\n.orr-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: none; }\n\n.orr-conn { padding: 10px 12px; border-bottom: 1px solid rgba(127, 127, 140, .18); }\n.orr-conn:last-child { border-bottom: 0; }\n.orr-conn-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }\n.orr-conn-h b { font-size: 12px; }\n.orr-conn-h .orr-acct { font-size: 11px; color: #8e8e9e; }\n.orr-conn-h .orr-min { margin-left: auto; font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }\n.orr-grid { display: grid; grid-template-columns: minmax(240px, 320px) 1fr; gap: 16px; }\n@media (max-width: 700px) { .orr-grid { grid-template-columns: 1fr; } }\n\n.orr-q { display: grid; grid-template-columns: 84px 1fr 46px; align-items: center; gap: 8px; margin: 5px 0; }\n.orr-q span:first-child { font-size: 10.5px; color: #8e8e9e; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n.orr-q b { font-size: 11px; text-align: right; font-variant-numeric: tabular-nums; }\n.orr-track { height: 9px; border-radius: 2px; background: rgba(127, 127, 140, .25); overflow: hidden; }\n.orr-fill { height: 100%; border-radius: 2px; }\n\n.orr-chips { display: flex; flex-wrap: wrap; gap: 5px; align-content: flex-start; }\n.orr-chip {\n  display: inline-flex; align-items: center; gap: 5px;\n  border: 1px solid #2c3235; border-radius: 3px; padding: 2px 7px;\n  font-size: 11px; font-family: ui-monospace, Menlo, Consolas, monospace;\n}\n.orr-chip.is-absent { color: #8e8e9e; }\n.orr-err { font-size: 11px; color: #f2495c; }\n.orr-muted { font-size: 11px; color: #8e8e9e; }\n.orr-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 10.5px; color: #8e8e9e; padding-top: 4px; }\n.orr-legend span { display: inline-flex; align-items: center; gap: 5px; }",
+        "afterRender": "/**\n * Рисует список «нода -> подключение провайдера -> квоты и модели».\n * Данные приходят четырьмя таргетами: A — orr_provider_quota_percent, B — orr_provider_quota_status,\n * C — orr_node_model_catalog, D — control.router_nodes (имена нод из Postgres).\n */\nvar COLORS = {\n  ok: '#73bf69',\n  warn: '#f2cc0c',\n  bad: '#f2495c',\n  absent: '#8e8e9e'\n};\n\nvar series = (context.panelData && context.panelData.series) || [];\n\n/** Значение поля дата-фрейма: в Grafana 10 values — обычный массив, в старых — ArrayVector. */\nfunction valueAt(field, i) {\n  var values = field.values;\n  if (!values) return undefined;\n  return typeof values.get === 'function' ? values.get(i) : values[i];\n}\n\n/** Строки всех фреймов одного таргета как массив объектов {имя поля: значение}. */\nfunction rowsOf(refId) {\n  var out = [];\n  series.filter(function (frame) { return frame.refId === refId; }).forEach(function (frame) {\n    var fields = frame.fields || [];\n    var length = frame.length != null\n      ? frame.length\n      : (fields[0] && fields[0].values ? fields[0].values.length : 0);\n    for (var i = 0; i < length; i++) {\n      var row = {};\n      fields.forEach(function (field) { row[field.name] = valueAt(field, i); });\n      out.push(row);\n    }\n  });\n  return out;\n}\n\n/** Prometheus зовёт колонку значения Value, но при нескольких фреймах имя может отличаться. */\nfunction metricValue(row) {\n  if (row.Value != null) return Number(row.Value);\n  var key = Object.keys(row).filter(function (name) { return name.indexOf('Value') === 0; })[0];\n  return key ? Number(row[key]) : NaN;\n}\n\nfunction esc(value) {\n  return String(value == null ? '' : value)\n    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\"/g, '&quot;');\n}\n\nfunction quotaColor(percent) {\n  if (percent > 50) return COLORS.ok;\n  if (percent > 20) return COLORS.warn;\n  return COLORS.bad;\n}\n\nfunction fmt(percent) {\n  return (Math.round(percent * 10) / 10).toFixed(1);\n}\n\nvar quotaRows = rowsOf('A');\nvar statusRows = rowsOf('B');\nvar modelRows = rowsOf('C');\nvar nodeRows = rowsOf('D');\n\n/* Подключения собираем из всех трёх метрик: сломанное подключение есть только в B,\n   а подключение без моделей — только в A. Пропасть из списка не должно ни одно. */\nvar connections = {};\nfunction connectionOf(row) {\n  var key = [row.node_id, row.provider, row.connection_id].join('\\u0000');\n  if (!connections[key]) {\n    connections[key] = {\n      nodeId: row.node_id || 'unknown',\n      provider: row.provider || 'unknown',\n      connectionId: row.connection_id || 'unknown',\n      account: '',\n      quotas: [],\n      models: [],\n      reporting: true,\n      reason: ''\n    };\n  }\n  if (row.account_name) connections[key].account = row.account_name;\n  return connections[key];\n}\n\nquotaRows.forEach(function (row) {\n  var percent = metricValue(row);\n  if (isNaN(percent)) return;\n  connectionOf(row).quotas.push({ name: row.quota_name || 'total', percent: percent });\n});\n\nstatusRows.forEach(function (row) {\n  var connection = connectionOf(row);\n  if (metricValue(row) === 0) {\n    connection.reporting = false;\n    connection.reason = row.reason || 'unknown';\n  }\n});\n\nmodelRows.forEach(function (row) {\n  connectionOf(row).models.push({\n    modelId: row.model_id || '',\n    state: row.billing_state || 'absent'\n  });\n});\n\nvar STATE_ORDER = { enabled: 0, disabled: 1, absent: 2 };\nvar STATE_COLOR = { enabled: COLORS.ok, disabled: COLORS.warn, absent: COLORS.absent };\n\n/* Именно через hasOwnProperty: у enabled вес 0, и привычное `order[state] || 3`\n   отправляло бы включённые модели в конец списка. */\nfunction stateOrder(state) {\n  return Object.prototype.hasOwnProperty.call(STATE_ORDER, state) ? STATE_ORDER[state] : 3;\n}\n\n/** «1 подключение / 2 подключения / 5 подключений». */\nfunction plural(count, one, few, many) {\n  var mod100 = count % 100;\n  if (mod100 >= 11 && mod100 <= 14) return count + ' ' + many;\n  var mod10 = count % 10;\n  if (mod10 === 1) return count + ' ' + one;\n  if (mod10 >= 2 && mod10 <= 4) return count + ' ' + few;\n  return count + ' ' + many;\n}\n\nvar all = Object.keys(connections).map(function (key) { return connections[key]; });\nall.forEach(function (connection) {\n  connection.quotas.sort(function (a, b) { return a.name.localeCompare(b.name); });\n  connection.models.sort(function (a, b) {\n    var byState = stateOrder(a.state) - stateOrder(b.state);\n    return byState !== 0 ? byState : a.modelId.localeCompare(b.modelId);\n  });\n  connection.min = connection.quotas.length\n    ? Math.min.apply(null, connection.quotas.map(function (q) { return q.percent; }))\n    : null;\n});\n\n/* Сводка: остаток подключения = min по его квотам, дальше сумма по провайдеру,\n   потолок = (число подключений) * 100 %. */\nvar byProvider = {};\nall.forEach(function (connection) {\n  if (connection.min == null) return;\n  if (!byProvider[connection.provider]) byProvider[connection.provider] = { sum: 0, count: 0 };\n  byProvider[connection.provider].sum += connection.min;\n  byProvider[connection.provider].count += 1;\n});\n\nvar nodesById = {};\nnodeRows.forEach(function (row) {\n  nodesById[row.node_id] = {\n    name: row.name || row.node_id,\n    status: row.status || '',\n    inFlight: row.in_flight_requests\n  };\n});\n\nvar html = [];\n\nvar providerNames = Object.keys(byProvider).sort();\nif (providerNames.length) {\n  html.push('<div class=\"orr-summary\"><div class=\"orr-summary-h\">Суммарный остаток по провайдерам</div>');\n  providerNames.forEach(function (provider) {\n    var totals = byProvider[provider];\n    var ceiling = totals.count * 100;\n    var share = ceiling > 0 ? (totals.sum / ceiling) * 100 : 0;\n    var color = quotaColor(share);\n    html.push(\n      '<div class=\"orr-sum-row\">' +\n        '<div class=\"orr-sum-lbl\">' + esc(provider) + ' &middot; ' + totals.count + ' подкл.</div>' +\n        '<div class=\"orr-track\"><div class=\"orr-fill\" style=\"width:' + fmt(share) + '%;background:' + color + '\"></div></div>' +\n        '<div class=\"orr-sum-val\" style=\"color:' + color + '\">' + fmt(totals.sum) + '<i> / ' + ceiling + ' %</i></div>' +\n      '</div>'\n    );\n  });\n  html.push('</div>');\n}\n\nvar nodeIds = all.map(function (connection) { return connection.nodeId; })\n  .filter(function (id, index, list) { return list.indexOf(id) === index; })\n  .sort(function (a, b) {\n    var an = nodesById[a] ? nodesById[a].name : a;\n    var bn = nodesById[b] ? nodesById[b].name : b;\n    return an.localeCompare(bn);\n  });\n\nnodeIds.forEach(function (nodeId) {\n  var node = nodesById[nodeId] || { name: nodeId, status: '', inFlight: null };\n  var nodeConnections = all\n    .filter(function (connection) { return connection.nodeId === nodeId; })\n    .sort(function (a, b) {\n      return a.provider.localeCompare(b.provider) || a.account.localeCompare(b.account);\n    });\n\n  var models = nodeConnections.reduce(function (acc, connection) { return acc + connection.models.length; }, 0);\n  var enabled = nodeConnections.reduce(function (acc, connection) {\n    return acc + connection.models.filter(function (model) { return model.state === 'enabled'; }).length;\n  }, 0);\n  var healthy = node.status === 'Healthy';\n\n  html.push('<div class=\"orr-node\">');\n  html.push(\n    '<div class=\"orr-node-h\">' +\n      '<span class=\"orr-dot\" style=\"background:' + (healthy ? COLORS.ok : COLORS.bad) + '\"></span>' +\n      '<b>' + esc(node.name) + '</b>' +\n      (node.status ? '<span class=\"orr-pill\">' + esc(node.status) + '</span>' : '') +\n      (node.inFlight != null ? '<span class=\"orr-pill\">in-flight ' + esc(node.inFlight) + '</span>' : '') +\n      '<span class=\"orr-sp\">' +\n        plural(nodeConnections.length, 'подключение', 'подключения', 'подключений') + ' &middot; ' +\n        plural(models, 'модель', 'модели', 'моделей') + ' &middot; ' + enabled + ' включено</span>' +\n    '</div>'\n  );\n\n  nodeConnections.forEach(function (connection) {\n    html.push('<div class=\"orr-conn\">');\n    html.push(\n      '<div class=\"orr-conn-h\">' +\n        '<b>' + esc(connection.provider) + '</b>' +\n        '<span class=\"orr-acct\">' + esc(connection.account || connection.connectionId) +\n          ' &middot; conn ' + esc(connection.connectionId) + '</span>' +\n        (connection.min != null\n          ? '<span class=\"orr-min\" style=\"color:' + quotaColor(connection.min) + '\">min ' + fmt(connection.min) + '%</span>'\n          : '') +\n      '</div>'\n    );\n    html.push('<div class=\"orr-grid\"><div>');\n    html.push('<div class=\"orr-chips-h\">Остаток лимитов</div>');\n\n    if (!connection.reporting) {\n      html.push('<div class=\"orr-err\">квота не читается &middot; reason=' + esc(connection.reason) + '</div>');\n    } else if (!connection.quotas.length) {\n      html.push('<div class=\"orr-muted\">нет данных по квотам</div>');\n    } else {\n      connection.quotas.forEach(function (quota) {\n        var color = quotaColor(quota.percent);\n        html.push(\n          '<div class=\"orr-q\">' +\n            '<span>' + esc(quota.name) + '</span>' +\n            '<div class=\"orr-track\"><div class=\"orr-fill\" style=\"width:' + fmt(Math.max(0, Math.min(100, quota.percent))) +\n              '%;background:' + color + '\"></div></div>' +\n            '<b style=\"color:' + color + '\">' + Math.round(quota.percent) + '%</b>' +\n          '</div>'\n        );\n      });\n    }\n\n    html.push('</div><div>');\n    var enabledHere = connection.models.filter(function (model) { return model.state === 'enabled'; }).length;\n    html.push('<div class=\"orr-chips-h\">Модели подключения' + (connection.models.length\n      ? ' &middot; ' + enabledHere + ' из ' + connection.models.length + ' включено'\n      : '') + '</div>');\n\n    if (!connection.models.length) {\n      html.push('<div class=\"orr-muted\">нет данных каталога</div>');\n    } else {\n      html.push('<div class=\"orr-chips\">' + connection.models.map(function (model) {\n        var color = STATE_COLOR[model.state] || COLORS.absent;\n        return '<span class=\"orr-chip' + (model.state === 'absent' ? ' is-absent' : '') + '\" title=\"' + esc(model.state) + '\">' +\n          '<span class=\"orr-dot\" style=\"width:7px;height:7px;background:' + color + '\"></span>' +\n          esc(model.modelId) + '</span>';\n      }).join('') + '</div>');\n    }\n\n    html.push('</div></div></div>');\n  });\n\n  html.push('</div>');\n});\n\nif (!all.length) {\n  html.push('<div class=\"orr-muted\">Нет данных: коллектор ещё не опросил ноды либо метрики не скрейпятся.</div>');\n}\n\nhtml.push(\n  '<div class=\"orr-legend\">' +\n    '<span><span class=\"orr-dot\" style=\"background:' + COLORS.ok + '\"></span>включена в ORR</span>' +\n    '<span><span class=\"orr-dot\" style=\"background:' + COLORS.warn + '\"></span>есть в каталоге, выключена</span>' +\n    '<span><span class=\"orr-dot\" style=\"background:' + COLORS.absent + '\"></span>нода отдаёт, в каталоге нет</span>' +\n  '</div>'\n);\n\ncontext.element.innerHTML = html.join('');",
+        "status": "",
+        "externalStyles": [],
+        "contentPartials": [],
+        "wrap": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    }
+  ]
+}

@@ -29,8 +29,13 @@ spec:
             # the pod needs egress to 443 (allow-external-egress in network-policies.yaml).
             # Pinned to the version the dashboard JSON was authored against; the panel builds
             # its markup from JS in options.afterRender, hence sanitizing must be off.
+            #
+            # The version is separated by a SPACE, not '@': /run.sh passes the entry to
+            # `grafana cli plugins install` unquoted, so a space becomes the second argument
+            # while "id@version" is taken as one plugin id and 404s. The entrypoint is
+            # `#!/bin/bash -e`, so that 404 crash-loops the container.
             - name: GF_INSTALL_PLUGINS
-              value: "marcusolsson-dynamictext-panel@5.5.0"
+              value: "marcusolsson-dynamictext-panel 5.5.0"
             - name: GF_PANELS_DISABLE_SANITIZE_HTML
               value: "true"
             # Interpolated into provisioning/datasources by Grafana itself ($VAR syntax).

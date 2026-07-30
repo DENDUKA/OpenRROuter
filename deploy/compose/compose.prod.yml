@@ -350,7 +350,11 @@ services:
       # Business Text — панель «Ноды, провайдеры и модели» дашборда ORR Nodes & Provider Limits.
       # Ставится при старте контейнера, нужен исходящий HTTPS. Версия запиннена: 5.5.0 — последняя,
       # поддерживающая Grafana 10.4; с 6.0.0 плагин требует Grafana 11+.
-      GF_INSTALL_PLUGINS: "marcusolsson-dynamictext-panel@5.5.0"
+      # Версия отделяется ПРОБЕЛОМ, не '@': /run.sh передаёт запись в `grafana cli plugins
+      # install` без кавычек, поэтому пробел становится вторым аргументом, а "id@version"
+      # уезжает целиком как id плагина и получает 404. Entrypoint — `#!/bin/bash -e`,
+      # так что этот 404 роняет контейнер в рестарт-луп.
+      GF_INSTALL_PLUGINS: "marcusolsson-dynamictext-panel 5.5.0"
       # Панель строит разметку JS-шаблоном; без этого Grafana вырезает её содержимое санитайзером.
       # Безопасно ровно потому, что Grafana закрыта (анонимный доступ и регистрация выключены),
       # а содержимое панелей задаётся только provisioning-файлами из git (allowUiUpdates: false).

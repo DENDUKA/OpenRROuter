@@ -282,11 +282,16 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   перецелена с `site_visits`, поэтому последние ~35 минут ещё не схлопнутого трафика в панели
   не попадают; метрики дневные, для них незаметно), `ORR Nodes & Provider Limits`
   (`nodes-providers.json` — список нода → подключение провайдера → квоты и модели).
-- **`ORR Nodes & Provider Limits` требует плагина** `marcusolsson-dynamictext-panel@5.5.0`
+- **`ORR Nodes & Provider Limits` требует плагина** `marcusolsson-dynamictext-panel` 5.5.0
   (Business Text; 6.x уже требует Grafana 11, а в compose стоит 10.4.2). Ставится через
   `GF_INSTALL_PLUGINS` при старте контейнера, разметку строит JS в `options.afterRender`
   панели — поэтому там же включён `GF_PANELS_DISABLE_SANITIZE_HTML`. Верхняя `bargauge`-панель
   нативная и остаётся рабочей, даже если плагин не установился.
+- **В `GF_INSTALL_PLUGINS` версия отделяется пробелом, не `@`**: `"<id> <version>"`.
+  Grafana'вский `/run.sh` подставляет запись в `grafana cli plugins install` без кавычек, так
+  что пробел даёт второй аргумент, а `id@version` уходит одним id и ловит `404: Plugin not
+  found`. Entrypoint — `#!/bin/bash -e`, поэтому такой 404 роняет контейнер в CrashLoopBackOff,
+  а не просто пропускает плагин.
 - **В k8s-оверлее те же дашборды раздаёт `configMapGenerator grafana-dashboards-orr`**
   (`infra/kustomize/base/infra/kustomization.yaml`, файлы в `base/infra/dashboards/` — это
   **копии** `deploy/compose/grafana/dashboards/`, kustomize не умеет читать выше своей

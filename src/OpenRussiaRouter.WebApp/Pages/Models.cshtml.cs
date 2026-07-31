@@ -132,6 +132,9 @@ public class ModelsModel(
         return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+            // MemoryCache is configured with SizeLimit (Program.cs) — an entry without
+            // Size throws InvalidOperationException and takes the whole page down.
+            entry.Size = 1;
             return await CollectorProvider.ListNodeModelCatalogAsync(cancellationToken);
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }

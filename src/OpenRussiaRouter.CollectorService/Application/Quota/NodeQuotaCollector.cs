@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.CollectorService.Application.Collection;
@@ -63,7 +64,7 @@ public sealed class NodeQuotaCollector(
                 var parsed = 0;
                 foreach (var quota in quotasElement.EnumerateObject())
                 {
-                    if (TryReadQuota(quota.Value, out var remaining, out var percent))
+                    if (TryReadQuota(quota.Value, out var numbers))
                     {
                         parsed++;
                         measurements.Add(new QuotaMeasurement(
@@ -72,9 +73,11 @@ public sealed class NodeQuotaCollector(
                             connectionId,
                             accountName,
                             quota.Name,
-                            remaining,
-                            percent,
-                            [quota.Name]));
+                            numbers.Remaining,
+                            numbers.Percent,
+                            [quota.Name],
+                            numbers.Total,
+                            numbers.ResetAt));
                     }
                 }
 
@@ -86,7 +89,7 @@ public sealed class NodeQuotaCollector(
                 continue;
             }
 
-            if (!TryReadQuota(usage, out var flatRemaining, out var flatPercent))
+            if (!TryReadQuota(usage, out var flat))
             {
                 Status(false, QuotaUnavailableReasons.NoQuotaFields);
                 continue;
@@ -98,61 +101,78 @@ public sealed class NodeQuotaCollector(
                 connectionId,
                 accountName,
                 "total",
-                flatRemaining,
-                flatPercent,
-                []));
+                flat.Remaining,
+                flat.Percent,
+                [],
+                flat.Total,
+                flat.ResetAt));
             Status(true, QuotaUnavailableReasons.Ok);
         }
 
         return new NodeQuotaResult(measurements, statuses);
     }
 
-    private static bool TryReadQuota(System.Text.Json.JsonElement usage, out double remaining, out double? percent)
-    {
-        remaining = 0;
-        percent = null;
+    /// <summary>Числа одной квоты. Record вместо четырёх out-параметров.</summary>
+    private readonly record struct QuotaNumbers(
+        double Remaining,
+        double? Percent,
+        double? Total,
+        DateTimeOffset? ResetAt);
 
-        if (usage.TryGetProperty("remaining", out var remainingElement) &&
-            remainingElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+    private static bool TryReadQuota(System.Text.Json.JsonElement usage, out QuotaNumbers numbers)
+    {
+        numbers = default;
+
+        var total = ReadNumber(usage, "total") ?? ReadNumber(usage, "limit");
+        double remaining;
+
+        if (ReadNumber(usage, "remaining") is { } explicitRemaining)
         {
-            remaining = remainingElement.GetDouble();
+            remaining = explicitRemaining;
         }
-        else if (usage.TryGetProperty("total", out var totalElement) &&
-                 totalElement.ValueKind == System.Text.Json.JsonValueKind.Number &&
-                 usage.TryGetProperty("used", out var usedElement) &&
-                 usedElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        else if (total is { } totalValue && ReadNumber(usage, "used") is { } used)
         {
-            remaining = Math.Max(0, totalElement.GetDouble() - usedElement.GetDouble());
+            remaining = Math.Max(0, totalValue - used);
         }
         else
         {
             return false;
         }
 
-        if (usage.TryGetProperty("remainingPercentage", out var remainingPercentageElement) &&
-            remainingPercentageElement.ValueKind == System.Text.Json.JsonValueKind.Number)
+        var percent = ReadNumber(usage, "remainingPercentage");
+        if (percent is null)
         {
-            percent = remainingPercentageElement.GetDouble();
-        }
-        else if (usage.TryGetProperty("limit", out var limitElement) &&
-                 limitElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-        {
-            var limit = limitElement.GetDouble();
-            if (limit > 0)
+            // Порядок фолбэков сохранён из прежней реализации: limit вперёд total.
+            var ceiling = ReadNumber(usage, "limit") ?? ReadNumber(usage, "total");
+            if (ceiling > 0)
             {
-                percent = remaining / limit * 100.0;
-            }
-        }
-        else if (usage.TryGetProperty("total", out var totalElement) &&
-                 totalElement.ValueKind == System.Text.Json.JsonValueKind.Number)
-        {
-            var total = totalElement.GetDouble();
-            if (total > 0)
-            {
-                percent = remaining / total * 100.0;
+                percent = remaining / ceiling.Value * 100.0;
             }
         }
 
+        numbers = new QuotaNumbers(remaining, percent, total, ReadResetAt(usage));
         return true;
     }
+
+    private static double? ReadNumber(System.Text.Json.JsonElement usage, string property) =>
+        usage.TryGetProperty(property, out var element) &&
+        element.ValueKind == System.Text.Json.JsonValueKind.Number
+            ? element.GetDouble()
+            : null;
+
+    /// <summary>
+    /// Момент обнуления окна. Нода отдаёт ISO-8601 в UTC (<c>2026-08-01T17:52:38.000Z</c>);
+    /// разбираем инвариантной культурой с <see cref="DateTimeStyles.RoundtripKind"/>, иначе
+    /// локаль хоста подменит смещение. Мусор в поле — просто отсутствие срока, не ошибка квоты.
+    /// </summary>
+    private static DateTimeOffset? ReadResetAt(System.Text.Json.JsonElement usage) =>
+        usage.TryGetProperty("resetAt", out var element) &&
+        element.ValueKind == System.Text.Json.JsonValueKind.String &&
+        DateTimeOffset.TryParse(
+            element.GetString(),
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.RoundtripKind,
+            out var parsed)
+            ? parsed
+            : null;
 }

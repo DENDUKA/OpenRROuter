@@ -56,6 +56,40 @@ public class NodeQuotaCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_ReadsWindowCeilingAndResetMoment()
+    {
+        // Antigravity: остаток только через total-used, потолок в total, срок в resetAt (UTC).
+        var client = ClientReturning(("antigravity", "a@x.com",
+            """{"quotas":{"gemini-3-flash":{"used":250,"total":1000,"resetAt":"2026-07-31T22:53:14.000Z","remainingPercentage":75,"unlimited":false}}}"""));
+
+        var result = await Build(client).CollectAsync(Node(), CancellationToken.None);
+
+        result.Measurements.Should().ContainSingle().Which.Should().BeEquivalentTo(new
+        {
+            QuotaName = "gemini-3-flash",
+            Remaining = 750d,
+            Percent = 75d,
+            Total = (double?)1000d,
+            ResetAt = (DateTimeOffset?)new DateTimeOffset(2026, 7, 31, 22, 53, 14, TimeSpan.Zero),
+        });
+    }
+
+    [Fact]
+    public async Task CollectAsync_QuotaWithoutResetAt_KeepsTheMeasurement()
+    {
+        // Срок — необязательное поле: без него квота обязана остаться видимой с числами.
+        var client = ClientReturning(("glm", "glm-light",
+            """{"quotas":{"session":{"remaining":40,"total":100}}}"""));
+
+        var result = await Build(client).CollectAsync(Node(), CancellationToken.None);
+
+        var measurement = result.Measurements.Should().ContainSingle().Subject;
+        measurement.ResetAt.Should().BeNull();
+        measurement.Total.Should().Be(100d);
+        measurement.Percent.Should().Be(40d);
+    }
+
+    [Fact]
     public async Task CollectAsync_EmptyQuotasObject_YieldsNoMeasurementButAVisibleStatus()
     {
         // Antigravity с протухшей авторизацией: HTTP 200, quotas пуст, причина в message.

@@ -19,7 +19,6 @@ public sealed class PublicProviderLogoController(BillingProvider billingProvider
         var provider = await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-            entry.Size = 1;
             return await billingProvider.GetModelProviderAsync(id, ct);
         });
 

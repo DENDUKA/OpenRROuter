@@ -73,10 +73,10 @@ builder.Services.AddRazorPages()
     .AddDataAnnotationsLocalization(o =>
         o.DataAnnotationLocalizerProvider = (_, factory) => factory.Create(typeof(SharedResource)));
 builder.Services.AddControllers();
-builder.Services.AddMemoryCache(options =>
-{
-    options.SizeLimit = 100;
-});
+// Без SizeLimit намеренно: с ним каждая запись обязана указывать Size, а забытый Size
+// роняет вызов InvalidOperationException'ом (так падал каталог на /models). Кеш ограничен
+// только временем жизни записей.
+builder.Services.AddMemoryCache();
 builder.Services.Configure<RequestLocalizationOptions>(o =>
 {
     var cultures = SupportedCultures.All;

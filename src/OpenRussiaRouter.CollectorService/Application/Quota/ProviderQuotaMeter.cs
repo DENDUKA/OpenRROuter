@@ -37,6 +37,41 @@ public sealed class ProviderQuotaMeter : IDisposable
             unit: "%",
             description: "Remaining quota percentage for providers");
 
+        // Потолок окна: без него на дашборде нельзя показать «0 / 1 000», только проценты.
+        // Имя намеренно не `_total` — этот суффикс в Prometheus зарезервирован за счётчиками.
+        // Unit не задаём осознанно: экспортёр дописывает его к имени, и `unit: "tokens"`
+        // превратил бы метрику в `orr_provider_quota_limit_tokens` (ровно так вышло
+        // у соседнего `orr_provider_quota` → `orr_provider_quota_tokens`).
+        _meter.CreateObservableGauge(
+            "orr_provider_quota_limit",
+            () => store.Current.Measurements
+                .Where(m => m.Total.HasValue)
+                .Select(m => new Measurement<double>(
+                    m.Total!.Value,
+                    new KeyValuePair<string, object?>("node_id", m.NodeId),
+                    new KeyValuePair<string, object?>("provider", m.Provider),
+                    new KeyValuePair<string, object?>("connection_id", m.ConnectionId),
+                    new KeyValuePair<string, object?>("account_name", m.AccountName),
+                    new KeyValuePair<string, object?>("quota_name", m.QuotaName))),
+            description: "Quota ceiling for the current window");
+
+        // Момент обнуления окна как unix-время в ЗНАЧЕНИИ, а не в метке: время в метке — это
+        // новая серия на каждый сброс, то есть неограниченный рост кардинальности.
+        // Длина окна (5 часов / сутки / неделя) отсюда же и читается: провайдеры её
+        // отдельным полем не отдают.
+        _meter.CreateObservableGauge(
+            "orr_provider_quota_reset_seconds",
+            () => store.Current.Measurements
+                .Where(m => m.ResetAt.HasValue)
+                .Select(m => new Measurement<long>(
+                    m.ResetAt!.Value.ToUnixTimeSeconds(),
+                    new KeyValuePair<string, object?>("node_id", m.NodeId),
+                    new KeyValuePair<string, object?>("provider", m.Provider),
+                    new KeyValuePair<string, object?>("connection_id", m.ConnectionId),
+                    new KeyValuePair<string, object?>("account_name", m.AccountName),
+                    new KeyValuePair<string, object?>("quota_name", m.QuotaName))),
+            description: "Unix timestamp when the provider quota window resets");
+
         // 1 = квота читается, 0 = подключение живёт, но чисел не отдаёт. Без этого гейджа
         // сломанный провайдер просто пропадал из всех остальных метрик, и «квот нет» было
         // неотличимо от «квоты сломаны».

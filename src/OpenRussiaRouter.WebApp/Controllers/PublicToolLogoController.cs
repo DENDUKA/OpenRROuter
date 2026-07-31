@@ -23,7 +23,6 @@ public sealed class PublicToolLogoController(ContentProvider contentProvider, IM
         var cached = await cache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = CacheDuration;
-            entry.Size = 1;
             var logo = await contentProvider.GetToolLogoAsync(id, ct);
             if (logo is null) return null;
             var etag = $"\"{Convert.ToHexString(SHA256.HashData(logo.Bytes))}\"";

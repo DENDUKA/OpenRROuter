@@ -115,6 +115,14 @@ observable-гейджи никогда не создаются и метрик �
 `GET /api/integrations/providers/quota?…` (`includeInactive: false`), `usage` парсится как
 сырой `JsonElement`: либо вложенный объект `quotas` (по записи на каждую квоту), либо плоские
 поля (`remaining` / `total`-`used`, процент из `remainingPercentage` / `limit` / `total`).
+Кроме процента забираются потолок окна (`Total` = `total` ?? `limit`) и момент обнуления
+(`ResetAt` ← `resetAt`, ISO-8601, парсится `InvariantCulture` + `RoundtripKind`).
+
+**Длину окна («5-часовой лимит», «недельный») не отдаёт ни один провайдер** — в ответе есть
+только `resetAt`. Сам 9Router в Quota Tracker тоже показывает лишь обратный отсчёт («in 5h 0m»).
+Поэтому наружу отдаётся момент сброса, а не выведенный из него тип: горизонт по мере
+расходования окна уменьшается, и после сброса он равен длине окна, а перед сбросом — почти нулю.
+Оценка типа живёт в дашборде (подпись «окно ~суточный») и честно помечена как приблизительная.
 
 Ключевой инвариант: **каждое подключение обязано быть видимо, даже если чисел нет.**
 Кроме `QuotaMeasurement` возвращается `QuotaStatusMeasurement` с `Reporting` и `Reason` из
@@ -140,8 +148,17 @@ observable-гейджи никогда не создаются и метрик �
 combo-алиас) схлопываются по `(NodeId, ConnectionId, ModelId)` — метка Prometheus обязана быть
 уникальной.
 
+**Экспортёр дописывает `unit` к имени метрики.** `orr_provider_quota` объявлен с
+`unit: "tokens"` и виден в Prometheus как **`orr_provider_quota_tokens`** — под этим именем его
+и надо искать в PromQL и дашбордах. `orr_provider_quota_percent` не удвоился только потому,
+что имя уже кончается на единицу измерения. Новым гейджам unit не задавай, если он не должен
+попасть в имя: так сделаны `orr_provider_quota_limit` и `orr_provider_quota_reset_seconds`.
+
 Метрики (`ProviderQuotaMeter`, observable gauges, meter `OpenRussiaRouter`):
-`orr_provider_quota`, `orr_provider_quota_percent`, `orr_provider_quota_status`,
+`orr_provider_quota` (→ `_tokens`), `orr_provider_quota_limit` (потолок окна),
+`orr_provider_quota_reset_seconds` (unix-время сброса **в значении**, не в метке: время
+в метке = новая серия на каждый сброс и неограниченная кардинальность),
+`orr_provider_quota_percent`, `orr_provider_quota_status`,
 `orr_model_active`, `orr_model_quota_percent`, `orr_active_model_quota_percent`,
 `orr_node_model_catalog` (значение всегда 1, смысл в метке `billing_state` ∈
 `enabled|disabled|absent`, закрытый список `ModelBillingStates`; кардинальность =

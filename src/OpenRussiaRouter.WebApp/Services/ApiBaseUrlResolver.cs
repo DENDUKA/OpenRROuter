@@ -44,7 +44,6 @@ public sealed class ApiBaseUrlResolver(
         cache.Set(CacheKey, result, new MemoryCacheEntryOptions
         {
             AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5),
-            Size = 1,
         });
 
         return result;

@@ -269,7 +269,10 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   Ключи — `SiteVisits:Compaction:*`, механика — в
   [BuildingBlocks/CLAUDE.md](src/OpenRussiaRouter.BuildingBlocks/CLAUDE.md).
 - **Метрики нод и провайдеров пишет CollectorService** (`ProviderQuotaMeter`) — остатки квот
-  (`orr_provider_quota*`), их читаемость (`orr_provider_quota_status` + `reason`) и полный срез
+  (`orr_provider_quota*`), потолок окна и момент его обнуления (`orr_provider_quota_limit`,
+  `orr_provider_quota_reset_seconds`; **длину окна — «5-часовой», «недельный» — не сообщает
+  ни один провайдер**, она оценивается по горизонту до сброса и на дашборде помечена «~»),
+  их читаемость (`orr_provider_quota_status` + `reason`) и полный срез
   «что нода отдаёт на подключении» — `orr_node_model_catalog{node_id, provider, connection_id,
   model_id, router_model_id, billing_state}`, где `billing_state` ∈ `enabled|disabled|absent`
   (закрытый список `ModelBillingStates`). Это единственный источник «моделей, которых нет
@@ -289,6 +292,14 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   парку нод — ради этого у большой панели есть **отдельный нефильтрованный таргет `E`**
   (`orr_provider_quota_percent` без селектора). Уберёшь `E` или навесишь на него `$node` —
   сводка молча схлопнется до одной ноды.
+- **Панель со смешанными датасорсами обязана быть `-- Mixed --`.** У большой панели
+  `ORR Nodes & Provider Limits` четыре таргета в Prometheus и один (`D`) в Postgres.
+  Grafana учитывает `datasource` **отдельного таргета** только если у панели на верхнем уровне
+  стоит `{"type":"datasource","uid":"-- Mixed --"}`; с конкретным датасорсом все таргеты уходят
+  в него, и Prometheus молча выбрасывает SQL-таргет (у него нет `expr`). Симптом — не ошибка,
+  а исчезнувшие данные: в заголовках нод вместо имён сырые `node_id`, без плашек статуса
+  и in-flight. Единственная такая панель в проекте; UI при этом честно рисует «D (ORR Billing)»,
+  так что по редактору проблему не видно.
 - **`ORR Nodes & Provider Limits` требует плагина** `marcusolsson-dynamictext-panel` 5.5.0
   (Business Text; 6.x уже требует Grafana 11, а в compose стоит 10.4.2). Ставится через
   `GF_INSTALL_PLUGINS` при старте контейнера, разметку строит JS в `options.afterRender`

@@ -310,6 +310,11 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
   подставленный клиентом `X-Forwarded-For` не обходил per-IP rate limit платёжного вебхука;
   не фиксировать для этого Docker-подсеть и не убирать forwarding схемы/host.
 - Внешний логин не появится, пока не заданы оба секрета соответствующего провайдера.
+- **`AddMemoryCache()` — без `SizeLimit`, и возвращать его нельзя.** С заданным `SizeLimit`
+  ASP.NET требует `Size` у **каждой** записи, а забытый `Size` не деградирует, а бросает
+  `InvalidOperationException` прямо из `Set`/`GetOrCreateAsync` — так `/models` целиком уходила
+  в «Failed to load public model catalog» из-за одной записи каталога. Кеш ограничивается только
+  временем жизни записей (каталог нод 60 мин, список провайдеров 1 ч, логотипы 24 ч).
 
 ## Тесты
 

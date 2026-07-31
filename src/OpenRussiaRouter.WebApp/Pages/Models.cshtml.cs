@@ -26,6 +26,7 @@ public class ModelsModel(
 
     private const string CatalogCacheKey = "public-models-node-catalog";
     private const string ProvidersCacheKey = "public-models-providers";
+    private static readonly TimeSpan CatalogCacheDuration = TimeSpan.FromMinutes(60);
     private static readonly TimeSpan ProvidersCacheDuration = TimeSpan.FromHours(1);
     private static readonly SemaphoreSlim ProvidersCacheLock = new(1, 1);
 
@@ -131,10 +132,7 @@ public class ModelsModel(
     {
         return await memoryCache.GetOrCreateAsync(CatalogCacheKey, async entry =>
         {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            // MemoryCache is configured with SizeLimit (Program.cs) — an entry without
-            // Size throws InvalidOperationException and takes the whole page down.
-            entry.Size = 1;
+            entry.AbsoluteExpirationRelativeToNow = CatalogCacheDuration;
             return await CollectorProvider.ListNodeModelCatalogAsync(cancellationToken);
         }) ?? new NodeModelCatalogResult([], [], [], "Cached catalog is empty.");
     }
@@ -163,7 +161,6 @@ public class ModelsModel(
             memoryCache.Set(ProvidersCacheKey, projection, new MemoryCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = ProvidersCacheDuration,
-                Size = 1,
             });
 
             return projection;

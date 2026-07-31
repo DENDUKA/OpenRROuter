@@ -282,6 +282,13 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   перецелена с `site_visits`, поэтому последние ~35 минут ещё не схлопнутого трафика в панели
   не попадают; метрики дневные, для них незаметно), `ORR Nodes & Provider Limits`
   (`nodes-providers.json` — список нода → подключение провайдера → квоты и модели).
+- **В `ORR Nodes & Provider Limits` селектор `$node` фильтрует только детальный список.**
+  Переменная — query по `control.router_nodes` (`__text` = имя, `__value` = id; колонка
+  `character varying` без дефисов, поэтому значение совпадает с меткой `node_id` в Prometheus),
+  `allValue = .*` под фильтр `=~"$node"`. Сводка по провайдерам намеренно остаётся по всему
+  парку нод — ради этого у большой панели есть **отдельный нефильтрованный таргет `E`**
+  (`orr_provider_quota_percent` без селектора). Уберёшь `E` или навесишь на него `$node` —
+  сводка молча схлопнется до одной ноды.
 - **`ORR Nodes & Provider Limits` требует плагина** `marcusolsson-dynamictext-panel` 5.5.0
   (Business Text; 6.x уже требует Grafana 11, а в compose стоит 10.4.2). Ставится через
   `GF_INSTALL_PLUGINS` при старте контейнера, разметку строит JS в `options.afterRender`

@@ -24,7 +24,8 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   и у его канала лимит сообщения поднят до 8 MiB (картинки инструментов ≤ 1 MiB).
 - **Именованные `HttpClient`**: `ApiGateway` (`ApiGatewayUrl`, 120с), `RouterNode`
   (HTTP/1.1 exact, 20с), `DirectNodeChat` (HTTP/1.1, 120с — прямой чат с нодой из `/admin/nodes`),
-  `OpenRouterDirect` (`https://openrouter.ai`, 20с), `Cbr`, клиент Rollypay, клиент Brevo.
+  `OpenRouterDirect` (`https://openrouter.ai`, 20с), `Cbr`, клиент Rollypay, клиент Brevo,
+  `YandexPay` (sandbox Merchant API, 15с).
 - `AddEmailInfrastructure`, `AddProductAnalytics` + `AddSiteVisitTracking` (BuildingBlocks),
   currency-слой, платежи, rate-limit политика вебхука.
 - **Hosted services**: `EmailDispatchWorker`, `CbrRateRefresher`, `PaymentReconciliationWorker`,
@@ -45,7 +46,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   (HSTS, работает только для HTTPS, localhost исключён ASP.NET Core по умолчанию)
   + inline middleware с `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: strict-origin-when-cross-origin`,
-  `Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline'; frame-ancestors 'none'`.
+  `Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://pay.yandex.ru; frame-src https://pay.yandex.ru; connect-src 'self' https://pay.yandex.ru; frame-ancestors 'none'`.
   Это первый эшелон защиты clickjacking и второй эшелон для T-013 (XSS через markdown).
   `UseHsts` автоматически неактивен в Development.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
@@ -63,7 +64,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Services/Content` | `ContentProvider` (gRPC→Content) — каталог Tools, логотипы/картинки, `ContentException` |
 | `Services/ControlPlane` | `ControlPlaneProvider` (gRPC) + `RouterNodeApiProvider` (прямой HTTP к admin API нод и `/v1/chat/completions`) |
 | `Services/Collector` | `CollectorProvider` (gRPC→Collector) |
-| `Services/Payments` | Чекаут, провайдеры, вебхук-процессор, гвард, воркер сверки, `Rollypay/` |
+| `Services/Payments` | Чекаут, провайдеры, вебхук-процессор, гвард, воркер сверки, `Rollypay/`, `YandexPay/` |
 | `Services/Currency` | Display-only слой курсов ЦБ РФ: `CbrClient`, `CbrRateSnapshot`, `CbrRateRefresher`, `CbrExchangeRateProvider`, `CurrencyFormatter`, `DisplayCurrency` |
 | `Services/Enrichment` | `OpenRouterCatalogClient` (обогащение каталога моделей), `ReasoningEnrichmentWorker` |
 | `Services/Legal` | `LegalDocumentService` — рендер `docs/mandatory/*.md` в страницы `/legal/*` |
@@ -87,7 +88,7 @@ PascalCase-путь файла. Источник истины — директи
 | Аутентификация | `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`, `/invite/{token}`, `/logout`, `/login/externalcallback` |
 | Кабинет (`[Authorize]`) | `/workspace` (редирект на `/workspace/apikeys`), `/workspace/apikeys`, `/workspace/apikeys/limits`, `/workspace/activity`, `/workspace/credits`, `/workspace/paymentsuccess`, `/workspace/settings` |
 | Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest`, `/admin/visitors`, `/admin/sessions` (голый `@page`, путь из имени файла `Admin/Sessions.cshtml`), `/admin/sessions/{id:long}` (явная директива `@page "/admin/sessions/{id:long}"` в `Admin/SessionDetails.cshtml` — иначе путь был бы `/admin/sessiondetails`) |
-| Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`) |
+| Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`), `POST /workspace/credits/yandexpay/checkout` (admin-only, JSON), `POST /v1/webhook` (Yandex Pay JWT ES256, анонимный) |
 | Контроллеры | `POST /preferences/currency` (`[Authorize]`), `POST /preferences/language` (анонимно, ставит culture-cookie), `GET /providers/logo/{id}`, `GET /tools/logo/{id}` (фолбэк — монограмма), `GET /tools/image/{id:guid}`, `GET /admin/providers/logo/{id}`, `POST /admin/gatewaytest/stream` (SSE) |
 | Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, OTel-эндпоинты |
 
@@ -110,7 +111,9 @@ PascalCase-путь файла. Источник истины — директи
   `HasUserHadPaidTopUpAsync`; ошибка чтения настройки просто отключает бонус.
 - **Реестр провайдеров** `PaymentProviderRegistry` + `IPaymentProvider`: `MockPaymentProvider`
   регистрируется **только в Development**, `RollypayPaymentProvider` — всегда, но активен лишь при
-  `Payments:ActiveProvider="rollypay"`. Пустой `ActiveProvider` просто выключает платежи.
+  `Payments:ActiveProvider="rollypay"`, `YandexPayPaymentProvider` — всегда, но используется
+  только через admin-only эндпоинт чекаута (не зависит от `ActiveProvider`). Пустой `ActiveProvider`
+  просто выключает публичные платежи.
 - **[`PaymentStartupGuard`](Services/Payments/PaymentStartupGuard.cs)** вне Development падает при:
   `ActiveProvider="mock"`, неизвестном провайдере и **`Payments:Rollypay:TestMode=true`**
   (тестовый платёж денег не двигает, но Billing зачисляет реальные USD). Не ослаблять.
@@ -121,6 +124,16 @@ PascalCase-путь файла. Источник истины — директи
   подписи, 400 при неразбираемом теле, 200 `ok`/`ignored`, 422 при отказе Billing.
   Незаконфигуренный `SigningSecret` → все вебхуки 401 (fail safe), пустой `ApiKey` → исходящие
   вызовы бросают.
+- **Yandex Pay (sandbox)** — альтернативный платёжный провайдер (только карта, только sandbox,
+  только для админов). Состав: `YandexPayPaymentProvider` (IPaymentProvider, Name=yandexpay,
+  SettlementCurrency=RUB), `YandexPayClient` (HTTP к Merchant API, sandbox URL,
+  `Authorization: Api-Key {merchantId}`), `YandexPayJwkProvider` (кеш JWK-ключей из
+  `https://sandbox.pay.yandex.ru/api/jwks`), `YandexPayWebhookVerifier` (ES256 JWT
+  верификация + `merchantId` валидация + подтягивание суммы из API для `CAPTURED`).
+  Эндпоинты: `POST /workspace/credits/yandexpay/checkout` (admin-only, JSON),
+  `POST /v1/webhook` (JWT ES256, анонимный). Включается через `Payments:YandexPay:Enabled=true`
+  + `Payments:YandexPay:MerchantId`. Sandbox merchantId = API key. Секреты — только env/secret.
+  `_WorkspaceLayout` не поддерживает `@section Scripts` — скрипт Yandex Pay инлайнов.
 - **`PaymentReconciliationWorker`** добирает статусы: раз в `Reconciliation:Interval` берёт
   `Created`-платежи старше `OlderThanMinutes` через Billing (`SKIP LOCKED` + лиза), спрашивает
   провайдера и **прогоняет ответ через тот же `PaymentWebhookProcessor`**, замапив статус
@@ -274,7 +287,7 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
 | `ProductAnalytics:*` | синк `orr_analytics` (`Enabled`, `ConnectionString`, `IdentitySalt`, `Environment`, размеры очереди) |
 | `SiteVisits:{Enabled,QueueCapacity,BatchSize}` | трекинг визитов; вложенная секция `SiteVisits:Compaction:*` здесь не читается — компакт хостит BillingService |
 | `ExchangeRates:*` | display-only курсы ЦБ РФ + фолбэки |
-| `Payments:*` | `ActiveProvider`, `Min/MaxTopUpUsd`, `Mock.SharedSecret`, `Rollypay.*`, `Reconciliation.*` |
+| `Payments:*` | `ActiveProvider`, `Min/MaxTopUpUsd`, `Mock.SharedSecret`, `Rollypay.*`, `YandexPay.*` (Enabled, Sandbox, MerchantId, SuccessRedirectUrl, FailRedirectUrl, OrderTtlSeconds), `Reconciliation.*` |
 | `Alerting:{WebhookToken,EmailTo}` | алерт-вебхук; **в `appsettings.json` отсутствуют** |
 
 `appsettings.Development.json` включает mock-провайдер, dev s2s-токен и dev-креды Yandex —

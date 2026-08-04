@@ -228,14 +228,19 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   **только `PaymentCheckoutService`**, никогда `BillingProvider.CreatePayment` / `AttachProviderRef`
   напрямую. Флоу: Billing создаёт строку и `payment_id` (= `order_id`) → провайдер отдаёт свой id
   и pay URL → `AttachProviderRef` атомарно их привязывает.
-- **Провайдеры** за `IPaymentProvider` + `PaymentProviderRegistry`: `mock` (только dev) и
-  `rollypay` (СБП-агрегатор, `Services/Payments/Rollypay/`). Активный выбирается
-  `Payments:ActiveProvider`; пустое значение просто выключает платежи.
+- **Провайдеры** за `IPaymentProvider` + `PaymentProviderRegistry`: `mock` (только dev),
+  `rollypay` (СБП-агрегатор, `Services/Payments/Rollypay/`) и
+  `yandexpay` (sandbox, карта, `Services/Payments/YandexPay/`). Активный публичный провайдер
+  выбирается `Payments:ActiveProvider`; пустое значение просто выключает публичные платежи.
+  Yandex Pay используется только через admin-only эндпоинт чекаута и не зависит от `ActiveProvider`.
 - **`PaymentStartupGuard`** падает на старте, если вне Development активен `mock` или
   неизвестный провайдер. Не ослаблять — мок не должен быть доступен в проде.
 - **Вебхук** — `PaymentWebhookEndpoint.Map(app)`: анонимный (провайдер не может залогиниться),
   per-IP rate limit, лимит размера тела, **verify-then-parse по сырому телу**
   (`RollypayWebhookVerifier`). Незаконфигуренный секрет → 401, а не пропуск.
+  Yandex Pay вебхук (`POST /v1/webhook`) — JWT ES256, верификация через JWK-ключи
+  (`YandexPayWebhookVerifier`), `merchantId` валидация, сумма для `CAPTURED` подтягивается
+  из Merchant API.
 - **`PaymentReconciliationWorker`** добирает статусы: `Created` без оплаты уходит в `Expired`.
 
 Страницы: `/workspace/credits` (пополнение), `/pay/mock/{paymentId}` (dev-заглушка оплаты),

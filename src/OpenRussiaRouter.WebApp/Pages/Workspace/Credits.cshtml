@@ -86,12 +86,17 @@
             <script>
                 function yandexPayCheckout() {
                     var btn = document.getElementById('yandexPayBtn');
+                    var amountInput = document.getElementById('TopUpAmountRaw');
+                    var currencySelect = document.getElementById('SelectedCurrency');
+                    var amount = parseFloat((amountInput.value || '').replace(',', '.'));
+                    var currency = currencySelect ? currencySelect.value : 'RUB';
+                    if (!amount || amount <= 0) { alert('Введите сумму'); return; }
                     btn.disabled = true;
                     btn.textContent = 'Создание платежа…';
                     fetch('/workspace/credits/yandexpay/checkout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: 10, currency: 'RUB', legalConsent: true })
+                        body: JSON.stringify({ amount: amount, currency: currency, legalConsent: true })
                     }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
                     .then(function(res) {
                         if (res.ok && res.data.payUrl) { window.location.href = res.data.payUrl; }

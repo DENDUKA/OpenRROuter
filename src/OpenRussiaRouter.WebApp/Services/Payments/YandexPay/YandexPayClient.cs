@@ -35,9 +35,9 @@ public sealed class YandexPayClient
     }
 
     /// <summary>
-    /// Create an order at Yandex Pay sandbox. Returns the order details including payment URL.
+    /// Create an order at Yandex Pay sandbox. Returns the URL the payer must be sent to.
     /// </summary>
-    public async Task<YandexPayOrderDetails> CreateOrderAsync(
+    public async Task<string> CreateOrderAsync(
         string orderId,
         decimal amount,
         string successRedirectUrl,
@@ -99,21 +99,19 @@ public sealed class YandexPayClient
         }
 
         var result = JsonSerializer.Deserialize<YandexPayCreateOrderResponse>(body, JsonOptions);
-        if (result?.Data?.Order is null)
+        if (string.IsNullOrWhiteSpace(result?.Data?.PaymentUrl))
         {
-            throw new InvalidOperationException("Yandex Pay create order returned no order data.");
-        }
-
-        if (string.IsNullOrWhiteSpace(result.Data.Order.PaymentUrl))
-        {
-            throw new InvalidOperationException("Yandex Pay create order returned no paymentUrl.");
+            // Include the body: a 200 that carries no link means the response shape drifted, and
+            // without it the failure is indistinguishable from a rejected order.
+            throw new InvalidOperationException(
+                $"Yandex Pay create order returned no paymentUrl: {body}");
         }
 
         _logger.LogInformation(
             "Yandex Pay: order {OrderId} created, paymentUrl received.",
             orderId);
 
-        return result.Data.Order;
+        return result.Data.PaymentUrl;
     }
 
     /// <summary>

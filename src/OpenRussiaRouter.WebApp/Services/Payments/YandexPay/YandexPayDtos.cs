@@ -93,13 +93,25 @@ public sealed class YandexPayRedirectUrls
 /// <summary>
 /// Response from POST /api/merchant/v1/orders.
 /// </summary>
+/// <remarks>
+/// Create-order answers <c>{"code":200,"status":"success","data":{"paymentUrl":"…"}}</c> — the
+/// link sits directly under <c>data</c>, with no <c>order</c> object. Only the GET endpoint wraps
+/// its payload in <see cref="YandexPayOrderData"/>; reusing that shape here deserializes into a
+/// null order and loses the pay URL on an otherwise successful 200.
+/// </remarks>
 public sealed class YandexPayCreateOrderResponse
 {
     [JsonPropertyName("status")]
     public string? Status { get; set; }
 
     [JsonPropertyName("data")]
-    public YandexPayOrderData? Data { get; set; }
+    public YandexPayCreateOrderData? Data { get; set; }
+}
+
+public sealed class YandexPayCreateOrderData
+{
+    [JsonPropertyName("paymentUrl")]
+    public string? PaymentUrl { get; set; }
 }
 
 public sealed class YandexPayOrderData

@@ -43,7 +43,7 @@ public sealed class YandexPayPaymentProvider : IPaymentProvider
 
     public async Task<PaymentCreated> CreateAsync(PaymentRequest request, CancellationToken ct)
     {
-        var order = await _client.CreateOrderAsync(
+        var paymentUrl = await _client.CreateOrderAsync(
             orderId: request.OrderId,
             amount: request.Amount,
             successRedirectUrl: _settings.SuccessRedirectUrl,
@@ -57,7 +57,7 @@ public sealed class YandexPayPaymentProvider : IPaymentProvider
 
         return new PaymentCreated(
             ProviderPaymentId: request.OrderId,
-            PayUrl: order.PaymentUrl!);
+            PayUrl: paymentUrl);
     }
 
     /// <summary>

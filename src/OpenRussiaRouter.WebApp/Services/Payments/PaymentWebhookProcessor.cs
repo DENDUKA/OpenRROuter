@@ -1,3 +1,4 @@
+using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.WebApp.Services.Billing;
 
 namespace OpenRussiaRouter.WebApp.Services.Payments;
@@ -43,11 +44,38 @@ public sealed class PaymentWebhookProcessor
         Applied,
         /// <summary>Event was a no-op (e.g. <c>created</c>).</summary>
         Ignored,
-        /// <summary>Event was rejected by Billing (e.g. amount mismatch, invalid transition).</summary>
+        /// <summary>
+        /// Billing refused the event for a reason that could clear on its own (provider or FX
+        /// outage, missing amount we may be able to fetch next time). Worth a redelivery.
+        /// </summary>
         Rejected,
+        /// <summary>
+        /// Billing refused the event for good: the payment is already in a state that cannot accept
+        /// it, or the confirmed amount disagrees with the record. Redelivering the identical event
+        /// produces the identical refusal, so the provider must be told to stop.
+        /// </summary>
+        RejectedPermanent,
     }
 
     public sealed record ProcessResult(ProcessOutcome Outcome, string? ErrorCode = null);
+
+    /// <summary>
+    /// Billing error codes that no redelivery can turn into an acceptance.
+    /// </summary>
+    /// <remarks>
+    /// Payment providers treat any non-2xx as "retry later" — Yandex Pay keeps redelivering for 24h
+    /// with backoff. Answering 422 to a verdict that is final buys nothing and turns one dead
+    /// payment into a day of noise, so these are acknowledged instead.
+    /// <para>
+    /// Deliberately absent: <c>payment_not_found</c> and <c>AMOUNT_MISSING</c>. Both can be caused
+    /// by something transient — a webhook overtaking the local row, or the amount lookup against the
+    /// provider API failing — and dropping a payment event is far worse than logging a retry.
+    /// </para>
+    /// </remarks>
+    private static bool IsPermanentRejection(string? errorCode) => errorCode is
+        ErrorCodes.PaymentInvalidTransition or
+        ErrorCodes.PaymentAmountMismatch or
+        ErrorCodes.PaymentAlreadyProcessed;
 
     /// <summary>
     /// Process a verified webhook event. Caller has already done <c>IPaymentProvider.Verify</c>
@@ -128,7 +156,9 @@ public sealed class PaymentWebhookProcessor
                 "ConfirmPaymentByProvider returned Confirmed=false for provider={Provider} " +
                 "providerRef={ProviderRef} order={Order} eventId={EventId} errorCode={ErrorCode}.",
                 providerName, evt.ProviderPaymentId, evt.OrderId, evt.ProviderEventId, result.ErrorCode);
-            return new ProcessResult(ProcessOutcome.Rejected, result.ErrorCode);
+            return new ProcessResult(
+                IsPermanentRejection(result.ErrorCode) ? ProcessOutcome.RejectedPermanent : ProcessOutcome.Rejected,
+                result.ErrorCode);
         }
 
         // Grant first top-up bonus if applicable (best-effort)
@@ -174,7 +204,9 @@ public sealed class PaymentWebhookProcessor
                 "ApplyPaymentEvent returned Applied=false for provider={Provider} event={Event} " +
                 "providerRef={ProviderRef} order={Order} eventId={EventId} errorCode={ErrorCode}.",
                 providerName, eventType, evt.ProviderPaymentId, evt.OrderId, evt.ProviderEventId, result.ErrorCode);
-            return new ProcessResult(ProcessOutcome.Rejected, result.ErrorCode);
+            return new ProcessResult(
+                IsPermanentRejection(result.ErrorCode) ? ProcessOutcome.RejectedPermanent : ProcessOutcome.Rejected,
+                result.ErrorCode);
         }
 
         return new ProcessResult(ProcessOutcome.Applied);

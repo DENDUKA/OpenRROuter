@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Payments;
 
@@ -195,4 +196,73 @@ public class PaymentWebhookProcessorTests
         result.Outcome.Should().Be(PaymentWebhookProcessor.ProcessOutcome.Rejected);
         result.ErrorCode.Should().Be("PaymentAmountMismatch");
     }
+
+    // A payment already in a terminal state, or one whose confirmed amount disagrees with the
+    // record, will refuse the same event forever. Providers read a non-2xx as "retry" — Yandex Pay
+    // for 24h — so these have to be separable from the refusals a redelivery could still fix.
+
+    [Theory]
+    [InlineData(ErrorCodes.PaymentInvalidTransition)]
+    [InlineData(ErrorCodes.PaymentAmountMismatch)]
+    [InlineData(ErrorCodes.PaymentAlreadyProcessed)]
+    public async Task apply_rejected_for_a_final_reason_is_RejectedPermanent(string errorCode)
+    {
+        var billing = new FakeBillingProvider
+        {
+            NextApplyResult = new ApplyPaymentEventResult(false, null, ErrorCode: errorCode)
+        };
+
+        var result = await CreateProcessor(billing).ProcessAsync(
+            "yandexpay", CanceledEvent(), rawPayload: "{}", signatureOk: true, CancellationToken.None);
+
+        result.Outcome.Should().Be(PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent);
+        result.ErrorCode.Should().Be(errorCode);
+    }
+
+    [Theory]
+    [InlineData(ErrorCodes.FxQuoteUnavailable)]
+    [InlineData(ErrorCodes.PaymentProviderUnavailable)]
+    [InlineData(ErrorCodes.InternalError)]
+    [InlineData(ErrorCodes.PaymentNotFound)]
+    public async Task apply_rejected_for_a_reason_that_may_clear_stays_retryable(string errorCode)
+    {
+        var billing = new FakeBillingProvider
+        {
+            NextApplyResult = new ApplyPaymentEventResult(false, null, ErrorCode: errorCode)
+        };
+
+        var result = await CreateProcessor(billing).ProcessAsync(
+            "yandexpay", CanceledEvent(), rawPayload: "{}", signatureOk: true, CancellationToken.None);
+
+        result.Outcome.Should().Be(PaymentWebhookProcessor.ProcessOutcome.Rejected);
+    }
+
+    [Fact]
+    public async Task confirm_rejected_for_a_final_reason_is_RejectedPermanent()
+    {
+        var billing = new FakeBillingProvider
+        {
+            NextConfirmResult = new ConfirmPaymentResult(
+                false, null, null, ErrorCode: ErrorCodes.PaymentInvalidTransition)
+        };
+        var evt = new PaymentWebhookEvent(
+            ProviderPaymentId: "yp-1", OrderId: "pay-1",
+            EventType: "paid",
+            ConfirmedAmount: 81.13m, ConfirmedCurrency: "RUB",
+            ProviderEventId: null, Reason: null);
+
+        var result = await CreateProcessor(billing).ProcessAsync(
+            "yandexpay", evt, rawPayload: "{}", signatureOk: true, CancellationToken.None);
+
+        result.Outcome.Should().Be(PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent);
+    }
+
+    private static PaymentWebhookEvent CanceledEvent() => new(
+        ProviderPaymentId: "yp-1",
+        OrderId: "pay-1",
+        EventType: "canceled",
+        ConfirmedAmount: null,
+        ConfirmedCurrency: null,
+        ProviderEventId: null,
+        Reason: null);
 }

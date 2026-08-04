@@ -97,6 +97,13 @@ public static class YandexPayWebhookEndpoint
         {
             PaymentWebhookProcessor.ProcessOutcome.Applied or PaymentWebhookProcessor.ProcessOutcome.Ignored =>
                 Results.Ok(new { code = StatusCodes.Status200OK }),
+            // Acknowledged on purpose: the verdict is final, and Yandex Pay reads any non-2xx as
+            // "retry" — for 24h with backoff. The error still travels in the body and the log.
+            PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent => Results.Ok(new
+            {
+                code = StatusCodes.Status200OK,
+                error = result.ErrorCode,
+            }),
             PaymentWebhookProcessor.ProcessOutcome.Rejected => Results.UnprocessableEntity(new
             {
                 code = StatusCodes.Status422UnprocessableEntity,

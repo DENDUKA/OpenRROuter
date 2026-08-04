@@ -133,6 +133,10 @@ public static class PaymentWebhookEndpoint
         {
             PaymentWebhookProcessor.ProcessOutcome.Applied => Results.Ok(new { status = "ok" }),
             PaymentWebhookProcessor.ProcessOutcome.Ignored => Results.Ok(new { status = "ignored" }),
+            // Final verdict: acknowledge so the provider stops redelivering an event we will never
+            // accept. The reason stays visible in the body and in the processor's warning.
+            PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent =>
+                Results.Ok(new { status = "ignored", error = result.ErrorCode }),
             PaymentWebhookProcessor.ProcessOutcome.Rejected => Results.Problem(
                 title: "Webhook rejected by billing",
                 detail: result.ErrorCode,

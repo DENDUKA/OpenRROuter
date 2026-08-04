@@ -19,6 +19,9 @@
     <PackageVersion Include="AspNet.Security.OAuth.Yandex" Version="8.1.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Process" Version="1.15.1-beta.1" />
     <PackageVersion Include="Yarp.ReverseProxy" Version="2.3.0" />
+    <!-- JWT/JWK for Yandex Pay webhook verification -->
+    <PackageVersion Include="Microsoft.IdentityModel.Protocols" Version="8.3.0" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.3.0" />
     <!-- Markdown -->
     <PackageVersion Include="Markdig" Version="0.37.0" />
     <!-- Email -->

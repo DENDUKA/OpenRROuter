@@ -18,6 +18,8 @@
     <PackageReference Include="AspNet.Security.OAuth.Yandex"  />
     <PackageReference Include="Grpc.Net.Client"  />
     <PackageReference Include="Grpc.Net.ClientFactory"  />
+    <PackageReference Include="Microsoft.IdentityModel.Protocols"  />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt"  />
     <PackageReference Include="Grpc.Tools" >
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>

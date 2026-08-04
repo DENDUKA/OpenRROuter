@@ -72,6 +72,36 @@
                typing rubles cannot tell from "$1.00" that 50 ₽ will bounce. *@
             <p class="text-muted" style="font-size: 13px;">@Localizer["Credits_MinTopUp", Model.FormatAmount(Model.MinTopUpUsd), Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
         </form>
+
+        @if (Model.IsAdmin && Model.YandexPayEnabled)
+        {
+            <hr style="margin: var(--spacing-md) 0;" />
+            <div>
+                <p class="text-muted" style="font-size: 13px; margin-bottom: 8px;">Yandex Pay (sandbox, карта)</p>
+                <button type="button" class="btn btn-outline-secondary" id="yandexPayBtn"
+                        onclick="yandexPayCheckout()">
+                    Оплатить через Yandex Pay
+                </button>
+            </div>
+            <script>
+                function yandexPayCheckout() {
+                    var btn = document.getElementById('yandexPayBtn');
+                    btn.disabled = true;
+                    btn.textContent = 'Создание платежа…';
+                    fetch('/workspace/credits/yandexpay/checkout', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ amount: 10, currency: 'RUB', legalConsent: true })
+                    }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+                    .then(function(res) {
+                        if (res.ok && res.data.payUrl) { window.location.href = res.data.payUrl; }
+                        else { alert(res.data.error || 'Ошибка создания платежа'); btn.disabled = false; btn.textContent = 'Оплатить через Yandex Pay'; }
+                    }).catch(function() {
+                        alert('Сетевая ошибка'); btn.disabled = false; btn.textContent = 'Оплатить через Yandex Pay';
+                    });
+                }
+            </script>
+        }
     </div>
 </div>
 

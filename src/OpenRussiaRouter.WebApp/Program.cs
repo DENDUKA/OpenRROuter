@@ -22,6 +22,7 @@ using OpenRussiaRouter.WebApp.Services.Enrichment;
 using OpenRussiaRouter.WebApp.Api;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using OpenRussiaRouter.WebApp.Services.Payments.Rollypay;
+using OpenRussiaRouter.WebApp.Services.Payments.YandexPay;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -343,6 +344,17 @@ builder.Services.AddHttpClient(RollypayPaymentProvider.HttpClientName, (sp, clie
 });
 builder.Services.AddSingleton<IPaymentProvider, RollypayPaymentProvider>();
 
+// Yandex Pay (sandbox) — card-only alternative for admin testing. Registered unconditionally;
+// only active when Payments:YandexPay:Enabled=true. Fails safe when unconfigured.
+builder.Services.AddHttpClient(YandexPayPaymentProvider.HttpClientName, client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+builder.Services.AddSingleton<YandexPayJwkProvider>();
+builder.Services.AddSingleton<YandexPayClient>();
+builder.Services.AddSingleton<IYandexPayWebhookVerifier, YandexPayWebhookVerifier>();
+builder.Services.AddSingleton<IPaymentProvider, YandexPayPaymentProvider>();
+
 builder.Services.AddSingleton<PaymentProviderRegistry>();
 builder.Services.AddScoped<PaymentCheckoutService>();
 builder.Services.AddScoped<PaymentWebhookProcessor>();
@@ -414,7 +426,9 @@ app.Use(async (context, next) =>
         "default-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
-        "script-src 'self' 'unsafe-inline'; " +
+        "script-src 'self' 'unsafe-inline' https://pay.yandex.ru; " +
+        "frame-src https://pay.yandex.ru; " +
+        "connect-src 'self' https://pay.yandex.ru; " +
         "frame-ancestors 'none'";
     await next();
 });
@@ -459,6 +473,10 @@ app.MapOpenTelemetryEndpoints();
 // TS-004: webhook endpoint — anonymous (providers can't authenticate as users), rate-limited,
 // body-capped, raw-body verify-then-parse. See PaymentWebhookEndpoint for details.
 PaymentWebhookEndpoint.Map(app);
+
+// Yandex Pay: admin checkout + anonymous webhook (JWT ES256).
+YandexPayCheckoutEndpoint.Map(app);
+YandexPayWebhookEndpoint.Map(app);
 
 // Grafana Alerting webhook → email via the Brevo HTTP path (SMTP is blocked on the prod box).
 // Token-gated; disabled (503) unless Alerting:WebhookToken + Alerting:EmailTo are set.

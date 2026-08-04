@@ -30,6 +30,9 @@ public sealed class PaymentSettings
     /// <summary>Rollypay (СБП aggregator) knobs. Read by <c>RollypayPaymentProvider</c>.</summary>
     public RollypaySettings Rollypay { get; set; } = new();
 
+    /// <summary>Yandex Pay sandbox knobs. Read by <c>YandexPayPaymentProvider</c>.</summary>
+    public YandexPaySettings YandexPay { get; set; } = new();
+
     /// <summary>Reconciliation worker tuning. Defaults are conservative for dev.</summary>
     public ReconciliationSettings Reconciliation { get; set; } = new();
 }
@@ -85,6 +88,37 @@ public sealed class RollypaySettings
     /// this MUST stay false in production — <c>PaymentStartupGuard</c> enforces that.</para>
     /// </remarks>
     public bool TestMode { get; set; }
+}
+
+/// <summary>
+/// Configuration for Yandex Pay sandbox integration. Bound from <c>Payments:YandexPay</c>.
+/// Disabled by default; sandbox is enabled only when <see cref="Enabled"/> and <see cref="Sandbox"/> are both true.
+/// </summary>
+public sealed class YandexPaySettings
+{
+    /// <summary>Master switch. When false, Yandex Pay SDK button and checkout endpoint are off.</summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Sandbox mode flag. When true, uses sandbox base URL and sandbox JWK endpoint.
+    /// Must be true in production until the integration is fully verified.
+    /// </summary>
+    public bool Sandbox { get; set; }
+
+    /// <summary>Yandex Pay merchant id. In sandbox mode this also serves as the API key.</summary>
+    public string MerchantId { get; set; } = string.Empty;
+
+    /// <summary>Redirect URL after a successful payment.</summary>
+    public string SuccessRedirectUrl { get; set; } = string.Empty;
+
+    /// <summary>Redirect URL after a failed/abandoned payment.</summary>
+    public string FailRedirectUrl { get; set; } = string.Empty;
+
+    /// <summary>Order time-to-live in seconds. Default 1800 (30 minutes). Min 120, max 604800.</summary>
+    public int OrderTtlSeconds { get; set; } = 1800;
+
+    /// <summary>How long to cache JWK keys before refresh. Default 10 minutes.</summary>
+    public TimeSpan JwkCacheDuration { get; set; } = TimeSpan.FromMinutes(10);
 }
 
 public sealed class ReconciliationSettings

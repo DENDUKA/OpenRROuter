@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(rm -f src/OpenRussiaRouter.WebApp/Services/Pricing/PriceComparison.cs)",
+      "Bash(rmdir src/OpenRussiaRouter.WebApp/Services/Pricing)"
     ]
   }
 }

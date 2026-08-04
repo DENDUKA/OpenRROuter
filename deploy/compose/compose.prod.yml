@@ -269,6 +269,13 @@ services:
       # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
       # Production — a test payment is free but still credits real balance.
       Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
+      # Yandex Pay sandbox — card-only alternative for admin testing. Disabled by default;
+      # enable via YANDEX_PAY_ENABLED=true + YANDEX_PAY_MERCHANT_ID in .env.
+      Payments__YandexPay__Enabled: "${YANDEX_PAY_ENABLED:-false}"
+      Payments__YandexPay__Sandbox: "${YANDEX_PAY_SANDBOX:-true}"
+      Payments__YandexPay__MerchantId: "${YANDEX_PAY_MERCHANT_ID:-}"
+      Payments__YandexPay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
+      Payments__YandexPay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
       # Site traffic → analytics.site_visits (unique visitors, referrers, UTM on the ORR Users
       # dashboard). Same DB and same IdentitySalt as auth/billing: the salt keys both the
       # visitor hash and distinct_id, so a different value would break the visit → signup

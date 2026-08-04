@@ -48,6 +48,8 @@ public class CreditsModel(
     public decimal MinTopUpUsd => paymentSettings.Value.MinTopUpUsd;
     public bool FirstTopUpBonusAvailable { get; set; }
     public decimal FirstTopUpBonusPercent { get; set; }
+    public bool IsAdmin => User.IsInRole("Admin");
+    public bool YandexPayEnabled => paymentSettings.Value.YandexPay.Enabled;
 
     public string FormatAmount(decimal usdAmount)
     {

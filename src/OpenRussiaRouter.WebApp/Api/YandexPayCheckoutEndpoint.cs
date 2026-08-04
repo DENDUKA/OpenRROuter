@@ -68,8 +68,12 @@ public static class YandexPayCheckoutEndpoint
                 ex,
                 "Yandex Pay checkout creation failed for user {UserId}.",
                 userId);
+            // The route is admin-only, so the provider-side failure can be surfaced verbatim:
+            // without it a misconfigured MerchantId and a blocked egress are the same empty 502,
+            // and the only way to tell them apart is shell access to the host.
             return Results.Problem(
                 title: "Unable to create Yandex Pay checkout",
+                detail: ex.Message,
                 statusCode: StatusCodes.Status502BadGateway);
         }
     }

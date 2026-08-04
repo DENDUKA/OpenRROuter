@@ -20,7 +20,8 @@ namespace OpenRussiaRouter.WebApp.Services.Payments.YandexPay;
 ///   <item>Read <c>kid</c> from the JWT header.</item>
 ///   <item>Fetch JWK keys from Yandex Pay, cached for bounded duration.</item>
 ///   <item>If <c>kid</c> not found, refresh JWK keys and retry once.</item>
-///   <item>Validate signature with the matching public key + exp/iat.</item>
+///   <item>Validate the signature with the matching public key. Expiry is not required —
+///         Yandex Pay does not put <c>exp</c> in these tokens.</item>
 ///   <item>Validate <c>merchantId</c> from payload matches the configured value.</item>
 ///   <item>For CAPTURED events, fetch order details from Yandex API to get amount/currency
 ///         (webhooks do not include confirmed amount).</item>
@@ -116,6 +117,12 @@ public sealed class YandexPayWebhookVerifier : IYandexPayWebhookVerifier
             ValidateIssuer = false,
             ValidateAudience = false,
             ValidateLifetime = true,
+            // Yandex Pay notification JWTs carry no `exp`. The handler requires one by default and
+            // fails every real webhook with IDX10225 before the signature is ever considered, so
+            // the requirement has to be lifted — `ValidateLifetime` still honours exp/nbf if Yandex
+            // starts sending them. Freshness is not what makes this token trustworthy: the ES256
+            // signature and the merchantId check are.
+            RequireExpirationTime = false,
             ClockSkew = TimeSpan.FromSeconds(30),
             RequireSignedTokens = true,
             ValidAlgorithms = ["ES256"],

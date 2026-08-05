@@ -3,6 +3,9 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: "OpenRussiaRouter Docs",
   description: "Официальная документация платформы OpenRussiaRouter",
+  // Сайт смонтирован под https://openrussiarouter.com/docs/ — все ассеты и навигация
+  // VitePress префиксятся base, иначе внутренние ссылки уводят на апекс-домен.
+  base: '/docs/',
   cleanUrls: true,
   appearance: 'dark', // по умолчанию темная тема как в aitunnel
   locales: {

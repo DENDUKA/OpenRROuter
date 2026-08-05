@@ -22,6 +22,12 @@
 	@grafana path /grafana /grafana/*
 	reverse_proxy @grafana grafana:3000
 
+	# VitePress-документация — https://openrussiarouter.com/docs/.
+	# docs-контейнер собран с base='/docs/' и держит файлы в /usr/share/nginx/html/docs,
+	# поэтому префикс /docs НЕ-strip'ается: nginx разрешает URI как есть.
+	@docs path /docs /docs/*
+	reverse_proxy @docs docs:80
+
 	reverse_proxy webapp:8080
 }
 

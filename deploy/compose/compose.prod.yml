@@ -296,6 +296,19 @@ services:
     mem_limit: 512m
     cpus: 0.75
 
+  # ---------------------------------------------------------------------------
+  # VitePress-документация. Раздаётся nginx'ом под https://openrussiarouter.com/docs/
+  # (см. docs-site/Dockerfile + nginx.conf и блок @docs в Caddyfile). Не публикует
+  # порт наружу — Caddy проксирует по внутренней сети илиr_default.
+  # ---------------------------------------------------------------------------
+  docs:
+    build:
+      context: ./app/docs-site
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    mem_limit: 64m
+    cpus: 0.25
+
   caddy:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -303,6 +316,8 @@ services:
       webapp:
         condition: service_started
       grafana:
+        condition: service_started
+      docs:
         condition: service_started
     ports:
       - "80:80"

@@ -14,7 +14,7 @@ public class LegalDocumentService
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["ORR_SERVICE_NAME"] = "OpenRussiaRouter",
-            ["ORR_DOCUMENT_DATE"] = "29.06.2026",
+            ["ORR_DOCUMENT_DATE"] = "05.08.2026",
             ["ORR_PUBLIC_DOMAIN"] = "https://openrussiarouter.com",
             ["ORR_OPERATOR_NAME"] = "OpenRussiaRouter",
             ["ORR_OPERATOR_DETAILS"] = "официальный сайт: https://openrussiarouter.com",

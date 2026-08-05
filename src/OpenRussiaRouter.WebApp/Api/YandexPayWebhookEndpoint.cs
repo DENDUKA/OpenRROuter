@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.WebApp.Services.Payments;
 
 namespace OpenRussiaRouter.WebApp.Api;
@@ -20,6 +21,13 @@ public static class YandexPayWebhookEndpoint
 
     /// <summary>Hard cap on a compact-JWT webhook body.</summary>
     public const int MaxBodyBytes = PaymentWebhookEndpoint.MaxBodyBytes;
+
+    // Yandex Pay documents a closed set of reasonCode values for non-200 answers; anything else
+    // reads as an unknown failure on their side. Only the ones this endpoint can produce are here.
+    private const string ReasonUnauthorized = "UNAUTHORIZED";
+    private const string ReasonOrderNotFound = "ORDER_NOT_FOUND";
+    private const string ReasonOrderAmountMismatch = "ORDER_AMOUNT_MISMATCH";
+    private const string ReasonConflict = "CONFLICT";
 
     /// <summary>Maps the anonymous Yandex Pay webhook endpoint.</summary>
     public static void Map(IEndpointRouteBuilder endpoints) =>
@@ -40,7 +48,9 @@ public static class YandexPayWebhookEndpoint
 
         if (http.Request.ContentLength is long length && length > MaxBodyBytes)
         {
-            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+            // Signature verification never ran, so from Yandex's side this is indistinguishable
+            // from a token we could not authenticate.
+            return Reject(StatusCodes.Status413PayloadTooLarge, ReasonUnauthorized);
         }
 
         string rawJwt;
@@ -54,12 +64,12 @@ public static class YandexPayWebhookEndpoint
         catch (PayloadTooLargeException)
         {
             logger.LogWarning("Yandex Pay webhook rejected: streamed body exceeds {Max} bytes.", MaxBodyBytes);
-            return Results.StatusCode(StatusCodes.Status413PayloadTooLarge);
+            return Reject(StatusCodes.Status413PayloadTooLarge, ReasonUnauthorized);
         }
 
         if (string.IsNullOrWhiteSpace(rawJwt))
         {
-            return Results.BadRequest(new { code = StatusCodes.Status400BadRequest });
+            return Reject(StatusCodes.Status400BadRequest, ReasonUnauthorized);
         }
 
         YandexPayWebhookNotification? notification;
@@ -71,19 +81,19 @@ public static class YandexPayWebhookEndpoint
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             logger.LogError(ex, "Yandex Pay webhook could not be verified.");
-            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return Reject(StatusCodes.Status503ServiceUnavailable, ReasonConflict);
         }
 
         if (notification is null)
         {
             logger.LogWarning("Yandex Pay webhook rejected: JWT verification failed.");
-            return Results.Unauthorized();
+            return Reject(StatusCodes.Status401Unauthorized, ReasonUnauthorized);
         }
 
         var webhookEvent = MapNotification(notification);
         if (webhookEvent is null)
         {
-            return Results.Ok(new { code = StatusCodes.Status200OK });
+            return Ack();
         }
 
         var result = await processor.ProcessAsync(
@@ -93,33 +103,53 @@ public static class YandexPayWebhookEndpoint
             signatureOk: true,
             ct);
 
-        return result.Outcome switch
+        switch (result.Outcome)
         {
-            PaymentWebhookProcessor.ProcessOutcome.Applied or PaymentWebhookProcessor.ProcessOutcome.Ignored =>
-                Results.Ok(new { code = StatusCodes.Status200OK }),
-            // Acknowledged on purpose: the verdict is final, and Yandex Pay reads any non-2xx as
-            // "retry" — for 24h with backoff. The error still travels in the body and the log.
-            PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent => Results.Ok(new
-            {
-                code = StatusCodes.Status200OK,
-                error = result.ErrorCode,
-            }),
-            PaymentWebhookProcessor.ProcessOutcome.Rejected => Results.UnprocessableEntity(new
-            {
-                code = StatusCodes.Status422UnprocessableEntity,
-                error = result.ErrorCode,
-            }),
-            _ => Results.Ok(new { code = StatusCodes.Status200OK }),
-        };
+            case PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent:
+                // Acknowledged on purpose: the verdict is final, and Yandex Pay reads any non-2xx
+                // as "retry" — for 24h with backoff. The reason travels in the log, because the
+                // ack body has no field for it.
+                logger.LogError(
+                    "Yandex Pay webhook acknowledged despite a final rejection: order={Order} status={Status} errorCode={ErrorCode}.",
+                    notification.OrderId, notification.Status, result.ErrorCode);
+                return Ack();
+
+            case PaymentWebhookProcessor.ProcessOutcome.Rejected:
+                return Reject(StatusCodes.Status422UnprocessableEntity, ToReasonCode(result.ErrorCode));
+
+            default:
+                return Ack();
+        }
     }
+
+    /// <summary>Body Yandex Pay expects on an accepted notification.</summary>
+    private static IResult Ack() => Results.Ok(new { status = "success" });
+
+    /// <summary>Non-200 answer carrying a documented <c>reasonCode</c>.</summary>
+    private static IResult Reject(int statusCode, string reasonCode) =>
+        Results.Json(new { reasonCode }, statusCode: statusCode);
+
+    /// <summary>Translates a Billing rejection into the closest documented Yandex Pay reason.</summary>
+    private static string ToReasonCode(string? errorCode) => errorCode switch
+    {
+        ErrorCodes.PaymentNotFound => ReasonOrderNotFound,
+        ErrorCodes.PaymentAmountMismatch => ReasonOrderAmountMismatch,
+        // Raised by PaymentWebhookProcessor when the confirmed amount could not be resolved at all.
+        "AMOUNT_MISSING" => ReasonOrderAmountMismatch,
+        _ => ReasonConflict,
+    };
 
     private static PaymentWebhookEvent? MapNotification(YandexPayWebhookNotification notification)
     {
+        // Keep in step with YandexPayPaymentProvider.MapStatus — the reconciliation worker maps the
+        // same Yandex states, and a status handled there but not here silently waits out a whole
+        // reconciliation cycle.
         var eventType = notification.Status.Trim().ToUpperInvariant() switch
         {
             "CAPTURED" => PaymentWebhookEventTypes.Paid,
-            "FAILED" => PaymentWebhookEventTypes.Canceled,
-            "REFUNDED" => PaymentWebhookEventTypes.Refunded,
+            "FAILED" or "VOIDED" => PaymentWebhookEventTypes.Canceled,
+            "REFUNDED" or "PARTIALLY_REFUNDED" => PaymentWebhookEventTypes.Refunded,
+            // PENDING / AUTHORIZED / CONFIRMED are non-terminal: acknowledged without touching Billing.
             _ => null,
         };
 

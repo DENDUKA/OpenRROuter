@@ -60,7 +60,7 @@ public class LegalDocumentServiceTests : IDisposable
         Assert.NotNull(html);
         Assert.DoesNotContain("{{ORR_", html);
         Assert.Contains("OpenRussiaRouter", html);
-        Assert.Contains("29.06.2026", html);
+        Assert.Contains("05.08.2026", html);
         Assert.Contains("https://openrussiarouter.com", html);
     }
 

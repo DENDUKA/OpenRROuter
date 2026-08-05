@@ -82,6 +82,31 @@
   одного (`visitor_hash` = `HMAC(salt, ip + user-agent)`), а `X-Forwarded-For` управляется
   клиентом, поэтому счётчик посетителей можно накрутить.
 
+## Yandex Pay: известные пробелы
+
+Интеграция сделана по механике «платёжная ссылка без SDK» (`POST /api/merchant/v1/orders` →
+`paymentUrl` → редирект), это допустимый вариант по
+[гайду](https://pay.yandex.ru/docs/ru/custom/integration-guide-link). Вебхук и юр. документы
+приведены в соответствие; осталось:
+
+- `[ ] YAPAY-001` - **фискализация по 54-ФЗ не реализована.** По условиям партнёра чек покупателю
+  выдаёт продавец, не позже дня получения подтверждения оплаты; Яндекс чеки не выдаёт (кроме
+  комиссии по длинному Сплиту). Нет ни интеграции с кассой (АТОЛ Онлайн / CloudKassir), ни поля
+  `receipt` в запросе `/orders`. Вместе с этим придётся пересмотреть п. 6.7 публичной оферты
+  («документом, подтверждающим оплату, является запись о платеже в учётной системе»).
+- `[ ] YAPAY-002` - **флаг `Payments:YandexPay:Sandbox` мёртвый — на прод переключиться нельзя.**
+  `YandexPayClient.SandboxBaseUrl` и `YandexPayJwkProvider.SandboxJwksUrl` захардкожены, а API-ключ
+  берётся из `MerchantId`; в боевой среде хост `https://pay.yandex.ru` и ключ отдельный от
+  merchant id. Нужен `ApiKey` в `YandexPaySettings` и выбор хоста по флагу. Заодно проверить, не
+  требуется ли `merchantId` в теле `/orders` — в гайде он в списке полей, мы его не шлём (в
+  sandbox проходит, потому что ключ = merchant id).
+- `[ ] YAPAY-003` - **кнопка admin-only.** Чекаут гейтится `IsAdmin && YandexPayEnabled`, и
+  Yandex Pay не участвует в `Payments:ActiveProvider` — обычным пользователям способ недоступен.
+- `[ ] YAPAY-004` - **реквизиты Оператора не заполнены.** `Legal:ORR_OPERATOR_NAME` /
+  `ORR_OPERATOR_DETAILS` / `ORR_SUPPORT_CONTACT` в проде остаются на дефолтах (только домен),
+  поэтому п. 15.4 оферты не содержит юрлица/ИП, ИНН и адреса. Задать через env в
+  compose/kustomize перед подключением merchant'а.
+
 ## Общие правила реализации
 
 - Основной стек: .NET 8/9, C#, ASP.NET Core, gRPC, PostgreSQL, Kubernetes.

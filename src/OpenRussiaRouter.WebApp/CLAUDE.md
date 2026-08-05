@@ -134,6 +134,20 @@ PascalCase-путь файла. Источник истины — директи
   `POST /v1/webhook` (JWT ES256, анонимный). Включается через `Payments:YandexPay:Enabled=true`
   + `Payments:YandexPay:MerchantId`. Sandbox merchantId = API key. Секреты — только env/secret.
   `_WorkspaceLayout` не поддерживает `@section Scripts` — скрипт Yandex Pay инлайнов.
+  Механика — **платёжная ссылка без Web SDK**: SDK не подключён и не нужен, кнопка своя, с
+  официальным лого (`wwwroot/icons/yandex-pay.png`, стиль `.btn-yapay` — белая плашка, потому что
+  бренд-лого тёмное на прозрачном). Записи `pay.yandex.ru` в `script-src`/`frame-src`/`connect-src`
+  сейчас ни на что не влияют — оплата это обычный top-level редирект на `paymentUrl`; они
+  понадобятся, только если появится SDK или бейджи (тогда же придётся добавить `img-src`).
+- **Ответ Yandex Pay вебхука — свой контракт, не общий с Rollypay.** Успех — 200
+  `{"status":"success"}`, отказ — не-200 с `reasonCode` из закрытого списка Яндекса
+  (`UNAUTHORIZED`, `ORDER_NOT_FOUND`, `ORDER_AMOUNT_MISMATCH`, `CONFLICT`); маппинг
+  Billing-кодов — `YandexPayWebhookEndpoint.ToReasonCode`. **`RejectedPermanent` намеренно
+  отдаёт 200**: Яндекс читает любой не-2xx как «повторить» и долбит 24 часа с backoff, а вердикт
+  Billing окончателен — причина уезжает в `LogError`, в теле ack'а поля под неё нет.
+  `MapNotification` обязан совпадать с `YandexPayPaymentProvider.MapStatus`: статус, разобранный
+  там, но не здесь, ждёт целый цикл реконсиляции (`VOIDED`, `PARTIALLY_REFUNDED` — как раз этот
+  случай).
 - **`PaymentReconciliationWorker`** добирает статусы: раз в `Reconciliation:Interval` берёт
   `Created`-платежи старше `OlderThanMinutes` через Billing (`SKIP LOCKED` + лиза), спрашивает
   провайдера и **прогоняет ответ через тот же `PaymentWebhookProcessor`**, замапив статус

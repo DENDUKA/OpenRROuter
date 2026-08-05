@@ -324,15 +324,26 @@ textarea.form-control {
     font-size: 14px;
 }
 
+/* Checkbox + its label on one baseline: the checkbox is a fixed 18px box, the label wraps. */
+.form-check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-sm);
+}
+
 .form-check-input {
     width: 18px;
     height: 18px;
+    margin: 3px 0 0;
+    flex-shrink: 0;
     cursor: pointer;
     accent-color: var(--color-primary);
 }
 
 .form-check-label {
     color: var(--color-body);
+    font-size: 14px;
+    line-height: 1.45;
     cursor: pointer;
 }
 
@@ -470,6 +481,7 @@ code.d-block {
 .alert-danger { border-color: rgba(239, 68, 68, .45); color: var(--color-danger); }
 .alert-success { border-color: rgba(34, 197, 94, .45); color: var(--color-success); }
 .alert-warning { border-color: rgba(234, 179, 8, .45); color: var(--color-warning); }
+.alert-info { border-color: rgba(96, 165, 250, .45); color: var(--color-info); }
 
 .spinner {
     display: inline-block;
@@ -939,6 +951,42 @@ code.d-block {
 
 .ws-balance-amount { font-size: 28px; font-weight: 600; color: var(--color-ink); }
 .ws-balance-currency { font-size: 16px; font-weight: 400; color: var(--color-body); }
+
+/* ── Top-up form (/workspace/credits) ── */
+.ws-topup-bonus { font-size: 13px; margin-bottom: var(--spacing-lg); }
+.ws-topup-fields { display: flex; flex-wrap: wrap; gap: var(--spacing-md); margin-bottom: var(--spacing-lg); }
+.ws-topup-field { display: flex; flex-direction: column; }
+.ws-topup-field .form-label { margin-bottom: var(--spacing-xs); }
+.ws-topup-field--amount { width: 180px; }
+.ws-topup-field--currency { width: 120px; }
+.ws-topup-form .legal-consent { margin: 0 0 var(--spacing-lg); }
+.ws-topup-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-md); }
+.ws-topup-hint { margin: var(--spacing-md) 0 0; font-size: 13px; color: var(--color-body); }
+
+/* Yandex Pay checkout button: the brand logo is dark ink on transparent, so it needs
+   a light plate — hence the white face instead of the site's transparent .btn. */
+.btn-yapay {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    min-height: 44px;
+    padding: 0 18px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background: #ffffff;
+    color: #0a0a0a;
+    font: inherit;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color .15s ease;
+}
+
+.btn-yapay:hover:not(:disabled) { background: #e8e8e8; }
+.btn-yapay:disabled { cursor: not-allowed; opacity: .48; }
+.btn-yapay-logo { display: block; height: 20px; width: auto; }
+.btn-yapay[data-busy="true"] .btn-yapay-logo { display: none; }
 
 .ws-info-row { display: flex; align-items: center; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--color-hairline); font-size: 14px; }
 .ws-info-row:last-child { border-bottom: none; }

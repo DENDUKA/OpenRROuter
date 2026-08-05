@@ -33,30 +33,27 @@
     <div class="ws-panel-body">
         @if (Model.FirstTopUpBonusAvailable)
         {
-            <div class="alert alert-info" style="font-size: 13px; margin-bottom: var(--spacing-md);">
+            <div class="alert alert-info ws-topup-bonus">
                 Первое пополнение получает бонус <strong>+@Model.FirstTopUpBonusPercent%</strong> к сумме.
             </div>
         }
-        <form method="post" asp-page-handler="TopUp">
-            <div class="mb-3 d-flex gap-2 align-items-end">
-                <div>
+        <form method="post" asp-page-handler="TopUp" class="ws-topup-form">
+            <div class="ws-topup-fields">
+                <div class="ws-topup-field ws-topup-field--amount">
                     <label class="form-label" asp-for="TopUpAmountRaw">@Localizer["Credits_AmountLabel"]</label>
                     @* TS-010: bind the raw form string so we can parse under InvariantCulture.
                        The default decimal binder would honor the request culture and mis-parse
                        "10.50" as 1050 under "ru". *@
                     <input type="text" name="TopUpAmount" id="TopUpAmountRaw" class="form-control"
-                           inputmode="decimal" autocomplete="off" placeholder="0.00" required style="width: 160px;" />
+                           inputmode="decimal" autocomplete="off" placeholder="0.00" required />
                 </div>
-                <div>
+                <div class="ws-topup-field ws-topup-field--currency">
                     <label class="form-label" asp-for="SelectedCurrency">@Localizer["Credits_CurrencyLabel"]</label>
-                    <select asp-for="SelectedCurrency" class="form-select" style="width: 100px;">
+                    <select asp-for="SelectedCurrency" class="form-select">
                         <option value="RUB">RUB</option>
                         <option value="USD">USD</option>
                         <option value="EUR">EUR</option>
                     </select>
-                </div>
-                <div>
-                    <button type="submit" class="btn btn-primary">@Localizer["Credits_TopUpSubmit"]</button>
                 </div>
             </div>
             <div class="form-group legal-consent">
@@ -68,29 +65,43 @@
                 </div>
                 <span asp-validation-for="AcceptLegal" class="validation-message"></span>
             </div>
+            @* Both checkout buttons live in one row inside the form: the Yandex Pay one is
+               type="button" and posts its own JSON, so it never submits this form. *@
+            <div class="ws-topup-actions">
+                @if (Model.IsAdmin && Model.YandexPayEnabled)
+                {
+                    <button type="button" class="btn-yapay" id="yandexPayBtn"
+                            title="Оплатить через Yandex Pay" aria-label="Оплатить через Yandex Pay"
+                            onclick="yandexPayCheckout()">
+                        <img class="btn-yapay-logo" src="~/icons/yandex-pay.png" alt="Yandex Pay" width="90" height="30" />
+                        <span class="btn-yapay-status" hidden>Создание платежа…</span>
+                    </button>
+                }
+                <button type="submit" class="btn btn-primary">@Localizer["Credits_TopUpSubmit"]</button>
+            </div>
             @* Show the limit in the user's own currency first: it is enforced in USD, so someone
                typing rubles cannot tell from "$1.00" that 50 ₽ will bounce. *@
-            <p class="text-muted" style="font-size: 13px;">@Localizer["Credits_MinTopUp", Model.FormatAmount(Model.MinTopUpUsd), Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
+            <p class="ws-topup-hint">@Localizer["Credits_MinTopUp", Model.FormatAmount(Model.MinTopUpUsd), Model.MinTopUpUsd.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)]</p>
         </form>
 
         @if (Model.IsAdmin && Model.YandexPayEnabled)
         {
-            <div>
-                <button type="button" class="btn btn-outline-secondary" id="yandexPayBtn"
-                        onclick="yandexPayCheckout()">
-                    Оплатить через Yandex Pay
-                </button>
-            </div>
+            @* _WorkspaceLayout has no Scripts section — the Yandex Pay script has to be inline. *@
             <script>
                 function yandexPayCheckout() {
                     var btn = document.getElementById('yandexPayBtn');
+                    var status = btn.querySelector('.btn-yapay-status');
                     var amountInput = document.getElementById('TopUpAmountRaw');
                     var currencySelect = document.getElementById('SelectedCurrency');
                     var amount = parseFloat((amountInput.value || '').replace(',', '.'));
                     var currency = currencySelect ? currencySelect.value : 'RUB';
                     if (!amount || amount <= 0) { alert('Введите сумму'); return; }
-                    btn.disabled = true;
-                    btn.textContent = 'Создание платежа…';
+                    function setBusy(busy) {
+                        btn.disabled = busy;
+                        btn.dataset.busy = busy ? 'true' : 'false';
+                        status.hidden = !busy;
+                    }
+                    setBusy(true);
                     fetch('/workspace/credits/yandexpay/checkout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -98,9 +109,9 @@
                     }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
                     .then(function(res) {
                         if (res.ok && res.data.payUrl) { window.location.href = res.data.payUrl; }
-                        else { alert(res.data.detail || res.data.error || 'Ошибка создания платежа'); btn.disabled = false; btn.textContent = 'Оплатить через Yandex Pay'; }
+                        else { alert(res.data.detail || res.data.error || 'Ошибка создания платежа'); setBusy(false); }
                     }).catch(function() {
-                        alert('Сетевая ошибка'); btn.disabled = false; btn.textContent = 'Оплатить через Yandex Pay';
+                        alert('Сетевая ошибка'); setBusy(false);
                     });
                 }
             </script>

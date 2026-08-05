@@ -93,9 +93,19 @@
                     var status = btn.querySelector('.btn-yapay-status');
                     var amountInput = document.getElementById('TopUpAmountRaw');
                     var currencySelect = document.getElementById('SelectedCurrency');
+                    var consent = document.getElementById('AcceptLegal');
                     var amount = parseFloat((amountInput.value || '').replace(',', '.'));
                     var currency = currencySelect ? currencySelect.value : 'RUB';
                     if (!amount || amount <= 0) { alert('Введите сумму'); return; }
+                    // type="button" skips the form's native validation, so the consent checkbox
+                    // has to be enforced here — otherwise the checkout would post legalConsent
+                    // without the user ever ticking it.
+                    if (!consent || !consent.checked) {
+                        if (consent && typeof consent.reportValidity === 'function') { consent.reportValidity(); }
+                        else { alert(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(Localizer["Validation_AcceptLegal"].Value))); }
+                        if (consent) { consent.focus(); }
+                        return;
+                    }
                     function setBusy(busy) {
                         btn.disabled = busy;
                         btn.dataset.busy = busy ? 'true' : 'false';
@@ -105,7 +115,7 @@
                     fetch('/workspace/credits/yandexpay/checkout', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ amount: amount, currency: currency, legalConsent: true })
+                        body: JSON.stringify({ amount: amount, currency: currency, legalConsent: consent.checked })
                     }).then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
                     .then(function(res) {
                         if (res.ok && res.data.payUrl) { window.location.href = res.data.payUrl; }

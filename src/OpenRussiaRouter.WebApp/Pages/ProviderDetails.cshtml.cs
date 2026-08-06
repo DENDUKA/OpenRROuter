@@ -8,6 +8,7 @@ using OpenRussiaRouter.WebApp.Services.Markup;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
+
 public class ProviderDetailsModel(
     BillingProvider billingProvider,
     CurrencyFormatter currencyFormatter,

@@ -122,7 +122,7 @@
                                 onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
                                 <td>
                                     <div class="model-cell">
-                                        @if (!string.IsNullOrEmpty(m.ProviderId) && Model.ProviderHasLogo.TryGetValue(m.ProviderId, out var hasLogo) && hasLogo)
+                                        @if (!string.IsNullOrEmpty(m.ProviderId))
                                         {
                                             <img class="model-icon" src="/providers/logo/@m.ProviderId" alt="" aria-hidden="true" />
                                         }

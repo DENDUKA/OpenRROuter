@@ -37,7 +37,6 @@ public class ModelsModel(
     public IReadOnlyList<PublicModelRow> Models { get; private set; } = [];
     public string? ErrorMessage { get; private set; }
     public bool CatalogMetadataUnavailable { get; private set; }
-    public IReadOnlyDictionary<string, bool> ProviderHasLogo { get; private set; } = new Dictionary<string, bool>();
 
     public IReadOnlyList<FilterCategory> ProviderCategories { get; private set; } = [];
     public IReadOnlyList<FilterCategory> CapabilityCategories { get; private set; } = [];
@@ -59,8 +58,6 @@ public class ModelsModel(
             var tagsById = (await tagsTask).ToDictionary(t => t.Id, StringComparer.Ordinal);
 
             var providers = await GetCachedProvidersAsync(HttpContext.RequestAborted);
-            ProviderHasLogo = providers
-                .ToDictionary(p => p.Id, p => p.HasLogo, StringComparer.OrdinalIgnoreCase);
 
             ProviderCategories = providers
                 .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)

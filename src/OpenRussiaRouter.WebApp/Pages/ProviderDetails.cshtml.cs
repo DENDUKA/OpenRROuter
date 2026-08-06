@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Auth;
@@ -36,6 +37,7 @@ public class ProviderDetailsModel(
             Provider = await billingProvider.GetModelProviderAsync(Id, HttpContext.RequestAborted);
             if (Provider is null)
             {
+                Response.StatusCode = StatusCodes.Status404NotFound;
                 ErrorMessage = localizer["ProviderDetails_NotFound"];
                 return;
             }

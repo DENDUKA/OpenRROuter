@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Services.Content;
@@ -39,6 +40,7 @@ public class ToolDetailsModel(
 
             if (Tool is null)
             {
+                Response.StatusCode = StatusCodes.Status404NotFound;
                 ErrorMessage = localizer["ToolDetails_NotFound"];
                 return Page();
             }

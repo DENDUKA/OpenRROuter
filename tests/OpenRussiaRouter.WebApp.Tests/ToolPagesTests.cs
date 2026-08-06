@@ -118,6 +118,32 @@ public class ToolPagesTests
 
         model.Tool.Should().BeNull();
         model.ErrorMessage.Should().NotBeNull();
+        model.HttpContext.Response.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task ToolDetails_ExistingTool_ReturnsOk()
+    {
+        var tool = new ToolInfo("cline", "Cline");
+        var model = CreateDetailsModel(new FakeContentProvider([], tool), "cline");
+
+        await model.OnGetAsync();
+
+        model.Tool.Should().NotBeNull();
+        model.HttpContext.Response.StatusCode.Should().Be(StatusCodes.Status200OK);
+    }
+
+    [Fact]
+    public async Task ToolDetails_DraftTool_ReturnsNotFound()
+    {
+        // Unpublished tools come back as null from the public RPC — drafts must be 404 like missing ones.
+        var model = CreateDetailsModel(new FakeContentProvider([]), "draft");
+
+        await model.OnGetAsync();
+
+        model.Tool.Should().BeNull();
+        model.ErrorMessage.Should().NotBeNull();
+        model.HttpContext.Response.StatusCode.Should().Be(StatusCodes.Status404NotFound);
     }
 
     [Fact]

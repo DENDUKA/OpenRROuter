@@ -1,6 +1,9 @@
 name: Build Images
 
 on:
+  # Ручной запуск: у workflow_dispatch нет github.event.before, поэтому шаг
+  # "Check if service changed" сравнивает с корневым коммитом и собирает все сервисы.
+  workflow_dispatch:
   push:
     branches: [main]
     paths:

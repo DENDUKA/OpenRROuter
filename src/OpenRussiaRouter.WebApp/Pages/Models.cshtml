@@ -1,6 +1,10 @@
 @page
 @model ModelsModel
-@{ Layout = "~/Pages/Shared/_CatalogLayout.cshtml"; ViewData["Title"] = Localizer["Catalog_Title"]; }
+@{
+    Layout = "~/Pages/Shared/_CatalogLayout.cshtml";
+    ViewData["Title"] = Localizer["Catalog_Title"];
+    ViewData["MetaDescription"] = Localizer["MetaDescription"];
+}
 
 <div class="models-page">
     <section class="models-hero" aria-labelledby="models-title">

@@ -48,4 +48,10 @@
   <data name="ToolDetails_BackToList" xml:space="preserve">
     <value>Вернуться к списку инструментов</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="MetaDescriptionNoTagline" xml:space="preserve">
+    <value>{0} — инструмент для работы с AI-моделями через OpenAI-совместимый API OpenRussiaRouter.</value>
+  </data>
 </root>

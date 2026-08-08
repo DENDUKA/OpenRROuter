@@ -65,4 +65,7 @@
   <data name="A11y_ShowPassword" xml:space="preserve">
     <value>Show password</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Sign up for OpenRussiaRouter: create an account, get an API key and start working with AI models through a single OpenAI-compatible API.</value>
+  </data>
 </root>

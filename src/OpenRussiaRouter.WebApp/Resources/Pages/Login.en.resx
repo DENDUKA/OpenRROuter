@@ -74,4 +74,7 @@
   <data name="A11y_ShowPassword" xml:space="preserve">
     <value>Show password</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Log in to OpenRussiaRouter: sign in to manage API keys, balance and service activity.</value>
+  </data>
 </root>

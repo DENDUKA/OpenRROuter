@@ -74,4 +74,7 @@
   <data name="Model_MetricsAria" xml:space="preserve">
     <value>Model metrics</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Model {0} by {1}: {2} per million input and {3} per million output tokens, context {4}. Available through the OpenAI-compatible API as {5}.</value>
+  </data>
 </root>

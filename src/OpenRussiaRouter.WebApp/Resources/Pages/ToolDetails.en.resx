@@ -48,4 +48,10 @@
   <data name="ToolDetails_BackToList" xml:space="preserve">
     <value>Back to all tools</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>{0} — {1}</value>
+  </data>
+  <data name="MetaDescriptionNoTagline" xml:space="preserve">
+    <value>{0} — a tool for working with AI models through the OpenAI-compatible API of OpenRussiaRouter.</value>
+  </data>
 </root>

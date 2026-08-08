@@ -47,4 +47,7 @@
   <data name="Tools_NoToolsTitle" xml:space="preserve">
     <value>No tools yet.</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Tools and integrations for the AI API: editors, IDEs and services that work with OpenRussiaRouter through the OpenAI-compatible API.</value>
+  </data>
 </root>

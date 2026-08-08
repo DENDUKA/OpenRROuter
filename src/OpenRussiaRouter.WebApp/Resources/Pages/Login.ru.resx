@@ -74,4 +74,7 @@
   <data name="A11y_ShowPassword" xml:space="preserve">
     <value>Показать пароль</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Вход в OpenRussiaRouter: авторизуйтесь, чтобы управлять API-ключами, балансом и активностью сервиса.</value>
+  </data>
 </root>

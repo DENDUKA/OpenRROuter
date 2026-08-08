@@ -74,4 +74,7 @@
   <data name="Model_MetricsAria" xml:space="preserve">
     <value>Характеристики модели</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Модель {0} от {1}: цена {2} за млн входных и {3} за млн выходных токенов, контекст {4}. Доступна через OpenAI-совместимый API по ID {5}.</value>
+  </data>
 </root>

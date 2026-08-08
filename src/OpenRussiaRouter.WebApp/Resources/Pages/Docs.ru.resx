@@ -110,4 +110,7 @@
   <data name="Docs_Title" xml:space="preserve">
     <value>Инструкция</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Документация OpenRussiaRouter: API-ключ, OpenAI-совместимый эндпоинт, примеры запросов и первые шаги с AI-моделями.</value>
+  </data>
 </root>

@@ -98,4 +98,7 @@
   <data name="Model_GetApiKey" xml:space="preserve">
     <value>Get API Key</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Provider {0} on OpenRussiaRouter: models are available through a single OpenAI-compatible API with per-token pricing.</value>
+  </data>
 </root>

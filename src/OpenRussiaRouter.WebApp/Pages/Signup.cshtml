@@ -1,6 +1,9 @@
 @page "/signup"
 @model SignupModel
-@{ ViewData["Title"] = Localizer["Signup_Title"]; }
+@{
+    ViewData["Title"] = Localizer["Signup_Title"];
+    ViewData["MetaDescription"] = Localizer["MetaDescription"];
+}
 
 <div class="auth-container">
     <div class="auth-header">

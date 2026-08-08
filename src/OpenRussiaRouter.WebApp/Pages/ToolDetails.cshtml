@@ -1,6 +1,12 @@
 @page "/tools/{id}"
 @model ToolDetailsModel
-@{ ViewData["Title"] = Model.Tool?.DisplayName ?? Localizer["ToolDetails_Title"].Value; }
+@{
+    var toolSeoName = Model.Tool?.DisplayName ?? Localizer["ToolDetails_Title"].Value;
+    ViewData["Title"] = toolSeoName;
+    ViewData["MetaDescription"] = string.IsNullOrWhiteSpace(Model.Tagline)
+        ? Localizer["MetaDescriptionNoTagline", toolSeoName]
+        : Localizer["MetaDescription", toolSeoName, Model.Tagline];
+}
 
 <div class="tool-details-page">
     @if (Model.Tool is null)

@@ -1,7 +1,11 @@
 @page "/models/{provider}/{slug}"
 @model ModelDetailsModel
 @using OpenRussiaRouter.WebApp.Services.Markup
-@{ ViewData["Title"] = Model.DisplayName; }
+@{
+    ViewData["Title"] = Model.DisplayName;
+    ViewData["MetaDescription"] = Localizer["MetaDescription", Model.DisplayName, Model.ProviderTitle,
+        Model.FormatPrice(Model.InputPrice), Model.FormatPrice(Model.OutputPrice), Model.ContextDisplay, Model.PublicModelId];
+}
 
 <div class="model-detail-page">
     <section class="model-hero">

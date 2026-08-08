@@ -128,4 +128,7 @@
   <data name="Catalog_Category_Coding" xml:space="preserve">
     <value>Coding</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>OpenRussiaRouter AI model catalog: input and output token prices, context and capabilities. All models are available through a single OpenAI-compatible API.</value>
+  </data>
 </root>

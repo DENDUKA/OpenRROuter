@@ -1,6 +1,10 @@
 @page "/docs"
 @model DocsModel
-@{ Layout = "~/Pages/Shared/_CatalogLayout.cshtml"; ViewData["Title"] = Localizer["Docs_Title"]; }
+@{
+    Layout = "~/Pages/Shared/_CatalogLayout.cshtml";
+    ViewData["Title"] = Localizer["Docs_Title"];
+    ViewData["MetaDescription"] = Localizer["MetaDescription"];
+}
 
 <div class="docs-page">
     <section class="docs-hero" aria-labelledby="docs-title">

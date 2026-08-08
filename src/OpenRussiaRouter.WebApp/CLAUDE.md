@@ -119,6 +119,15 @@ PascalCase-путь файла. Источник истины — директи
   брендовый дефолт `Seo_DefaultDescription` из `_Layout.{ru,en}.resx`. ⚠️ Ключи SEO-дефолта кладутся
   в ресурсы **вьюхи layout**, а не в `SharedResource` — `IViewLocalizer` в layout резолвит ключи
   через `Resources/Pages/Shared/_Layout.*.resx`.
+- **Per-page description** — публичные страницы (`/`, `/models`, `/providers`, `/tools`, `/docs`,
+  `/support`, `/legal/*`, `/login`, `/signup`) ставят `ViewData["MetaDescription"] = Localizer["MetaDescription"]`
+  из своего per-page `{ru,en}.resx`. Detail-страницы строят описание из данных сущности формат-строкой:
+  `ModelDetails` — `Localizer["MetaDescription", DisplayName, ProviderTitle, InputPrice, OutputPrice,
+  ContextDisplay, PublicModelId]`; `ProviderDetails` — по имени провайдера; `ToolDetails` — по имени и
+  tagline (если tagline пуст — фолбэк-ключ `MetaDescriptionNoTagline`). `/login` и `/signup` noindex,
+  но описания им тоже задаются. Юридические страницы получили собственные
+  `Resources/Pages/Legal/{Privacy,Offer}.{ru,en}.resx` с `Footer_Privacy`/`Footer_Offer`
+  (раньше title резолвился как сырой ключ) и `MetaDescription`.
 - **Open Graph + Twitter Card** — `og:site_name`, `og:type=website`, `og:title`,
   `og:description`, `og:url` (= canonical), `og:image` и `twitter:card/title/description/image`;
   `og:image`/`twitter:image` = `{baseUrl}/og-image.png` (`wwwroot/og-image.png`, 1200×630 —

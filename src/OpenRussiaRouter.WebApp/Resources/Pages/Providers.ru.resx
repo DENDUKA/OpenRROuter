@@ -44,4 +44,7 @@
   <data name="Providers_NoProvidersTitle" xml:space="preserve">
     <value>Провайдеры не настроены.</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>Провайдеры AI-моделей в OpenRussiaRouter: поставщики, модели и цены в одном каталоге. Подключение через единый OpenAI-совместимый API.</value>
+  </data>
 </root>

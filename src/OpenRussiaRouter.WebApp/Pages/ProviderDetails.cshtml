@@ -1,6 +1,9 @@
 @page "/providers/{id}"
 @model ProviderDetailsModel
-@{ ViewData["Title"] = Model.Provider?.DisplayName ?? Model.Id; }
+@{
+    ViewData["Title"] = Model.Provider?.DisplayName ?? Model.Id;
+    ViewData["MetaDescription"] = Localizer["MetaDescription", Model.Provider?.DisplayName ?? Model.Id];
+}
 
 <div class="provider-detail-page">
     <section class="provider-hero">

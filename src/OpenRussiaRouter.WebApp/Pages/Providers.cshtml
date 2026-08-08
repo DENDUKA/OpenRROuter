@@ -1,6 +1,10 @@
 @page
 @model ProvidersModel
-@{ Layout = "~/Pages/Shared/_CatalogLayout.cshtml"; ViewData["Title"] = Localizer["Providers_Title"]; }
+@{
+    Layout = "~/Pages/Shared/_CatalogLayout.cshtml";
+    ViewData["Title"] = Localizer["Providers_Title"];
+    ViewData["MetaDescription"] = Localizer["MetaDescription"];
+}
 
 <div class="providers-page">
     <section class="providers-hero" aria-labelledby="providers-title">

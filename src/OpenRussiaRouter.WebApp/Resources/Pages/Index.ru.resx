@@ -143,4 +143,7 @@
   <data name="A11y_ExampleCurlRequest" xml:space="preserve">
     <value>Пример запроса curl</value>
   </data>
+  <data name="MetaDescription" xml:space="preserve">
+    <value>OpenRussiaRouter — единый OpenAI-совместимый API для работы с AI-моделями: каталог моделей, цены за токены, пополнение баланса и один API-ключ.</value>
+  </data>
 </root>

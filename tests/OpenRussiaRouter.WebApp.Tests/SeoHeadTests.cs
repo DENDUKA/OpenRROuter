@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.RegularExpressions;
 using FluentAssertions;
 using Grpc.Core;
 using Microsoft.AspNetCore.Hosting;
@@ -29,7 +30,7 @@ public sealed class SeoHeadTests
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/\" />");
         body.Should().Contain("<meta name=\"description\" content=\"");
-        body.Should().Contain("Единый OpenAI-совместимый API");
+        body.Should().Contain("единый OpenAI-совместимый API для работы с AI-моделями");
         body.Should().Contain("property=\"og:site_name\" content=\"OpenRussiaRouter\"");
         body.Should().Contain("property=\"og:type\" content=\"website\"");
         body.Should().Contain("property=\"og:title\"");
@@ -110,6 +111,36 @@ public sealed class SeoHeadTests
 
         var body = await response.Content.ReadAsStringAsync();
         body.Should().Contain("<meta name=\"robots\" content=\"noindex,follow\" />");
+    }
+
+    [Fact]
+    public async Task Get_IndexablePublicPages_AllEmitUniqueMetaDescriptions()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var urls = new[]
+        {
+            "/", "/models", "/models/xiaomi/mimo-v2.5-pro", "/providers", "/providers/xiaomi",
+            "/tools", "/tools/cline", "/docs", "/support", "/legal/privacy", "/legal/offer"
+        };
+
+        var descriptions = new List<string>();
+        foreach (var url in urls)
+        {
+            using var response = await client.GetAsync(url);
+            response.StatusCode.Should().Be(HttpStatusCode.OK, $"page {url} should be reachable");
+
+            var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+            var match = Regex.Match(body, "<meta name=\"description\" content=\"([^\"]*)\"");
+            match.Success.Should().BeTrue($"page {url} must emit a meta description");
+
+            var description = match.Groups[1].Value;
+            description.Should().NotBeNullOrWhiteSpace($"page {url} must have a non-empty meta description");
+            descriptions.Add(description);
+        }
+
+        descriptions.Should().OnlyHaveUniqueItems("indexable pages must not share meta descriptions");
     }
 
     private static WebApplicationFactory<Program> CreateFactory()

@@ -143,21 +143,59 @@ public sealed class SeoHeadTests
         descriptions.Should().OnlyHaveUniqueItems("indexable pages must not share meta descriptions");
     }
 
-    private static WebApplicationFactory<Program> CreateFactory()
+    [Fact]
+    public async Task Get_Root_NoAnalyticsConfigured_EmitsNoTrackingTags()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("googletagmanager.com");
+        body.Should().NotContain("mc.yandex.ru");
+        body.Should().NotContain("AnalyticsEvents");
+    }
+
+    [Fact]
+    public async Task Get_Root_AnalyticsConfigured_EmitsBothTrackingTags()
+    {
+        using var factory = CreateFactory(analyticsConfigured: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("https://www.googletagmanager.com/gtag/js?id=G-TEST123");
+        body.Should().Contain("gtag('config', 'G-TEST123')");
+        body.Should().Contain("https://mc.yandex.ru/metrika/tag.js?id=11111111");
+        body.Should().Contain("https://mc.yandex.ru/watch/11111111");
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory(bool analyticsConfigured = false)
     {
         var billing = new FakeBillingClient();
         var content = new FakeContentClient();
         var collector = new FakeCollectorClient();
 
+        var config = new Dictionary<string, string?>
+        {
+            ["PublicApiBaseUrl"] = "https://example.com",
+        };
+        if (analyticsConfigured)
+        {
+            config["Analytics:GoogleTagId"] = "G-TEST123";
+            config["Analytics:YandexCounterId"] = "11111111";
+        }
+
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Development");
-            builder.ConfigureAppConfiguration((_, config) =>
+            builder.ConfigureAppConfiguration((_, configBuilder) =>
             {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    ["PublicApiBaseUrl"] = "https://example.com",
-                });
+                configBuilder.AddInMemoryCollection(config);
             });
             builder.ConfigureServices(services =>
             {

@@ -286,6 +286,11 @@ services:
       ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
       ProductAnalytics__Environment: "production"
       SiteVisits__Enabled: "${SITE_VISITS_ENABLED:-true}"
+      # Web-analytics tags in the shared layout: Yandex Metrika counter and GA4 gtag.
+      # Not secrets (they are emitted into public HTML); empty values disable the
+      # corresponding snippet and keep CSP strict.
+      Analytics__GoogleTagId: "G-BDD3DYVCLL"
+      Analytics__YandexCounterId: "111420552"
       # Data Protection key ring: persisted to a Docker volume so the antiforgery tokens
       # and cookie-auth session tickets survive container restarts. Without this every
       # restart silently mints a new key ring, logged-in users are kicked out, and stale

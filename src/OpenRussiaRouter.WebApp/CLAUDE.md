@@ -162,6 +162,26 @@ URL). SEO-следствие: несуществующие URL каталога 
 - Кириллица в `content` атрибутов кодируется Razor в числовые сущности `&#x...;` — это норм
   (браузер декодирует); при проверках рендера в тестах декодируй `WebUtility.HtmlDecode`.
 
+## Веб-аналитика (Yandex Metrika / GA4) в layout
+
+Внешние счётчики живут в `_Layout.cshtml` и включаются по секции `Analytics`
+([`AnalyticsOptions`](Services/Analytics/AnalyticsOptions.cs), env `Analytics__*`):
+
+- **gated по пустым ID**: пустой `GoogleTagId`/`YandexCounterId` → соответствующий сниппет не
+  рендерится вообще (dev и тесты остаются чистыми). Теги в `<head>` после OG-блока.
+- **CSP расширяется условно** (`Program.cs`, блок security headers): хосты
+  `googletagmanager.com`/`google-analytics.com`/`analytics.google.com` добавляются только при
+  `GoogleTagId`, `mc.yandex.ru` — только при `YandexCounterId`. Без аналитики политика остаётся
+  прежней — не «расширять навсегда».
+- **Конверсионные события** — механизм `ViewData["AnalyticsEvents"]` (список имён): page model
+  кладёт флаг (обычно через `TempData` из POST-редиректа, см. `signup`/`email_verified`/
+  `api_key_created`; `topup_completed` — по query `?topup=success` на `/workspace/credits`),
+  layout в конце `<body>` рендерит inline-скрипт `gtag('event', …)` + `ym(…,'reachGoal',…)`
+  для каждого события. Пустой список/нет аналитики → ничего.
+- Прод-значения зашиты в `deploy/compose/compose.prod.yml` (Analytics__GoogleTagId /
+  Analytics__YandexCounterId) — это не секреты, они и так уходят в публичный HTML.
+  Полный runbook подключения — `docs/seo/webmasters-analytics-runbook.md`.
+
 ## Платежи ([Services/Payments](Services/Payments))
 
 Границы ответственности жёсткие (см. корневой CLAUDE.md), в коде это выглядит так:
@@ -367,6 +387,7 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
 | `Email:*` | транспорт, SMTP-хост/порт/SSL, отправитель, `BatchDelayMs`; секреты (`BrevoApiKey`, SMTP-логин/пароль) — только env/secret |
 | `Support:{Inbox,TelegramUrl}` | получатель формы `/support` и альтернативный канал |
 | `ProductAnalytics:*` | синк `orr_analytics` (`Enabled`, `ConnectionString`, `IdentitySalt`, `Environment`, размеры очереди) |
+| `Analytics:{GoogleTagId,YandexCounterId}` | теги веб-аналитики в layout; пусто → сниппет не рендерится, CSP остаётся строгим |
 | `SiteVisits:{Enabled,QueueCapacity,BatchSize}` | трекинг визитов; вложенная секция `SiteVisits:Compaction:*` здесь не читается — компакт хостит BillingService |
 | `ExchangeRates:*` | display-only курсы ЦБ РФ + фолбэки |
 | `Payments:*` | `ActiveProvider`, `Min/MaxTopUpUsd`, `Mock.SharedSecret`, `Rollypay.*`, `YandexPay.*` (Enabled, Sandbox, MerchantId, SuccessRedirectUrl, FailRedirectUrl, OrderTtlSeconds), `Reconciliation.*` |

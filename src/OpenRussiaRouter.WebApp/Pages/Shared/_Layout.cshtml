@@ -1,7 +1,10 @@
 @using OpenRussiaRouter.WebApp.Services.State
 @inject OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver BaseUrlResolver
+@inject Microsoft.Extensions.Options.IOptions<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsOptions> AnalyticsOptions
 @{
     var path = Context.Request.Path.Value ?? "";
+    var googleTagId = AnalyticsOptions.Value.GoogleTagId;
+    var yandexCounterId = AnalyticsOptions.Value.YandexCounterId;
     var hideSidebar = path.StartsWith("/workspace", StringComparison.OrdinalIgnoreCase)
         || path.StartsWith("/admin", StringComparison.OrdinalIgnoreCase);
     var user = User.GetUserSession();
@@ -109,6 +112,32 @@
     <meta name="twitter:image" content="@ogImageUrl" />
     <link rel="icon" type="image/png" href="~/favicon.png" />
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
+    @if (!string.IsNullOrWhiteSpace(googleTagId))
+    {
+        <script async src="https://www.googletagmanager.com/gtag/js?id=@googleTagId"></script>
+        <script>
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '@googleTagId');
+        </script>
+    }
+    @if (!string.IsNullOrWhiteSpace(yandexCounterId))
+    {
+        <!-- Yandex.Metrika counter -->
+        <script type="text/javascript">
+            (function(m,e,t,r,i,k,a){
+                m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+                m[i].l=1*new Date();
+                for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+                k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+            })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=@yandexCounterId', 'ym');
+
+            ym(@yandexCounterId, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+        </script>
+        <noscript><div><img src="https://mc.yandex.ru/watch/@yandexCounterId" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+        <!-- /Yandex.Metrika counter -->
+    }
 </head>
 <body>
 <div class="app-shell @(hideSidebar ? "app-shell--no-sidebar" : "")">
@@ -362,6 +391,29 @@
             });
         });
     </script>
+    @{
+        // Conversion events set by page models (e.g. signup, email_verified). Fired once per
+        // page view into whichever counter is configured; nothing is emitted when the list is
+        // empty or no analytics is configured.
+        var analyticsEvents = ViewData["AnalyticsEvents"] as IEnumerable<string>;
+        var analyticsEventScript = "";
+        if (analyticsEvents is { } evts && evts.Any())
+        {
+            var eventsJson = System.Text.Json.JsonSerializer.Serialize(evts);
+            var calls = new List<string>();
+            if (!string.IsNullOrWhiteSpace(googleTagId))
+                calls.Add("gtag('event', name);");
+            if (!string.IsNullOrWhiteSpace(yandexCounterId))
+                calls.Add($"ym({yandexCounterId}, 'reachGoal', name);");
+            if (calls.Count > 0)
+            {
+                analyticsEventScript =
+                    "<script>(function () { var events = " + eventsJson + "; " +
+                    "events.forEach(function (name) { " + string.Join(" ", calls) + " }); })();</script>";
+            }
+        }
+    }
+    @Html.Raw(analyticsEventScript)
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

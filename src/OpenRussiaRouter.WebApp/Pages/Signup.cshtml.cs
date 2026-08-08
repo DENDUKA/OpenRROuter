@@ -76,6 +76,7 @@ public class SignupModel : PageModelBase
             }
 
             TempData["StatusMessage"] = _localizer["Auth_VerificationCodeSent", result.Email].Value;
+            TempData["AnalyticsSignup"] = true;
             return RedirectToPage("/VerifyEmail", new { email = result.Email });
         }
         catch (AuthException ex)

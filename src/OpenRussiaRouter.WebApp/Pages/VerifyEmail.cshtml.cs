@@ -45,6 +45,8 @@ public class VerifyEmailModel : PageModelBase
             return RedirectToPage("/Workspace/ApiKeys");
 
         StatusMessage = TempData["StatusMessage"] as string;
+        if (TempData["AnalyticsSignup"] is true)
+            ViewData["AnalyticsEvents"] = new[] { "signup" };
         return Page();
     }
 
@@ -95,6 +97,7 @@ public class VerifyEmailModel : PageModelBase
                 _logger.LogWarning(ex, "Failed to grant start balance after email verification. UserId={UserId}", response.UserId);
             }
 
+            TempData["AnalyticsEmailVerified"] = true;
             return RedirectToPage("/Workspace/ApiKeys");
         }
         catch (AuthException ex)

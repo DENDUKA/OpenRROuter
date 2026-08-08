@@ -50,7 +50,8 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   Это первый эшелон защиты clickjacking и второй эшелон для T-013 (XSS через markdown).
   `UseHsts` автоматически неактивен в Development.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
-  `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`. `UseRateLimiter()` — **до** маппинга.
+  `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`, `SitemapEndpoint.Map`
+  (динамический XML-sitemap, `Api/SitemapEndpoint.cs`). `UseRateLimiter()` — **до** маппинга.
 
 ## Структура
 
@@ -90,7 +91,7 @@ PascalCase-путь файла. Источник истины — директи
 | Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest`, `/admin/visitors`, `/admin/sessions` (голый `@page`, путь из имени файла `Admin/Sessions.cshtml`), `/admin/sessions/{id:long}` (явная директива `@page "/admin/sessions/{id:long}"` в `Admin/SessionDetails.cshtml` — иначе путь был бы `/admin/sessiondetails`) |
 | Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`), `POST /workspace/credits/yandexpay/checkout` (admin-only, JSON), `POST /v1/webhook` (Yandex Pay JWT ES256, анонимный) |
 | Контроллеры | `POST /preferences/currency` (`[Authorize]`), `POST /preferences/language` (анонимно, ставит culture-cookie), `GET /providers/logo/{id}`, `GET /tools/logo/{id}` (фолбэк — монограмма), `GET /tools/image/{id:guid}`, `GET /admin/providers/logo/{id}`, `POST /admin/gatewaytest/stream` (SSE) |
-| Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, OTel-эндпоинты |
+| Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, `GET /sitemap.xml` (динамический XML-sitemap, `Api/SitemapEndpoint.cs`), OTel-эндпоинты |
 
 Все POST-контроллеры под `[ValidateAntiForgeryToken]`.
 

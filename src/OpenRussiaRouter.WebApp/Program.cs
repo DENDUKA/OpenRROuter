@@ -482,6 +482,10 @@ YandexPayWebhookEndpoint.Map(app);
 // Token-gated; disabled (503) unless Alerting:WebhookToken + Alerting:EmailTo are set.
 AlertWebhookEndpoint.Map(app);
 
+// Dynamic XML sitemap for search engines: static indexable pages + enabled models,
+// active providers, published tools. Absolute base URL comes from ApiBaseUrlResolver.
+SitemapEndpoint.Map(app);
+
 app.Run();
 
 public partial class Program;

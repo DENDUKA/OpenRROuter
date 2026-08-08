@@ -1,0 +1,90 @@
+name: 🔎 Diagnose production
+
+# Read-only inspection of the prod box (201.51.6.246) over the same SSH channel the deploy uses.
+# Nothing here mutates the server: no git write, no docker up/build, no .env edit. Exists because
+# a blind full-stack deploy across a large gap is unsafe — the live compose file, the state of the
+# app/ clone and the .env key set all have to be known first.
+#
+# Secret hygiene: values are never printed. .env shows key names only; the compose diff is passed
+# through a redactor because the hand-edited file on the box may hold literal credentials.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  # Must not interleave with a running deploy.
+  group: prod-deploy
+  cancel-in-progress: false
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Inspect via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.PROD_SSH_HOST }}
+          username: ${{ secrets.PROD_SSH_USER }}
+          password: ${{ secrets.PROD_SSH_PASSWORD }}
+          port: 22
+          command_timeout: 5m
+          script: |
+            set -u
+            cd /opt/orr
+
+            echo "===== 1. /opt/orr layout ====="
+            ls -la
+
+            echo ""
+            echo "===== 2. app/ clone ====="
+            git -C app remote -v
+            git -C app rev-parse --abbrev-ref HEAD
+            git -C app log -1 --format='HEAD = %h %ad %s' --date=short
+            echo "--- fetch + how far behind origin/main ---"
+            git -C app fetch --quiet origin || echo "!! fetch failed"
+            echo "behind: $(git -C app rev-list --count HEAD..origin/main) commits"
+            echo "origin/main = $(git -C app rev-parse --short origin/main)"
+
+            echo ""
+            echo "===== 3. working tree (why pull --ff-only fails) ====="
+            git -C app status --short
+            echo "--- diff stat ---"
+            git -C app --no-pager diff --stat
+            echo "--- diff (secret-like values redacted) ---"
+            git -C app --no-pager diff | \
+              sed -E 's/([A-Za-z_]*(TOKEN|PASSWORD|SECRET|APIKEY|API_KEY|SALT)[A-Za-z_]*)([:=])[[:space:]]*.+/\1\3 ***REDACTED***/I'
+
+            echo ""
+            echo "===== 4. live /opt/orr/compose.yml ====="
+            echo "--- services defined ---"
+            grep -nE '^  [a-z0-9_-]+:' compose.yml || true
+            echo "--- f9router present in live compose? ---"
+            grep -c 'f9router' compose.yml || true
+            echo "--- which tracked file does it match? ---"
+            for f in app/deploy/compose/compose.prod.yml app/deploy/compose/compose.yml; do
+              printf '%s  %s\n' "$(md5sum < "$f" | cut -d' ' -f1)" "$f"
+            done
+            printf '%s  %s\n' "$(md5sum < compose.yml | cut -d' ' -f1)" "compose.yml (live)"
+
+            echo ""
+            echo "===== 5. .env — key names only, no values ====="
+            sed -E 's/=.*//' .env | grep -vE '^\s*(#|$)' | sort
+
+            echo ""
+            echo "===== 6. containers ====="
+            docker compose ps --format 'table {{.Service}}\t{{.Status}}'
+            echo "--- compose project name ---"
+            docker compose config --services | tr '\n' ' '; echo
+
+            echo ""
+            echo "===== 7. capacity (a full-stack rebuild needs headroom) ====="
+            df -h / | tail -2
+            free -m | head -2
+            docker system df
+
+            echo ""
+            echo "===== 8. app health right now ====="
+            for u in http://127.0.0.1:8080/health http://127.0.0.1:5006/health http://127.0.0.1:3000/login; do
+              printf '%s -> %s\n' "$u" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "$u")"
+            done

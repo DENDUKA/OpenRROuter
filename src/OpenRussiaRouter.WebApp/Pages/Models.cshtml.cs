@@ -64,7 +64,7 @@ public class ModelsModel(
                 .Select(p => new FilterCategory(
                     p.Id,
                     p.DisplayName,
-                    p.HasLogo ? $"/providers/logo/{p.Id}" : null))
+                    $"/providers/logo/{p.Id}"))
                 .ToList();
 
             CapabilityCategories =

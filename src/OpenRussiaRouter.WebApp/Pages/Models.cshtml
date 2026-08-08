@@ -36,14 +36,7 @@
                             aria-pressed="false"
                             onclick="setCategory('@cat.Id', this)">
                         <span class="filter-pill-icon" aria-hidden="true">
-                            @if (cat.IconUrl != null)
-                            {
-                                <img src="@cat.IconUrl" width="14" height="14" alt="" />
-                            }
-                            else
-                            {
-                                @cat.DisplayName[0]
-                            }
+                            <img src="@cat.IconUrl" width="14" height="14" alt="" />
                         </span>
                         @cat.DisplayName
                     </button>

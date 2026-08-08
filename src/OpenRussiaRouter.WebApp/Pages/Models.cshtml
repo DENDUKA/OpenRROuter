@@ -117,7 +117,7 @@
                         @foreach (var m in Model.Models)
                         {
                             var initials = ModelsModel.GetInitials(m.DisplayName);
-                            var detailUrl = $"/models/{Uri.EscapeDataString(m.Provider)}/{Uri.EscapeDataString(m.Id)}";
+                            var detailUrl = ModelDetailRoute.TryBuildPath(m.Id, m.ProviderId, m.Provider);
                             var tagSearch = string.Join(" ", m.Tags.Select(t => t.DisplayName));
                             <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
                                 data-provider="@m.Provider.ToLower()" data-capability="@m.Capability.ToLower()"

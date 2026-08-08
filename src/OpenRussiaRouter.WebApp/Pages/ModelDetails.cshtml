@@ -14,7 +14,7 @@
             <span class="breadcrumb-sep">/</span>
             <a href="/models">@Localizer["Nav_Models"]</a>
             <span class="breadcrumb-sep">/</span>
-            <a href="/providers/@Model.Provider">@Model.ProviderTitle</a>
+            <a href="/providers/@Uri.EscapeDataString(Model.ProviderRouteId)">@Model.ProviderTitle</a>
             <span class="breadcrumb-sep">/</span>
             <span>@Model.DisplayName</span>
         </div>

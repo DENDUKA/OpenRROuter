@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Catalog;
 using OpenRussiaRouter.WebApp.Services.Content;
 
 namespace OpenRussiaRouter.WebApp.Api;
@@ -73,6 +74,8 @@ public static class SitemapEndpoint
     /// Only enabled models (the <c>ListPublicModels</c> source already filters them), providers that
     /// have at least one enabled model, and published tools are included. <paramref name="baseUrl"/>
     /// is used as the origin; paths are percent-encoded per the sitemap protocol.
+    /// Model URLs come from <see cref="ModelDetailRoute"/> — the sitemap must not invent its own shape,
+    /// or it would list URLs the detail page redirects away from (or 404s on).
     /// </summary>
     internal static IReadOnlyList<SitemapEntry> Collect(
         string baseUrl,
@@ -109,7 +112,7 @@ public static class SitemapEndpoint
 
         foreach (var model in models.OrderBy(m => m.Id, StringComparer.Ordinal))
         {
-            var path = TryBuildModelPath(model.Id);
+            var path = ModelDetailRoute.TryBuildPath(model.Id, model.ProviderId, model.Provider);
             if (path is not null)
             {
                 entries.Add(new SitemapEntry(origin + path));
@@ -152,31 +155,6 @@ public static class SitemapEndpoint
         var document = new XDocument(new XDeclaration("1.0", "utf-8", null), urlset);
         // XDocument.ToString() strips the declaration; prepend it so the response carries the encoding.
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + Environment.NewLine + document.ToString();
-    }
-
-    /// <summary>
-    /// Builds the <c>/models/{provider}/{slug}</c> path for a model id.
-    /// The route has two segments and ASP.NET Core does not decode <c>%2F</c> inside a segment, so
-    /// only ids with exactly one slash map onto a working URL: <c>xiaomi/mimo-v2.5-pro</c> →
-    /// <c>/models/xiaomi/mimo-v2.5-pro</c>. Returns <c>null</c> when no such path exists.
-    /// </summary>
-    internal static string? TryBuildModelPath(string modelId)
-    {
-        if (string.IsNullOrWhiteSpace(modelId))
-        {
-            return null;
-        }
-
-        var firstSlash = modelId.IndexOf('/');
-        if (firstSlash <= 0
-            || firstSlash == modelId.Length - 1
-            || firstSlash != modelId.LastIndexOf('/'))
-        {
-            return null;
-        }
-
-        return $"/models/{Uri.EscapeDataString(modelId[..firstSlash])}/" +
-               $"{Uri.EscapeDataString(modelId[(firstSlash + 1)..])}";
     }
 
     private static DateTimeOffset? NormalizeLastMod(DateTimeOffset value) =>

@@ -6,6 +6,7 @@ using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Services.Catalog;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Services.Markup;
 
@@ -45,12 +46,19 @@ public class ModelDetailsModel : CatalogPageModelBase
     [BindProperty(SupportsGet = true)]
     public string Slug { get; set; } = "";
 
-    public string ModelId => $"{Provider}/{Slug}";
-
     public ModelInfo? ModelData { get; private set; }
 
     public string DisplayName => ModelData?.DisplayName ?? ToTitle(Slug.Replace('-', ' '));
-    public string ProviderTitle => ToTitle(Provider);
+
+    public string ProviderTitle => !string.IsNullOrWhiteSpace(ModelData?.Provider)
+        ? ModelData.Provider
+        : ToTitle(Provider);
+
+    /// <summary>Provider segment for the breadcrumb link to <c>/providers/{id}</c>.</summary>
+    public string ProviderRouteId => !string.IsNullOrWhiteSpace(ModelData?.ProviderId)
+        ? ModelData.ProviderId
+        : Provider;
+
     public string Initials => string.Concat(
         ProviderTitle.Split(' ', StringSplitOptions.RemoveEmptyEntries)
                      .Take(2)
@@ -90,8 +98,8 @@ public class ModelDetailsModel : CatalogPageModelBase
     public bool HasPricing => InputPrice > 0 || OutputPrice > 0;
     public bool IsAudioModel => string.Equals(ModelData?.ModelType, "audio", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>The public catalog id (preferred) for copy-paste snippets, falling back to the route id.</summary>
-    public string PublicModelId => ModelData?.Id ?? ModelId;
+    /// <summary>The public catalog id (preferred) for copy-paste snippets, falling back to the route slug.</summary>
+    public string PublicModelId => ModelData?.Id ?? Slug;
 
     public string ApiBaseUrl { get; private set; } = "";
 
@@ -104,16 +112,62 @@ public class ModelDetailsModel : CatalogPageModelBase
     {
         Currency = await ResolveCurrencyAsync();
         ApiBaseUrl = await _baseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
+
+        ModelData = await ResolveModelAsync(HttpContext.RequestAborted);
+        if (ModelData is null)
+        {
+            return NotFound();
+        }
+
+        // One model = one URL. Legacy links (provider display name in the segment, the whole id in the
+        // slug, the id prefix as the provider) resolve to the same model above and are moved onto the
+        // canonical path instead of serving duplicate content under a second URL.
+        if (!ModelDetailRoute.IsCanonical(ModelData.Id, ModelData.ProviderId, ModelData.Provider, Provider, Slug)
+            && ModelDetailRoute.TryBuildPath(ModelData.Id, ModelData.ProviderId, ModelData.Provider) is { } canonical)
+        {
+            return RedirectPermanent(canonical);
+        }
+
+        return Page();
+    }
+
+    /// <summary>
+    /// Resolves the model addressed by <c>{provider}/{slug}</c>. The public id is not
+    /// <c>"{provider}/{slug}"</c> (see <see cref="ModelDetailRoute"/>), so the slug is looked up
+    /// directly first and only prefixed or legacy-addressed ids need the catalog scan.
+    /// </summary>
+    private async Task<ModelInfo?> ResolveModelAsync(CancellationToken ct)
+    {
+        var slug = ModelDetailRoute.NormalizeSlug(Slug);
+        if (slug.Length == 0)
+        {
+            return null;
+        }
+
         try
         {
-            ModelData = await _billingClient.GetModelAsync(ModelId);
+            // Fast path: most public ids are exactly the slug ("claude-opus-4-8").
+            var direct = await _billingClient.GetModelAsync(slug, ct);
+            if (direct is not null)
+            {
+                return direct;
+            }
+
+            // Prefixed ids ("ORR/Gemini-3.1-Pro") are not addressable by the slug alone — only the
+            // public catalog maps provider + slug back onto the full id.
+            var catalog = await _billingClient.ListPublicModelsAsync(ct);
+            return catalog.FirstOrDefault(m =>
+                       ModelDetailRoute.Matches(m.Id, m.ProviderId, m.Provider, Provider, slug))
+                   // Wrong provider segment (old link, hand-typed URL): the slug alone identifies the
+                   // model and the canonical redirect above sends the request to the right provider.
+                   ?? catalog.FirstOrDefault(m =>
+                       string.Equals(ModelDetailRoute.SlugOf(m.Id), slug, StringComparison.OrdinalIgnoreCase));
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Failed to load model {ModelId}", ModelId);
+            _logger.LogWarning(ex, "Failed to load model {Provider}/{Slug}", Provider, slug);
+            return null;
         }
-
-        return ModelData is null ? NotFound() : Page();
     }
 
     private static string ToTitle(string value) =>

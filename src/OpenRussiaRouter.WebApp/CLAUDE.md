@@ -62,6 +62,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Controllers/` | MVC-контроллеры для того, что нужно с любой страницы или отдаёт бинарь: `PreferencesController`, `PublicProviderLogoController`, `PublicToolLogoController`, `PublicToolImageController`, `Admin/ProviderLogoController`, `Admin/GatewayTestController` |
 | `Services/Auth` | `AuthProvider` (gRPC→Auth) + DTO, `AuthException` |
 | `Services/Billing` | `BillingProvider` (gRPC→Billing) + DTO (balance, usage, models, providers, anomalies, tags, payments, лимиты ключей), `PlatformSettingKeys`, `BillingException` |
+| `Services/Catalog` | [`ModelDetailRoute`](Services/Catalog/ModelDetailRoute.cs) — единственный источник истины URL-контракта `/models/{provider}/{slug}` (построение ссылок, канонизация, матчинг старых форм) |
 | `Services/Content` | `ContentProvider` (gRPC→Content) — каталог Tools, логотипы/картинки, `ContentException` |
 | `Services/ControlPlane` | `ControlPlaneProvider` (gRPC) + `RouterNodeApiProvider` (прямой HTTP к admin API нод и `/v1/chat/completions`) |
 | `Services/Collector` | `CollectorProvider` (gRPC→Collector) |
@@ -95,12 +96,38 @@ PascalCase-путь файла. Источник истины — директи
 
 Все POST-контроллеры под `[ValidateAntiForgeryToken]`.
 
+**`/models/{provider}/{slug}` — не «id, разрезанный по слэшу».** Публичный id модели этому шаблону
+не подчиняется: в каталоге живут и голые id (`claude-opus-4-8`, `GPT-5.5`), и префиксные
+(`ORR/Gemini-3.1-Pro`), поэтому склейка `$"{provider}/{slug}"` не даёт существующий `model_id` —
+именно так страница детали и отдавала 404 на **каждую** карточку. Контракт зафиксирован в
+[`ModelDetailRoute`](Services/Catalog/ModelDetailRoute.cs), и все четыре места (каталог `/models`,
+`/providers/{id}`, `sitemap.xml`, сама `ModelDetails`) обязаны ходить через него, а не строить путь
+руками:
+
+- **Канонический URL** — `{provider}` = `ModelInfo.ProviderId` (стабильный lowercase-id провайдера,
+  не отображаемое имя), `{slug}` = часть id после последнего слэша. Фолбэки сегмента провайдера:
+  `ProviderId` → префикс id с единственным слэшем → отображаемое имя; если нет ничего, модель
+  не адресуема и ссылка не рендерится (`TryBuildPath` → `null`).
+- **Резолв** — сперва `GetModelAsync(slug)` (у большинства моделей id и есть слаг), при промахе —
+  скан `ListPublicModelsAsync` через `Matches`. Только каталог знает, какому полному id
+  соответствует пара provider+slug: обратно из URL префикс не восстановить.
+- **Старые формы 301-редиректятся на канонический URL, а не 404-ят**: отображаемое имя провайдера
+  в сегменте (`/models/Antropic/…`), префикс id вместо провайдера (`/models/ORR/…`, так строил
+  первый sitemap), полный id в слаге (в т.ч. `%2F`), чужой провайдер при верном слаге.
+  Проверка каноничности — `IsCanonical`, ordinal, поэтому отличие в регистре тоже редирект.
+- Один слаг = одна модель. Если в каталоге появятся `X` и `ORR/X` одного провайдера, второй
+  окажется недостижим (шадоуится первым) — это ограничение контракта, а не баг резолва.
+- **Sitemap не строит URL моделей сам** — иначе он снова начнёт публиковать ссылки, с которых
+  страница редиректит (или которые 404-ят).
+
 **Detail-страницы каталога отдают настоящий 404, а не soft-404.** `/tools/{id}` и `/providers/{id}`
 при отсутствующей или недоступной сущности (в т.ч. черновик tool — публичный `GetTool` возвращает
 `null` для `!IsPublished`) выставляют `Response.StatusCode = 404` и рендерят штатный HTML-блок
 «не найдено»; страницы пользовательской 404 не имеют, глобального `UseStatusCodePages` нет —
-поэтому голый `NotFound()` не используется. SEO-следствие: несуществующие URL каталога индексируются
-не должны, при необходимости — снять в Search Console.
+поэтому голый `NotFound()` не используется. Исключение — `ModelDetails`: несуществующая модель
+отдаёт пустой `NotFound()` (страница построена на `IActionResult`, ей нужен ещё и 301 на канонический
+URL). SEO-следствие: несуществующие URL каталога индексируются не должны, при необходимости — снять
+в Search Console.
 
 ## SEO-метаданные в layout ([_Layout.cshtml](Pages/Shared/_Layout.cshtml))
 

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Служебные и приватные разделы — закрыты от индексации.
+Disallow: /admin/
+Disallow: /workspace/
+Disallow: /webhook/
+Disallow: /internal/
+Disallow: /health
+Disallow: /metrics
+
+Sitemap: https://openrussiarouter.com/sitemap.xml

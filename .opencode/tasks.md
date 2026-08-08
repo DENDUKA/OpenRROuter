@@ -58,11 +58,11 @@
 - desc: WebApp. Обработчик /tools/{id} (Pages/Tools.cshtml.cs): отсутствующий или неопубликованный tool возвращает NotFound() вместо HTML с сообщением при статусе 200. Обработчик /providers/{id} (Pages/Providers.cshtml.cs): отсутствующий provider возвращает NotFound(). Пользовательскую страницу 404 сохранить. Добавить unit/integration тесты: существующая сущность → 200; несуществующая → 404; черновик tool недоступен публично (404). Сборка и тесты WebApp обязательны.
 
 ## SEO-005 — Добавить robots.txt
-- status: todo
+- status: done
 - priority: high
 - created: 2026-08-06T00:00:00Z
-- started:
-- completed:
+- started: 2026-08-08T00:00:00+00:00
+- completed: 2026-08-08T00:00:00+00:00
 - desc: WebApp. Добавить доступный по /robots.txt файл (wwwroot/robots.txt). Разрешить обход публичных страниц; закрыть служебные разделы: /admin/, /workspace/, /webhook/, /internal/, /health, /metrics. Добавить абсолютную ссылку Sitemap: https://openrussiarouter.com/sitemap.xml. Критерий: /robots.txt отвечает 200 и валиден. Сборка обязательна.
 
 ## SEO-006 — Реализовать динамический sitemap.xml

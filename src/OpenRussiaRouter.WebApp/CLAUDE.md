@@ -75,7 +75,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Email/` | Очередь + воркер + два транспорта (SMTP/Brevo API), шаблоны, рассылки |
 | `Resources/` | `.ru.resx`/`.en.resx`: `SharedResource` + per-page ресурсы, путь зеркалит путь страницы (`Resources/Pages/Workspace/Credits.*.resx`) |
 | `Support/` | `SupportSettings` (секция `Support`) для формы `/support` |
-| `wwwroot/` | `app.css`, локальный `bootstrap/`, `favicon.png`, `icons/`, `js/tool-editor.js`. Своего фронтенд-билда нет, CDN не используется |
+| `wwwroot/` | `app.css`, локальный `bootstrap/`, `favicon.png`, `icons/`, `js/tool-editor.js`, `robots.txt`, `og-image.png` (OG-баннер 1200×630). Своего фронтенд-билда нет, CDN не используется |
 
 ## Карта маршрутов
 
@@ -101,6 +101,30 @@ PascalCase-путь файла. Источник истины — директи
 «не найдено»; страницы пользовательской 404 не имеют, глобального `UseStatusCodePages` нет —
 поэтому голый `NotFound()` не используется. SEO-следствие: несуществующие URL каталога индексируются
 не должны, при необходимости — снять в Search Console.
+
+## SEO-метаданные в layout ([_Layout.cshtml](Pages/Shared/_Layout.cshtml))
+
+Общий механизм SEO-метаданных живёт в `_Layout.cshtml` и применяется ко всем страницам
+(в т.ч. `_CatalogLayout`/`_WorkspaceLayout`/`_AdminLayout` — они рендерятся внутри общего layout):
+
+- **Self-referencing canonical** — `ViewData["CanonicalUrl"]`, если задан; иначе
+  `ApiBaseUrlResolver` base + `Request.Path` **без query** (`/tools?category=x` → `/tools`,
+  UTM не попадают). Рендерится только на индексируемых страницах (не на noindex).
+- **`meta robots="noindex,follow"`** — на приватных/служебных префиксах
+  (`/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email`, `/invite/`,
+  `/workspace`, `/admin`, `/pay/`, `/error`, `/webhook/`, `/internal/`, `/health`, `/metrics`,
+  `/.well-known`) и при `Response.StatusCode >= 400` (страницы каталога с 404 получают noindex,
+  canonical и `og:url` при этом не выводятся).
+- **`meta description`** — `ViewData["MetaDescription"]` (string или IHtmlContent), иначе
+  брендовый дефолт `Seo_DefaultDescription` из `_Layout.{ru,en}.resx`. ⚠️ Ключи SEO-дефолта кладутся
+  в ресурсы **вьюхи layout**, а не в `SharedResource` — `IViewLocalizer` в layout резолвит ключи
+  через `Resources/Pages/Shared/_Layout.*.resx`.
+- **Open Graph + Twitter Card** — `og:site_name`, `og:type=website`, `og:title`,
+  `og:description`, `og:url` (= canonical), `og:image` и `twitter:card/title/description/image`;
+  `og:image`/`twitter:image` = `{baseUrl}/og-image.png` (`wwwroot/og-image.png`, 1200×630 —
+  сгенерированный брендовый баннер, правки картинки — через генерацию PNG, не текстом).
+- Кириллица в `content` атрибутов кодируется Razor в числовые сущности `&#x...;` — это норм
+  (браузер декодирует); при проверках рендера в тестах декодируй `WebUtility.HtmlDecode`.
 
 ## Платежи ([Services/Payments](Services/Payments))
 
@@ -360,7 +384,9 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
   `TestAuthenticationHandler` для залогиненных сценариев. Покрыто: платежи (чекаут, реестр, гвард,
   вебхук-эндпоинт и процессор, Rollypay-верификатор), email (очередь, воркер, шаблоны),
   локализация и переключение языка, юридические страницы/согласие/`LegalDocumentService`,
-  трекинг визитов, markdown, курсы ЦБ, activity, support, страницы Tools.
+  трекинг визитов, markdown, курсы ЦБ, activity, support, страницы Tools,
+  SEO-заголовки layout (`SeoHeadTests` — canonical без query, noindex на /login и /signup,
+  description и OG/Twitter-теги).
 - **E2E** — Playwright, opt-in (`tests/OpenRussiaRouter.E2ETests`). База —
   `ORR_E2E_BASE_URL` / `e2e.local.json` (дефолт `http://localhost:5004`), креды —
   `ORR_E2E_USER_EMAIL`/`ORR_E2E_USER_PASSWORD`; **без кредов тесты тихо скипаются**.

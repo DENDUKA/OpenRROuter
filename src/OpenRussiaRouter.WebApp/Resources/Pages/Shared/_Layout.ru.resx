@@ -122,4 +122,7 @@
   <data name="Nav_Support" xml:space="preserve">
     <value>Поддержка</value>
   </data>
+  <data name="Seo_DefaultDescription" xml:space="preserve">
+    <value>Единый OpenAI-совместимый API для AI-моделей: каталог моделей, прозрачные цены и пополнение баланса в России.</value>
+  </data>
 </root>

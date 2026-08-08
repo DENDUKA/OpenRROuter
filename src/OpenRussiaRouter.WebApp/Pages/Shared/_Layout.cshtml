@@ -1,4 +1,5 @@
 @using OpenRussiaRouter.WebApp.Services.State
+@inject OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver BaseUrlResolver
 @{
     var path = Context.Request.Path.Value ?? "";
     var hideSidebar = path.StartsWith("/workspace", StringComparison.OrdinalIgnoreCase)
@@ -45,6 +46,41 @@
         htmlTitle.WriteTo(titleWriter, System.Text.Encodings.Web.HtmlEncoder.Default);
         pageTitle = titleWriter.ToString();
     }
+
+    // SEO metadata: self-referencing canonical (no query), noindex for private/service paths and
+    // error pages, brand fallback description, Open Graph + Twitter Card.
+    var baseUrl = (await BaseUrlResolver.ResolveAsync(Context.Request)).TrimEnd('/');
+    var canonicalUrl = ViewData["CanonicalUrl"] as string;
+    if (string.IsNullOrWhiteSpace(canonicalUrl))
+    {
+        canonicalUrl = baseUrl + path;
+    }
+
+    string[] noIndexPrefixes =
+    [
+        "/login", "/signup", "/forgot-password", "/reset-password", "/verify-email",
+        "/invite/", "/workspace", "/admin", "/pay/", "/error", "/webhook/",
+        "/internal/", "/health", "/metrics", "/.well-known",
+    ];
+    var noIndex = Context.Response.StatusCode >= 400
+        || noIndexPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+    string? metaDescription = null;
+    if (ViewData["MetaDescription"] is string md)
+        metaDescription = md;
+    else if (ViewData["MetaDescription"] is Microsoft.AspNetCore.Html.IHtmlContent htmlMeta)
+    {
+        using var metaWriter = new System.IO.StringWriter();
+        htmlMeta.WriteTo(metaWriter, System.Text.Encodings.Web.HtmlEncoder.Default);
+        metaDescription = metaWriter.ToString();
+    }
+    if (string.IsNullOrWhiteSpace(metaDescription))
+    {
+        metaDescription = Localizer["Seo_DefaultDescription"].Value;
+    }
+
+    var ogTitle = string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle;
+    var ogImageUrl = baseUrl + "/og-image.png";
 }
 <!DOCTYPE html>
 <html lang="@activeLang">
@@ -52,6 +88,25 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@(string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle + " - OpenRussiaRouter")</title>
+    <meta name="description" content="@metaDescription" />
+    @if (noIndex)
+    {
+        <meta name="robots" content="noindex,follow" />
+    }
+    @if (!noIndex)
+    {
+        <link rel="canonical" href="@canonicalUrl" />
+        <meta property="og:url" content="@canonicalUrl" />
+    }
+    <meta property="og:site_name" content="OpenRussiaRouter" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="@ogTitle" />
+    <meta property="og:description" content="@metaDescription" />
+    <meta property="og:image" content="@ogImageUrl" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="@ogTitle" />
+    <meta name="twitter:description" content="@metaDescription" />
+    <meta name="twitter:image" content="@ogImageUrl" />
     <link rel="icon" type="image/png" href="~/favicon.png" />
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
 </head>

@@ -124,6 +124,30 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
         Assert.Equal("Credits_AmountInvalid", model.ErrorMessage);
     }
 
+    [Fact]
+    public async Task Get_WithTopUpSuccessQuery_FiresTopUpCompletedEvent()
+    {
+        var (model, _) = CreateCreditsModel(acceptLegal: true);
+        model.PageContext!.HttpContext!.Request.QueryString =
+            new QueryString("?topup=success");
+
+        await model.OnGetAsync();
+
+        var events = model.ViewData["AnalyticsEvents"] as IEnumerable<string>;
+        Assert.NotNull(events);
+        Assert.Equal(["topup_completed"], events);
+    }
+
+    [Fact]
+    public async Task Get_WithoutTopUpSuccessQuery_FiresNoEvent()
+    {
+        var (model, _) = CreateCreditsModel(acceptLegal: true);
+
+        await model.OnGetAsync();
+
+        Assert.Null(model.ViewData["AnalyticsEvents"]);
+    }
+
     private static (CreditsModel Model, CheckoutFakeBilling Billing) CreateCreditsModel(bool acceptLegal)
     {
         var billing = new CheckoutFakeBilling();
@@ -155,7 +179,10 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
                     User = new ClaimsPrincipal(new ClaimsIdentity(
                         [new Claim(ClaimTypes.NameIdentifier, "user-1")],
                         "test"))
-                }
+                },
+                ViewData = new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(
+                    new Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider(),
+                    new Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary())
             }
         };
 

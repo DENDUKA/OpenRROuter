@@ -34,12 +34,12 @@
 
 ## SEO-002 — Подключить системы вебмастеров и аналитику
 - status: blocked
-- blocked_reason: нужен доступ к DNS и аккаунтам вебмастеров/аналитики; агент не имеет этих прав
+- blocked_reason: код внедрения готов (теги, CSP, события конверсии), DNS подтверждён; осталось задеплоить и вручную настроить цели в GA4/Метрике и проверить конверсии
 - priority: low
 - created: 2026-08-06T00:00:00Z
-- started:
+- started: 2026-08-08T00:00:00+00:00
 - completed:
-- desc: Зарегистрировать домен в Google Search Console и Яндекс Вебмастере через DNS-подтверждение; настроить Яндекс Метрику и (при необходимости) Google Analytics 4; связать Search Console и GA4; настроить цели: регистрация, подтверждение email, создание API-ключа, первое пополнение. Критерий: домен подтверждён в обеих системах, события конверсии приходят в аналитику.
+- desc: Зарегистрировать домен в Google Search Console и Яндекс Вебмастере через DNS-подтверждение; настроить Яндекс Метрику и (при необходимости) Google Analytics 4; связать Search Console и GA4; настроить цели: регистрация, подтверждение email, создание API-ключа, первое пополнение. Критерий: домен подтверждён в обеих системах, события конверсии приходят в аналитику. Код готов: AnalyticsOptions + теги в _Layout.cshtml (GA4 G-BDD3DYVCLL, Метрика 111420552, CSP-хосты в Program.cs), события signup/email_verified/api_key_created/topup_completed, прод-значения в compose.prod.yml, тесты в SeoHeadTests/LegalConsentTests. Runbook — docs/seo/webmasters-analytics-runbook.md.
 
 ## SEO-003 — Список index/noindex URL
 - status: todo

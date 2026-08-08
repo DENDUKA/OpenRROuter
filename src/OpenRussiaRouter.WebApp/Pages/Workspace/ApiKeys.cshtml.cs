@@ -39,6 +39,11 @@ public class ApiKeysModel(
 
     public async Task OnGetAsync()
     {
+        if (TempData["AnalyticsEmailVerified"] is true)
+            ViewData["AnalyticsEvents"] = new[] { "email_verified" };
+        else if (TempData["AnalyticsApiKeyCreated"] is true)
+            ViewData["AnalyticsEvents"] = new[] { "api_key_created" };
+
         try
         {
             Keys = await _authClient.ListApiKeysAsync(User.GetUserId(), cancellationToken: HttpContext.RequestAborted);
@@ -93,6 +98,7 @@ public class ApiKeysModel(
             {
                 _logger.LogWarning(ex, "Failed to push new API key to router nodes. UserId={UserId} KeyId={KeyId}", User.GetUserId(), result.ApiKeyId);
             }
+            TempData["AnalyticsApiKeyCreated"] = true;
             return RedirectToPage();
         }
         catch (AuthException ex)

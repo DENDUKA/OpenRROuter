@@ -33,6 +33,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
 using OpenRussiaRouter.WebApp.Services.Localization;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.SiteStats;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,6 +91,10 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
         new AcceptLanguageHeaderRequestCultureProvider()
     ];
 });
+
+// Web-analytics tags (Yandex Metrika / Google Analytics 4). Emitted by the shared layout
+// only when a tag/counter id is configured; CSP hosts below are added the same way.
+builder.Services.Configure<AnalyticsOptions>(builder.Configuration.GetSection(AnalyticsOptions.SectionName));
 
 var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
@@ -417,6 +422,25 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 // X-Content-Type-Options: nosniff for MIME-type confusion,
 // Referrer-Policy: strict-origin-when-cross-origin.
 app.UseHsts();
+// Web-analytics hosts are appended only when the corresponding tag is configured; without
+// analytics the policy stays exactly as strict as before (no drift on unrelated deploys).
+var analyticsOptions = app.Services.GetRequiredService<IOptions<AnalyticsOptions>>().Value;
+var scriptSrcExtra = "";
+var imgSrcExtra = "";
+var connectSrcExtra = "";
+if (!string.IsNullOrWhiteSpace(analyticsOptions.GoogleTagId))
+{
+    scriptSrcExtra = " https://www.googletagmanager.com";
+    imgSrcExtra = " https://www.google-analytics.com";
+    connectSrcExtra = " https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com";
+}
+if (!string.IsNullOrWhiteSpace(analyticsOptions.YandexCounterId))
+{
+    // mc.yandex.ru is the counter; yastatic.net serves webvisor/clickmap assets.
+    scriptSrcExtra += " https://mc.yandex.ru https://yastatic.net";
+    imgSrcExtra += " https://mc.yandex.ru https://yastatic.net";
+    connectSrcExtra += " https://mc.yandex.ru https://yastatic.net";
+}
 app.Use(async (context, next) =>
 {
     context.Response.Headers["X-Content-Type-Options"] = "nosniff";
@@ -425,10 +449,10 @@ app.Use(async (context, next) =>
     context.Response.Headers["Content-Security-Policy"] =
         "default-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; " +
-        "script-src 'self' 'unsafe-inline' https://pay.yandex.ru; " +
+        "img-src 'self' data:" + imgSrcExtra + "; " +
+        "script-src 'self' 'unsafe-inline' https://pay.yandex.ru" + scriptSrcExtra + "; " +
         "frame-src https://pay.yandex.ru; " +
-        "connect-src 'self' https://pay.yandex.ru; " +
+        "connect-src 'self' https://pay.yandex.ru" + connectSrcExtra + "; " +
         "frame-ancestors 'none'";
     await next();
 });

@@ -64,6 +64,9 @@ public class CreditsModel(
 
     public async Task OnGetAsync()
     {
+        if (string.Equals(Request.Query["topup"], "success", StringComparison.OrdinalIgnoreCase))
+            ViewData["AnalyticsEvents"] = new[] { "topup_completed" };
+
         var userId = User.GetUserId();
         try
         {

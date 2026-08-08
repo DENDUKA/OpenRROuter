@@ -171,8 +171,15 @@ URL). SEO-следствие: несуществующие URL каталога 
   рендерится вообще (dev и тесты остаются чистыми). Теги в `<head>` после OG-блока.
 - **CSP расширяется условно** (`Program.cs`, блок security headers): хосты
   `googletagmanager.com`/`google-analytics.com`/`analytics.google.com` добавляются только при
-  `GoogleTagId`, `mc.yandex.ru` — только при `YandexCounterId`. Без аналитики политика остаётся
+  `GoogleTagId`, набор хостов Метрики — только при `YandexCounterId`. Без аналитики политика остаётся
   прежней — не «расширять навсегда».
+- **Метрика — это не один `mc.yandex.ru`.** Тег грузится с `mc.yandex.ru`, но дальше сам ходит
+  на `mc.yandex.com` (пиксель `sync_cookie_image_check` → `img-src`, транспорт
+  `wss://mc.yandex.com/solid.ws` → `connect-src`) и на `mc.webvisor.org`/`mc.webvisor.com`
+  (вебвизор). Все они перечислены в `yandexMetrikaHosts` в `Program.cs`.
+  **`wss:` пишется отдельной записью**: браузер не считает `https://host` покрывающим
+  `wss://host`, и без неё в консоли висит «Connecting to 'wss://mc.yandex.com/solid.ws'
+  violates … connect-src».
 - **Конверсионные события** — механизм `ViewData["AnalyticsEvents"]` (список имён): page model
   кладёт флаг (обычно через `TempData` из POST-редиректа, см. `signup`/`email_verified`/
   `api_key_created`; `topup_completed` — по query `?topup=success` на `/workspace/credits`),

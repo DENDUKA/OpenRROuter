@@ -436,10 +436,14 @@ if (!string.IsNullOrWhiteSpace(analyticsOptions.GoogleTagId))
 }
 if (!string.IsNullOrWhiteSpace(analyticsOptions.YandexCounterId))
 {
-    // mc.yandex.ru is the counter; yastatic.net serves webvisor/clickmap assets.
-    scriptSrcExtra += " https://mc.yandex.ru https://yastatic.net";
-    imgSrcExtra += " https://mc.yandex.ru https://yastatic.net";
-    connectSrcExtra += " https://mc.yandex.ru https://yastatic.net";
+    // mc.yandex.ru is the counter; the tag also talks to mc.yandex.com (cookie-sync pixel and
+    // the wss://mc.yandex.com/solid.ws transport) and to mc.webvisor.org/.com for webvisor
+    // uploads; yastatic.net serves webvisor/clickmap assets. wss: is listed explicitly because
+    // browsers do not treat an https: source as covering the websocket scheme.
+    const string yandexMetrikaHosts = " https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net";
+    scriptSrcExtra += yandexMetrikaHosts;
+    imgSrcExtra += yandexMetrikaHosts;
+    connectSrcExtra += yandexMetrikaHosts + " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
 }
 app.Use(async (context, next) =>
 {

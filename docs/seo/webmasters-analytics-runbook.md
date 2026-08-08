@@ -54,7 +54,10 @@ GA4 → Admin → Property → **Search Console links** → добавить GSC
 - `_Layout.cshtml`: gtag.js + счётчик Метрики в `<head>`, gated по непустым ID;
   конверсии через `ViewData["AnalyticsEvents"]`.
 - `Program.cs`: CSP расширяется **условно** — `googletagmanager.com`/`google-analytics.com`/
-  `analytics.google.com` при `GoogleTagId`, `mc.yandex.ru` при `YandexCounterId`.
+  `analytics.google.com` при `GoogleTagId`, набор хостов Метрики при `YandexCounterId`:
+  `mc.yandex.ru`, `mc.yandex.com` (cookie-sync пиксель + `wss://mc.yandex.com/solid.ws`),
+  `mc.webvisor.org`/`mc.webvisor.com`, `yastatic.net`; `wss:`-схема в `connect-src`
+  перечисляется отдельно от `https:`.
 - Прод-значения — в `deploy/compose/compose.prod.yml` (`Analytics__GoogleTagId`,
   `Analytics__YandexCounterId`).
 - Тесты в `SeoHeadTests`: без конфига тегов нет; с конфигом — оба сниппета на месте.

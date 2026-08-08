@@ -50,12 +50,12 @@
 - desc: Зафиксировать стратегию: поисковик всегда получает русскую версию публичного сайта как основную; hreflang для cookie-локализации не строить (один URL не представляет две языковые версии); подготовить архитектуру для будущих /ru/... и /en/..., но англоязычный SEO-контур не публиковать. Индексируемые URL: /, /models, /models/{provider}/{slug}, /providers, /providers/{id}, /tools, /tools/{id} (только опубликованные с содержательным описанием), /docs, /support, юридические страницы. Неиндексируемые: /login, /signup, /forgot-password, /reset-password, /verify-email, /invite/*, /workspace/*, /admin/*, /pay/*, /error, служебные API и webhooks. Артефакт — список index/noindex, согласованный с продуктом.
 
 ## SEO-004 — Исправить soft 404 в каталогах
-- status: todo
+- status: done
 - priority: high
 - created: 2026-08-06T00:00:00Z
-- started:
-- completed:
-- desc: WebApp. Обработчик /tools/{id} (Pages/Tools.cshtml.cs): отсутствующий или неопубликованный tool возвращает NotFound() вместо HTML с сообщением при статусе 200. Обработчик /providers/{id} (Pages/Providers.cshtml.cs): отсутствующий provider возвращает NotFound(). Пользовательскую страницу 404 сохранить. Добавить unit/integration тесты: существующая сущность → 200; несуществующая → 404; черновик tool недоступен публично (404). Сборка и тесты WebApp обязательны.
+- started: 2026-08-08T00:00:00+00:00
+- completed: 2026-08-08T00:00:00+00:00
+- desc: WebApp. Обработчик /tools/{id} (Pages/ToolDetails.cshtml.cs:43): отсутствующий или неопубликованный tool → Response.StatusCode = 404. Обработчик /providers/{id} (Pages/ProviderDetails.cshtml.cs:41): отсутствующий provider → 404. Реализовано. Тесты: ProviderDetailsPageTests.cs (MissingProvider → 404), ToolPagesTests.cs (MissingTool → 404, DraftTool → 404), ModelDetailsPageTests.cs (UnknownModel → 404).
 
 ## SEO-005 — Добавить robots.txt
 - status: done
@@ -179,8 +179,7 @@
 - desc: После деплоя технических SEO-изменений проверить: HTTP-коды ключевых URL; sitemap; robots; canonical и noindex. Критерий: ключевые URL отдают корректные коды, sitemap/robots/canonical/noindex валидны.
 
 ## SEO-020 — Добавить sitemap в поисковые системы
-- status: blocked
-- blocked_reason: нужен доступ к аккаунтам Google Search Console и Яндекс Вебмастер
+- status: todo
 - priority: high
 - created: 2026-08-06T00:00:00Z
 - started:

@@ -47,6 +47,10 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   + inline middleware с `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
   `Referrer-Policy: strict-origin-when-cross-origin`,
   `Content-Security-Policy: default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self' 'unsafe-inline' https://pay.yandex.ru; frame-src https://pay.yandex.ru; connect-src 'self' https://pay.yandex.ru; frame-ancestors 'none'`.
+  Базовые записи аналитики (GA4: `*.google-analytics.com` + голый `analytics.google.com` +
+  `googletagmanager.com`; Яндекс: `mc.yandex.ru|com`, `mc.webvisor.org|com`, `yastatic.net`,
+  `wss://` в `connect-src`) дописываются условно по секции `Analytics` — см. раздел
+  «Веб-аналитика» ниже.
   Это первый эшелон защиты clickjacking и второй эшелон для T-013 (XSS через markdown).
   `UseHsts` автоматически неактивен в Development.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
@@ -169,6 +173,7 @@ URL). SEO-следствие: несуществующие URL каталога 
 
 - **gated по пустым ID**: пустой `GoogleTagId`/`YandexCounterId` → соответствующий сниппет не
   рендерится вообще (dev и тесты остаются чистыми). Теги в `<head>` после OG-блока.
+<<<<<<< HEAD
 - **CSP расширяется условно** (`Program.cs`, блок security headers): хосты
   `googletagmanager.com`/`google-analytics.com`/`analytics.google.com` добавляются только при
   `GoogleTagId`, набор хостов Метрики — только при `YandexCounterId`. Без аналитики политика остаётся
@@ -180,6 +185,18 @@ URL). SEO-следствие: несуществующие URL каталога 
   **`wss:` пишется отдельной записью**: браузер не считает `https://host` покрывающим
   `wss://host`, и без неё в консоли висит «Connecting to 'wss://mc.yandex.com/solid.ws'
   violates … connect-src».
+=======
+- **CSP расширяется условно** (`Program.cs`, блок security headers): при `GoogleTagId` в
+  `connect-src` добавляются `googletagmanager.com`, **wildcard `*.google-analytics.com`**
+  (покрывает `www` и региональные collect-endpoint'ы GA4 `region1..N.google-analytics.com`
+  — какой `regionN` выбирает gtag.js, определяется настройками свойства/consent, а не IP
+  посетителя) и **отдельный голый `analytics.google.com`** — wildcard матчит только поддомены,
+  родительский домен не покрывает; `script-src` получает `googletagmanager.com`. При
+  `YandexCounterId` в `script-src`/`img-src`/`connect-src` добавляются `mc.yandex.ru`,
+  `mc.yandex.com`, `mc.webvisor.org`, `mc.webvisor.com`, `yastatic.net`, а в `connect-src` ещё и
+  `wss://mc.yandex.ru|mc.yandex.com|mc.webvisor.org|mc.webvisor.com` (живой WebSocket Webvisor).
+  Без аналитики политика остаётся прежней — не «расширять навсегда».
+>>>>>>> fix ga console error
 - **Конверсионные события** — механизм `ViewData["AnalyticsEvents"]` (список имён): page model
   кладёт флаг (обычно через `TempData` из POST-редиректа, см. `signup`/`email_verified`/
   `api_key_created`; `topup_completed` — по query `?topup=success` на `/workspace/credits`),

@@ -161,7 +161,7 @@ public sealed class SeoHeadTests
     [Fact]
     public async Task Get_Root_AnalyticsConfigured_EmitsBothTrackingTags()
     {
-        using var factory = CreateFactory(analyticsConfigured: true);
+        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
         using var client = factory.CreateClient();
 
         using var response = await client.GetAsync("/");
@@ -174,7 +174,74 @@ public sealed class SeoHeadTests
         body.Should().Contain("https://mc.yandex.ru/watch/11111111");
     }
 
-    private static WebApplicationFactory<Program> CreateFactory(bool analyticsConfigured = false)
+    [Fact]
+    public async Task Get_Root_GoogleAnalyticsConfigured_CspAllowsGa4Endpoints()
+    {
+        using var factory = CreateFactory(googleAnalytics: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
+        csp.Should().Contain("connect-src 'self' https://pay.yandex.ru https://www.googletagmanager.com https://*.google-analytics.com https://analytics.google.com");
+        csp.Should().Contain("script-src 'self' 'unsafe-inline' https://pay.yandex.ru https://www.googletagmanager.com");
+        csp.Should().NotContain("mc.yandex");
+        csp.Should().NotContain("wss://");
+    }
+
+    [Fact]
+    public async Task Get_Root_NoAnalyticsConfigured_CspHasNoAnalyticsHosts()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
+        csp.Should().NotContain("googletagmanager.com");
+        csp.Should().NotContain("google-analytics.com");
+        csp.Should().NotContain("analytics.google.com");
+        csp.Should().NotContain("mc.yandex");
+        csp.Should().NotContain("yastatic.net");
+        csp.Should().NotContain("wss://");
+    }
+
+    [Fact]
+    public async Task Get_Root_YandexMetrikaConfigured_CspHasYandexHostsAndNoGoogle()
+    {
+        using var factory = CreateFactory(yandexMetrika: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
+        csp.Should().Contain("https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net");
+        csp.Should().Contain("wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com");
+        csp.Should().NotContain("googletagmanager.com");
+        csp.Should().NotContain("google-analytics.com");
+        csp.Should().NotContain("analytics.google.com");
+    }
+
+    [Fact]
+    public async Task Get_Root_BothAnalyticsConfigured_CspAllowsBothGroups()
+    {
+        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
+        csp.Should().Contain("https://*.google-analytics.com");
+        csp.Should().Contain("https://analytics.google.com");
+        csp.Should().Contain("https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net");
+        csp.Should().Contain("wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com");
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory(bool googleAnalytics = false, bool yandexMetrika = false)
     {
         var billing = new FakeBillingClient();
         var content = new FakeContentClient();
@@ -183,12 +250,11 @@ public sealed class SeoHeadTests
         var config = new Dictionary<string, string?>
         {
             ["PublicApiBaseUrl"] = "https://example.com",
+            // appsettings.json hardcodes the prod tag IDs, so each scenario must pin its own
+            // values (null = explicitly not configured, overrides the lower-priority source).
+            ["Analytics:GoogleTagId"] = googleAnalytics ? "G-TEST123" : null,
+            ["Analytics:YandexCounterId"] = yandexMetrika ? "11111111" : null,
         };
-        if (analyticsConfigured)
-        {
-            config["Analytics:GoogleTagId"] = "G-TEST123";
-            config["Analytics:YandexCounterId"] = "11111111";
-        }
 
         return new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {

@@ -53,11 +53,21 @@ GA4 → Admin → Property → **Search Console links** → добавить GSC
 - `AnalyticsOptions` (`GoogleTagId`, `YandexCounterId`), секция `Analytics` в `appsettings.json`.
 - `_Layout.cshtml`: gtag.js + счётчик Метрики в `<head>`, gated по непустым ID;
   конверсии через `ViewData["AnalyticsEvents"]`.
+<<<<<<< HEAD
 - `Program.cs`: CSP расширяется **условно** — `googletagmanager.com`/`google-analytics.com`/
   `analytics.google.com` при `GoogleTagId`, набор хостов Метрики при `YandexCounterId`:
   `mc.yandex.ru`, `mc.yandex.com` (cookie-sync пиксель + `wss://mc.yandex.com/solid.ws`),
   `mc.webvisor.org`/`mc.webvisor.com`, `yastatic.net`; `wss:`-схема в `connect-src`
   перечисляется отдельно от `https:`.
+=======
+- `Program.cs`: CSP расширяется **условно** — при `GoogleTagId` в `connect-src` добавляются
+  `googletagmanager.com`, **wildcard `*.google-analytics.com`** (покрывает `www` и региональные
+  collect-endpoint'ы GA4 `region1..N.google-analytics.com` — gtag.js выбирает `regionN` по
+  настройкам свойства/consent, а не по IP посетителя) и **голый `analytics.google.com`**
+  отдельным источником (CSP-wildcard матчит поддомены, но не родительский домен); при
+  `YandexCounterId` — `mc.yandex.ru`/`mc.yandex.com`/`mc.webvisor.org`/`mc.webvisor.com`/
+  `yastatic.net` (+ `wss://` в `connect-src` для живого Webvisor).
+>>>>>>> fix ga console error
 - Прод-значения — в `deploy/compose/compose.prod.yml` (`Analytics__GoogleTagId`,
   `Analytics__YandexCounterId`).
 - Тесты в `SeoHeadTests`: без конфига тегов нет; с конфигом — оба сниппета на месте.

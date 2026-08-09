@@ -173,30 +173,23 @@ URL). SEO-следствие: несуществующие URL каталога 
 
 - **gated по пустым ID**: пустой `GoogleTagId`/`YandexCounterId` → соответствующий сниппет не
   рендерится вообще (dev и тесты остаются чистыми). Теги в `<head>` после OG-блока.
-<<<<<<< HEAD
-- **CSP расширяется условно** (`Program.cs`, блок security headers): хосты
-  `googletagmanager.com`/`google-analytics.com`/`analytics.google.com` добавляются только при
-  `GoogleTagId`, набор хостов Метрики — только при `YandexCounterId`. Без аналитики политика остаётся
+- **CSP расширяется условно** (`Program.cs`, блок security headers): хосты GA добавляются только
+  при `GoogleTagId`, хосты Метрики — только при `YandexCounterId`. Без аналитики политика остаётся
   прежней — не «расширять навсегда».
+- **GA4 — это не только `www.google-analytics.com`.** В `script-src` идёт `googletagmanager.com`,
+  в `img-src` — `www.google-analytics.com`, а в `connect-src` — `googletagmanager.com`,
+  **wildcard `*.google-analytics.com`** и **отдельно голый `analytics.google.com`**. Wildcard
+  нужен ради региональных collect-endpoint'ов GA4 (`region1..N.google-analytics.com`; какой
+  `regionN` выберет gtag.js, определяют настройки свойства/consent, а не IP посетителя), а голый
+  родительский домен пишется отдельной записью — **CSP-wildcard матчит только поддомены**.
 - **Метрика — это не один `mc.yandex.ru`.** Тег грузится с `mc.yandex.ru`, но дальше сам ходит
   на `mc.yandex.com` (пиксель `sync_cookie_image_check` → `img-src`, транспорт
   `wss://mc.yandex.com/solid.ws` → `connect-src`) и на `mc.webvisor.org`/`mc.webvisor.com`
-  (вебвизор). Все они перечислены в `yandexMetrikaHosts` в `Program.cs`.
-  **`wss:` пишется отдельной записью**: браузер не считает `https://host` покрывающим
-  `wss://host`, и без неё в консоли висит «Connecting to 'wss://mc.yandex.com/solid.ws'
-  violates … connect-src».
-=======
-- **CSP расширяется условно** (`Program.cs`, блок security headers): при `GoogleTagId` в
-  `connect-src` добавляются `googletagmanager.com`, **wildcard `*.google-analytics.com`**
-  (покрывает `www` и региональные collect-endpoint'ы GA4 `region1..N.google-analytics.com`
-  — какой `regionN` выбирает gtag.js, определяется настройками свойства/consent, а не IP
-  посетителя) и **отдельный голый `analytics.google.com`** — wildcard матчит только поддомены,
-  родительский домен не покрывает; `script-src` получает `googletagmanager.com`. При
-  `YandexCounterId` в `script-src`/`img-src`/`connect-src` добавляются `mc.yandex.ru`,
-  `mc.yandex.com`, `mc.webvisor.org`, `mc.webvisor.com`, `yastatic.net`, а в `connect-src` ещё и
-  `wss://mc.yandex.ru|mc.yandex.com|mc.webvisor.org|mc.webvisor.com` (живой WebSocket Webvisor).
-  Без аналитики политика остаётся прежней — не «расширять навсегда».
->>>>>>> fix ga console error
+  (вебвизор); `yastatic.net` отдаёт ассеты вебвизора/кликмапы. Все они перечислены в
+  `yandexMetrikaHosts` в `Program.cs` и уходят сразу в `script-src`/`img-src`/`connect-src`.
+  **`wss:` пишется отдельной записью** (`yandexMetrikaWssHosts`, только `connect-src`): браузер
+  не считает `https://host` покрывающим `wss://host`, и без неё в консоли висит
+  «Connecting to 'wss://mc.yandex.com/solid.ws' violates … connect-src».
 - **Конверсионные события** — механизм `ViewData["AnalyticsEvents"]` (список имён): page model
   кладёт флаг (обычно через `TempData` из POST-редиректа, см. `signup`/`email_verified`/
   `api_key_created`; `topup_completed` — по query `?topup=success` на `/workspace/credits`),

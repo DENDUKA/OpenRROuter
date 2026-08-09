@@ -443,25 +443,16 @@ if (!string.IsNullOrWhiteSpace(analyticsOptions.GoogleTagId))
 }
 if (!string.IsNullOrWhiteSpace(analyticsOptions.YandexCounterId))
 {
-<<<<<<< HEAD
     // mc.yandex.ru is the counter; the tag also talks to mc.yandex.com (cookie-sync pixel and
     // the wss://mc.yandex.com/solid.ws transport) and to mc.webvisor.org/.com for webvisor
     // uploads; yastatic.net serves webvisor/clickmap assets. wss: is listed explicitly because
-    // browsers do not treat an https: source as covering the websocket scheme.
+    // browsers do not treat an https: source as covering the websocket scheme, and the live
+    // webvisor session stream is only valid in connect-src.
     const string yandexMetrikaHosts = " https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net";
+    const string yandexMetrikaWssHosts = " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
     scriptSrcExtra += yandexMetrikaHosts;
     imgSrcExtra += yandexMetrikaHosts;
-    connectSrcExtra += yandexMetrikaHosts + " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
-=======
-    // mc.yandex.ru is the counter; mc.yandex.com/mc.webvisor.org/mc.webvisor.com are the
-    // webvisor cluster; yastatic.net serves webvisor/clickmap assets. wss:// carries the live
-    // webvisor session stream and is only valid in connect-src.
-    var yandexHosts = " https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net";
-    var yandexWss = " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
-    scriptSrcExtra += yandexHosts;
-    imgSrcExtra += yandexHosts;
-    connectSrcExtra += yandexHosts + yandexWss;
->>>>>>> fix ga console error
+    connectSrcExtra += yandexMetrikaHosts + yandexMetrikaWssHosts;
 }
 app.Use(async (context, next) =>
 {

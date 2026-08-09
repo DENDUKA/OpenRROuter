@@ -1,5 +1,5 @@
 @using OpenRussiaRouter.WebApp.Services.State
-@inject OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver BaseUrlResolver
+@inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @inject Microsoft.Extensions.Options.IOptions<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsOptions> AnalyticsOptions
 @{
     var path = Context.Request.Path.Value ?? "";
@@ -52,7 +52,7 @@
 
     // SEO metadata: self-referencing canonical (no query), noindex for private/service paths and
     // error pages, brand fallback description, Open Graph + Twitter Card.
-    var baseUrl = (await BaseUrlResolver.ResolveAsync(Context.Request)).TrimEnd('/');
+    var baseUrl = SiteUrlResolver.Resolve(Context.Request);
     var canonicalUrl = ViewData["CanonicalUrl"] as string;
     if (string.IsNullOrWhiteSpace(canonicalUrl))
     {

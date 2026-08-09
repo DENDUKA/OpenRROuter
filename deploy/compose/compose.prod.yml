@@ -238,6 +238,10 @@ services:
       GrpcServices__Content: "http://content-service:8080"
       ServiceAuth__BillingCaller: "webappadmin"
       ServiceAuth__BillingToken: "${S2S_WEBAPP_TOKEN}"
+      # Canonical site origin for crawler-facing SEO metadata (canonical, og:url, og:image,
+      # sitemap.xml <loc>). The admin-configured API base points at api.<domain> and must never
+      # leak into the sitemap/canonical tags.
+      PublicSiteBaseUrl: "https://${ORR_PUBLIC_DOMAIN}"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
       # config (host/port) ships in appsettings.json.

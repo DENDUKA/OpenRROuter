@@ -76,7 +76,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Services/Legal` | `LegalDocumentService` — рендер `docs/mandatory/*.md` в страницы `/legal/*` |
 | `Services/Markup` | `MarkdownRenderer` (санитизация недоверенного markdown), `MonogramSvg` (фолбэк-логотип) |
 | `Services/SiteStats` | `SiteVisitTrackingMiddleware` (запись визитов в `analytics.site_visits`), `SiteVisitReader` (несхлопнутый хвост для `/admin/visitors`), `VisitSessionReader` + DTO `VisitSessionEntry`/`VisitSessionQuery` (сессии для `/admin/sessions`) |
-| `Services/State` | `UserSession`, `ClaimsExtensions` (`GetUserId`, `GetSessionToken`); рядом `Services/ApiBaseUrlResolver.cs`, `Services/ColorContrast.cs` |
+| `Services/State` | `UserSession`, `ClaimsExtensions` (`GetUserId`, `GetSessionToken`); рядом `Services/ApiBaseUrlResolver.cs`, `Services/SiteBaseUrlResolver.cs`, `Services/ColorContrast.cs` |
 | `Email/` | Очередь + воркер + два транспорта (SMTP/Brevo API), шаблоны, рассылки |
 | `Resources/` | `.ru.resx`/`.en.resx`: `SharedResource` + per-page ресурсы, путь зеркалит путь страницы (`Resources/Pages/Workspace/Credits.*.resx`) |
 | `Support/` | `SupportSettings` (секция `Support`) для формы `/support` |
@@ -139,8 +139,13 @@ URL). SEO-следствие: несуществующие URL каталога 
 (в т.ч. `_CatalogLayout`/`_WorkspaceLayout`/`_AdminLayout` — они рендерятся внутри общего layout):
 
 - **Self-referencing canonical** — `ViewData["CanonicalUrl"]`, если задан; иначе
-  `ApiBaseUrlResolver` base + `Request.Path` **без query** (`/tools?category=x` → `/tools`,
+  `SiteBaseUrlResolver` base + `Request.Path` **без query** (`/tools?category=x` → `/tools`,
   UTM не попадают). Рендерится только на индексируемых страницах (не на noindex).
+  **`SiteBaseUrlResolver` — только для crawler-метаданных** (canonical, `og:url`, `og:image`,
+  `twitter:image`, `<loc>` sitemap): резолвит `PublicSiteBaseUrl` (прод: `https://openrussiarouter.com`)
+  с фолбэком на request origin и **никогда не читает `PublicApiBaseUrl`/админскую настройку** —
+  иначе в canonical/og/sitemap утёк бы api-поддомен. API-примеры (`base_url` в `_IntegrationExamples`,
+  страницы `/docs`) по-прежнему берут адрес из `ApiBaseUrlResolver`.
 - **`meta robots="noindex,follow"`** — на приватных/служебных префиксах
   (`/login`, `/signup`, `/forgot-password`, `/reset-password`, `/verify-email`, `/invite/`,
   `/workspace`, `/admin`, `/pay/`, `/error`, `/webhook/`, `/internal/`, `/health`, `/metrics`,
@@ -398,6 +403,7 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
 | `ApiGatewayUrl` | база для named-клиента `ApiGateway` (тест шлюза из админки) |
 | `DataProtection:KeyRingPath` | путь к persistent-кольцу ключей Data Protection; пусто → ephemeral-дефолт (только локал/тесты) |
 | `PublicApiBaseUrl` | фолбэк для `ApiBaseUrlResolver` (примеры интеграции, `/docs`) |
+| `PublicSiteBaseUrl` | канонический сайт для `SiteBaseUrlResolver` (canonical/og/sitemap); пусто → фолбэк на request origin. Прод: `https://openrussiarouter.com` |
 | `GrpcServices:{Auth,Billing,ControlPlane,Collector,Content}` | адреса сервисов; `CallDeadlineSeconds` — дедлайн всех gRPC-вызовов |
 | `ServiceAuth:{BillingCaller,BillingToken,ContentCaller,ContentToken}` | s2s-креды; **`BillingToken` обязателен**, Content-пара по умолчанию наследует Billing |
 | `Google:*`, `Yandex:*` | внешний логин; провайдер не регистрируется, пока не заданы оба значения |
@@ -434,7 +440,10 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
   textarea): строгий pipeline с `DisableHtml()` + regex-скраббер. Скраббер не HTML-парсер, не
   полагаться на него как на единственную защиту.
 - `ApiBaseUrlResolver`: `platform_settings` (админская настройка) → `PublicApiBaseUrl` → origin
-  запроса. Ошибка Billing не валит страницу, просто уводит на фолбэк.
+  запроса. Ошибка Billing не валит страницу, просто уводит на фолбэк. Используется только для
+  **API-примеров** (`base_url`, `/docs`) — не для SEO. Для crawler-метаданных отдельный
+  `SiteBaseUrlResolver` (`PublicSiteBaseUrl` → origin), чтобы api-поддомен не утекал в
+  canonical/og/sitemap.
 - `ReasoningEnrichmentWorker` крутится **в каждой реплике**, идемпотентен по `model_id` и **не
   перетирает** админскую разметку reasoning-возможностей (патчит только не отмеченные модели или
   отмеченные с пустым списком efforts).

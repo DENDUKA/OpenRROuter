@@ -1,5 +1,15 @@
 import { defineConfig } from 'vitepress'
 
+// Канонический адрес для каждой страницы /docs/ строится от сырого пути
+// (guide/models.md -> https://openrussiarouter.com/docs/guide/models).
+// og-image тот же бренд-баннер, что на основном сайте.
+function canonicalUrl(page: string): string {
+  const isIndex = page.replace(/\.md$/, '').match(/(^|\/)index$/) !== null
+  const rel = page.replace(/\.md$/, '').replace(/\/?index$/, '')
+  const path = rel === '' ? '' : `/${rel}`
+  return `https://openrussiarouter.com/docs${path}${isIndex ? '/' : ''}`
+}
+
 export default defineConfig({
   title: "OpenRussiaRouter Docs",
   description: "Официальная документация платформы OpenRussiaRouter",
@@ -7,6 +17,24 @@ export default defineConfig({
   // VitePress префиксятся base, иначе внутренние ссылки уводят на апекс-домен.
   base: '/docs/',
   cleanUrls: true,
+  // Per-page SEO: canonical + Open Graph/Twitter. Возвращаемые HeadConfig[] mergeHead'ом
+  // добавляются к уже собранному head (не перезаписывают его).
+  transformHead({ page, title, description }) {
+    const canonical = canonicalUrl(page)
+    return [
+      ['link', { rel: 'canonical', href: canonical }],
+      ['meta', { property: 'og:url', content: canonical }],
+      ['meta', { property: 'og:site_name', content: 'OpenRussiaRouter' }],
+      ['meta', { property: 'og:type', content: 'website' }],
+      ['meta', { property: 'og:title', content: title }],
+      ['meta', { property: 'og:description', content: description }],
+      ['meta', { property: 'og:image', content: 'https://openrussiarouter.com/og-image.png' }],
+      ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
+      ['meta', { name: 'twitter:title', content: title }],
+      ['meta', { name: 'twitter:description', content: description }],
+      ['meta', { name: 'twitter:image', content: 'https://openrussiarouter.com/og-image.png' }]
+    ]
+  },
   appearance: 'dark', // по умолчанию темная тема как в aitunnel
   locales: {
     root: {

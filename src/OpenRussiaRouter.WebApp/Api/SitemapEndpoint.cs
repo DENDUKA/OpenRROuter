@@ -16,9 +16,10 @@ namespace OpenRussiaRouter.WebApp.Api;
 /// <c>GET /sitemap.xml</c> — dynamic XML sitemap for search engines.
 /// Emits the static indexable pages plus dynamic catalog URLs: enabled models
 /// (<c>/models/{provider}/{slug}</c>), active providers (<c>/providers/{id}</c>) and published
-/// tools (<c>/tools/{id}</c>). The absolute base URL comes from <see cref="ApiBaseUrlResolver"/>
-/// so the sitemap follows the admin-configured public origin instead of whatever host served the
-/// request. Private/service URLs (workspace, admin, payments, auth) are never included.
+/// tools (<c>/tools/{id}</c>). The absolute base URL comes from <see cref="SiteBaseUrlResolver"/>
+/// (the canonical site origin) — never from the admin-configured API base, so the sitemap only ever
+/// lists URLs on the crawler-facing domain. Private/service URLs (workspace, admin, payments, auth)
+/// are never included.
 /// </summary>
 public static class SitemapEndpoint
 {
@@ -42,7 +43,7 @@ public static class SitemapEndpoint
 
     private static async Task<IResult> HandleAsync(
         HttpRequest request,
-        ApiBaseUrlResolver baseUrlResolver,
+        SiteBaseUrlResolver baseUrlResolver,
         BillingProvider billing,
         ContentProvider content,
         ILoggerFactory loggerFactory,
@@ -51,7 +52,7 @@ public static class SitemapEndpoint
         var logger = loggerFactory.CreateLogger("SitemapEndpoint");
         try
         {
-            var baseUrl = (await baseUrlResolver.ResolveAsync(request, ct)).TrimEnd('/');
+            var baseUrl = baseUrlResolver.Resolve(request);
 
             var modelsTask = billing.ListPublicModelsAsync(ct);
             var providersTask = billing.ListModelProvidersAsync(ct);

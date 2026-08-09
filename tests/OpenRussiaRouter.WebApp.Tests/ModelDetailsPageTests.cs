@@ -80,6 +80,7 @@ public sealed class ModelDetailsPageTests
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
                     ["PublicApiBaseUrl"] = "https://example.com",
+                    ["PublicSiteBaseUrl"] = "https://example.com",
                 });
             });
             builder.ConfigureServices(services =>

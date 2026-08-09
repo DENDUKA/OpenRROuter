@@ -241,7 +241,52 @@ public sealed class SeoHeadTests
         csp.Should().Contain("wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com");
     }
 
-    private static WebApplicationFactory<Program> CreateFactory(bool googleAnalytics = false, bool yandexMetrika = false)
+    [Fact]
+    public async Task Get_Root_ApiBaseUrlNeverLeaksIntoCrawlerMeta()
+    {
+        // The admin-configured API base lives on a subdomain; the crawler-facing origin is the
+        // apex site. None of the SEO metadata (canonical, og:url, og:image, twitter:image) may
+        // reference the API host.
+        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/\" />");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/\"");
+        body.Should().Contain("property=\"og:image\" content=\"https://example.com/og-image.png\"");
+        body.Should().Contain("name=\"twitter:image\" content=\"https://example.com/og-image.png\"");
+        body.Should().NotContain("api.example.com");
+    }
+
+    [Fact]
+    public async Task Get_ModelDetails_ApiExamplesKeepApiHostWhileCanonicalUsesSiteHost()
+    {
+        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/models/xiaomi/mimo-v2.5-pro");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        // Integration snippets must still point at the API host (that's what users call).
+        body.Should().Contain("base_url=\"https://api.example.com/v1\"");
+        body.Should().Contain("https://api.example.com/v1/chat/completions");
+        // ... while the canonical stays on the crawler-facing site host.
+        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/models/xiaomi/mimo-v2.5-pro\" />");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/models/xiaomi/mimo-v2.5-pro\"");
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory(bool googleAnalytics = false, bool yandexMetrika = false) =>
+        CreateFactory("https://example.com", "https://example.com", googleAnalytics, yandexMetrika);
+
+    private static WebApplicationFactory<Program> CreateFactory(
+        string apiBaseUrl,
+        string siteBaseUrl,
+        bool googleAnalytics = false,
+        bool yandexMetrika = false)
     {
         var billing = new FakeBillingClient();
         var content = new FakeContentClient();
@@ -249,7 +294,8 @@ public sealed class SeoHeadTests
 
         var config = new Dictionary<string, string?>
         {
-            ["PublicApiBaseUrl"] = "https://example.com",
+            ["PublicApiBaseUrl"] = apiBaseUrl,
+            ["PublicSiteBaseUrl"] = siteBaseUrl,
             // appsettings.json hardcodes the prod tag IDs, so each scenario must pin its own
             // values (null = explicitly not configured, overrides the lower-priority source).
             ["Analytics:GoogleTagId"] = googleAnalytics ? "G-TEST123" : null,

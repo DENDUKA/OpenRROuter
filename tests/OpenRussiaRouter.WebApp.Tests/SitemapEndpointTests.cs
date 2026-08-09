@@ -165,7 +165,32 @@ public sealed class SitemapEndpointTests
         }
     }
 
-    private static WebApplicationFactory<Program> CreateFactory()
+    [Fact]
+    public async Task Get_SitemapXml_EveryLocUsesSiteHost_NeverTheApiHost()
+    {
+        // The API base is admin-configured on a subdomain; the sitemap must only ever list the
+        // crawler-facing site host. A leak of the API host here is what broke the old prod sitemap.
+        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/sitemap.xml");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().NotContain("api.example.com");
+
+        var doc = XDocument.Parse(body);
+        var locs = doc.Root!.Elements()
+            .Select(u => u.Element(doc.Root.Name.Namespace + "loc")!.Value)
+            .ToList();
+        locs.Should().NotBeEmpty();
+        locs.Should().OnlyContain(loc => loc.StartsWith("https://example.com", StringComparison.Ordinal));
+    }
+
+    private static WebApplicationFactory<Program> CreateFactory() =>
+        CreateFactory("https://example.com", "https://example.com");
+
+    private static WebApplicationFactory<Program> CreateFactory(string apiBaseUrl, string siteBaseUrl)
     {
         var billing = new FakeBillingClient();
         var content = new FakeContentClient();
@@ -178,7 +203,8 @@ public sealed class SitemapEndpointTests
             {
                 config.AddInMemoryCollection(new Dictionary<string, string?>
                 {
-                    ["PublicApiBaseUrl"] = "https://example.com",
+                    ["PublicApiBaseUrl"] = apiBaseUrl,
+                    ["PublicSiteBaseUrl"] = siteBaseUrl,
                 });
             });
             builder.ConfigureServices(services =>

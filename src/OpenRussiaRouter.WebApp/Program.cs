@@ -207,6 +207,7 @@ builder.Services.AddGrpcClient<BillingGrpc.BillingServiceClient>(options =>
 .AddInterceptor(() => new ServiceAuthClientInterceptor(billingS2sCaller, billingS2sToken));
 builder.Services.AddScoped<BillingProvider>();
 builder.Services.AddScoped<OpenRussiaRouter.WebApp.Services.ApiBaseUrlResolver>();
+builder.Services.AddScoped<OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver>();
 
 // ContentService owns the /tools catalog. Its admin surface is s2s-protected with the same
 // webappadmin credentials as Billing, so no new secret material is introduced.
@@ -520,7 +521,8 @@ YandexPayWebhookEndpoint.Map(app);
 AlertWebhookEndpoint.Map(app);
 
 // Dynamic XML sitemap for search engines: static indexable pages + enabled models,
-// active providers, published tools. Absolute base URL comes from ApiBaseUrlResolver.
+// active providers, published tools. Absolute base URL comes from SiteBaseUrlResolver
+// (canonical site origin, never the admin-configured API base).
 SitemapEndpoint.Map(app);
 
 app.Run();

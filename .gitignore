@@ -13,9 +13,20 @@ NuGet/
 *.log
 TestResults/
 
-# Per-developer VS state (active debug profile и т.п.) — не должно ехать в общий репозиторий.
+# Per-developer VS/Rider state (active debug profile, *.sln.DotSettings.user и т.п.).
 *.user
 *.suo
+
+# Вывод dotnet publish, если кто-то соберёт его внутрь дерева.
+publish/
+*.nupkg
+
+# --- Playwright (tests/OpenRussiaRouter.E2ETests) ---
+# E2E opt-in, но прогон оставляет отчёты и трейсы рядом с тестами.
+playwright-report/
+playwright/.cache/
+test-results/
+.playwright/
 
 # --- Node / docs-site (VitePress) ---
 # docs-site — единственный npm-проект в репозитории. Всё ниже пересоздаётся
@@ -26,6 +37,7 @@ TestResults/
 node_modules/
 **/.vitepress/dist/
 **/.vitepress/cache/
+**/.vitepress/.temp/
 
 # --- Секреты и локальные оверрайды ---
 # `.env.example` намеренно НЕ подпадает: игнорируется только точное имя `.env`.
@@ -35,15 +47,22 @@ node_modules/
 .env.local
 
 # --- IDE / редакторы ---
-/.vs
+# Без ведущего слэша — чтобы ловились и во вложенных каталогах, а не только в корне.
+.vs/
+.idea/
 /.kilo
-/.idea
 /.claude/worktrees
 
 # --- Прочее ---
 /graphify-out/cache
 /src/graphify-out/cache
 /tools
+
+# --- Мусор от merge/rebase и редакторские бэкапы ---
+*.orig
+*.rej
+*.bak
+*~
 
 # --- OS ---
 .DS_Store

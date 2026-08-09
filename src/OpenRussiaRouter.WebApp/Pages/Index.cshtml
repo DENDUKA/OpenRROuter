@@ -2,7 +2,9 @@
 @model IndexModel
 @{
     Layout = "~/Pages/Shared/_CatalogLayout.cshtml";
-    ViewData["Title"] = null;
+    // Was null, which collapsed the most valuable <title> on the site to the bare brand name.
+    // Mirrors the H1 (Home_Title) so title/H1/intent stay aligned.
+    ViewData["Title"] = Localizer["Title"];
     ViewData["MetaDescription"] = Localizer["MetaDescription"];
 }
 

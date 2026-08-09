@@ -1,0 +1,17 @@
+# Образ доков собирается с context: ./docs-site (см. deploy/compose/compose.prod.yml),
+# поэтому .dockerignore нужен именно здесь — корневой на этот контекст не распространяется.
+#
+# node_modules критичен: Dockerfile ставит зависимости сам (`npm install`), а следующий
+# за ним `COPY . .` иначе кладёт локальное дерево поверх установленного — с бинарниками
+# под чужую платформу и виндовыми шимами в .bin. Отсюда же росли проблемы с exec-битом
+# у node_modules/.bin (EXIT 126 «vitepress: Permission denied»), описанные в Dockerfile.
+node_modules
+
+# Артефакты сборки: vitepress build пересоздаёт их внутри образа.
+.vitepress/dist
+.vitepress/cache
+
+.git
+.gitignore
+Dockerfile
+.dockerignore

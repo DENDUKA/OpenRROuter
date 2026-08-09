@@ -1,10 +1,35 @@
 @page "/models/{provider}/{slug}"
 @model ModelDetailsModel
 @using OpenRussiaRouter.WebApp.Services.Markup
+@* Site origin, not the API base: structured-data URLs must match the canonical the layout emits. *@
+@inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @{
     ViewData["Title"] = Model.DisplayName;
-    ViewData["MetaDescription"] = Localizer["MetaDescription", Model.DisplayName, Model.ProviderTitle,
+    var metaDescription = Localizer["MetaDescription", Model.DisplayName, Model.ProviderTitle,
         Model.FormatPrice(Model.InputPrice), Model.FormatPrice(Model.OutputPrice), Model.ContextDisplay, Model.PublicModelId];
+    ViewData["MetaDescription"] = metaDescription;
+
+    var seoBase = SiteUrlResolver.Resolve(Model.Request);
+    var modelUrl = seoBase + Model.Request.Path;
+    ViewData["StructuredData"] = new[]
+    {
+        StructuredData.ModelProduct(
+            Model.DisplayName,
+            metaDescription.Value,
+            Model.PublicModelId,
+            Model.ProviderTitle,
+            modelUrl,
+            Model.InputPrice,
+            Model.OutputPrice,
+            Model.HasPricing),
+        StructuredData.Breadcrumbs(
+        [
+            (Localizer["Nav_Home"].Value, seoBase + "/"),
+            (Localizer["Nav_Models"].Value, seoBase + "/models"),
+            (Model.ProviderTitle, seoBase + "/providers/" + Uri.EscapeDataString(Model.ProviderRouteId)),
+            (Model.DisplayName, modelUrl),
+        ]),
+    };
 }
 
 <div class="model-detail-page">
@@ -69,6 +94,9 @@
     </section>
 
     <section class="model-section">
+        @* The description block had no heading, so the page went H1 -> H2 "API" with the only
+           prose in between unlabelled. *@
+        <h2>@Localizer["Model_AboutTitle", Model.DisplayName]</h2>
         @if (!string.IsNullOrWhiteSpace(Model.DescriptionHtml))
         {
             <div class="model-markdown">@Html.Raw(Model.DescriptionHtml)</div>
@@ -84,6 +112,25 @@
         <p>@Localizer["Model_ApiLead", Model.PublicModelId]</p>
         <partial name="_IntegrationExamples" model="Model.Integration" />
     </section>
+
+    @if (Model.RelatedModels.Count > 0)
+    {
+        @* Only outbound catalog links on the page: without them a model detail page is a dead end
+           for readers and a leaf with no onward crawl path. *@
+        <section class="model-section">
+            <h2>@Localizer["Model_RelatedTitle", Model.ProviderTitle]</h2>
+            <ul class="related-models">
+                @foreach (var related in Model.RelatedModels)
+                {
+                    <li>
+                        <a href="@related.Path">@related.DisplayName</a>
+                        <code class="related-model-id">@related.Id</code>
+                    </li>
+                }
+            </ul>
+            <p><a href="/providers/@Uri.EscapeDataString(Model.ProviderRouteId)">@Localizer["Model_RelatedAll", Model.ProviderTitle]</a></p>
+        </section>
+    }
 </div>
 
 <style>
@@ -110,6 +157,9 @@
     .modality-icon.active { color: var(--color-ink); border-color: var(--color-ink); background: var(--color-canvas-card); }
     .modality-icon.inactive { color: var(--color-hairline); border-color: var(--color-hairline); opacity: .35; }
     .model-markdown { max-width: 820px; color: var(--color-ink); font-size: 15px; line-height: 1.65; }
+    .related-models { list-style: none; padding: 0; margin: 0 0 var(--spacing-lg); display: grid; gap: var(--spacing-sm); max-width: 820px; }
+    .related-models li { display: flex; align-items: baseline; gap: var(--spacing-sm); flex-wrap: wrap; }
+    .related-model-id { color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; }
     .model-markdown > :first-child { margin-top: 0; }
     .model-markdown > :last-child { margin-bottom: 0; }
     .model-markdown h1, .model-markdown h2, .model-markdown h3, .model-markdown h4 { margin: 1.4em 0 .5em; line-height: 1.2; font-weight: 600; }

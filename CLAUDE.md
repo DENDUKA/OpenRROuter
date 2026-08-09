@@ -148,9 +148,38 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 Вне solution, но в репозитории: `docs-site/` — публичная документация на **VitePress**
 (отдельный npm-проект со своим `Dockerfile`, `npm run docs:dev` / `docs:build`;
-`dotnet build` его не собирает, CI-шаги для .NET его не трогают), `tools/fill-providers` —
-разовая утилита наполнения каталога провайдеров, `db/migrations/` — SQL-миграции,
+`dotnet build` его не собирает, CI-шаги для .NET его не трогают), `db/migrations/` — SQL-миграции,
 `deploy/` — compose+Caddy+Grafana для VPS, `infra/` — kustomize и Argo CD.
+`tools/` (в т.ч. разовая утилита наполнения провайдеров `fill-providers`) **в git не хранится** —
+каталог целиком в `.gitignore`, это локальная песочница.
+
+#### SEO-контур `docs-site` (`.vitepress/config.mts`)
+
+Документация смонтирована под `/docs/` (Caddy: `@docs path /docs /docs/*` → контейнер `docs`,
+префикс **не** стрипается), поэтому у неё свой, независимый от WebApp набор SEO-сигналов:
+
+- **`hostname` в опции `sitemap` обязан включать `/docs/`** — VitePress склеивает его с маршрутом
+  как есть и `base` сам не подмешивает. С голым origin в `/docs/sitemap.xml` уезжают URL без
+  префикса, то есть 404 на каждой строке.
+- **Опция `sitemap` не добавляет canonical** — canonical, OG/Twitter и hreflang проставляет
+  `transformHead`.
+- **Единственные адресуемые локали в проекте** — `/docs/` (ru) и `/docs/en/`, деревья зеркальны
+  1:1. hreflang взаимные + self-referencing, `x-default` → русская версия; 404 исключена (у неё нет
+  пары). Ломается зеркальность — ломается кластер.
+- **Обе карты сайта перечислены в `robots.txt` WebApp**: динамическая `/sitemap.xml` знает про
+  `/docs` ровно один URL и содержимое раздела не покрывает.
+- Юридических страниц в docs-site **нет** — их единственный дом это `/legal/*` в WebApp
+  (причина — в [WebApp/CLAUDE.md](src/OpenRussiaRouter.WebApp/CLAUDE.md)).
+- **Артефакты сборки в git не хранятся** — `node_modules/` и `.vitepress/{dist,cache}/` закрыты
+  корневым `.gitignore` (шаблоны с `**/`: без него путь со слэшем якорится к корню репозитория
+  и `docs-site/` не попадает под правило) и продублированы в `docs-site/.dockerignore`.
+  `.dockerignore` нужен именно рядом с `Dockerfile`: образ собирается с `context: ./docs-site`,
+  корневой на этот контекст не действует. Без него `COPY . .` клал локальное `node_modules`
+  поверх установленного в образе — с бинарниками под чужую платформу и виндовыми шимами в `.bin`
+  (отсюда и заметка в `Dockerfile` про exec-бит и `EXIT 126`).
+- В git лежат только исходники: `.vitepress/config.mts`, `.vitepress/theme/` и markdown-страницы.
+  `docs-site/Dockerfile` собирает сайт сам, поэтому **правки конфига доезжают до прода только
+  пересборкой контейнера `docs`**.
 
 ### Поток `POST /v1/chat/completions`
 

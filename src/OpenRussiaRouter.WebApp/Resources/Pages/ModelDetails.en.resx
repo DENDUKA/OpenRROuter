@@ -77,4 +77,13 @@
   <data name="MetaDescription" xml:space="preserve">
     <value>Model {0} by {1}: {2} per million input and {3} per million output tokens, context {4}. Available through the OpenAI-compatible API as {5}.</value>
   </data>
+  <data name="Model_AboutTitle" xml:space="preserve">
+    <value>About {0}</value>
+  </data>
+  <data name="Model_RelatedTitle" xml:space="preserve">
+    <value>Other {0} models</value>
+  </data>
+  <data name="Model_RelatedAll" xml:space="preserve">
+    <value>All {0} models</value>
+  </data>
 </root>

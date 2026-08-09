@@ -146,4 +146,7 @@
   <data name="MetaDescription" xml:space="preserve">
     <value>OpenRussiaRouter — a single OpenAI-compatible API for AI models: a model catalog, per-token pricing, balance top-up and one API key.</value>
   </data>
+  <data name="Title" xml:space="preserve">
+    <value>OpenAI-compatible API for AI models in Russia</value>
+  </data>
 </root>

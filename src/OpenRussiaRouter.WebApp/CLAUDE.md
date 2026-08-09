@@ -53,6 +53,12 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   «Веб-аналитика» ниже.
   Это первый эшелон защиты clickjacking и второй эшелон для T-013 (XSS через markdown).
   `UseHsts` автоматически неактивен в Development.
+- **Канонизация URL** — инлайн-middleware сразу **после `UseStaticFiles`**, отдаёт 301 через
+  [`CanonicalUrlNormalizer`](Services/Seo/CanonicalUrlNormalizer.cs). Снимает хвостовой `/` и
+  понижает регистр у **закрытого списка** статических публичных путей. Понижать регистр всего
+  подряд нельзя: `/providers/logo/{id}`, `/tools/image/{guid}` и слаги моделей сравниваются
+  ordinal ниже по стеку (у моделей своя канонизация — `ModelDetailRoute`). Только GET/HEAD:
+  301 на POST выкинул бы тело запроса. После `UseStaticFiles` — чтобы статика отдавалась нетронутой.
 - Маппинг эндпоинтов: `MapRazorPages`, `MapControllers`, `MapOpenTelemetryEndpoints`,
   `PaymentWebhookEndpoint.Map`, `AlertWebhookEndpoint.Map`, `SitemapEndpoint.Map`
   (динамический XML-sitemap, `Api/SitemapEndpoint.cs`). `UseRateLimiter()` — **до** маппинга.
@@ -151,6 +157,10 @@ URL). SEO-следствие: несуществующие URL каталога 
   `/workspace`, `/admin`, `/pay/`, `/error`, `/webhook/`, `/internal/`, `/health`, `/metrics`,
   `/.well-known`) и при `Response.StatusCode >= 400` (страницы каталога с 404 получают noindex,
   canonical и `og:url` при этом не выводятся).
+- **`ViewData["NoIndex"] = true`** — точечный отказ от индексации для страницы, которая
+  отрезолвилась, но показывать ей нечего. Единственный потребитель — `ProviderDetails` у провайдера
+  с нулём включённых моделей: `SitemapEndpoint` такие страницы и так не публикует, а без noindex
+  сайт слал бы два противоположных сигнала (в sitemap нет, внутренняя ссылка с `/providers` есть).
 - **`meta description`** — `ViewData["MetaDescription"]` (string или IHtmlContent), иначе
   брендовый дефолт `Seo_DefaultDescription` из `_Layout.{ru,en}.resx`. ⚠️ Ключи SEO-дефолта кладутся
   в ресурсы **вьюхи layout**, а не в `SharedResource` — `IViewLocalizer` в layout резолвит ключи
@@ -168,8 +178,36 @@ URL). SEO-следствие: несуществующие URL каталога 
   `og:description`, `og:url` (= canonical), `og:image` и `twitter:card/title/description/image`;
   `og:image`/`twitter:image` = `{baseUrl}/og-image.png` (`wwwroot/og-image.png`, 1200×630 —
   сгенерированный брендовый баннер, правки картинки — через генерацию PNG, не текстом).
+- **JSON-LD** — [`Services/Seo/StructuredData.cs`](Services/Seo/StructuredData.cs). Layout сам
+  выводит `Organization` + `WebSite`, страницы добавляют свои блоки через
+  `ViewData["StructuredData"]` (`IEnumerable<string>` с готовым JSON). Выводится **только на
+  индексируемых** страницах. `ModelDetails` — `Product` + `Offer` (цены за токены как
+  `UnitPriceSpecification` на 1M), `ModelDetails`/`ProviderDetails` — `BreadcrumbList`.
+  Абсолютные URL берутся из **`SiteBaseUrlResolver`**, не из `ApiBaseUrlResolver`: иначе
+  структурированные данные разъедутся с canonical и утащат в индекс api-поддомен. Сериализация —
+  `System.Text.Json` дефолтным энкодером, он экранирует `<`, `>`, `&`, поэтому недоверенный текст
+  каталога внутри `<script type="application/ld+json">` безопасен. CSP не трогали: `script-src`
+  уже содержит `'unsafe-inline'`.
 - Кириллица в `content` атрибутов кодируется Razor в числовые сущности `&#x...;` — это норм
   (браузер декодирует); при проверках рендера в тестах декодируй `WebUtility.HtmlDecode`.
+- **`Context` в Razor Pages не существует** — это свойство layout'ов (`RazorPage`), страницы
+  наследуются от `RazorPages.Page`. В `.cshtml` страницы бери запрос через `Model.Request`.
+
+## Перелинковка каталога — обязательное условие индексации
+
+Таблицы каталога кликаются по строке (`onclick="location.href=..."` на `<tr>`), но **поисковик
+onclick ссылкой не считает**. Пока имена моделей не были обёрнуты в `<a href>`, все detail-страницы
+моделей были сиротами: ни одной входящей ссылки, только sitemap. Инварианты:
+
+- В `Models.cshtml` и `ProviderDetails.cshtml` имя модели — настоящий `<a href>`, путь строит
+  **только** `ModelDetailRoute.TryBuildPath`. В `Models.cshtml` провайдер в строке — ссылка на
+  `/providers/{ProviderId}`.
+- `TryBuildPath` может вернуть `null` (модель не адресуема) — тогда рендерится обычный текст, а
+  `onclick`/`tabindex`/`role` **не выводятся вовсе**: Razor опускает атрибут, если его значение
+  целиком `null`, иначе получался бы `location.href=''`.
+- `ModelDetails` тянет соседние модели того же провайдера (`RelatedModels`, максимум 8, сортировка
+  по `Priority`) и рендерит блок ссылок — **единственный** исходящий путь со страницы модели
+  в остальной каталог. Ошибка загрузки просто убирает блок, страница живёт.
 
 ## Веб-аналитика (Yandex Metrika / GA4) в layout
 
@@ -427,6 +465,18 @@ nullable `NpgsqlDataSource` + `UserPseudonymizer`, `IsEnabled`, тот же disa
 - **Новая строка UI = две `.resx`** (`.ru.resx` + `.en.resx`) в пути, зеркалящем путь страницы,
   иначе на второй культуре останется ключ. Новый маршрут — не забыть ссылку в соответствующем
   layout'е и что кебаб-кейс сам не появится (нужна директива `@page "..."`).
+- **Английская версия сайта не адресуема — это осознанное ограничение, не баг.** Культура
+  выбирается только cookie → `Accept-Language`, отдельного URL у локали нет. Googlebot краулит
+  с US-IP и **не шлёт `Accept-Language`**, поэтому всегда получает русскую версию: EN-контент
+  переведён полностью, но органического трафика на него не будет, и hreflang ставить не на что.
+  Единственное место в проекте с адресуемыми локалями — VitePress (`/docs/` и `/docs/en/`), там
+  hreflang есть. Разворот решения = крупная работа: префиксы локали в маршрутах, self-canonical
+  на локаль, взаимные hreflang + `x-default`, альтернативы в sitemap и правка всех ссылок.
+- **Юридические документы живут только в WebApp.** `/legal/privacy` и `/legal/offer` рендерит
+  `LegalDocumentService` из `docs/mandatory/*.md` с подстановкой плейсхолдеров `ORR_*`. Копии
+  в `docs-site/legal/` удалены: они отставали по содержанию (не было пунктов про «Яндекс Пэй»),
+  дублировали контент на втором URL и показывали сырые `{{ORR_SERVICE_NAME}}` — подстановки
+  в VitePress нет. Меню документации ведёт абсолютными ссылками на `/legal/*`. Не заводить заново.
 - **`RouterNodeApiProvider`** ходит в admin API нод (`/api/integrations/*`) со **значением
   `control_token` из ControlPlane-БД** (`Authorization: Bearer` + дублирующий `X-ORR-Node-Token`).
   Никакого маппинга токенов через конфиг здесь нет и не надо реинтродьюсить. Для чат-теста

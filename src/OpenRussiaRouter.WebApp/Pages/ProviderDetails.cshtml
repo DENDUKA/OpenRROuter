@@ -1,8 +1,28 @@
 @page "/providers/{id}"
 @model ProviderDetailsModel
+@inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @{
     ViewData["Title"] = Model.Provider?.DisplayName ?? Model.Id;
     ViewData["MetaDescription"] = Localizer["MetaDescription", Model.Provider?.DisplayName ?? Model.Id];
+
+    // A provider with no enabled models is a thin page, and SitemapEndpoint already refuses to
+    // publish it. It stays linked from /providers for humans, but must not be indexed — otherwise
+    // the sitemap says "skip this" while the internal link says "index this".
+    ViewData["NoIndex"] = Model.Provider != null && Model.Models.Count == 0;
+
+    if (Model.Provider != null && Model.Models.Count > 0)
+    {
+        var seoBase = SiteUrlResolver.Resolve(Model.Request);
+        ViewData["StructuredData"] = new[]
+        {
+            StructuredData.Breadcrumbs(
+            [
+                (Localizer["Nav_Home"].Value, seoBase + "/"),
+                (Localizer["Providers_Title"].Value, seoBase + "/providers"),
+                (Model.Provider.DisplayName, seoBase + Model.Request.Path),
+            ]),
+        };
+    }
 }
 
 <div class="provider-detail-page">
@@ -88,16 +108,29 @@
                                     var initials = ProviderDetailsModel.GetInitials(m.DisplayName);
                                     var detailUrl = ModelDetailRoute.TryBuildPath(m.Id, Model.Provider?.Id ?? Model.Id, Model.Provider?.DisplayName);
                                     var tagSearch = string.Join(" ", m.Tags.Select(t => t.DisplayName));
+                                    // Razor drops an attribute whose value expression is null, so a model without an
+                                    // addressable detail URL renders a plain row instead of location.href=''.
+                                    var rowClick = detailUrl is null ? null : $"location.href='{detailUrl}'";
+                                    var rowKey = detailUrl is null ? null : $"if(event.key==='Enter')location.href='{detailUrl}'";
                                     <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
                                         data-tags="@tagSearch.ToLower()"
-                                        onclick="location.href='@detailUrl'" tabindex="0" role="link"
-                                        onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
+                                        onclick="@rowClick" tabindex="@(detailUrl is null ? null : "0")"
+                                        role="@(detailUrl is null ? null : "link")"
+                                        onkeydown="@rowKey">
                                         <td>
                                             <div class="model-cell">
                                                 <img class="model-icon" src="/providers/logo/@Uri.EscapeDataString(Model.Id)" alt="" aria-hidden="true" />
                                                 <div>
                                                     <div style="display: flex; align-items: center; gap: 6px;">
-                                                        <div class="model-name">@m.DisplayName</div>
+                                                        @* Real <a href> — crawlers do not follow the row's onclick. *@
+                                                        @if (detailUrl is not null)
+                                                        {
+                                                            <a class="model-name" href="@detailUrl">@m.DisplayName</a>
+                                                        }
+                                                        else
+                                                        {
+                                                            <div class="model-name">@m.DisplayName</div>
+                                                        }
                                                         <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="@Localizer["Catalog_CopyTitle"]" aria-label="@Localizer["Catalog_CopyAria"]">
                                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                                         </button>
@@ -152,7 +185,9 @@
     .search { flex: 1 1 360px; max-width: 560px; border-radius: var(--radius-pill); }
     .model-cell { display: flex; align-items: center; gap: var(--spacing-md); min-width: 200px; }
     .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); object-fit: contain; }
-    .model-name { color: var(--color-ink); font-weight: 500; }
+    /* .model-name is an <a> when the model is addressable, a <div> otherwise. */
+    .model-name { color: var(--color-ink); font-weight: 500; text-decoration: none; }
+    a.model-name:hover, a.model-name:focus-visible { text-decoration: underline; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
     .model-table { table-layout: fixed; width: 100%; min-width: 800px; }
     .model-table tbody tr { cursor: pointer; }

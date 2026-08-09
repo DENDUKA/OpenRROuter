@@ -24,6 +24,7 @@ using OpenRussiaRouter.WebApp.Services.Payments;
 using OpenRussiaRouter.WebApp.Services.Payments.Rollypay;
 using OpenRussiaRouter.WebApp.Services.Payments.YandexPay;
 using OpenRussiaRouter.WebApp.Services.Currency;
+using OpenRussiaRouter.WebApp.Services.Seo;
 using OpenRussiaRouter.WebApp.Email;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
@@ -481,6 +482,24 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles();
+
+// SEO: fold trailing-slash and letter-case duplicates of public URLs onto one canonical URL.
+// After UseStaticFiles so real assets are served untouched, and GET/HEAD only — a 301 on POST
+// would drop the request body.
+app.Use(async (context, next) =>
+{
+    if (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+    {
+        var canonical = CanonicalUrlNormalizer.TryNormalize(context.Request.Path.Value);
+        if (canonical is not null)
+        {
+            context.Response.Redirect(canonical + context.Request.QueryString, permanent: true);
+            return;
+        }
+    }
+
+    await next();
+});
 
 // TS-010: must run after UseStaticFiles and before UseAuthentication so that
 // cookie/Accept-Language are honored for the auth pipeline and Razor views.

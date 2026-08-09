@@ -279,6 +279,94 @@ public sealed class SeoHeadTests
         body.Should().Contain("property=\"og:url\" content=\"https://example.com/models/xiaomi/mimo-v2.5-pro\"");
     }
 
+    [Fact]
+    public async Task Get_Root_EmitsOrganizationAndWebSiteJsonLd()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var body = WebUtility.HtmlDecode(await client.GetStringAsync("/"));
+
+        body.Should().Contain("<script type=\"application/ld+json\">");
+        body.Should().Contain("\"@type\":\"Organization\"");
+        body.Should().Contain("\"@type\":\"WebSite\"");
+    }
+
+    [Fact]
+    public async Task Get_ModelDetails_EmitsProductAndBreadcrumbJsonLd()
+    {
+        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
+        using var client = factory.CreateClient();
+
+        var body = WebUtility.HtmlDecode(await client.GetStringAsync("/models/xiaomi/mimo-v2.5-pro"));
+
+        body.Should().Contain("\"@type\":\"Product\"");
+        body.Should().Contain("\"sku\":\"xiaomi/mimo-v2.5-pro\"");
+        body.Should().Contain("\"@type\":\"Offer\"");
+        body.Should().Contain("\"priceCurrency\":\"USD\"");
+        body.Should().Contain("\"@type\":\"BreadcrumbList\"");
+        // Structured-data URLs must track the canonical, never the API host.
+        body.Should().Contain("\"url\":\"https://example.com/models/xiaomi/mimo-v2.5-pro\"");
+    }
+
+    [Fact]
+    public async Task Get_Login_NoIndexPage_EmitsNoJsonLd()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var body = await client.GetStringAsync("/login");
+
+        body.Should().NotContain("application/ld+json");
+    }
+
+    [Fact]
+    public async Task Get_ModelsCatalog_LinksModelDetailPagesWithRealAnchors()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        var body = await client.GetStringAsync("/models");
+
+        // The row's onclick is not a crawlable link: without an <a href> every model detail page
+        // is an orphan reachable only from the sitemap.
+        body.Should().Contain("href=\"/models/xiaomi/mimo-v2.5-pro\"");
+        body.Should().Contain("href=\"/providers/xiaomi\"");
+    }
+
+    [Theory]
+    [InlineData("/Models", "/models")]
+    [InlineData("/models/", "/models")]
+    [InlineData("/providers/", "/providers")]
+    public async Task Get_DuplicateUrlForm_RedirectsPermanentlyToCanonical(string requested, string expected)
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        using var response = await client.GetAsync(requested);
+
+        response.StatusCode.Should().Be(HttpStatusCode.MovedPermanently);
+        response.Headers.Location!.OriginalString.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task Get_DuplicateUrlForm_PreservesQueryStringOnRedirect()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        using var response = await client.GetAsync("/Models/?category=text");
+
+        response.StatusCode.Should().Be(HttpStatusCode.MovedPermanently);
+        response.Headers.Location!.OriginalString.Should().Be("/models?category=text");
+    }
+
     private static WebApplicationFactory<Program> CreateFactory(bool googleAnalytics = false, bool yandexMetrika = false) =>
         CreateFactory("https://example.com", "https://example.com", googleAnalytics, yandexMetrika);
 

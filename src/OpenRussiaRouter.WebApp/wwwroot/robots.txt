@@ -9,4 +9,7 @@ Disallow: /internal/
 Disallow: /health
 Disallow: /metrics
 
+# Две карты сайта: динамическая от WebApp (каталог) и статическая от VitePress
+# (раздел /docs — отдельный контейнер со своим base, в первую он не попадает).
 Sitemap: https://openrussiarouter.com/sitemap.xml
+Sitemap: https://openrussiarouter.com/docs/sitemap.xml

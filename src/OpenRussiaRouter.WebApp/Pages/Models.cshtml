@@ -112,11 +112,16 @@
                             var initials = ModelsModel.GetInitials(m.DisplayName);
                             var detailUrl = ModelDetailRoute.TryBuildPath(m.Id, m.ProviderId, m.Provider);
                             var tagSearch = string.Join(" ", m.Tags.Select(t => t.DisplayName));
+                            // Razor drops an attribute whose value expression is null, so a model without an
+                            // addressable detail URL renders a plain row instead of location.href=''.
+                            var rowClick = detailUrl is null ? null : $"location.href='{detailUrl}'";
+                            var rowKey = detailUrl is null ? null : $"if(event.key==='Enter')location.href='{detailUrl}'";
                             <tr data-name="@m.DisplayName.ToLower()" data-id="@m.Id.ToLower()"
                                 data-provider="@m.Provider.ToLower()" data-capability="@m.Capability.ToLower()"
                                 data-tags="@tagSearch.ToLower()"
-                                onclick="location.href='@detailUrl'" tabindex="0" role="link"
-                                onkeydown="if(event.key==='Enter')location.href='@detailUrl'">
+                                onclick="@rowClick" tabindex="@(detailUrl is null ? null : "0")"
+                                role="@(detailUrl is null ? null : "link")"
+                                onkeydown="@rowKey">
                                 <td>
                                     <div class="model-cell">
                                         @if (!string.IsNullOrEmpty(m.ProviderId))
@@ -133,7 +138,16 @@
                                         }
                                         <div>
                                             <div style="display: flex; align-items: center; gap: 6px;">
-                                                <div class="model-name">@m.DisplayName</div>
+                                                @* Real <a href>: crawlers do not follow the row's onclick, and without
+                                                   it every model detail page is an orphan. The handler stays for UX. *@
+                                                @if (detailUrl is not null)
+                                                {
+                                                    <a class="model-name" href="@detailUrl">@m.DisplayName</a>
+                                                }
+                                                else
+                                                {
+                                                    <div class="model-name">@m.DisplayName</div>
+                                                }
                                                 <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="@Localizer["Catalog_CopyTitle"]" aria-label="@Localizer["Catalog_CopyAria"]">
                                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                                                 </button>
@@ -142,7 +156,16 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="model-author">@m.Provider</td>
+                                <td class="model-author">
+                                    @if (!string.IsNullOrEmpty(m.ProviderId))
+                                    {
+                                        <a class="model-author-link" href="/providers/@Uri.EscapeDataString(m.ProviderId)">@m.Provider</a>
+                                    }
+                                    else
+                                    {
+                                        @m.Provider
+                                    }
+                                </td>
                                 <td>
                                     @if (m.Tags.Count > 0)
                                     {
@@ -189,11 +212,16 @@
     .model-cell { display: flex; align-items: center; gap: 8px; min-width: 0; max-width: 260px; }
     .model-table { table-layout: fixed; width: 100%; min-width: 900px; }
     .model-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border: 1px solid var(--color-hairline); border-radius: var(--radius-sm); color: var(--color-ink); font-family: var(--font-mono); font-size: 10px; background: var(--color-canvas-soft); object-fit: contain; }
-    .model-name { color: var(--color-ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* .model-name is an <a> when the model is addressable, a <div> otherwise; display:block keeps
+       the ellipsis working in both cases and the link visually identical to the old plain text. */
+    .model-name { display: block; color: var(--color-ink); font-weight: 500; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    a.model-name:hover, a.model-name:focus-visible { text-decoration: underline; }
     .model-table tbody tr { cursor: pointer; }
     .model-table .num { text-align: left; }
     .model-slug { display: inline-block; margin-top: 3px; color: var(--color-mute); font-family: var(--font-mono); font-size: 13px; overflow-wrap: anywhere; }
     .model-author { color: var(--color-body); font-size: 14px; white-space: nowrap; }
+    .model-author-link { color: inherit; text-decoration: none; }
+    .model-author-link:hover, .model-author-link:focus-visible { text-decoration: underline; }
     .tag-list { display: flex; flex-wrap: wrap; gap: 4px; min-width: 120px; }
     .model-tag { border-color: transparent; }
     .catalog-state { border: 1px solid var(--color-hairline); color: var(--color-body); display: grid; gap: var(--spacing-xs); padding: var(--spacing-xl); }

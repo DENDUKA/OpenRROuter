@@ -10,6 +10,30 @@ function canonicalUrl(page: string): string {
   return `https://openrussiarouter.com/docs${path}${isIndex ? '/' : ''}`
 }
 
+/**
+ * Взаимные hreflang для пары ru/en. Деревья локалей зеркальны 1:1 (`guide/models.md` ↔
+ * `en/guide/models.md`), поэтому пара вычисляется из пути. Ссылаться нужно и на себя:
+ * без self-referencing записи Google отбрасывает кластер целиком. x-default — русская
+ * версия, локаль по умолчанию.
+ *
+ * 404 исключена: у неё нет пары, а hreflang на несуществующий URL инвалидирует кластер.
+ */
+function hreflangLinks(page: string): [string, Record<string, string>][] {
+  if (page.replace(/\.md$/, '') === '404') {
+    return []
+  }
+
+  const isEn = page.startsWith('en/')
+  const ru = canonicalUrl(isEn ? page.slice(3) : page)
+  const en = canonicalUrl(isEn ? page : `en/${page}`)
+
+  return [
+    ['link', { rel: 'alternate', hreflang: 'ru', href: ru }],
+    ['link', { rel: 'alternate', hreflang: 'en', href: en }],
+    ['link', { rel: 'alternate', hreflang: 'x-default', href: ru }]
+  ]
+}
+
 export default defineConfig({
   title: "OpenRussiaRouter Docs",
   description: "Официальная документация платформы OpenRussiaRouter",
@@ -17,6 +41,11 @@ export default defineConfig({
   // VitePress префиксятся base, иначе внутренние ссылки уводят на апекс-домен.
   base: '/docs/',
   cleanUrls: true,
+  // Генерирует /docs/sitemap.xml. Без него весь раздел документации не заявлен нигде:
+  // динамический sitemap WebApp знает про /docs ровно один URL.
+  // hostname обязан включать base — VitePress склеивает его с маршрутом как есть и `base`
+  // сам не подмешивает; с голым origin в sitemap уезжают URL без /docs/, то есть 404.
+  sitemap: { hostname: 'https://openrussiarouter.com/docs/' },
   // Per-page SEO: canonical + Open Graph/Twitter. Возвращаемые HeadConfig[] mergeHead'ом
   // добавляются к уже собранному head (не перезаписывают его).
   transformHead({ page, title, description }) {
@@ -32,7 +61,8 @@ export default defineConfig({
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
       ['meta', { name: 'twitter:title', content: title }],
       ['meta', { name: 'twitter:description', content: description }],
-      ['meta', { name: 'twitter:image', content: 'https://openrussiarouter.com/og-image.png' }]
+      ['meta', { name: 'twitter:image', content: 'https://openrussiarouter.com/og-image.png' }],
+      ...hreflangLinks(page)
     ]
   },
   appearance: 'dark', // по умолчанию темная тема как в aitunnel
@@ -65,10 +95,14 @@ export default defineConfig({
             ]
           },
           {
+            // Юридические документы живут только в WebApp (/legal/*): там их рендерит
+            // LegalDocumentService из docs/mandatory/*.md с подстановкой плейсхолдеров ORR_*.
+            // Копии в docs-site отставали по содержанию (не было пунктов про «Яндекс Пэй»)
+            // и показывали сырые {{ORR_SERVICE_NAME}} — заводить их здесь заново нельзя.
             text: 'Документы',
             items: [
-              { text: 'Политика конфиденциальности', link: '/legal/privacy-policy' },
-              { text: 'Публичная оферта', link: '/legal/public-offer' }
+              { text: 'Политика конфиденциальности', link: 'https://openrussiarouter.com/legal/privacy' },
+              { text: 'Публичная оферта', link: 'https://openrussiarouter.com/legal/offer' }
             ]
           }
         ],
@@ -111,10 +145,12 @@ export default defineConfig({
             ]
           },
           {
+            // See the Russian sidebar: legal documents are served by the WebApp only. They exist
+            // in Russian solely (RU jurisdiction), hence the same canonical links here.
             text: 'Legal',
             items: [
-              { text: 'Privacy Policy', link: '/en/legal/privacy-policy' },
-              { text: 'Public Offer', link: '/en/legal/public-offer' }
+              { text: 'Privacy Policy', link: 'https://openrussiarouter.com/legal/privacy' },
+              { text: 'Public Offer', link: 'https://openrussiarouter.com/legal/offer' }
             ]
           }
         ],

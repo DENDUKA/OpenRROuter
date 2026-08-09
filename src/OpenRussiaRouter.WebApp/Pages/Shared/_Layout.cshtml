@@ -65,7 +65,11 @@
         "/invite/", "/workspace", "/admin", "/pay/", "/error", "/webhook/",
         "/internal/", "/health", "/metrics", "/.well-known",
     ];
-    var noIndex = Context.Response.StatusCode >= 400
+    // ViewData["NoIndex"] lets a page opt out on its own (e.g. a catalog page that resolved to
+    // an entity with nothing to show): such pages are deliberately kept out of sitemap.xml, so
+    // leaving them indexable would send search engines two contradictory signals.
+    var noIndex = ViewData["NoIndex"] is true
+        || Context.Response.StatusCode >= 400
         || noIndexPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
     string? metaDescription = null;
@@ -110,6 +114,17 @@
     <meta name="twitter:title" content="@ogTitle" />
     <meta name="twitter:description" content="@metaDescription" />
     <meta name="twitter:image" content="@ogImageUrl" />
+    @if (!noIndex)
+    {
+        @* Organization + WebSite once per indexable page; pages append their own blocks
+           (Product, BreadcrumbList) through ViewData["StructuredData"]. Fully qualified because
+           _Layout is shared by areas whose _ViewImports may not pull in Services.Seo. *@
+        <script type="application/ld+json">@Html.Raw(OpenRussiaRouter.WebApp.Services.Seo.StructuredData.SiteGraph(baseUrl, activeLang))</script>
+        @foreach (var block in (ViewData["StructuredData"] as IEnumerable<string>) ?? [])
+        {
+            <script type="application/ld+json">@Html.Raw(block)</script>
+        }
+    }
     <link rel="icon" type="image/png" href="~/favicon.png" />
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
     @if (!string.IsNullOrWhiteSpace(googleTagId))

@@ -1,3 +1,4 @@
+# --- .NET ---
 bin/
 obj/
 e2e.local.json
@@ -11,9 +12,39 @@ NuGet/
 *.binlog
 *.log
 TestResults/
+
+# Per-developer VS state (active debug profile и т.п.) — не должно ехать в общий репозиторий.
+*.user
+*.suo
+
+# --- Node / docs-site (VitePress) ---
+# docs-site — единственный npm-проект в репозитории. Всё ниже пересоздаётся
+# `npm install` / `npm run docs:build`, а образ доков и так собирается из исходников
+# (docs-site/Dockerfile), поэтому в git ничего из этого не нужно.
+# `**/` обязателен: шаблон со слэшем внутри якорится к каталогу самого .gitignore,
+# то есть голый `.vitepress/dist/` закрыл бы только корневой путь, а не docs-site/.
+node_modules/
+**/.vitepress/dist/
+**/.vitepress/cache/
+
+# --- Секреты и локальные оверрайды ---
+# `.env.example` намеренно НЕ подпадает: игнорируется только точное имя `.env`.
+# Общего `*.local.json` здесь нет умышленно — под него попадает отслеживаемый
+# `.claude/settings.local.json`. Локальные конфиги перечисляем поимённо (см. e2e.local.json выше).
+.env
+.env.local
+
+# --- IDE / редакторы ---
 /.vs
 /.kilo
+/.idea
 /.claude/worktrees
+
+# --- Прочее ---
 /graphify-out/cache
 /src/graphify-out/cache
 /tools
+
+# --- OS ---
+.DS_Store
+Thumbs.db

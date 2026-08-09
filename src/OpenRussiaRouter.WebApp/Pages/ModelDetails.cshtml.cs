@@ -103,6 +103,13 @@ public class ModelDetailsModel : CatalogPageModelBase
 
     public string ApiBaseUrl { get; private set; } = "";
 
+    private const int RelatedModelsLimit = 8;
+
+    /// <summary>Other models of the same provider, already resolved to canonical detail paths.</summary>
+    public IReadOnlyList<RelatedModel> RelatedModels { get; private set; } = [];
+
+    public sealed record RelatedModel(string DisplayName, string Id, string Path);
+
     public IntegrationExamplesModel Integration => new(
         $"{ApiBaseUrl}/v1",
         PublicModelId,
@@ -128,7 +135,46 @@ public class ModelDetailsModel : CatalogPageModelBase
             return RedirectPermanent(canonical);
         }
 
+        RelatedModels = await LoadRelatedModelsAsync(ModelData, HttpContext.RequestAborted);
+
         return Page();
+    }
+
+    /// <summary>
+    /// Sibling models of the same provider, for the "other models" block. This is the page's only
+    /// outbound link into the rest of the catalog: without it a model page is a dead end for both
+    /// readers and crawlers. A catalog failure is not fatal — the block simply disappears.
+    /// </summary>
+    private async Task<IReadOnlyList<RelatedModel>> LoadRelatedModelsAsync(ModelInfo current, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(current.ProviderId))
+        {
+            return [];
+        }
+
+        try
+        {
+            var catalog = await _billingClient.ListPublicModelsAsync(ct);
+            return catalog
+                .Where(m => string.Equals(m.ProviderId, current.ProviderId, StringComparison.OrdinalIgnoreCase)
+                            && !string.Equals(m.Id, current.Id, StringComparison.Ordinal))
+                .OrderByDescending(m => m.Priority)
+                .ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
+                .Select(m => new
+                {
+                    Model = m,
+                    Path = ModelDetailRoute.TryBuildPath(m.Id, m.ProviderId, m.Provider),
+                })
+                .Where(x => x.Path is not null)
+                .Take(RelatedModelsLimit)
+                .Select(x => new RelatedModel(x.Model.DisplayName, x.Model.Id, x.Path!))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to load related models for {ModelId}", current.Id);
+            return [];
+        }
     }
 
     /// <summary>

@@ -43,9 +43,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `/build-test [Service\|all]` | command | Сборка + тесты solution'а или одного сервиса с обязательными флагами |
 | `/deploy [Service\|all]` | command | Деплой изменившихся сервисов на прод через `update-orr.sh` |
 | `/add-task <title>` | command | Добавить задачу в `.opencode/tasks.md` со следующим ID, `status=todo` |
-| `/start-task [T-NNN]` | command | Запустить отдельный агент `task-worker` (через task tool): берёт свободную задачу, помечает `in_progress`, реализует, собирает, помечает `done` |
+| `/start-task [<PREFIX>-NNN]` | command | Запустить отдельный агент `task-worker` (через task tool): берёт свободную задачу, помечает `in_progress`, реализует, собирает, переносит выполненную в архив |
 | `orr-service-edit` | skill | On-demand триггер: при правке `src/OpenRussiaRouter.*/` напоминает открыть per-service `CLAUDE.md`. Это маршрутизатор к файлам, не копия |
-| `task-worker` | agent (subagent) | Автономный исполнитель одной задачи из `.opencode/tasks.md`; владеет циклом claim→implement→build→mark done. Запускается через `/start-task` |
+| `task-worker` | agent (subagent) | Автономный исполнитель одной задачи из `.opencode/tasks.md`; владеет циклом claim→implement→build→archive. Запускается через `/start-task` |
+
+### Файлы задач — два, и задача живёт ровно в одном
+
+- **`.opencode/tasks.md` — активный бэклог.** Только `todo`, `in_progress`, `blocked`.
+  Все новые задачи (`/add-task`) пишутся сюда.
+- **`.opencode/tasks-done.md` — архив выполненных.** Только на дозапись, вручную не редактируется.
+
+**Перевод в `done` — это перенос, а не смена строки статуса.** `task-worker` проставляет
+`status: done` + `completed`, **дописывает блок целиком в конец `tasks-done.md`** и только
+после этого **вырезает его из `tasks.md`**. Порядок именно такой: падение между шагами даёт
+дубль (чинится вручную), а не потерянную задачу. `status: done` в `tasks.md` — признак
+незавершённого переноса.
+
+`blocked` в архив **не** переезжает — это не «выполнено», такие задачи остаются в бэклоге
+с `blocked_reason`.
+
+**ID не переиспользуются.** Следующий номер `/add-task` считает по максимуму **обоих** файлов
+в рамках префикса (`<PREFIX>-NNN`; `T-` — разовые задачи по репозиторию, остальные префиксы —
+свои пачки со своей нумерацией с 001). Считать только по `tasks.md` нельзя — номера
+выполненных задач там уже не видны, и новая задача переиспользует чужой ID.
 
 Контракты observation/error-recovery (status / summary / next_actions / artifacts; root cause /
 safe retry / stop condition) зашиты в тела команд по скилу `agent-harness-construction`.

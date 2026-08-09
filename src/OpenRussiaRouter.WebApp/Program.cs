@@ -432,10 +432,18 @@ if (!string.IsNullOrWhiteSpace(analyticsOptions.GoogleTagId))
 {
     scriptSrcExtra = " https://www.googletagmanager.com";
     imgSrcExtra = " https://www.google-analytics.com";
-    connectSrcExtra = " https://www.googletagmanager.com https://www.google-analytics.com https://analytics.google.com";
+    // *.google-analytics.com covers both www and the regional GA4 collect endpoints
+    // (region1..N.google-analytics.com, chosen per property data-residency/consent settings).
+    // analytics.google.com stays a separate exact source — a CSP wildcard matches subdomains
+    // only, never the bare parent domain.
+    connectSrcExtra =
+        " https://www.googletagmanager.com" +
+        " https://*.google-analytics.com" +
+        " https://analytics.google.com";
 }
 if (!string.IsNullOrWhiteSpace(analyticsOptions.YandexCounterId))
 {
+<<<<<<< HEAD
     // mc.yandex.ru is the counter; the tag also talks to mc.yandex.com (cookie-sync pixel and
     // the wss://mc.yandex.com/solid.ws transport) and to mc.webvisor.org/.com for webvisor
     // uploads; yastatic.net serves webvisor/clickmap assets. wss: is listed explicitly because
@@ -444,6 +452,16 @@ if (!string.IsNullOrWhiteSpace(analyticsOptions.YandexCounterId))
     scriptSrcExtra += yandexMetrikaHosts;
     imgSrcExtra += yandexMetrikaHosts;
     connectSrcExtra += yandexMetrikaHosts + " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
+=======
+    // mc.yandex.ru is the counter; mc.yandex.com/mc.webvisor.org/mc.webvisor.com are the
+    // webvisor cluster; yastatic.net serves webvisor/clickmap assets. wss:// carries the live
+    // webvisor session stream and is only valid in connect-src.
+    var yandexHosts = " https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net";
+    var yandexWss = " wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com";
+    scriptSrcExtra += yandexHosts;
+    imgSrcExtra += yandexHosts;
+    connectSrcExtra += yandexHosts + yandexWss;
+>>>>>>> fix ga console error
 }
 app.Use(async (context, next) =>
 {

@@ -52,3 +52,19 @@
 - started: 2026-08-08T00:00:00+00:00
 - completed: 2026-08-08T00:00:00+00:00
 - desc: WebApp. Добавить ViewData["MetaDescription"] на публичные страницы: / (Index), /models, /models/{provider}/{slug} (ModelDetails), /providers, /providers/{id} (ProviderDetails), /tools, /tools/{id} (ToolDetails), /docs, /support, /legal/privacy, /legal/offer, /signup, /login. Описания уникальные, без шаблона с заменой одного названия; локализация через существующие .resx (ru/en). Критерий: нет дублирующихся descriptions среди индексируемых публичных страниц. Сборка обязательна.
+
+## SEO-020 — Добавить sitemap в поисковые системы
+- status: done
+- priority: high
+- created: 2026-08-06T00:00:00Z
+- started: 2026-08-09T00:00:00+00:00
+- completed: 2026-08-09T16:19:17Z
+- desc: https://openrussiarouter.com/sitemap.xml добавлен в Google Search Console и Яндекс Вебмастер; статус зелёный (принят без ошибок) в обеих системах. Критерий выполнен.
+
+## SEO-002 — Подключить системы вебмастеров и аналитику
+- status: done
+- priority: low
+- created: 2026-08-06T00:00:00Z
+- started: 2026-08-08T00:00:00+00:00
+- completed: 2026-08-09T16:19:17Z
+- desc: Код внедрён и задеплоен: AnalyticsOptions + теги GA4 (G-BDD3DYVCLL) и Метрики (111420552) в _Layout.cshtml, условные CSP-хосты в Program.cs, конверсионные события signup/email_verified/api_key_created/topup_completed через ViewData["AnalyticsEvents"], прод-значения в compose.prod.yml, тесты SeoHeadTests/LegalConsentTests. Домен подтверждён в GSC и Яндекс Вебмастере через TXT-записи. Цели/конверсии добавлены в оба кабинета, связка GSC↔GA4 работает. События фиксируются (email_verified подтверждено); signup на тестовом первом визите не отобразился в Метрике — известный edge case «hit до добивки cookie», механизм работает. Runbook — docs/seo/webmasters-analytics-runbook.md. Юридическая точка (cookies Метрики/GA4 в privacy-policy) вынесена в SEO-023.

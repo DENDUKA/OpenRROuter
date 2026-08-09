@@ -27,10 +27,10 @@
 
 > Источник: SEO-план первичного запуска, 2026-08-06.
 > 22 задачи: SEO-001..SEO-022. Приоритеты: high — обязательны до первой индексации;
-> medium — повышение в выдаче; low — метрика. Операционные (SEO-002, SEO-019..SEO-022) — blocked.
+> medium — повышение в выдаче; low — метрика. Операционные (SEO-019..SEO-022) — blocked.
 > Рекомендуемый порядок: SEO-004 → SEO-005 → SEO-006 → SEO-007 (high-пакет),
 > затем SEO-001/003 → SEO-008..SEO-015 → SEO-016/017 → SEO-018; low-блок — отдельно.
-> SEO-004..SEO-008 выполнены и лежат в `.opencode/tasks-done.md`.
+> SEO-002, SEO-004..SEO-008, SEO-020 выполнены и лежат в `.opencode/tasks-done.md`.
 
 ## SEO-001 — Карта ключевых запросов (keyword map)
 - status: todo
@@ -39,15 +39,6 @@
 - started:
 - completed:
 - desc: Составить keyword map минимум для 10 стартовых кластеров: «ИИ API», «AI API», «API нейросетей», «OpenAI-совместимый API», «OpenRouter оплатить», «OpenRouter API пополнить», «Модели и цены», «API конкретной модели», «Провайдеры моделей». Для каждой посадочной страницы зафиксировать primary/secondary keyword и intent; не назначать один точный запрос одновременно главной и /ai-api; определить title, H1, description и CTA. Артефакт — markdown-файл docs/seo/keyword-map.md с таблицей keyword → URL → intent → статус → показы → клики → регистрация. Документ, не код; сборка solution не меняется.
-
-## SEO-002 — Подключить системы вебмастеров и аналитику
-- status: blocked
-- blocked_reason: код внедрения готов (теги, CSP, события конверсии), DNS подтверждён; осталось задеплоить и вручную настроить цели в GA4/Метрике и проверить конверсии
-- priority: low
-- created: 2026-08-06T00:00:00Z
-- started: 2026-08-08T00:00:00+00:00
-- completed:
-- desc: Зарегистрировать домен в Google Search Console и Яндекс Вебмастере через DNS-подтверждение; настроить Яндекс Метрику и (при необходимости) Google Analytics 4; связать Search Console и GA4; настроить цели: регистрация, подтверждение email, создание API-ключа, первое пополнение. Критерий: домен подтверждён в обеих системах, события конверсии приходят в аналитику. Код готов: AnalyticsOptions + теги в _Layout.cshtml (GA4 G-BDD3DYVCLL, Метрика 111420552, CSP-хосты в Program.cs), события signup/email_verified/api_key_created/topup_completed, прод-значения в compose.prod.yml, тесты в SeoHeadTests/LegalConsentTests. Runbook — docs/seo/webmasters-analytics-runbook.md.
 
 ## SEO-003 — Список index/noindex URL
 - status: todo
@@ -146,14 +137,6 @@
 - completed:
 - desc: После деплоя технических SEO-изменений проверить: HTTP-коды ключевых URL; sitemap; robots; canonical и noindex. Критерий: ключевые URL отдают корректные коды, sitemap/robots/canonical/noindex валидны.
 
-## SEO-020 — Добавить sitemap в поисковые системы
-- status: todo
-- priority: high
-- created: 2026-08-06T00:00:00Z
-- started:
-- completed:
-- desc: Добавить sitemap в Google Search Console и Яндекс Вебмастер. Критерий: системы вебмастеров приняли sitemap без ошибок.
-
 ## SEO-021 — Ручной переобход приоритетных страниц
 - status: blocked
 - blocked_reason: нужен доступ к аккаунтам вебмастеров
@@ -171,3 +154,13 @@
 - started:
 - completed:
 - desc: Первые 12 недель еженедельно: Coverage/Pages и ошибки индексации; проверка попадания служебных URL в индекс; soft 404, duplicate canonical, crawled-not-indexed. Отслеживать показы по кластерам: «ИИ API», «AI API», «OpenRouter оплатить», «OpenRouter API пополнить». Улучшать title и description страниц с показами, но низким CTR. Добавлять контент только по запросам с показами или подтверждённым спросом. Раз в месяц обновлять цены, статусы моделей и sitemap. Анализировать конверсию organic → signup → API key → top-up. KPI: число индексируемых/проиндексированных URL; показы и клики по кластерам; CTR; регистрации из organic; конверсия organic → API key; organic → первое пополнение. Ориентиры на 90 дней: 100% технически корректных индексируемых URL в sitemap; 0 soft 404 в каталогах; 0 indexable URL без title/description/canonical; первые показы по «ИИ API», «AI API», «OpenAI-совместимый API»; первые позиции по long-tail запросам моделей; брендовый кластер OpenRouter оценивать по регистрациям и пополнениям отдельно.
+
+---
+
+## SEO-023 — Политика конфиденциальности: cookies Метрики и GA4 (152-ФЗ)
+- status: todo
+- priority: medium
+- created: 2026-08-09T16:19:17Z
+- started:
+- completed:
+- desc: Юридическая точка из SEO-002 (отложена по решению продукта). На проде активны Яндекс Метрика и Google Analytics 4, которые ставят cookies и собирают обезличенную статистику посещений. В docs/mandatory/privacy-policy.md дописать раздел про эти системы и cookies (положение по 152-ФЗ); возможно потребуется consent-баннер — в коде его нет. Формулировку согласовать с продуктом/юристом. Критерий: /legal/privacy упоминает Метрику/GA4 и cookies; решение по consent-баннеру зафиксировано.

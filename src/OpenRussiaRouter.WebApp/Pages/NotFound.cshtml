@@ -1,0 +1,19 @@
+@page
+@model NotFoundModel
+@{ ViewData["Title"] = Localizer["NotFound_Title"]; }
+
+<div class="not-found">
+    <h1>@Localizer["NotFound_Title"]</h1>
+    <p>@Localizer["NotFound_Lead"]</p>
+    <div class="not-found-actions">
+        <a href="/" class="btn btn-primary">@Localizer["NotFound_Home"]</a>
+        <a href="/models" class="btn btn-secondary">@Localizer["NotFound_Models"]</a>
+    </div>
+</div>
+
+<style>
+    .not-found { text-align: center; padding: var(--spacing-section) 0; max-width: 480px; margin: 0 auto; }
+    .not-found h1 { font-size: 48px; font-weight: 400; margin-bottom: var(--spacing-md); }
+    .not-found p { color: var(--color-body-mid); margin-bottom: var(--spacing-xl); }
+    .not-found-actions { display: flex; gap: var(--spacing-md); justify-content: center; }
+</style>

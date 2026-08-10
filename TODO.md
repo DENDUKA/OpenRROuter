@@ -51,6 +51,7 @@
 ### Следующий фокус
 
 - Gateway streaming/retry integration без развертывания 9Router: SSE proxy contract, safe retry и test fake upstream.
+- `[ ] WEBAPP-OAUTH-GOOGLE` - добавить Google OAuth на страницы `/login` и `/signup` (по аналогии с Яндексом). Требует `Google:ClientId`/`Google:ClientSecret` в compose.prod.yml и `.env`. Кнопка условная — рендерится только при заданных credentials. `ExternalCallback` уже поддерживает auto-registration через `LoginOrRegisterWithExternalProviderAsync`.
 
 ## Трафик сайта
 

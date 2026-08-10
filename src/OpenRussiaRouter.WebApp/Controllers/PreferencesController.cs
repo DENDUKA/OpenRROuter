@@ -88,4 +88,30 @@ public sealed class PreferencesController(
             MaxAge = TimeSpan.FromDays(365),
             IsEssential = true
         });
+
+    /// <summary>Cookie that stores the user's analytics consent choice (1 = accepted, absent = no consent).</summary>
+    public const string ConsentCookie = "orr_consent";
+
+    /// <summary>
+    /// Records the user's cookie consent decision. Called from the consent banner via fetch().
+    /// The cookie is read server-side in _Layout.cshtml to decide whether to load analytics tags
+    /// in granted or denied mode.
+    /// </summary>
+    [HttpPost("consent")]
+    [AllowAnonymous]
+    [ValidateAntiForgeryToken]
+    public IActionResult SetConsent([FromForm] string consent)
+    {
+        var value = consent == "1" ? "1" : "0";
+        Response.Cookies.Append(ConsentCookie, value, new CookieOptions
+        {
+            Path = "/",
+            HttpOnly = false,
+            SameSite = SameSiteMode.Lax,
+            MaxAge = TimeSpan.FromDays(365),
+            IsEssential = true
+        });
+
+        return Ok();
+    }
 }

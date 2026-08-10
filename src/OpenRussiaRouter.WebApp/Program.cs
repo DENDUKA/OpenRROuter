@@ -488,6 +488,8 @@ app.UseAuthorization();
 // enforced on the request path. Other endpoints without a policy are unaffected.
 app.UseRateLimiter();
 
+app.UseStatusCodePagesWithReExecute("/NotFound");
+
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapRazorPages();

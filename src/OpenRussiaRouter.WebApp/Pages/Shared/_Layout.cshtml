@@ -40,6 +40,10 @@
 
     var returnUrlForSwitchers = (path + Context.Request.QueryString).ToString();
 
+    // Cookie consent: read server-side to decide analytics loading mode.
+    var hasConsent = Context.Request.Cookies.TryGetValue("orr_consent", out var consentVal)
+        && consentVal == "1";
+
     // ViewData["Title"] is often a LocalizedHtmlString (set from the view localizer); string-concat
     // on it prints the type name instead of the text, so render IHtmlContent titles to plain text.
     string? pageTitle = ViewData["Title"]?.ToString();
@@ -129,10 +133,13 @@
     <link rel="stylesheet" href="~/app.css" asp-append-version="true" />
     @if (!string.IsNullOrWhiteSpace(googleTagId))
     {
-        <script async src="https://www.googletagmanager.com/gtag/js?id=@googleTagId"></script>
         <script>
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
+            gtag('consent', 'default', { analytics_storage: '@(hasConsent ? "granted" : "denied")' });
+        </script>
+        <script async src="https://www.googletagmanager.com/gtag/js?id=@googleTagId"></script>
+        <script>
             gtag('js', new Date());
             gtag('config', '@googleTagId');
         </script>
@@ -148,7 +155,7 @@
                 k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
             })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=@yandexCounterId', 'ym');
 
-            ym(@yandexCounterId, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+            ym(@yandexCounterId, 'init', {ssr:true, webvisor:@(hasConsent ? "true" : "false"), clickmap:@(hasConsent ? "true" : "false"), ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true, consent:'@(hasConsent ? "advertising" : "no")'});
         </script>
         <noscript><div><img src="https://mc.yandex.ru/watch/@yandexCounterId" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
         <!-- /Yandex.Metrika counter -->
@@ -429,6 +436,44 @@
         }
     }
     @Html.Raw(analyticsEventScript)
+    @if (!hasConsent && !string.IsNullOrWhiteSpace(googleTagId))
+    {
+        <div class="cookie-consent" id="cookie-consent" role="alert">
+            <span class="cookie-consent-text">@Localizer["CookieConsent_Message"]</span>
+            <div class="cookie-consent-actions">
+                <form method="post" action="/preferences/consent" data-no-loading class="cookie-consent-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="consent" value="0" />
+                    <button type="submit" class="btn btn-outline-primary">@Localizer["CookieConsent_Decline"]</button>
+                </form>
+                <form method="post" action="/preferences/consent" data-no-loading class="cookie-consent-form">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="consent" value="1" />
+                    <button type="submit" class="btn btn-primary">@Localizer["CookieConsent_Accept"]</button>
+                </form>
+            </div>
+        </div>
+        <script>
+            document.querySelectorAll('.cookie-consent-form').forEach(function(form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    var consent = form.querySelector('input[name="consent"]').value;
+                    var fd = new FormData(form);
+                    fetch(form.action, { method: 'POST', body: fd })
+                        .then(function() {
+                            document.getElementById('cookie-consent').remove();
+                            if (consent === '1') {
+                                gtag('consent', 'update', { analytics_storage: 'granted' });
+                                @if (!string.IsNullOrWhiteSpace(yandexCounterId))
+                                {
+                                    @:ym(@yandexCounterId, 'setUserParams', { consent: 'advertising' });
+                                }
+                            }
+                        });
+                });
+            });
+        </script>
+    }
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

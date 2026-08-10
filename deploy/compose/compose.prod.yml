@@ -293,6 +293,10 @@ services:
       # corresponding snippet and keep CSP strict.
       Analytics__GoogleTagId: "G-BDD3DYVCLL"
       Analytics__YandexCounterId: "111420552"
+      # Yandex OAuth: login + signup via Yandex account. Enables the "Sign in with Yandex"
+      # button on /login and /signup. Empty values hide the button (OAuth disabled).
+      Yandex__ClientId: "${YANDEX_OAUTH_CLIENT_ID:-}"
+      Yandex__ClientSecret: "${YANDEX_OAUTH_CLIENT_SECRET:-}"
       # Data Protection key ring: persisted to a Docker volume so the antiforgery tokens
       # and cookie-auth session tickets survive container restarts. Without this every
       # restart silently mints a new key ring, logged-in users are kicked out, and stale

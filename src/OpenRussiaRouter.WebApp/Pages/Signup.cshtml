@@ -56,6 +56,16 @@
         }
         <button type="submit" id="signup-submit" class="btn btn-primary w-100">@Localizer["Signup_Submit"]</button>
     </form>
+    @if (Model.YandexEnabled)
+    {
+        <div class="auth-divider">@Localizer["Signup_Divider"]</div>
+        <form method="post" asp-page-handler="Yandex">
+            <button type="submit" class="btn btn-secondary w-100 btn-oauth">
+                <img class="oauth-icon" src="/icons/yandex.svg" alt="Yandex" width="20" height="20" />
+                @Localizer["Signup_Yandex"]
+            </button>
+        </form>
+    }
     <div class="auth-alt">@Localizer["Signup_AltLogin"] <a href="/login">@Localizer["Signup_LoginLink"]</a></div>
 </div>
 
@@ -76,6 +86,9 @@
         border-radius: var(--radius-sm);
     }
     .password-toggle:hover { color: var(--color-ink); background: var(--color-canvas-mid); }
+    .auth-divider { text-align: center; margin: var(--spacing-lg) 0; color: var(--color-body-mid); font-size: 13px; }
+    .btn-oauth { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+    .oauth-icon { flex-shrink: 0; border-radius: 2px; }
 </style>
 
 @section Scripts {

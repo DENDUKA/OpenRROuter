@@ -1,4 +1,7 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
@@ -22,14 +25,17 @@ public class SignupModel : PageModelBase
     public string? ErrorMessage { get; set; }
     public bool StartBalanceEnabled { get; set; }
     public decimal StartBalanceAmountUsd { get; set; }
+    public bool YandexEnabled { get; }
 
-    public SignupModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<SignupModel> logger)
+    public SignupModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<SignupModel> logger, IConfiguration configuration)
     {
         _authClient = authProvider;
         _billingProvider = billingProvider;
         _emailQueue = emailQueue;
         _localizer = localizer;
         _logger = logger;
+        YandexEnabled = !string.IsNullOrWhiteSpace(configuration["Yandex:ClientId"])
+                     && !string.IsNullOrWhiteSpace(configuration["Yandex:ClientSecret"]);
     }
 
     public async Task<IActionResult> OnGetAsync()
@@ -95,6 +101,19 @@ public class SignupModel : PageModelBase
         }
 
         return Page();
+    }
+
+    public IActionResult OnPostYandex()
+    {
+        if (User.Identity?.IsAuthenticated == true)
+            return RedirectToPage("/Workspace/ApiKeys");
+
+        var props = new AuthenticationProperties
+        {
+            RedirectUri = "/Login/ExternalCallback",
+            Items = { ["provider"] = "yandex" }
+        };
+        return Challenge(props, YandexAuthenticationDefaults.AuthenticationScheme);
     }
 
     public class InputModel

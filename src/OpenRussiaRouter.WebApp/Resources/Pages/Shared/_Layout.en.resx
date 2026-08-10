@@ -125,4 +125,13 @@
   <data name="Seo_DefaultDescription" xml:space="preserve">
     <value>One OpenAI-compatible API for AI models: model catalog, transparent pricing and balance top-up in Russia.</value>
   </data>
+  <data name="CookieConsent_Message" xml:space="preserve">
+    <value>We use cookies for analytics and service improvement.</value>
+  </data>
+  <data name="CookieConsent_Accept" xml:space="preserve">
+    <value>Accept</value>
+  </data>
+  <data name="CookieConsent_Decline" xml:space="preserve">
+    <value>Required only</value>
+  </data>
 </root>

@@ -1354,3 +1354,39 @@ input[type=number] { -moz-appearance: textfield; }
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px;
 }
 .ms-empty { padding: 8px 6px; color: var(--color-body-mid); font-size: 13px; font-style: italic; }
+
+/* ── Cookie consent banner ── */
+.cookie-consent {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--color-canvas-soft);
+    border-top: 1px solid var(--color-hairline);
+    font-size: 14px;
+    color: var(--color-body);
+}
+.cookie-consent-text { flex: 1; }
+.cookie-consent-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+.cookie-consent .btn {
+    padding: 6px 16px;
+    font-size: 13px;
+}
+@media (max-width: 640px) {
+    .cookie-consent {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    .cookie-consent-actions { justify-content: center; }
+}

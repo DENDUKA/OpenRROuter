@@ -68,4 +68,10 @@
   <data name="MetaDescription" xml:space="preserve">
     <value>Sign up for OpenRussiaRouter: create an account, get an API key and start working with AI models through a single OpenAI-compatible API.</value>
   </data>
+  <data name="Signup_Divider" xml:space="preserve">
+    <value>or</value>
+  </data>
+  <data name="Signup_Yandex" xml:space="preserve">
+    <value>Sign up with Yandex</value>
+  </data>
 </root>

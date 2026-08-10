@@ -51,7 +51,7 @@
         else
         {
             <div class="provider-hero-header">
-                <img class="provider-detail-logo" src="/providers/logo/@Uri.EscapeDataString(Model.Id)?v=@Model.Provider.UpdatedAtUtc.UtcDateTime.Ticks" alt="@Model.Provider.DisplayName" />
+                 <img class="provider-detail-logo" src="/providers/logo/@Uri.EscapeDataString(Model.Id)?v=@Model.Provider.UpdatedAtUtc.UtcDateTime.Ticks" alt="@Model.Provider.DisplayName" width="64" height="64" />
                 <div>
                     <h1 class="provider-detail-name">@Model.Provider.DisplayName</h1>
                 </div>
@@ -119,7 +119,7 @@
                                         onkeydown="@rowKey">
                                         <td>
                                             <div class="model-cell">
-                                                <img class="model-icon" src="/providers/logo/@Uri.EscapeDataString(Model.Id)" alt="" aria-hidden="true" />
+                                                 <img class="model-icon" src="/providers/logo/@Uri.EscapeDataString(Model.Id)" alt="" aria-hidden="true" width="28" height="28" />
                                                 <div>
                                                     <div style="display: flex; align-items: center; gap: 6px;">
                                                         @* Real <a href> — crawlers do not follow the row's onclick. *@

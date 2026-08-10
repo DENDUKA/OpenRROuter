@@ -46,11 +46,11 @@
         <h1 class="model-title">
             @if (!string.IsNullOrEmpty(Model.ModelData?.ProviderId))
             {
-                <img class="model-provider-icon" src="/providers/logo/@Uri.EscapeDataString(Model.ModelData.ProviderId)" alt="" aria-hidden="true" />
+                <img class="model-provider-icon" src="/providers/logo/@Uri.EscapeDataString(Model.ModelData.ProviderId)" alt="" aria-hidden="true" width="48" height="48" />
             }
             else if (ModelsModel.TryGetStaticIcon(Model.Provider, out var iconPath))
             {
-                <img class="model-provider-icon" src="@iconPath" alt="" aria-hidden="true" />
+                <img class="model-provider-icon" src="@iconPath" alt="" aria-hidden="true" width="48" height="48" />
             }
             else
             {

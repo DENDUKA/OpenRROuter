@@ -57,14 +57,105 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task HomePage_AcceptLanguage_En_FallsBackToEnglish()
+    public async Task HomePage_AcceptLanguage_IsIgnored_UnprefixedUrlIsAlwaysRussian()
     {
+        // SEO-024: AcceptLanguageHeaderRequestCultureProvider was removed from the chain. While it
+        // was there, one URL served two languages depending on a request header, which contradicts
+        // that URL's own canonical and hreflang. English now has its own address.
         var req = NewRequest("/");
         req.Headers.Add("Accept-Language", "en-US,en;q=0.9");
         var body = await ReadBodyAsync(req);
 
+        Assert.Equal("ru", ExtractHtmlLang(body));
+        AssertContainsText(body, ">Модели<");
+    }
+
+    [Theory]
+    [InlineData("/en")]
+    [InlineData("/en/models")]
+    [InlineData("/en/providers")]
+    [InlineData("/en/tools")]
+    [InlineData("/en/support")]
+    [InlineData("/en/legal/privacy")]
+    public async Task EnglishPrefixedUrl_Returns200AndRendersEnglish_WithoutAnyCookie(string path)
+    {
+        // The crawler case: no cookie, no Accept-Language. The URL alone must decide.
+        // Asserting the status code matters — the re-executed /NotFound page also renders with
+        // <html lang="en">, so a body-only check would pass on a 404.
+        using var response = await _client.SendAsync(NewRequest(path));
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("en", ExtractHtmlLang(body));
+    }
+
+    [Fact]
+    public async Task EnglishPrefixedUrl_BeatsRussianCookie()
+    {
+        // Arriving from a search result must show the language the URL promises, whatever an
+        // earlier visit left in the cookie — otherwise the page contradicts its own hreflang.
+        var req = NewRequest("/en/models", $"{CultureCookie}=c=ru|uic=ru");
+        var body = await ReadBodyAsync(req);
+
         Assert.Equal("en", ExtractHtmlLang(body));
         AssertContainsText(body, ">Models<");
+    }
+
+    [Fact]
+    public async Task EnglishPage_InternalLinks_StayInsideTheEnglishTree()
+    {
+        // Views link with literal href="/..." paths, which ASP.NET Core does not rewrite with
+        // PathBase. Without LocalePathTagHelper the first click would drop the visitor back onto
+        // the Russian tree and a crawler would read the English pages as orphans.
+        var body = await ReadBodyAsync(NewRequest("/en"));
+
+        Assert.Contains("href=\"/en/models\"", body);
+        Assert.DoesNotContain("href=\"/models\"", body);
+    }
+
+    [Theory]
+    [InlineData("/ru", "/")]
+    [InlineData("/ru/models", "/models")]
+    [InlineData("/en/", "/en")]
+    [InlineData("/EN/models", "/en/models")]
+    public async Task DuplicateLocaleSpellings_301ToTheCanonicalUrl(string requested, string expected)
+    {
+        using var response = await _client.SendAsync(NewRequest(requested));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal(expected, response.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task EnglishDocs_301ToTheVitePressEnglishTree()
+    {
+        // /docs is served by a separate container that nests its English tree inside its own base.
+        using var response = await _client.SendAsync(NewRequest("/en/docs"));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal("/docs/en/", response.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task TrailingSlashUnderEnglishPrefix_301Preserves_ThePrefix()
+    {
+        // The canonical normalizer runs on the bare path; dropping PathBase from its redirect
+        // would silently send every sloppy English URL to its Russian twin.
+        using var response = await _client.SendAsync(NewRequest("/en/models/"));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal("/en/models", response.Headers.Location!.ToString());
+    }
+
+    [Fact]
+    public async Task PrivateAreas_HaveNoLocalePrefix_AndStayCookieDriven()
+    {
+        // Workspace/admin/auth are noindex and behind auth: they have no indexable URL to prefix,
+        // so the cookie remains their language carrier.
+        var req = NewRequest("/login", $"{CultureCookie}=c=en|uic=en");
+        var body = await ReadBodyAsync(req);
+
+        Assert.Equal("en", ExtractHtmlLang(body));
     }
 
     [Fact]

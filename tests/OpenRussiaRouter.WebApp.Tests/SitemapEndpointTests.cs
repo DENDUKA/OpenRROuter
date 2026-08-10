@@ -28,9 +28,9 @@ public sealed class SitemapEndpointTests
     [Fact]
     public void Collect_IncludesStaticIndexablePaths()
     {
-        var entries = SitemapEndpoint.Collect("https://example.com", [], [], []);
+        var entries = SitemapEndpoint.Collect([], [], []);
 
-        var paths = entries.Select(e => e.Url.Replace("https://example.com", "")).ToList();
+        var paths = entries.Select(e => e.Path).ToList();
         paths.Should().Contain("/");
         paths.Should().Contain("/models");
         paths.Should().Contain("/providers");
@@ -40,9 +40,20 @@ public sealed class SitemapEndpointTests
         paths.Should().Contain("/legal/offer");
         paths.Should().Contain("/legal/privacy");
         // Никаких query-параметров и служебных разделов.
-        entries.Select(e => e.Url).Should().NotContain(e => e.Contains('?'));
-        entries.Select(e => e.Url).Should().NotContain(e => e.Contains("/admin"));
-        entries.Select(e => e.Url).Should().NotContain(e => e.Contains("/workspace"));
+        paths.Should().NotContain(e => e.Contains('?'));
+        paths.Should().NotContain(e => e.Contains("/admin"));
+        paths.Should().NotContain(e => e.Contains("/workspace"));
+    }
+
+    [Fact]
+    public void Collect_MarksDocsAsNonLocalized_ButEverythingElseLocalized()
+    {
+        // /docs живёт в контейнере VitePress со своей двуязычной картой сайта; ветку /en/docs
+        // это приложение отдаёт только редиректом, и в карту она попасть не должна.
+        var entries = SitemapEndpoint.Collect([], [], []);
+
+        entries.Single(e => e.Path == "/docs").Localized.Should().BeFalse();
+        entries.Where(e => e.Path != "/docs").Should().OnlyContain(e => e.Localized);
     }
 
     [Fact]
@@ -57,14 +68,14 @@ public sealed class SitemapEndpointTests
             new ModelInfo("a/b/c", "Multi Slash", "multi", "", 1m, 2m, 0m, true),
         };
 
-        var entries = SitemapEndpoint.Collect("https://example.com", models, [], []);
+        var entries = SitemapEndpoint.Collect(models, [], []);
 
-        var urls = entries.Select(e => e.Url).ToList();
-        urls.Should().Contain("https://example.com/models/xiaomi/mimo-v2.5-pro");
-        urls.Should().Contain("https://example.com/models/ocg/deepseek-v4-flash");
-        urls.Should().NotContain(e => e.Contains("no-slash", StringComparison.Ordinal));
-        urls.Should().NotContain(e => e.EndsWith("a/b/c", StringComparison.Ordinal));
-        urls.Should().NotContain(e => e.Contains("models/a/", StringComparison.Ordinal));
+        var paths = entries.Select(e => e.Path).ToList();
+        paths.Should().Contain("/models/xiaomi/mimo-v2.5-pro");
+        paths.Should().Contain("/models/ocg/deepseek-v4-flash");
+        paths.Should().NotContain(e => e.Contains("no-slash", StringComparison.Ordinal));
+        paths.Should().NotContain(e => e.EndsWith("a/b/c", StringComparison.Ordinal));
+        paths.Should().NotContain(e => e.Contains("models/a/", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -80,12 +91,12 @@ public sealed class SitemapEndpointTests
             new ProviderInfo("empty", "Empty Provider"),
         };
 
-        var entries = SitemapEndpoint.Collect("https://example.com", models, providers, []);
+        var entries = SitemapEndpoint.Collect(models, providers, []);
 
-        var xiaomi = entries.Single(e => e.Url == "https://example.com/providers/xiaomi");
+        var xiaomi = entries.Single(e => e.Path == "/providers/xiaomi");
         xiaomi.LastModUtc.Should().Be(Updated);
 
-        entries.Select(e => e.Url).Should().NotContain("https://example.com/providers/empty");
+        entries.Select(e => e.Path).Should().NotContain("/providers/empty");
     }
 
     [Fact]
@@ -97,12 +108,12 @@ public sealed class SitemapEndpointTests
             new ToolSummaryInfo("draft", "Draft", "ide", [], "кратко", "short", null, false, false, 0, Updated),
         };
 
-        var entries = SitemapEndpoint.Collect("https://example.com", [], [], tools);
+        var entries = SitemapEndpoint.Collect([], [], tools);
 
-        var cline = entries.Single(e => e.Url == "https://example.com/tools/cline");
+        var cline = entries.Single(e => e.Path == "/tools/cline");
         cline.LastModUtc.Should().Be(Updated);
 
-        entries.Select(e => e.Url).Should().NotContain("https://example.com/tools/draft");
+        entries.Select(e => e.Path).Should().NotContain("/tools/draft");
     }
 
     // ── unit: BuildXml ──────────────────────────────────────────────────────
@@ -112,14 +123,14 @@ public sealed class SitemapEndpointTests
     {
         var entries = new[]
         {
-            new SitemapEndpoint.SitemapEntry("https://example.com/"),
-            new SitemapEndpoint.SitemapEntry("https://example.com/tools/cline", Updated),
+            new SitemapEndpoint.SitemapEntry("/", Localized: false),
+            new SitemapEndpoint.SitemapEntry("/tools/cline", Updated, Localized: false),
         };
 
-        var xml = SitemapEndpoint.BuildXml(entries);
+        var xml = SitemapEndpoint.BuildXml("https://example.com", entries);
 
         xml.Should().StartWith("<?xml version=\"1.0\" encoding=\"utf-8\"?>");
-        xml.Should().Contain("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">");
+        xml.Should().Contain("xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"");
         xml.Should().Contain("<loc>https://example.com/</loc>");
         xml.Should().Contain("<loc>https://example.com/tools/cline</loc>");
         xml.Should().Contain("<lastmod>2026-08-06</lastmod>");
@@ -130,6 +141,70 @@ public sealed class SitemapEndpointTests
         urls.Should().HaveCount(2);
         urls[0].Element(doc.Root.Name.Namespace + "lastmod").Should().BeNull();
         urls[1].Element(doc.Root.Name.Namespace + "lastmod")!.Value.Should().Be("2026-08-06");
+    }
+
+    [Fact]
+    public void BuildXml_LocalizedEntry_EmitsBothLocales_EachWithFullReciprocalAlternateSet()
+    {
+        var xml = SitemapEndpoint.BuildXml(
+            "https://example.com",
+            [new SitemapEndpoint.SitemapEntry("/models")]);
+
+        var doc = XDocument.Parse(xml);
+        XNamespace sm = "http://www.sitemaps.org/schemas/sitemap/0.9";
+        XNamespace xhtml = "http://www.w3.org/1999/xhtml";
+
+        var urls = doc.Root!.Elements(sm + "url").ToList();
+        urls.Select(u => u.Element(sm + "loc")!.Value).Should().Equal(
+            "https://example.com/models",
+            "https://example.com/en/models");
+
+        // Каждая версия обязана перечислять все версии, включая саму себя, плюс x-default —
+        // несимметричный набор поисковики отбрасывают целиком.
+        foreach (var url in urls)
+        {
+            var links = url.Elements(xhtml + "link")
+                .Select(l => (Lang: l.Attribute("hreflang")!.Value, Href: l.Attribute("href")!.Value))
+                .ToList();
+
+            links.Should().BeEquivalentTo(new[]
+            {
+                ("ru", "https://example.com/models"),
+                ("en", "https://example.com/en/models"),
+                ("x-default", "https://example.com/en/models"),
+            }.Select(t => (Lang: t.Item1, Href: t.Item2)));
+            url.Elements(xhtml + "link").Should().OnlyContain(l => l.Attribute("rel")!.Value == "alternate");
+        }
+    }
+
+    [Fact]
+    public void BuildXml_HomePage_EnglishLocIsPrefixWithoutTrailingSlash()
+    {
+        // "/en/" редиректит на "/en"; карта сайта обязана перечислять ту форму, которая отдаёт 200.
+        var xml = SitemapEndpoint.BuildXml(
+            "https://example.com",
+            [new SitemapEndpoint.SitemapEntry("/")]);
+
+        xml.Should().Contain("<loc>https://example.com/en</loc>");
+        xml.Should().NotContain("<loc>https://example.com/en/</loc>");
+    }
+
+    [Fact]
+    public void BuildXml_NonLocalizedEntry_HasNoAlternateAnnotations()
+    {
+        var xml = SitemapEndpoint.BuildXml(
+            "https://example.com",
+            [new SitemapEndpoint.SitemapEntry("/docs", Localized: false)]);
+
+        var doc = XDocument.Parse(xml);
+        XNamespace sm = "http://www.sitemaps.org/schemas/sitemap/0.9";
+        XNamespace xhtml = "http://www.w3.org/1999/xhtml";
+
+        var urls = doc.Root!.Elements(sm + "url").ToList();
+        urls.Should().ContainSingle();
+        urls[0].Element(sm + "loc")!.Value.Should().Be("https://example.com/docs");
+        urls[0].Elements(xhtml + "link").Should().BeEmpty();
+        xml.Should().NotContain("/en/docs");
     }
 
     // ── integration: GET /sitemap.xml ───────────────────────────────────────
@@ -152,6 +227,11 @@ public sealed class SitemapEndpointTests
         body.Should().Contain("<lastmod>2026-08-06</lastmod>");
         body.Should().NotContain("providers/empty");
         body.Should().NotContain("tools/draft");
+
+        // Английская ветка адресуема и обязана быть в карте — иначе её нечем обнаружить.
+        body.Should().Contain("<loc>https://example.com/en/models/xiaomi/mimo-v2.5-pro</loc>");
+        body.Should().Contain("<loc>https://example.com/en/providers/xiaomi</loc>");
+        body.Should().Contain("<loc>https://example.com/en/tools/cline</loc>");
 
         // Критерий: каждый URL из sitemap реально отдаёт 200. Абсолютный origin (https://example.com)
         // в тестовом хосте недоступен — ходим по локальному пути к тому же приложению.

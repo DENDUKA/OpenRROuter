@@ -43,6 +43,78 @@ public sealed class SeoHeadTests
     }
 
     [Fact]
+    public async Task Get_Root_EmitsReciprocalHreflangCluster_WithEnglishXDefault()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/\" />");
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"en\" href=\"https://example.com/en\" />");
+        // x-default targets the version for visitors whose language matches neither. Outside the
+        // RU-speaking market English is the better landing, so it must not point at the Russian page.
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://example.com/en\" />");
+    }
+
+    [Fact]
+    public async Task Get_EnglishPage_CanonicalIsSelfReferencing_NotTheRussianTwin()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/en/models");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        // Canonicalizing /en/models onto /models would tell search engines the English tree is a
+        // duplicate — it would be crawled and then dropped straight back out of the index.
+        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/en/models\" />");
+        body.Should().NotContain("<link rel=\"canonical\" href=\"https://example.com/models\" />");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/en/models\"");
+        body.Should().NotContain("name=\"robots\"");
+    }
+
+    [Fact]
+    public async Task Get_BothLocales_AdvertiseTheIdenticalAlternateSet()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var ru = await client.GetAsync("/models");
+        using var en = await client.GetAsync("/en/models");
+
+        var ruLinks = ExtractHreflangLinks(WebUtility.HtmlDecode(await ru.Content.ReadAsStringAsync()));
+        var enLinks = ExtractHreflangLinks(WebUtility.HtmlDecode(await en.Content.ReadAsStringAsync()));
+
+        // A cluster whose members disagree about its membership is discarded wholesale.
+        ruLinks.Should().Equal(enLinks);
+        ruLinks.Should().Equal(
+            ("ru", "https://example.com/models"),
+            ("en", "https://example.com/en/models"),
+            ("x-default", "https://example.com/en/models"));
+    }
+
+    [Fact]
+    public async Task Get_NoIndexPage_EmitsNoHreflang()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/login");
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        body.Should().Contain("name=\"robots\" content=\"noindex,follow\"");
+        body.Should().NotContain("hreflang");
+    }
+
+    private static List<(string Lang, string Href)> ExtractHreflangLinks(string body) =>
+        Regex.Matches(body, "<link rel=\"alternate\" hreflang=\"([^\"]+)\" href=\"([^\"]+)\" />")
+            .Select(m => (m.Groups[1].Value, m.Groups[2].Value))
+            .ToList();
+
+    [Fact]
     public async Task Get_ModelsWithQuery_CanonicalStripsQuery()
     {
         using var factory = CreateFactory();

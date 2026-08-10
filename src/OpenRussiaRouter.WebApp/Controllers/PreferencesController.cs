@@ -51,31 +51,66 @@ public sealed class PreferencesController(
     }
 
     /// <summary>
-    /// TS-010: switch the UI culture via cookie. Anonymous — the switcher must work on
-    /// <c>/login</c> and <c>/signup</c> as well as inside the workspace.
+    /// TS-010: switch the UI culture. Anonymous — the switcher must work on <c>/login</c> and
+    /// <c>/signup</c> as well as inside the workspace.
     /// Invalid <paramref name="culture"/> values are silently ignored (no cookie set),
     /// but the redirect still happens.
     /// </summary>
+    /// <remarks>
+    /// SEO-024: the public site addresses locales by path, so switching language has to move the
+    /// visitor to the other locale's URL — setting the cookie alone would leave them on a URL whose
+    /// canonical and hreflang now contradict the page they are looking at. The cookie is still
+    /// written, because the private areas (workspace, admin, auth) have no locale-prefixed URLs and
+    /// keep taking their language from it.
+    /// </remarks>
     [HttpPost("language")]
     [AllowAnonymous]
     [ValidateAntiForgeryToken]
     public IActionResult SetLanguage([FromForm] string culture, [FromForm] string? returnUrl)
     {
-        if (SupportedCultures.IsSupported(culture))
+        if (!SupportedCultures.IsSupported(culture))
         {
-            Response.Cookies.Append(
-                CookieRequestCultureProvider.DefaultCookieName,
-                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
-                new CookieOptions
-                {
-                    Path = "/",
-                    MaxAge = TimeSpan.FromDays(365),
-                    IsEssential = true,
-                    SameSite = SameSiteMode.Lax
-                });
+            return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToPage("/Index");
         }
 
-        return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl!) : RedirectToPage("/Index");
+        Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+            new CookieOptions
+            {
+                Path = "/",
+                MaxAge = TimeSpan.FromDays(365),
+                IsEssential = true,
+                SameSite = SameSiteMode.Lax
+            });
+
+        if (!Url.IsLocalUrl(returnUrl))
+        {
+            return LocalRedirect(LocaleUrl.For("/", culture));
+        }
+
+        return LocalRedirect(TranslateReturnUrl(returnUrl!, culture));
+    }
+
+    /// <summary>
+    /// Re-points a local return URL at <paramref name="culture"/>: strips whichever locale prefix
+    /// it carries and applies the target one, leaving query and fragment untouched.
+    /// </summary>
+    internal static string TranslateReturnUrl(string returnUrl, string culture)
+    {
+        var stop = returnUrl.AsSpan().IndexOfAny('?', '#');
+        var path = stop < 0 ? returnUrl : returnUrl[..stop];
+        var tail = stop < 0 ? string.Empty : returnUrl[stop..];
+
+        var bare = LocaleUrl.Split(path).Path;
+
+        // The documentation tree nests its English version inside its own base rather than under
+        // the site-wide prefix, so it cannot be rewritten like an ordinary page.
+        var translated = LocaleUrl.IsDocsPath(bare)
+            ? LocaleUrl.DocsFor(bare, culture)
+            : LocaleUrl.For(bare, culture);
+
+        return translated + tail;
     }
 
     /// <summary>Shared so the Settings page write-path keeps the topbar cookie in sync.</summary>

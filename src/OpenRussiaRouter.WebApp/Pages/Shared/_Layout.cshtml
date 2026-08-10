@@ -38,7 +38,9 @@
     string LangBtnClass(string code) => code.Equals(activeLang, StringComparison.OrdinalIgnoreCase)
         ? "ccy-btn active" : "ccy-btn";
 
-    var returnUrlForSwitchers = (path + Context.Request.QueryString).ToString();
+    // PathBase carries the /en locale prefix, so the switchers must send the visitor back to the
+    // URL they are actually on — not to its Russian twin.
+    var returnUrlForSwitchers = (Context.Request.PathBase + path + Context.Request.QueryString).ToString();
 
     // Cookie consent: read server-side to decide analytics loading mode.
     var hasConsent = Context.Request.Cookies.TryGetValue("orr_consent", out var consentVal)
@@ -60,7 +62,10 @@
     var canonicalUrl = ViewData["CanonicalUrl"] as string;
     if (string.IsNullOrWhiteSpace(canonicalUrl))
     {
-        canonicalUrl = baseUrl + path;
+        // Self-referencing per locale: /en/models canonicalizes to itself, not to /models.
+        // Pointing both at the Russian URL would tell search engines the English tree is a
+        // duplicate and drop it straight back out of the index.
+        canonicalUrl = baseUrl + Context.Request.PathBase + path;
     }
 
     string[] noIndexPrefixes =
@@ -92,6 +97,23 @@
 
     var ogTitle = string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle;
     var ogImageUrl = baseUrl + "/og-image.png";
+
+    // hreflang cluster for this page, or null when the page must not advertise one (noindex, or
+    // the docs tree, which the VitePress container annotates itself). x-default targets English:
+    // it is the version for visitors whose language matches neither, and outside the RU-speaking
+    // market English is by far the better landing.
+    // Fully qualified for the same reason as StructuredData below — _Layout is shared by views
+    // whose _ViewImports may not pull in Services.Localization.
+    List<(string Culture, string Url)>? hreflangAlternates = null;
+    string? xDefaultUrl = null;
+    if (!noIndex && !OpenRussiaRouter.WebApp.Services.Localization.LocaleUrl.IsDocsPath(path))
+    {
+        hreflangAlternates = OpenRussiaRouter.WebApp.Services.Localization.LocaleUrl
+            .Alternates(baseUrl, path).ToList();
+        xDefaultUrl = hreflangAlternates
+            .First(a => a.Culture == OpenRussiaRouter.WebApp.Services.Localization.LocaleUrl.XDefaultCulture)
+            .Url;
+    }
 }
 <!DOCTYPE html>
 <html lang="@activeLang">
@@ -108,6 +130,18 @@
     {
         <link rel="canonical" href="@canonicalUrl" />
         <meta property="og:url" content="@canonicalUrl" />
+    }
+    @if (hreflangAlternates is not null)
+    {
+        @* Mutual, self-referencing hreflang across the two addressable locales. The set must be
+           identical on every page of the cluster (each version lists all versions, itself
+           included) or search engines discard the annotation. /docs is excluded: the VitePress
+           container serves its own bilingual tree and emits its own hreflang. *@
+        @foreach (var (altCulture, altUrl) in hreflangAlternates)
+        {
+            <link rel="alternate" hreflang="@altCulture" href="@altUrl" />
+        }
+        <link rel="alternate" hreflang="x-default" href="@xDefaultUrl" />
     }
     <meta property="og:site_name" content="OpenRussiaRouter" />
     <meta property="og:type" content="website" />

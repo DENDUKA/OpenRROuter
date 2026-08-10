@@ -9,6 +9,7 @@ using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Catalog;
 using OpenRussiaRouter.WebApp.Services.Content;
+using OpenRussiaRouter.WebApp.Services.Localization;
 
 namespace OpenRussiaRouter.WebApp.Api;
 
@@ -59,8 +60,8 @@ public static class SitemapEndpoint
             var toolsTask = content.ListToolsAsync(cancellationToken: ct);
             await Task.WhenAll(modelsTask, providersTask, toolsTask);
 
-            var entries = Collect(baseUrl, await modelsTask, await providersTask, await toolsTask);
-            return Results.Content(BuildXml(entries), "application/xml", Encoding.UTF8);
+            var entries = Collect(await modelsTask, await providersTask, await toolsTask);
+            return Results.Content(BuildXml(baseUrl, entries), "application/xml", Encoding.UTF8);
         }
         catch (Exception ex)
         {
@@ -71,25 +72,27 @@ public static class SitemapEndpoint
     }
 
     /// <summary>
-    /// Collects the sitemap entries: static pages, then dynamic catalog URLs.
-    /// Only enabled models (the <c>ListPublicModels</c> source already filters them), providers that
-    /// have at least one enabled model, and published tools are included. <paramref name="baseUrl"/>
-    /// is used as the origin; paths are percent-encoded per the sitemap protocol.
+    /// Collects the sitemap entries as <b>locale-free paths</b>: static pages, then dynamic catalog
+    /// URLs. Only enabled models (the <c>ListPublicModels</c> source already filters them), providers
+    /// that have at least one enabled model, and published tools are included. Paths are
+    /// percent-encoded per the sitemap protocol; <see cref="BuildXml"/> adds the origin and fans each
+    /// entry out across the addressable locales.
     /// Model URLs come from <see cref="ModelDetailRoute"/> — the sitemap must not invent its own shape,
     /// or it would list URLs the detail page redirects away from (or 404s on).
     /// </summary>
     internal static IReadOnlyList<SitemapEntry> Collect(
-        string baseUrl,
         IReadOnlyList<ModelInfo> models,
         IReadOnlyList<ProviderInfo> providers,
         IReadOnlyList<ToolSummaryInfo> tools)
     {
-        var origin = baseUrl.TrimEnd('/');
         var entries = new List<SitemapEntry>();
 
         foreach (var path in StaticPaths)
         {
-            entries.Add(new SitemapEntry(origin + path));
+            // /docs is served by the VitePress container, which lists its own bilingual tree in
+            // /docs/sitemap.xml and annotates it itself. Fanning it out here would claim /en/docs,
+            // a URL this app answers only with a redirect.
+            entries.Add(new SitemapEntry(path, Localized: !LocaleUrl.IsDocsPath(path)));
         }
 
         // "Active" provider = one an enabled model points at via ProviderId. Providers without
@@ -107,7 +110,7 @@ public static class SitemapEndpoint
             }
 
             entries.Add(new SitemapEntry(
-                origin + $"/providers/{Uri.EscapeDataString(provider.Id)}",
+                $"/providers/{Uri.EscapeDataString(provider.Id)}",
                 NormalizeLastMod(provider.UpdatedAtUtc)));
         }
 
@@ -116,7 +119,7 @@ public static class SitemapEndpoint
             var path = ModelDetailRoute.TryBuildPath(model.Id, model.ProviderId, model.Provider);
             if (path is not null)
             {
-                entries.Add(new SitemapEntry(origin + path));
+                entries.Add(new SitemapEntry(path));
             }
         }
 
@@ -125,7 +128,7 @@ public static class SitemapEndpoint
                      .OrderBy(t => t.Id, StringComparer.Ordinal))
         {
             entries.Add(new SitemapEntry(
-                origin + $"/tools/{Uri.EscapeDataString(tool.Id)}",
+                $"/tools/{Uri.EscapeDataString(tool.Id)}",
                 NormalizeLastMod(tool.UpdatedAtUtc)));
         }
 
@@ -133,24 +136,49 @@ public static class SitemapEndpoint
     }
 
     /// <summary>
-    /// Serializes entries to the sitemaps.org XML document. <c>lastmod</c> is emitted only when a
-    /// real update date exists, as a W3C date (<c>yyyy-MM-dd</c>).
+    /// Serializes entries to the sitemaps.org XML document, one <c>&lt;url&gt;</c> per locale.
+    /// <c>lastmod</c> is emitted only when a real update date exists, as a W3C date
+    /// (<c>yyyy-MM-dd</c>).
     /// </summary>
-    internal static string BuildXml(IReadOnlyList<SitemapEntry> entries)
+    /// <remarks>
+    /// Every localized entry carries the full <c>xhtml:link</c> alternate set — including a link to
+    /// itself — plus <c>x-default</c>. That is the form search engines require: an alternate set that
+    /// is not reciprocal and self-referencing on every member is discarded wholesale. The annotations
+    /// must stay byte-identical to the <c>hreflang</c> tags in <c>_Layout</c>; both are generated
+    /// from <see cref="LocaleUrl"/> so they cannot drift apart.
+    /// </remarks>
+    internal static string BuildXml(string baseUrl, IReadOnlyList<SitemapEntry> entries)
     {
+        var origin = baseUrl.TrimEnd('/');
         var ns = XNamespace.Get("http://www.sitemaps.org/schemas/sitemap/0.9");
-        var urlset = new XElement(ns + "urlset");
+        var xhtml = XNamespace.Get("http://www.w3.org/1999/xhtml");
+        var urlset = new XElement(ns + "urlset", new XAttribute(XNamespace.Xmlns + "xhtml", xhtml));
 
         foreach (var entry in entries)
         {
-            var url = new XElement(ns + "url", new XElement(ns + "loc", entry.Url));
-            if (entry.LastModUtc is { } lastMod)
+            if (!entry.Localized)
             {
-                url.Add(new XElement(ns + "lastmod",
-                    lastMod.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+                urlset.Add(BuildUrl(ns, origin + entry.Path, entry.LastModUtc, alternates: null));
+                continue;
             }
 
-            urlset.Add(url);
+            var alternates = LocaleUrl.Alternates(origin, entry.Path).ToList();
+            var xDefault = alternates.First(a => a.Culture == LocaleUrl.XDefaultCulture).Url;
+
+            foreach (var (_, url) in alternates)
+            {
+                var annotations = alternates
+                    .Select(a => new XElement(xhtml + "link",
+                        new XAttribute("rel", "alternate"),
+                        new XAttribute("hreflang", a.Culture),
+                        new XAttribute("href", a.Url)))
+                    .Append(new XElement(xhtml + "link",
+                        new XAttribute("rel", "alternate"),
+                        new XAttribute("hreflang", "x-default"),
+                        new XAttribute("href", xDefault)));
+
+                urlset.Add(BuildUrl(ns, url, entry.LastModUtc, annotations));
+            }
         }
 
         var document = new XDocument(new XDeclaration("1.0", "utf-8", null), urlset);
@@ -158,8 +186,33 @@ public static class SitemapEndpoint
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>" + Environment.NewLine + document.ToString();
     }
 
+    private static XElement BuildUrl(
+        XNamespace ns,
+        string loc,
+        DateTimeOffset? lastMod,
+        IEnumerable<XElement>? alternates)
+    {
+        var url = new XElement(ns + "url", new XElement(ns + "loc", loc));
+        if (lastMod is { } value)
+        {
+            url.Add(new XElement(ns + "lastmod",
+                value.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)));
+        }
+
+        if (alternates is not null)
+        {
+            url.Add(alternates);
+        }
+
+        return url;
+    }
+
     private static DateTimeOffset? NormalizeLastMod(DateTimeOffset value) =>
         value == default ? null : value;
 
-    internal sealed record SitemapEntry(string Url, DateTimeOffset? LastModUtc = null);
+    /// <summary>
+    /// One indexable page, as a locale-free path. <paramref name="Localized"/> is false for pages
+    /// that exist at exactly one URL regardless of language.
+    /// </summary>
+    internal sealed record SitemapEntry(string Path, DateTimeOffset? LastModUtc = null, bool Localized = true);
 }

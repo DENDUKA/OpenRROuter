@@ -62,10 +62,18 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
     o.DefaultRequestCulture = new RequestCulture(SupportedCultures.DefaultCulture);
     o.SupportedCultures = cultures;
     o.SupportedUICultures = cultures;
+    // SEO-024: the URL is the authority. RouteCultureProvider reports the culture that
+    // LocalePrefixMiddleware lifted out of the /en prefix and beats the cookie, so a visitor
+    // arriving from a search result gets the language the URL promises.
+    //
+    // AcceptLanguageHeaderRequestCultureProvider is deliberately absent: with it, one URL served
+    // two languages depending on a request header, which contradicts that URL's own canonical and
+    // hreflang. Language is now chosen by the path, and by the cookie only where there is no
+    // indexable path to speak of (workspace, admin, auth).
     o.RequestCultureProviders =
     [
-        new CookieRequestCultureProvider(),
-        new AcceptLanguageHeaderRequestCultureProvider()
+        new RouteCultureProvider(),
+        new CookieRequestCultureProvider()
     ];
 });
 
@@ -457,6 +465,12 @@ if (!app.Environment.IsDevelopment())
     app.UseLoggedExceptionHandler("/Error");
 }
 
+// SEO-024: move the /en prefix into PathBase before anything else looks at the path. Ahead of
+// UseStaticFiles because tilde-resolved asset URLs (~/app.css) arrive prefixed as /en/app.css,
+// and ahead of the canonical normalizer and UseRequestLocalization, both of which expect the
+// bare path and the resolved culture respectively.
+app.UseLocalePrefix();
+
 app.UseStaticFiles();
 
 // SEO: fold trailing-slash and letter-case duplicates of public URLs onto one canonical URL.
@@ -469,7 +483,11 @@ app.Use(async (context, next) =>
         var canonical = CanonicalUrlNormalizer.TryNormalize(context.Request.Path.Value);
         if (canonical is not null)
         {
-            context.Response.Redirect(canonical + context.Request.QueryString, permanent: true);
+            // PathBase carries the locale prefix; dropping it here would silently redirect every
+            // sloppy English URL onto its Russian twin.
+            context.Response.Redirect(
+                context.Request.PathBase + canonical + context.Request.QueryString,
+                permanent: true);
             return;
         }
     }
@@ -477,8 +495,14 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// TS-010: must run after UseStaticFiles and before UseAuthentication so that
-// cookie/Accept-Language are honored for the auth pipeline and Razor views.
+// Explicit, and it must stay explicit: without this call WebApplication injects its own
+// UseRouting at the very start of the pipeline — ahead of UseLocalePrefix — so routing would
+// try to match the still-prefixed /en/models against the bare page routes and 404 the whole
+// English tree.
+app.UseRouting();
+
+// TS-010: must run after UseStaticFiles and before UseAuthentication so that the culture
+// (URL prefix, then cookie) is honored for the auth pipeline and Razor views.
 app.UseRequestLocalization();
 
 app.UseAuthentication();

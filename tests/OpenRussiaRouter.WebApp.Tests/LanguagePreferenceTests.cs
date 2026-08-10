@@ -72,13 +72,42 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
-        Assert.Equal(new Uri("/models", UriKind.Relative), resp.Headers.Location);
+        // SEO-024: the public site addresses locales by path, so the switch has to move the visitor
+        // onto the English URL. Leaving them on /models would put them on a page whose canonical and
+        // hreflang say Russian.
+        Assert.Equal(new Uri("/en/models", UriKind.Relative), resp.Headers.Location);
 
         // The response sets the .AspNetCore.Culture cookie with the new value.
         // Cookie values are URL-encoded, so look for the encoded form (c%3Den%7Cuic%3Den).
         Assert.True(resp.Headers.TryGetValues("Set-Cookie", out var setCookieHeaders));
         var cookieHeader = string.Join(",", setCookieHeaders!);
         Assert.Contains($"{CultureCookie}=c%3Den%7Cuic%3Den", cookieHeader);
+    }
+
+    [Fact]
+    public async Task PostLanguage_SwitchingBackToRussian_DropsThePrefix()
+    {
+        var resp = await PostLanguageAsync(new Dictionary<string, string>
+        {
+            { "culture", "ru" },
+            { "returnUrl", "/en/models" },
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
+        Assert.Equal(new Uri("/models", UriKind.Relative), resp.Headers.Location);
+    }
+
+    [Fact]
+    public async Task PostLanguage_PreservesQueryString_WhenSwitchingLocale()
+    {
+        var resp = await PostLanguageAsync(new Dictionary<string, string>
+        {
+            { "culture", "en" },
+            { "returnUrl", "/models?category=text" },
+        });
+
+        Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
+        Assert.Equal(new Uri("/en/models?category=text", UriKind.Relative), resp.Headers.Location);
     }
 
     [Fact]

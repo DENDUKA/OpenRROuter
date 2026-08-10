@@ -280,16 +280,14 @@ services:
       Payments__YandexPay__MerchantId: "${YANDEX_PAY_MERCHANT_ID:-}"
       Payments__YandexPay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
       Payments__YandexPay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
-      # Site traffic → analytics.site_visits (unique visitors, referrers, UTM on the ORR Users
-      # dashboard). Same DB and same IdentitySalt as auth/billing: the salt keys both the
-      # visitor hash and distinct_id, so a different value would break the visit → signup
-      # funnel. Raw IPs are never stored. SiteVisits__Enabled=false turns tracking off.
+      # Product analytics sink (analytics.events). Same DB and same IdentitySalt as
+      # auth/billing: the salt keys distinct_id, so a different value would orphan the
+      # existing pseudonyms. Site traffic itself is measured by Yandex Metrika.
       ProductAnalytics__Enabled: "true"
       ProductAnalytics__Provider: "Postgres"
       ProductAnalytics__ConnectionString: "Host=postgres;Port=5432;Database=orr_analytics;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
       ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
       ProductAnalytics__Environment: "production"
-      SiteVisits__Enabled: "${SITE_VISITS_ENABLED:-true}"
       # Web-analytics tags in the shared layout: Yandex Metrika counter and GA4 gtag.
       # Not secrets (they are emitted into public HTML); empty values disable the
       # corresponding snippet and keep CSP strict.

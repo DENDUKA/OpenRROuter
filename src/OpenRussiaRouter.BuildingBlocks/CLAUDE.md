@@ -1,7 +1,7 @@
 # BuildingBlocks — CLAUDE.md
 
 Низ стека: деньги, токены/usage, SQL-миграции, телеметрия и метрики, gRPC-интерсепторы,
-логирование, продуктовая аналитика и трафик сайта. Подключается всеми сервисами.
+логирование, продуктовая аналитика. Подключается всеми сервисами.
 **Зависимостей на другие проекты solution нет** — и не появляется: если типу нужен
 `Contracts`, он не в BuildingBlocks. Тащит `Microsoft.AspNetCore.App` (FrameworkReference),
 `Grpc.Net.Client`, `Npgsql` (+`Npgsql.OpenTelemetry`), Serilog/Seq, OpenTelemetry
@@ -17,7 +17,7 @@
 | `Money/` | доллар как единственная валюта | `MoneyAmount`, `Currency` (`Usd = 840`, других значений нет), `MoneyRounding` (единая политика округления денег) |
 | `Usage/` | токены, цены, расчёт стоимости, парсинг usage из ответов LLM | `TokenUsage`, `ModelTokenPrice`, `UsageCostCalculator` (+`IUsageCostCalculator`), `TokenUsageExtractor` |
 | `Migrations/` | применение сырых `.sql` на старте сервиса | `PostgresSqlMigrationRunner`, `SqlMigrationLoader`, `SqlMigration`, `RepositoryMigrationPath`, `WebApplicationMigrationExtensions` |
-| `Analytics/` | продуктовые события + трафик сайта, все очереди и воркеры | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure`, `SiteVisit`, `VisitorIdHasher`, `SiteVisitQueue`/`FlushWorker`, `VisitSessionizer`, `VisitSessionAggregator`, `VisitSessionCompactor`, `VisitSessionCompactionWorker` |
+| `Analytics/` | продуктовые события: очередь и воркер | `IProductAnalytics`, `AnalyticsEventBuilder`, `AnalyticsEvents`, `AnalyticsBuckets`, `UserPseudonymizer`, `ProductAnalyticsEventQueue`/`FlushWorker`, `IProductAnalyticsErasure` |
 | `Metrics/` | Prometheus-экспорт и общий счётчик лимитов | `OpenTelemetryExtensions` (`AddOpenTelemetryMetrics`, `MapOpenTelemetryEndpoints`, `DefaultMeterName`), `LimitMetrics` |
 | `Grpc/` | клиентские и серверные интерсепторы | `GrpcDeadlineInterceptor`, `ServiceAuthClientInterceptor`, `ServiceAuthInterceptor` (серверный, конфигурируется через `ServiceAuthServerOptions.ProtectedMethods` per-service) |
 | `Logging/` | Serilog + Seq, логирование необработанных исключений | `SeqLoggingExtensions` (`AddSeqLogging`, `UseLoggedExceptionHandler`) |
@@ -135,77 +135,14 @@ ApiGateway зовёт это через свою обёртку `RouterUsageExtr
   `{Service}DbConnectionFactory`, а не через `NpgsqlDataSource` из контейнера. Не резолвить его
   для сервисной БД и не регистрировать второй.
 
-## Трафик сайта (`Analytics/SiteVisit*`)
+## Трафик сайта — здесь его больше нет
 
-Тот же конвейер, но для HTML-страниц и таблицы `analytics.site_visits`: middleware WebApp →
-`SiteVisitQueue.TryEnqueue` → `SiteVisitFlushWorker` (батч-insert, без `on conflict`).
-`SiteVisit` — плоская запись со `Path`, `ReferrerHost`/`ReferrerKind`, utm-полями,
-`DeviceClass`, `IsAuthenticated`, `Environment`; допустимые значения — в
-`SiteVisitDeviceClasses` и `SiteVisitReferrerKinds` (`direct`/`internal`/`search`/`social`/`external`).
-
-- Посетитель — `VisitorIdHasher.ComputeVisitorHash` = `Base64Url(HMAC-SHA256(IdentitySalt, ip + "|" + ua))`.
-  **Сырой IP не покидает класс, кук нет** — поэтому и consent-баннера нет. Соль стабильная
-  (не ротируется по дням) намеренно: иначе не отличить вернувшегося посетителя и не построить
-  воронку «визит → регистрация». Известные ограничения (написаны и на панелях дашборда):
-  посетители за одним NAT склеиваются в одного, `X-Forwarded-For` управляется клиентом и
-  счётчик можно накрутить.
-- У залогиненного визита заполняется `DistinctId` тем же `UserPseudonymizer` → джойн с
-  `analytics.events` в одной БД.
-- **`AddSiteVisitTracking(configuration)` вызывать после `AddProductAnalytics`** (секция `SiteVisits`):
-  синк, соль и `Environment` берутся из `ProductAnalytics`, и без сконфигуренного Postgres-синка
-  (включая непустой `IdentitySalt`) регистрация тихо ничего не делает — писать некуда.
-  Единственный потребитель — WebApp.
-
-### Схлопывание визитов в сессии (`analytics.visit_sessions`)
-
-`site_visits` — **эфемерный буфер**, а не история: фоновой компакт схлопывает визиты одного
-посетителя в одну строку-сессию и **удаляет исходные строки**. В устоявшемся режиме в таблице
-визитов лежит примерно `SessionGap + SafetyLag` (~35 минут) трафика, всё остальное живёт в
-`analytics.visit_sessions` (миграция `db/migrations/analytics/003_visit_sessions.sql`, детализация
-внутри `pages jsonb` — массив `{"t":<utc>,"p":<path>}`).
-
-- **Граница сессии** (`VisitSessionizer.Split(visits, gap, splitOnUtcDayBoundary)`): разрыв
-  **строго больше** `gap` (ровно `gap` — та же сессия) **ИЛИ** смена календарных суток UTC.
-  Второе условие обязательно и выключать его в проде нельзя: бот, стучащийся раз в 5 минут,
-  иначе даёт вечно открытую сессию, которая каждый прогон пересчитывается и растит `pages`
-  без предела. Вход сортируется внутри метода по `(OccurredAt, Id)`; сутки сравниваются по
-  `OccurredAt.UtcDateTime.Date`.
-- **Агрегация** (`VisitSessionAggregator.Aggregate(slice, maxPages)`): `entry/exit_path` — первый
-  и последний по времени, `utm_*` — **первый непустой**, `distinct_id` — **последний непустой**
-  (логин мог случиться в середине сессии), `is_authenticated` = OR, `referrer_*`/`device_class`/
-  `environment` — из первого визита. `pages` режется до `MaxPagesPerSession`, а `page_view_count`
-  считается по **всем** визитам — обрезка детектируется как `page_view_count > длина pages`,
-  отдельного флага нет.
-- **`VisitSessionCompactor.CompactOnceAsync(nowUtc, after, ct)`** → `CompactionResult(Sessions,
-  DeletedVisits, LastVisitorHash)`. Cutoff = `now - (SessionGap + SafetyLag)`; пишутся только
-  сессии, закончившиеся раньше cutoff. Один проход = одна короткая транзакция:
-  `pg_try_advisory_xact_lock` (координаты — **литеральные константы в C#**, не `hashtext()`: он
-  нестабилен между мажорами PG; только `_xact_`-версия — сессионный лок на пуле Npgsql течёт) →
-  keyset-батч `visitor_hash > @after` → выборка **всех** строк этих посетителей, включая свежее
-  cutoff (иначе живая сессия порежется на фрагменты) → сессионизация в C# → array-unnest insert с
-  `on conflict (visitor_hash, started_at_utc) do update` (merge, **не** `do nothing`) → точечный
-  `delete ... where id = any(@ids)`. Гвард `to_regclass` на обе таблицы: миграция не применена →
-  один warning и выход, а не исключение на каждом тике (fail-open контракт всей `Analytics/`).
-- **`VisitSessionCompactionWorker`** живёт **в BillingService** (`AddSiteVisitCompaction` →
-  `BillingService/Infrastructure/Startup/Startup.cs`), а не в WebApp: Billing владеет БД
-  `orr_analytics`, катает её миграции, `NpgsqlDataSource` аналитической БД у него уже
-  зарегистрирован и он идёт **в одной реплике** (WebApp реплицируется — там N претендентов на
-  один компакт). Advisory-лок всё равно ставится: rolling update, «включили ещё где-то».
-  Прогон делает до `MaxIterationsPerRun` проходов, каждый — своя транзакция: одна длинная
-  держала бы `xmin` и блокировала autovacuum на той самой таблице, которую воркер опустошает.
-- **`AddSiteVisitCompaction(configuration)` — отдельно от `AddSiteVisitTracking`.** Гейт — тот же
-  Postgres-синк (`ProductAnalytics.Enabled` + `Provider="Postgres"` + непустой `ConnectionString`),
-  **но без `IdentitySalt`** (компактор ничего не хеширует) и **без `SiteVisits:Enabled`**
-  (выключенный трекинг не должен оставлять уже записанные визиты несхлопнутыми). Мусорные значения
-  опций клампятся в `BuildCompactionSettings`, а не валят старт хоста.
-- Ключи `SiteVisits:Compaction:*` — `Enabled=true`, `IntervalMinutes=5` (пол — 1 минута),
-  `SessionGapMinutes=30`, `SafetyLagMinutes=5`, `VisitorBatchSize=500`, `MaxIterationsPerRun=20`,
-  `MaxPagesPerSession=200`, `SplitOnUtcDayBoundary=true`.
-- **Известное искажение**: флаш очереди с задержкой больше `SafetyLag` попадает в уже схлопнутую
-  сессию — совпал `started_at_utc`, домержится через `on conflict`, не совпал — появится
-  сессия-фрагмент из одного просмотра. Стоит рядом с ограничениями NAT/`X-Forwarded-For`
-  (см. `TODO.md`, раздел «Трафик сайта: сессии»), и по той же причине `SafetyLag` не уменьшают
-  без нужды.
+Собственный трекинг визитов (`SiteVisit*`, `VisitorIdHasher`, `VisitSession*`) **удалён**:
+трафик сайта считает Яндекс.Метрика, счётчик живёт в layout WebApp. Вместе с кодом ушли
+`analytics.site_visits`/`visit_sessions` (дропает `db/migrations/analytics/004_drop_site_visits.sql`),
+компакт в BillingService и админские страницы `/admin/visitors` и `/admin/sessions`.
+Не заводить заново — дублировать Метрику своим трекером незачем. `analytics.events` выше
+это не затрагивает: продуктовые события живут дальше.
 
 ## Метрики
 

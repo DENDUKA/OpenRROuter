@@ -262,7 +262,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`,
 `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`,
 `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
-`/admin/gatewaytest`, `/admin/visitors`, `/admin/sessions`, `/admin/sessions/{id}`.
+`/admin/gatewaytest`.
 
 ## Платежи и пополнение баланса
 
@@ -306,22 +306,13 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   (`ProductAnalyticsEventQueue` → `ProductAnalyticsFlushWorker`) в `analytics.events`.
   Есть no-op реализация, псевдонимизация пользователя (`UserPseudonymizer`) и путь стирания
   (`IProductAnalyticsErasure`). Схема — `db/migrations/analytics/`.
-- **Трафик сайта** (`analytics.site_visits`): WebApp пишет по строке на отданную HTML-страницу
-  (`SiteVisitTrackingMiddleware` → `SiteVisitQueue` → `SiteVisitFlushWorker`). Посетитель — это
-  `HMAC(IdentitySalt, ip + user-agent)`, **сырой IP не хранится и кук нет**; у залогиненного
-  визита заполняется тот же `distinct_id`, что в `analytics.events`, поэтому воронка
-  «визит → регистрация» считается внутри одной БД. Детали и ограничения —
-  в [WebApp/CLAUDE.md](src/OpenRussiaRouter.WebApp/CLAUDE.md).
-- **`analytics.site_visits` — эфемерный буфер, долгоживущее хранилище трафика это
-  `analytics.visit_sessions`.** `VisitSessionCompactionWorker` (BuildingBlocks, хостит
-  **BillingService** — владелец БД `orr_analytics`, одна реплика) схлопывает визиты одного
-  посетителя в строку-сессию (граница = разрыв **строго больше** `SessionGap` **или** смена
-  календарных суток UTC) и **удаляет исходные строки**; в `site_visits` остаётся
-  `SessionGap + SafetyLag` ≈ 35 минут трафика. Всё, что считает трафик за период — панели Grafana,
-  страница `/admin/sessions`, резолв `visitor_hash` по `distinct_id` — обязано читать
-  `visit_sessions`; `/admin/visitors` намеренно остался сырым хвостом для отладки трекинга.
-  Ключи — `SiteVisits:Compaction:*`, механика — в
-  [BuildingBlocks/CLAUDE.md](src/OpenRussiaRouter.BuildingBlocks/CLAUDE.md).
+- **Трафика сайта система не считает сама** — это делает Яндекс.Метрика (счётчик в layout WebApp,
+  секция `Analytics`). Собственный контур (`analytics.site_visits`/`visit_sessions`,
+  `SiteVisitTrackingMiddleware`, компакт в BillingService, страницы `/admin/visitors`
+  и `/admin/sessions`, секция «Посетители сайта» в дашборде `ORR Users`) **удалён**, обе таблицы
+  дропает миграция `db/migrations/analytics/004_drop_site_visits.sql`. Не реинтродьюсить:
+  дублировать Метрику своим трекером незачем. `analytics.events` (продуктовая аналитика) —
+  отдельный, живой конвейер.
 - **Метрики нод и провайдеров пишет CollectorService** (`ProviderQuotaMeter`) — остатки квот
   (`orr_provider_quota*`), потолок окна и момент его обнуления (`orr_provider_quota_limit`,
   `orr_provider_quota_reset_seconds`; **длину окна — «5-часовой», «недельный» — не сообщает
@@ -334,10 +325,8 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   в in-memory снапшоте коллектора и в этих метриках.
 - Дашборды Grafana и конфиг Prometheus для прода — в `deploy/compose/grafana/`
   и `deploy/compose/prometheus.prod.yml`. Дашборды: `ORR Limits` (лимиты и квоты),
-  `ORR Product Analytics` (псевдонимные события), `ORR Users` (рост, retention, посетители
-  сайта; строится по `auth`+`billing` и по `analytics.visit_sessions` — секция «Посетители сайта»
-  перецелена с `site_visits`, поэтому последние ~35 минут ещё не схлопнутого трафика в панели
-  не попадают; метрики дневные, для них незаметно), `ORR Nodes & Provider Limits`
+  `ORR Product Analytics` (псевдонимные события), `ORR Users` (рост, retention; строится по
+  `auth`+`billing`, трафик сайта смотрим в Яндекс.Метрике), `ORR Nodes & Provider Limits`
   (`nodes-providers.json` — список нода → подключение провайдера → квоты и модели).
 - **В `ORR Nodes & Provider Limits` селектор `$node` фильтрует только детальный список.**
   Переменная — query по `control.router_nodes` (`__text` = имя, `__value` = id; колонка

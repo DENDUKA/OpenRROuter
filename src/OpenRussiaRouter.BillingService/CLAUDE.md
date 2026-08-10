@@ -16,26 +16,17 @@ Layered: Domain → Application → Infrastructure.
 - `ApplySqlMigrationsAsync("BillingDb", "billing", …)` — `db/migrations/billing/`;
 - при непустом `ProductAnalytics:ConnectionString` (и `SqlMigrations:Enabled` != `false`) — ещё и
   `db/migrations/analytics/`. **Billing — единственный сервис, накатывающий analytics-миграции**,
-  хотя пишет в эту схему и WebApp (`analytics.site_visits`).
+  хотя пишет в эту схему и WebApp (`analytics.events`).
 
 [Startup.cs](Infrastructure/Startup/Startup.cs): `AddGrpc` с глобальным `ServiceAuthInterceptor`,
 `AddControllers`, `AddHealthChecks`, `AddBillingInfrastructure(ConnectionStrings:BillingDb)`,
 `AddBillingApplicationServices`, `AddProductAnalytics`, options `ExchangeRates`/`Payments`/`ServiceAuth`,
 singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-сервисы —
-`FxRateRefresher`, `PaymentEventRecoveryWorker` и `VisitSessionCompactionWorker`
-(регистрируется `AddSiteVisitCompaction(configuration)` **после** `AddProductAnalytics`, у которого
-он забирает `NpgsqlDataSource` аналитической БД). Pipeline мапит `GrpcBillingService`, контроллеры,
+`FxRateRefresher` и `PaymentEventRecoveryWorker`. Pipeline мапит `GrpcBillingService`, контроллеры,
 `/health` и OpenTelemetry-эндпоинты.
 
-**Компакт визитов живёт здесь, а не в WebApp** — Billing владеет БД `orr_analytics`, катает её
-миграции и идёт в одной реплике (WebApp реплицируется). Воркер схлопывает `analytics.site_visits` в
-`analytics.visit_sessions` и удаляет исходные строки, так что таблица визитов держит ~35 минут
-трафика. Настройки — `SiteVisits:Compaction:*` в `appsettings.json` (`Enabled`, `IntervalMinutes`,
-`SessionGapMinutes`, `SafetyLagMinutes`, `VisitorBatchSize`, `MaxIterationsPerRun`,
-`MaxPagesPerSession`, `SplitOnUtcDayBoundary`); гейт регистрации — сконфигуренный Postgres-синк
-`ProductAnalytics` + `Compaction.Enabled`, **`SiteVisits:Enabled` в гейт не входит**. Механика,
-инварианты и подводные камни — в [BuildingBlocks/CLAUDE.md](../OpenRussiaRouter.BuildingBlocks/CLAUDE.md),
-раздел «Трафик сайта».
+Компакта визитов здесь больше нет: собственный трекинг трафика удалён (его считает Яндекс.Метрика),
+`analytics.site_visits`/`visit_sessions` дропает `db/migrations/analytics/004_drop_site_visits.sql`.
 
 `AddBillingInfrastructure` ([BillingServiceExtensions.cs](Application/Extensions/BillingServiceExtensions.cs)):
 **пустая строка подключения → `InMemoryBillingRepository`** (так живёт dev-профиль и часть тестов).
@@ -193,8 +184,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 | `Payments:AutoReverseChargeback` | сторнировать ли chargeback автоматически (по умолчанию `false`) |
 | `ExchangeRates:Source` / `MarkupPercent` / `Fallback:RubPerUsd` / `Fallback:RubPerEur` | FX; `MarkupPercent` уменьшает `usdPerUnit` (наценка в пользу платформы) |
 | `ServiceAuth:Tokens` / `ServiceAuth:MethodPolicies` | s2s (см. выше) |
-| `ProductAnalytics:*` | продуктовая аналитика; непустой `ConnectionString` дополнительно включает накат analytics-миграций и регистрацию компакта визитов |
-| `SiteVisits:Compaction:*` | компакт `site_visits` → `visit_sessions` (единственная часть секции `SiteVisits`, которую читает Billing; трекинг визитов — не его дело) |
+| `ProductAnalytics:*` | продуктовая аналитика; непустой `ConnectionString` дополнительно включает накат analytics-миграций |
 | `SqlMigrations:Enabled` | `false` отключает накат analytics-миграций |
 
 ## Подводные камни

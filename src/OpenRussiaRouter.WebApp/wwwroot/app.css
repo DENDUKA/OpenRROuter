@@ -712,8 +712,8 @@ code.d-block {
 .app-shell--no-sidebar .topbar-brand { padding-left: 24px; }
 
 .logo-mark {
-    width: 26px;
-    height: 26px;
+    width: 30px;
+    height: 30px;
     border: 1px solid var(--color-hairline);
     border-radius: 7px;
     display: flex;

@@ -49,14 +49,6 @@
 - completed:
 - desc: Составить keyword map минимум для 10 стартовых кластеров: «ИИ API», «AI API», «API нейросетей», «OpenAI-совместимый API», «OpenRouter оплатить», «OpenRouter API пополнить», «Модели и цены», «API конкретной модели», «Провайдеры моделей». Для каждой посадочной страницы зафиксировать primary/secondary keyword и intent; не назначать один точный запрос одновременно главной и /ai-api; определить title, H1, description и CTA. Артефакт — markdown-файл docs/seo/keyword-map.md с таблицей keyword → URL → intent → статус → показы → клики → регистрация. Документ, не код; сборка solution не меняется.
 
-## SEO-003 — Список index/noindex URL
-- status: todo
-- priority: medium
-- created: 2026-08-06T00:00:00Z
-- started:
-- completed:
-- desc: ⚠️ ЯЗЫКОВАЯ ЧАСТЬ ЭТОЙ ЗАДАЧИ ОТМЕНЕНА — исполнять по старому тексту нельзя. Было: «поисковик всегда получает русскую версию как основную; hreflang для cookie-локализации не строить; англоязычный SEO-контур не публиковать». Решение развёрнуто 2026-08-10 в SEO-024 (расширение рынка за пределы РФ): английская локаль адресуема префиксом /en, hreflang ru/en/x-default построен, x-default ведёт на английскую версию. ОСТАЁТСЯ СДЕЛАТЬ ровно одно — согласовать с продуктом список index/noindex. Индексируемые URL: /, /models, /models/{provider}/{slug}, /providers, /providers/{id}, /tools, /tools/{id} (только опубликованные с содержательным описанием), /docs, /support, юридические страницы — и их зеркала под /en (кроме /docs, у которого своя двуязычная ветка /docs/en/). Неиндексируемые: /login, /signup, /forgot-password, /reset-password, /verify-email, /invite/*, /workspace/*, /admin/*, /pay/*, /error, служебные API и webhooks — префикса локали у них нет. Артефакт — список index/noindex, согласованный с продуктом.
-
 ## SEO-009 — Переработать главную страницу
 - status: todo
 - priority: medium

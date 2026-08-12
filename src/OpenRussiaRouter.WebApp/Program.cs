@@ -41,6 +41,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddSeqLogging("webapp");
 builder.AddOpenTelemetryMetrics("OpenRussiaRouter.WebApp");
 
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+});
+
 // Analytics sink (orr_analytics): gives the app the shared UserPseudonymizer and the
 // Npgsql data source for product analytics events. Site traffic itself is measured by
 // Yandex Metrika (see the Analytics section), not by the app.
@@ -394,6 +399,7 @@ var app = builder.Build();
 
 // Must be the very first middleware so downstream pipeline (auth, OAuth redirect_uri
 // generation, absolute URLs) sees the original scheme/host from Caddy.
+app.UseResponseCompression();
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
     ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost,

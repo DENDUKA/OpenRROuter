@@ -92,6 +92,11 @@ var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticat
         options.LoginPath = "/Login";
         options.AccessDeniedPath = "/Login";
         options.Cookie.HttpOnly = true;
+        // Authentication is shared by the bare Russian routes and the English /en contour.
+        // Without an explicit root path, CookieAuthentication uses the current PathBase when
+        // deleting the cookie: logout from /en/logout then expires a different /en-scoped cookie
+        // and leaves the real root-scoped authentication cookie intact.
+        options.Cookie.Path = "/";
         options.Cookie.SameSite = SameSiteMode.Lax;
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;

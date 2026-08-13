@@ -39,6 +39,6 @@ public class RobotsTxtTests : IClassFixture<WebApplicationFactory<Program>>
     public async Task RobotsTxt_ReferencesAbsoluteSitemapUrl()
     {
         var content = await _client.GetStringAsync("/robots.txt");
-        Assert.Contains("Sitemap: https://openrussiarouter.com/sitemap.xml", content);
+        Assert.Contains("Sitemap: https://rawrter.com/sitemap.xml", content);
     }
 }

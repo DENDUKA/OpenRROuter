@@ -31,7 +31,7 @@ public sealed class SeoHeadTests
         body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/\" />");
         body.Should().Contain("<meta name=\"description\" content=\"");
         body.Should().Contain("единый OpenAI-совместимый API для работы с AI-моделями");
-        body.Should().Contain("property=\"og:site_name\" content=\"OpenRussiaRouter\"");
+        body.Should().Contain("property=\"og:site_name\" content=\"Rawrter\"");
         body.Should().Contain("property=\"og:type\" content=\"website\"");
         body.Should().Contain("property=\"og:title\"");
         body.Should().Contain("property=\"og:description\"");

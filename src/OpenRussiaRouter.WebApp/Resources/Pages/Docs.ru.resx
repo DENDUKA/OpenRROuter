@@ -66,7 +66,7 @@
     <value>Используйте в своём инструменте</value>
   </data>
   <data name="Docs_Lead" xml:space="preserve">
-    <value>Подключитесь к OpenRussiaRouter через OpenAI-совместимый поток запросов. Укажите любому OpenAI-клиенту эндпоинт ниже и авторизуйтесь своим API-ключом.</value>
+    <value>Подключитесь к Rawrter через OpenAI-совместимый поток запросов. Укажите любому OpenAI-клиенту эндпоинт ниже и авторизуйтесь своим API-ключом.</value>
   </data>
   <data name="Docs_ListModels" xml:space="preserve">
     <value>Список моделей, доступных вашему аккаунту</value>
@@ -111,6 +111,6 @@
     <value>Инструкция</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>Документация OpenRussiaRouter: API-ключ, OpenAI-совместимый эндпоинт, примеры запросов и первые шаги с AI-моделями.</value>
+    <value>Документация Rawrter: API-ключ, OpenAI-совместимый эндпоинт, примеры запросов и первые шаги с AI-моделями.</value>
   </data>
 </root>

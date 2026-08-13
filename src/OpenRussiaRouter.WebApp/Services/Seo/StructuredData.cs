@@ -34,7 +34,7 @@ public static class StructuredData
         {
             ["@type"] = "Organization",
             ["@id"] = baseUrl + "/#organization",
-            ["name"] = "OpenRussiaRouter",
+            ["name"] = "Rawrter",
             ["url"] = baseUrl + "/",
             ["logo"] = baseUrl + "/og-image.png",
         };
@@ -43,7 +43,7 @@ public static class StructuredData
         {
             ["@type"] = "WebSite",
             ["@id"] = baseUrl + "/#website",
-            ["name"] = "OpenRussiaRouter",
+            ["name"] = "Rawrter",
             ["url"] = baseUrl + "/",
             ["inLanguage"] = language,
             ["publisher"] = new Dictionary<string, object?> { ["@id"] = baseUrl + "/#organization" },

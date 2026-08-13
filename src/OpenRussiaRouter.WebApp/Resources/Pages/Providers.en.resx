@@ -36,7 +36,7 @@
     <value>Providers</value>
   </data>
   <data name="Providers_Lead" xml:space="preserve">
-    <value>Model providers available through OpenRussiaRouter.</value>
+    <value>Model providers available through Rawrter.</value>
   </data>
   <data name="Providers_LoadFailedTitle" xml:space="preserve">
     <value>Could not load providers.</value>
@@ -45,6 +45,6 @@
     <value>No providers configured.</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>AI model providers in OpenRussiaRouter: suppliers, models and prices in one catalog. Connect through a single OpenAI-compatible API.</value>
+    <value>AI model providers in Rawrter: suppliers, models and prices in one catalog. Connect through a single OpenAI-compatible API.</value>
   </data>
 </root>

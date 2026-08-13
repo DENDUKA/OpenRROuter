@@ -51,7 +51,7 @@
     <value>Model categories</value>
   </data>
   <data name="Catalog_Lead" xml:space="preserve">
-    <value>Browse available OpenAI-compatible models routed through OpenRussiaRouter.</value>
+    <value>Browse available OpenAI-compatible models routed through Rawrter.</value>
   </data>
   <data name="Catalog_LoadFailedTitle" xml:space="preserve">
     <value>Could not load models.</value>
@@ -129,6 +129,6 @@
     <value>Coding</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>OpenRussiaRouter AI model catalog: input and output token prices, context and capabilities. All models are available through a single OpenAI-compatible API.</value>
+    <value>Rawrter AI model catalog: input and output token prices, context and capabilities. All models are available through a single OpenAI-compatible API.</value>
   </data>
 </root>

@@ -95,7 +95,7 @@
         metaDescription = Localizer["Seo_DefaultDescription"].Value;
     }
 
-    var ogTitle = string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle;
+    var ogTitle = string.IsNullOrEmpty(pageTitle) ? "Rawrter" : pageTitle;
     var ogImageUrl = baseUrl + "/og-image.png";
 
     // hreflang cluster for this page, or null when the page must not advertise one (noindex, or
@@ -120,7 +120,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@(string.IsNullOrEmpty(pageTitle) ? "OpenRussiaRouter" : pageTitle + " - OpenRussiaRouter")</title>
+    <title>@(string.IsNullOrEmpty(pageTitle) ? "Rawrter" : pageTitle + " - Rawrter")</title>
     <meta name="description" content="@metaDescription" />
     @if (noIndex)
     {
@@ -143,7 +143,7 @@
         }
         <link rel="alternate" hreflang="x-default" href="@xDefaultUrl" />
     }
-    <meta property="og:site_name" content="OpenRussiaRouter" />
+    <meta property="og:site_name" content="Rawrter" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="@ogTitle" />
     <meta property="og:description" content="@metaDescription" />
@@ -201,8 +201,8 @@
 
     <header class="topbar">
         <a href="/" class="topbar-brand">
-            <span class="logo-mark">ORR</span>
-            <span class="topbar-brand-name">OpenRussiaRouter</span>
+            <span class="logo-mark">rawr</span>
+            <span class="topbar-brand-name">Rawrter</span>
         </a>
 
         <nav class="topbar-nav" aria-label="@Localizer["Sidebar_Product"]">

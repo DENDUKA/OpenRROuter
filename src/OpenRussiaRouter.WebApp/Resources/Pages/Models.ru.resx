@@ -51,7 +51,7 @@
     <value>Категории моделей</value>
   </data>
   <data name="Catalog_Lead" xml:space="preserve">
-    <value>Доступные OpenAI-совместимые модели, маршрутизируемые через OpenRussiaRouter.</value>
+    <value>Доступные OpenAI-совместимые модели, маршрутизируемые через Rawrter.</value>
   </data>
   <data name="Catalog_LoadFailedTitle" xml:space="preserve">
     <value>Не удалось загрузить модели.</value>
@@ -129,6 +129,6 @@
     <value>Код</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>Каталог AI-моделей OpenRussiaRouter: цены входных и выходных токенов, контекст и возможности. Все модели доступны через единый OpenAI-совместимый API.</value>
+    <value>Каталог AI-моделей Rawrter: цены входных и выходных токенов, контекст и возможности. Все модели доступны через единый OpenAI-совместимый API.</value>
   </data>
 </root>

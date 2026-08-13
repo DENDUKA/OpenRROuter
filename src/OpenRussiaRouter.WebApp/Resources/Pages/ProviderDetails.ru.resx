@@ -99,6 +99,6 @@
     <value>Получить API-ключ</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>Провайдер {0} в OpenRussiaRouter: модели доступны через единый OpenAI-совместимый API с ценами за токены.</value>
+    <value>Провайдер {0} в Rawrter: модели доступны через единый OpenAI-совместимый API с ценами за токены.</value>
   </data>
 </root>

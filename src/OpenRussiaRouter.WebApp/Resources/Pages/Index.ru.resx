@@ -75,7 +75,7 @@
     <value>Готовы отправить первый запрос?</value>
   </data>
   <data name="Home_Lead" xml:space="preserve">
-    <value>Зарегистрируйтесь, пополните баланс, выберите модель и отправляйте запросы через OpenRussiaRouter с одним API-ключом.</value>
+    <value>Зарегистрируйтесь, пополните баланс, выберите модель и отправляйте запросы через Rawrter с одним API-ключом.</value>
   </data>
   <data name="Home_ProofBilling_Desc" xml:space="preserve">
     <value>Пополните баланс один раз — токены и расходы видны в личном кабинете.</value>
@@ -96,7 +96,7 @@
     <value>Гибкое управление API-ключами</value>
   </data>
   <data name="Home_ProofSavings_Desc" xml:space="preserve">
-    <value>Маршрутизируйте OpenAI-совместимые запросы через OpenRussiaRouter и экономьте бюджет на AI.</value>
+    <value>Маршрутизируйте OpenAI-совместимые запросы через Rawrter и экономьте бюджет на AI.</value>
   </data>
   <data name="Home_ProofSavings_Title" xml:space="preserve">
     <value>На 25% дешевле, чем OpenRouter</value>
@@ -144,7 +144,7 @@
     <value>Пример запроса curl</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>OpenRussiaRouter — единый OpenAI-совместимый API для работы с AI-моделями: каталог моделей, цены за токены, пополнение баланса и один API-ключ.</value>
+    <value>Rawrter — единый OpenAI-совместимый API для работы с AI-моделями: каталог моделей, цены за токены, пополнение баланса и один API-ключ.</value>
   </data>
   <data name="Title" xml:space="preserve">
     <value>OpenAI-совместимый API для AI-моделей в России</value>

@@ -36,7 +36,7 @@
     <value>Integrations</value>
   </data>
   <data name="Tools_Lead" xml:space="preserve">
-    <value>Apps, editors and agents that work with OpenRussiaRouter. Open a tool for step-by-step setup instructions.</value>
+    <value>Apps, editors and agents that work with Rawrter. Open a tool for step-by-step setup instructions.</value>
   </data>
   <data name="Tools_AllCategories" xml:space="preserve">
     <value>All</value>
@@ -48,6 +48,6 @@
     <value>No tools yet.</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>Tools and integrations for the AI API: editors, IDEs and services that work with OpenRussiaRouter through the OpenAI-compatible API.</value>
+    <value>Tools and integrations for the AI API: editors, IDEs and services that work with Rawrter through the OpenAI-compatible API.</value>
   </data>
 </root>

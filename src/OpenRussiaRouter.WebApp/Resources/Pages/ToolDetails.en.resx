@@ -52,6 +52,6 @@
     <value>{0} — {1}</value>
   </data>
   <data name="MetaDescriptionNoTagline" xml:space="preserve">
-    <value>{0} — a tool for working with AI models through the OpenAI-compatible API of OpenRussiaRouter.</value>
+    <value>{0} — a tool for working with AI models through the OpenAI-compatible API of Rawrter.</value>
   </data>
 </root>

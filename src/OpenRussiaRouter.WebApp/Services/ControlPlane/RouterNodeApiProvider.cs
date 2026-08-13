@@ -45,7 +45,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         {
             return new RouterNodeProbeResult(
                 requestLine,
-                "Control token is empty in OpenRussiaRouter DB - open this node in /admin/nodes and re-create it with the Control Token from 9Router's .env (ROUTER_CONTROL_TOKEN).");
+                "Control token is empty in the Rawrter DB - open this node in /admin/nodes and re-create it with the Control Token from 9Router's .env (ROUTER_CONTROL_TOKEN).");
         }
 
         try

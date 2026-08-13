@@ -36,7 +36,7 @@
     <value>Провайдеры</value>
   </data>
   <data name="Providers_Lead" xml:space="preserve">
-    <value>Провайдеры моделей, доступные через OpenRussiaRouter.</value>
+    <value>Провайдеры моделей, доступные через Rawrter.</value>
   </data>
   <data name="Providers_LoadFailedTitle" xml:space="preserve">
     <value>Не удалось загрузить провайдеров.</value>
@@ -45,6 +45,6 @@
     <value>Провайдеры не настроены.</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>Провайдеры AI-моделей в OpenRussiaRouter: поставщики, модели и цены в одном каталоге. Подключение через единый OpenAI-совместимый API.</value>
+    <value>Провайдеры AI-моделей в Rawrter: поставщики, модели и цены в одном каталоге. Подключение через единый OpenAI-совместимый API.</value>
   </data>
 </root>

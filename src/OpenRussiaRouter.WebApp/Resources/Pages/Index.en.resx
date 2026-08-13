@@ -75,7 +75,7 @@
     <value>Ready to route your first request?</value>
   </data>
   <data name="Home_Lead" xml:space="preserve">
-    <value>Signup, add credits, choose a model, and send requests through OpenRussiaRouter with one API key.</value>
+    <value>Signup, add credits, choose a model, and send requests through Rawrter with one API key.</value>
   </data>
   <data name="Home_ProofBilling_Desc" xml:space="preserve">
     <value>Buy credits once, track tokens and costs, and keep API usage visible from your workspace.</value>
@@ -96,7 +96,7 @@
     <value>Flexible API key management</value>
   </data>
   <data name="Home_ProofSavings_Desc" xml:space="preserve">
-    <value>Route OpenAI-compatible requests through OpenRussiaRouter and keep more budget for model usage.</value>
+    <value>Route OpenAI-compatible requests through Rawrter and keep more budget for model usage.</value>
   </data>
   <data name="Home_ProofSavings_Title" xml:space="preserve">
     <value>25% cheaper than OpenRouter</value>
@@ -144,7 +144,7 @@
     <value>Example curl request</value>
   </data>
   <data name="MetaDescription" xml:space="preserve">
-    <value>OpenRussiaRouter — a single OpenAI-compatible API for AI models: a model catalog, per-token pricing, balance top-up and one API key.</value>
+    <value>Rawrter — a single OpenAI-compatible API for AI models: a model catalog, per-token pricing, balance top-up and one API key.</value>
   </data>
   <data name="Title" xml:space="preserve">
     <value>OpenAI-compatible API for AI models in Russia</value>

@@ -13,10 +13,10 @@ public static class EmailTemplates
     /// </summary>
     public static EmailMessage InviteEmail(string recipient, string inviteLink)
     {
-        const string subject = "You're invited to OpenRussiaRouter";
+        const string subject = "You're invited to Rawrter";
         var body =
             "Hello,\n\n" +
-            "You've been invited to OpenRussiaRouter. Follow the link below to set a " +
+            "You've been invited to Rawrter. Follow the link below to set a " +
             "password and activate your account:\n\n" +
             $"{inviteLink}\n\n" +
             "The link is single-use and expires in 7 days. If you didn't expect this " +
@@ -30,11 +30,11 @@ public static class EmailTemplates
     /// </summary>
     public static EmailMessage VerificationEmail(string recipient, string code)
     {
-        const string subject = "Confirm your OpenRussiaRouter email";
+        const string subject = "Confirm your Rawrter email";
         var body =
             "Hello,\n\n" +
             "Use the code below to confirm your email and finish creating your " +
-            "OpenRussiaRouter account:\n\n" +
+            "Rawrter account:\n\n" +
             $"    {code}\n\n" +
             "The code expires in 15 minutes. If you didn't request this, you can " +
             "ignore this message.\n";
@@ -47,10 +47,10 @@ public static class EmailTemplates
     /// </summary>
     public static EmailMessage PasswordResetEmail(string recipient, string code)
     {
-        const string subject = "Reset your OpenRussiaRouter password";
+        const string subject = "Reset your Rawrter password";
         var body =
             "Hello,\n\n" +
-            "We received a request to reset the password of your OpenRussiaRouter " +
+            "We received a request to reset the password of your Rawrter " +
             "account. Use the code below to set a new password:\n\n" +
             $"    {code}\n\n" +
             "The code expires in 15 minutes. If you didn't request a password reset, " +
@@ -70,7 +70,7 @@ public static class EmailTemplates
     {
         var fullSubject = $"[Support] {subject}";
         var body =
-            "New support request via the OpenRussiaRouter website.\n\n" +
+            "New support request via the Rawrter website.\n\n" +
             $"From:    {fromEmail}\n" +
             $"{meta}\n" +
             "----------------------------------------\n\n" +

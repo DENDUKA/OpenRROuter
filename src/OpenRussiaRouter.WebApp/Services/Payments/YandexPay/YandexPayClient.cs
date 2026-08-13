@@ -62,7 +62,7 @@ public sealed class YandexPayClient
                     new YandexPayCartItem
                     {
                         ProductId = $"topup-{orderId}",
-                        Title = "Пополнение баланса OpenRussiaRouter",
+                        Title = "Пополнение баланса Rawrter",
                         Quantity = new YandexPayItemQuantity { Count = "1" },
                         Total = amount.ToString("F2", CultureInfo.InvariantCulture),
                         Description = "Пополнение баланса",

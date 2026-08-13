@@ -36,7 +36,7 @@
     <value>API</value>
   </data>
   <data name="Model_Desc" xml:space="preserve">
-    <value>Use this model through the OpenRussiaRouter OpenAI-compatible API. Requests are routed through available nodes with account-level usage tracking.</value>
+    <value>Use this model through the Rawrter OpenAI-compatible API. Requests are routed through available nodes with account-level usage tracking.</value>
   </data>
   <data name="Model_DescriptionEmpty" xml:space="preserve">
     <value>No description has been added for this model yet.</value>

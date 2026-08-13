@@ -19,7 +19,7 @@ public class EmailSettings
     public int SmtpPort { get; set; } = 587;
     public bool UseSsl { get; set; } = true;
     public string SenderAddress { get; set; } = null!;
-    public string SenderName { get; set; } = "OpenRussiaRouter";
+    public string SenderName { get; set; } = "Rawrter";
 
     /// <summary>
     /// Pause after each sent message in the dispatch worker, to stay under the

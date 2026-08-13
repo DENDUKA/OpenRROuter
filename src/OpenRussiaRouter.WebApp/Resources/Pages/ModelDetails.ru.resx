@@ -36,7 +36,7 @@
     <value>API</value>
   </data>
   <data name="Model_Desc" xml:space="preserve">
-    <value>Используйте эту модель через OpenAI-совместимый API OpenRussiaRouter. Запросы маршрутизируются по доступным нодам с учётом биллинга аккаунта.</value>
+    <value>Используйте эту модель через OpenAI-совместимый API Rawrter. Запросы маршрутизируются по доступным нодам с учётом биллинга аккаунта.</value>
   </data>
   <data name="Model_DescriptionEmpty" xml:space="preserve">
     <value>Описание для этой модели пока не добавлено.</value>

@@ -16,6 +16,7 @@
 с 001, чтобы несвязанные пачки не смешивались: T- — аудит репозитория, VS- — сессии визитов.
 ## <PREFIX>-NNN — <заголовок>
 - status: todo | in_progress | done | blocked
+- category: <короткая категория; для RNM используется surface>
 - priority: low | medium | high
 - created:  <ISO8601>
 - started:  <ISO8601>    (заполняется при взятии в работу)
@@ -156,3 +157,68 @@
 - started:
 - completed:
 - desc: Юридическая точка из SEO-002 (отложена по решению продукта). На проде активны Яндекс Метрика и Google Analytics 4, которые ставят cookies и собирают обезличенную статистику посещений. В docs/mandatory/privacy-policy.md дописать раздел про эти системы и cookies (положение по 152-ФЗ); возможно потребуется consent-баннер — в коде его нет. Формулировку согласовать с продуктом/юристом. Критерий: /legal/privacy упоминает Метрику/GA4 и cookies; решение по consent-баннеру зафиксировано.
+
+---
+
+> Источник: surface-переименование публичного сайта, 2026-08-13.
+> Меняется только видимая пользователям и поисковикам поверхность: бренд `Rawrter` и сайт
+> `https://rawrter.com`. Внутренние имена `OpenRussiaRouter.*`, переменные `ORR_*`, API-ключи
+> `sk-or-*`, model ID `ORR/*`, почтовые адреса и API `https://api.openrussiarouter.com` не меняются.
+> Старый сайт не получает redirect-контур. Существующие задачи SEO-* и архив не переписываются.
+> Порядок: RNM-001 → RNM-002 → RNM-003/RNM-004 → RNM-005 → RNM-006.
+
+## RNM-001 — Бренд интерфейса
+- status: todo
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: WebApp. Перед правкой прочитать `src/OpenRussiaRouter.WebApp/CLAUDE.md`. Заменить отображаемое название продукта `OpenRussiaRouter` на `Rawrter` во всех пользовательских текстах Razor Pages, layout, ресурсах ru/en, SEO-title/description, административном интерфейсе, email-шаблонах, `Email:SenderName`, платёжных назначениях, юридических шаблонах, alt/aria-подписях и пользовательских сообщениях. Проверить `wwwroot` на логотипы и изображения со старым текстом; при наличии обновить исходные assets без смены визуального стиля. Не менять namespace, assembly/project names, каталоги, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, URL API и почтовые адреса. Обновить затронутые тесты. Критерий: отрендеренные страницы и письма показывают `Rawrter`, технические исключения сохранены; `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1` и тесты `OpenRussiaRouter.WebApp.Tests` проходят.
+
+## RNM-002 — Домен сайта
+- status: todo
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: Перевести только публичный сайт с `https://openrussiarouter.com` на `https://rawrter.com`. Обновить актуальные значения и ссылки в WebApp (`PublicSiteBaseUrl`, юридический `ORR_PUBLIC_DOMAIN`, robots и связанные тесты), docs-site, `deploy/compose`, `PROD-ACCESS.md`, актуальных deploy/runbook-файлах и комментариях, описывающих текущий прод. Имя переменной `ORR_PUBLIC_DOMAIN` сохранить; её production-значение должно стать `rawrter.com`. Caddy развязать так, чтобы apex обслуживался на `rawrter.com`, а API продолжал обслуживаться только на `api.openrussiarouter.com`; не создавать `api.rawrter.com`. Удалить redirect-блоки старого/опечаточного сайта, новые редиректы не добавлять. Не менять `PublicApiBaseUrl`, API-примеры, почтовые адреса и API DNS. Критерий: рабочие ссылки сайта используют `rawrter.com`, `api.openrussiarouter.com` сохранён как явное исключение; `docker compose -f deploy/compose/compose.prod.yml config` валиден и обязательная сборка solution проходит.
+
+## RNM-003 — SEO-контур
+- status: todo
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: WebApp + docs-site. Перед правкой WebApp прочитать его `CLAUDE.md`. Перевести crawler-facing сигналы сайта на `https://rawrter.com`: canonical, `og:url`, `og:image`, Twitter image, JSON-LD, взаимные hreflang ru/en/x-default, `<loc>` динамической `/sitemap.xml`, hostname `/docs/sitemap.xml` и обе записи Sitemap в `/robots.txt`. Сохранить структуру локалей и `/docs/`, не подменять сайт API-origin'ом. Обновить `SeoHeadTests`, `SitemapEndpointTests`, `RobotsTxtTests` и другие затронутые ожидания. Не менять `https://api.openrussiarouter.com` в API-контракте и примерах. Критерий: сгенерированный SEO-контур содержит `rawrter.com` для сайта и документации, API-исключение сохранено; тесты WebApp, обязательная сборка solution и `npm run docs:build` в `docs-site` проходят.
+
+## RNM-004 — Публичная документация
+- status: todo
+- category: surface
+- priority: medium
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: docs-site и актуальная пользовательская документация. Заменить отображаемый бренд на `Rawrter`, а ссылки на панель, главную и `/legal/*` — на `https://rawrter.com`. Обновить title, description, навигацию и обычный текст, не меняя техническое содержание API. Явно сохранить `https://api.openrussiarouter.com` во всех API reference, curl-командах, Python/Node.js примерах и `base_url`; не менять почтовые адреса, `sk-or-*` и `ORR/*`. Не редактировать `.opencode/tasks-done.md`, существующие блоки SEO-* и датированные исторические планы/specs. Критерий: документация использует бренд `Rawrter` и новый адрес сайта, API-примеры побайтно сохраняют прежний endpoint; `npm run docs:build` проходит.
+
+## RNM-005 — Внешний переход
+- status: blocked
+- blocked_reason: нужен доступ к DNS, OAuth, платёжным, аналитическим и SEO-кабинетам; выполнять после RNM-001..RNM-004
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: Внешняя конфигурация без переименования внутренностей. Настроить DNS и TLS для `rawrter.com` и при необходимости `www.rawrter.com`; старый apex отключить после проверки, redirect не создавать. В production `.env` установить `ORR_PUBLIC_DOMAIN=rawrter.com`. Добавить новые Google/Yandex OAuth callback URL на apex, заменить Rollypay webhook и success/fail redirect URL, создать ресурсы `rawrter.com` в Google Search Console и Яндекс Вебмастере, отправить обе sitemap, обновить адрес сайта в GA4 и Метрике. Не менять DNS/TLS `api.openrussiarouter.com`, `PublicApiBaseUrl`, API-примеры, Brevo sender domain и адреса `noreply@openrussiarouter.com`/`support@openrussiarouter.com`. Критерий: сайт и внешние callbacks работают через `rawrter.com`, API и почта продолжают работать по прежним адресам; результаты проверки зафиксированы в актуальном runbook.
+
+## RNM-006 — Проверка поверхности
+- status: blocked
+- blocked_reason: выполнять после RNM-001..RNM-005; для production smoke-test нужен доступ к продакшену
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started:
+- completed:
+- desc: Финальный surface-аудит. В репозитории проверить отображаемый бренд, ссылки сайта, canonical, hreflang, robots, обе sitemap, Open Graph/Twitter, JSON-LD, юридические страницы и публичную документацию. На проде проверить HTTP/TLS для ключевых ru/en URL и `/docs/`, OAuth callback, платёжные redirect/webhook URL и отсутствие redirect-контура со старого apex. Отдельными отрицательными проверками подтвердить, что namespace/project names, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, почтовые адреса, `PublicApiBaseUrl`, API-примеры и `api.openrussiarouter.com` не изменены. Выполнить `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1`, `dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1`, `npm run docs:build` и проверку production Compose-конфига. Критерий: публичный сайт называется `Rawrter` и использует `rawrter.com`, все утверждённые исключения сохранены, проверки зелёные.

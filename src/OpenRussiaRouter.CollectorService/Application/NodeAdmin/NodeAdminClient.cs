@@ -50,7 +50,7 @@ public sealed class NodeAdminClient(HttpClient httpClient) : INodeAdminClient
         var absoluteUri = new Uri(endpoint, relativePath);
         using var request = new HttpRequestMessage(HttpMethod.Get, absoluteUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + controlToken);
-        request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", controlToken);
+        request.Headers.TryAddWithoutValidation("X-RWT-Node-Token", controlToken);
 
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)

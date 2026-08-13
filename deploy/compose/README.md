@@ -17,7 +17,7 @@ elsewhere) fronted by **Caddy** with automatic Let's Encrypt TLS. It is driven b
 - `update-prod.sh` — routine update (pull → re-sync → rebuild → restart → rollback on fail).
 
 Both scripts re-sync the tracked `compose.prod.yml`/`Caddyfile` every run, so the box
-never hand-diverges from git. `.env` needs `ORR_PUBLIC_DOMAIN`, `ACME_EMAIL`, and (for
+never hand-diverges from git. `.env` needs `RWT_PUBLIC_DOMAIN`, `ACME_EMAIL`, and (for
 live payments) `ROLLYPAY_*` + `PAYMENTS_ACTIVE_PROVIDER` — see `.env.example`.
 
 ## Layout on the server (`/opt/orr/`)
@@ -65,7 +65,7 @@ cp .env.example .env && $EDITOR .env
 
 After it's up, register the f9router node in the admin UI
 (`/admin/nodes` → Add Node, endpoint `http://f9router:20128/`, Control Token =
-`ORR_NODE_CONTROL_TOKEN`).
+`RWT_NODE_CONTROL_TOKEN`).
 
 ## Updating
 

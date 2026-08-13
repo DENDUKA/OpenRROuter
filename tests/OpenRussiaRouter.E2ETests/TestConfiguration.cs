@@ -7,23 +7,23 @@ static class TestConfiguration
     private static readonly Lazy<LocalConfig?> _local = new(LoadLocal);
 
     public static string BaseUrl =>
-        Env("ORR_E2E_BASE_URL") ?? _local.Value?.BaseUrl ?? "http://localhost:5004";
+        Env("RWT_E2E_BASE_URL") ?? _local.Value?.BaseUrl ?? "http://localhost:5004";
 
     public static string? UserEmail =>
-        Env("ORR_E2E_USER_EMAIL") ?? _local.Value?.UserEmail;
+        Env("RWT_E2E_USER_EMAIL") ?? _local.Value?.UserEmail;
 
     public static string? UserPassword =>
-        Env("ORR_E2E_USER_PASSWORD") ?? _local.Value?.UserPassword;
+        Env("RWT_E2E_USER_PASSWORD") ?? _local.Value?.UserPassword;
 
     public static bool IsConfigured => UserEmail is not null && UserPassword is not null;
 
     /// <summary>
     /// Address (host or IP) the ControlPlane process can reach to connect to the E2E stub server.
     /// Defaults to "localhost" for local dev. In Docker/K8s set to "host.docker.internal" or
-    /// the appropriate container network alias via ORR_E2E_STUB_ADDRESS.
+    /// the appropriate container network alias via RWT_E2E_STUB_ADDRESS.
     /// </summary>
     public static string StubAddress =>
-        Env("ORR_E2E_STUB_ADDRESS") ?? _local.Value?.StubAddress ?? "localhost";
+        Env("RWT_E2E_STUB_ADDRESS") ?? _local.Value?.StubAddress ?? "localhost";
 
     private static string? Env(string name) =>
         Environment.GetEnvironmentVariable(name) is { Length: > 0 } v ? v : null;

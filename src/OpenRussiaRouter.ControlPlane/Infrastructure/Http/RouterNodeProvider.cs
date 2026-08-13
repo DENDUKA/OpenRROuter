@@ -141,7 +141,7 @@ public sealed class RouterNodeProvider(HttpClient httpClient)
         var absoluteUri = new Uri(node.EndpointUrl, relativePathAndQuery);
         using var request = new HttpRequestMessage(method, absoluteUri);
         request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
-        request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", node.ControlToken);
+        request.Headers.TryAddWithoutValidation("X-RWT-Node-Token", node.ControlToken);
         request.Content = content;
 
         using var response = await httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);

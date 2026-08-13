@@ -193,7 +193,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
    в OpenAI-формате ошибки + `Retry-After`.
 1. Bearer-токен (`sk-or-*`) → валидация в AuthService (UserId, ApiKeyId, IsAdmin).
 2. Баланс, spend-лимиты ключа (суточный/недельный) и доступность модели в BillingService.
-   Здесь публичный `ModelId` (`ORR/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
+   Здесь публичный `ModelId` (`RWT/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
 3. Выбор ноды в ControlPlane — **передаётся `RouterModelId`**, иначе capability-store
    не сматчит модель. Capability-aware, при пустом store — fallback на least-load.
 4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —

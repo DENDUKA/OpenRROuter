@@ -45,7 +45,7 @@ public static class AuthServiceExtensions
         var codeHmacKey = configuration["CodeHmacKey"];
         if (string.IsNullOrWhiteSpace(codeHmacKey))
         {
-            codeHmacKey = "orr-dev-code-hmac-key-do-not-use-in-production";
+            codeHmacKey = "rwt-dev-code-hmac-key-do-not-use-in-production";
         }
 
         var keyBytes = SHA256.HashData(Encoding.UTF8.GetBytes(codeHmacKey));

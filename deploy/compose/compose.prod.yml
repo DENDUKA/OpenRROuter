@@ -241,7 +241,7 @@ services:
       # Canonical site origin for crawler-facing SEO metadata (canonical, og:url, og:image,
       # sitemap.xml <loc>). The admin-configured API base points at api.<domain> and must never
       # leak into the sitemap/canonical tags.
-      PublicSiteBaseUrl: "https://${ORR_PUBLIC_DOMAIN}"
+      PublicSiteBaseUrl: "https://${RWT_PUBLIC_DOMAIN}"
       Seq__Url: "http://seq:80"
       # Brevo SMTP credentials — from /opt/orr/.env (see .env.example). Non-secret Email
       # config (host/port) ships in appsettings.json.
@@ -264,12 +264,12 @@ services:
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
       # Payments (Rollypay СБП). Blank ActiveProvider disables payments (fail-safe); set it
       # to "rollypay" only once ApiKey + SigningSecret are filled in .env from the касса UI,
-      # and the webhook https://${ORR_PUBLIC_DOMAIN}/webhook/rollypay is registered there.
+      # and the webhook https://${RWT_PUBLIC_DOMAIN}/webhook/rollypay is registered there.
       Payments__ActiveProvider: "${PAYMENTS_ACTIVE_PROVIDER:-}"
       Payments__Rollypay__ApiKey: "${ROLLYPAY_API_KEY:-}"
       Payments__Rollypay__SigningSecret: "${ROLLYPAY_SIGNING_SECRET:-}"
-      Payments__Rollypay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
-      Payments__Rollypay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
+      Payments__Rollypay__SuccessRedirectUrl: "https://${RWT_PUBLIC_DOMAIN}/workspace/credits?topup=success"
+      Payments__Rollypay__FailRedirectUrl: "https://${RWT_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
       # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
       # Production — a test payment is free but still credits real balance.
       Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
@@ -278,8 +278,8 @@ services:
       Payments__YandexPay__Enabled: "${YANDEX_PAY_ENABLED:-false}"
       Payments__YandexPay__Sandbox: "${YANDEX_PAY_SANDBOX:-true}"
       Payments__YandexPay__MerchantId: "${YANDEX_PAY_MERCHANT_ID:-}"
-      Payments__YandexPay__SuccessRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=success"
-      Payments__YandexPay__FailRedirectUrl: "https://${ORR_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
+      Payments__YandexPay__SuccessRedirectUrl: "https://${RWT_PUBLIC_DOMAIN}/workspace/credits?topup=success"
+      Payments__YandexPay__FailRedirectUrl: "https://${RWT_PUBLIC_DOMAIN}/workspace/credits?topup=fail"
       # Product analytics sink (analytics.events). Same DB and same IdentitySalt as
       # auth/billing: the salt keys distinct_id, so a different value would orphan the
       # existing pseudonyms. Site traffic itself is measured by Yandex Metrika.
@@ -334,7 +334,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      ORR_PUBLIC_DOMAIN: "${ORR_PUBLIC_DOMAIN}"
+      RWT_PUBLIC_DOMAIN: "${RWT_PUBLIC_DOMAIN}"
       ACME_EMAIL: "${ACME_EMAIL:-nusferatus64@gmail.com}"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
@@ -392,11 +392,11 @@ services:
       # Безопасно ровно потому, что Grafana закрыта (анонимный доступ и регистрация выключены),
       # а содержимое панелей задаётся только provisioning-файлами из git (allowUiUpdates: false).
       GF_PANELS_DISABLE_SANITIZE_HTML: "true"
-      # Exposed behind Caddy at https://<ORR_PUBLIC_DOMAIN>/grafana/ — see Caddyfile.
+      # Exposed behind Caddy at https://<RWT_PUBLIC_DOMAIN>/grafana/ — see Caddyfile.
       # SERVE_FROM_SUB_PATH keeps the /grafana/ prefix so Grafana emits correct asset URLs.
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
-      GF_SERVER_DOMAIN: "${ORR_PUBLIC_DOMAIN}"
-      GF_SERVER_ROOT_URL: "https://${ORR_PUBLIC_DOMAIN}/grafana/"
+      GF_SERVER_DOMAIN: "${RWT_PUBLIC_DOMAIN}"
+      GF_SERVER_ROOT_URL: "https://${RWT_PUBLIC_DOMAIN}/grafana/"
       # Consumed by provisioning/datasources/datasources.yml via $POSTGRES_PASSWORD.
       # Must be a real value — an empty one silently yields a password-less datasource.
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"

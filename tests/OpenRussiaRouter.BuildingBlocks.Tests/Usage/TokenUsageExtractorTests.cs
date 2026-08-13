@@ -31,7 +31,7 @@ public sealed class TokenUsageExtractorTests
         var body = """
             data: {"choices":[{"delta":{"content":"hi"}}]}
 
-            data: {"usage":{"prompt_tokens":2144,"completion_tokens":2042,"total_tokens":4186,"_orr_raw":{"prompt_tokens":144,"completion_tokens":42}}}
+            data: {"usage":{"prompt_tokens":2144,"completion_tokens":2042,"total_tokens":4186,"_rwt_raw":{"prompt_tokens":144,"completion_tokens":42}}}
 
             data: [DONE]
 
@@ -81,10 +81,10 @@ public sealed class TokenUsageExtractorTests
     public void TryExtractStreamingSse_NodeBufferedUsageWithCache_UsesRawInputAndNestedCache()
     {
         // Mirrors what the F9Router node emits for a translated Claude->OpenAI stream:
-        // prompt_tokens is inflated by BUFFER_TOKENS, the real counts live in _orr_raw,
+        // prompt_tokens is inflated by BUFFER_TOKENS, the real counts live in _rwt_raw,
         // and the Anthropic cache is folded into prompt_tokens_details.cached_tokens.
         var body = """
-            data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":2950,"completion_tokens":40,"total_tokens":2990,"prompt_tokens_details":{"cached_tokens":800,"cache_creation_tokens":50},"_orr_raw":{"prompt_tokens":950,"completion_tokens":40}}}
+            data: {"choices":[{"index":0,"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":2950,"completion_tokens":40,"total_tokens":2990,"prompt_tokens_details":{"cached_tokens":800,"cache_creation_tokens":50},"_rwt_raw":{"prompt_tokens":950,"completion_tokens":40}}}
 
             data: [DONE]
 
@@ -102,10 +102,10 @@ public sealed class TokenUsageExtractorTests
     public void TryExtractJson_NodeUsageWithOrrRawAndNestedCache_FoldsCacheFromPromptTokensDetails()
     {
         // Mirrors the F9Router non-streaming translated Claude->OpenAI body: input/output
-        // come from _orr_raw, cache from prompt_tokens_details.cached_tokens (already a
+        // come from _rwt_raw, cache from prompt_tokens_details.cached_tokens (already a
         // subset of prompt_tokens, so it is not re-added to input).
         var json = """
-            {"usage":{"prompt_tokens":2950,"completion_tokens":40,"total_tokens":2990,"prompt_tokens_details":{"cached_tokens":800,"cache_creation_tokens":50},"_orr_raw":{"prompt_tokens":950,"completion_tokens":40}}}
+            {"usage":{"prompt_tokens":2950,"completion_tokens":40,"total_tokens":2990,"prompt_tokens_details":{"cached_tokens":800,"cache_creation_tokens":50},"_rwt_raw":{"prompt_tokens":950,"completion_tokens":40}}}
             """;
 
         var result = TokenUsageExtractor.TryExtractJson(json, out var usage);
@@ -207,14 +207,14 @@ public sealed class TokenUsageExtractorTests
     public void TryExtractStreamingSse_MiniMaxM3NullUsageChunks_DoesNotThrowAndPicksFinalUsage()
     {
         // Real MiniMax-M3 shape: content chunks carry "usage":null, the final chunk carries
-        // real usage (with _orr_raw). Must not throw on the null chunks and must extract the
+        // real usage (with _rwt_raw). Must not throw on the null chunks and must extract the
         // final usage. Regression for the api-gateway 500 (RouterStreamSession.CopyToAsync).
         var body = """
             data: {"choices":[{"index":0,"delta":{"content":"<think>","role":"assistant","reasoning":"x"}}],"model":"MiniMax-M3","object":"chat.completion.chunk","usage":null}
 
             data: {"choices":[{"index":0,"delta":{"content":"Red, blue, green"}}],"usage":null}
 
-            data: {"choices":[{"finish_reason":"stop","index":0,"delta":{"content":""}}],"usage":{"prompt_tokens":2030,"completion_tokens":45,"_orr_raw":{"prompt_tokens":30,"completion_tokens":45}}}
+            data: {"choices":[{"finish_reason":"stop","index":0,"delta":{"content":""}}],"usage":{"prompt_tokens":2030,"completion_tokens":45,"_rwt_raw":{"prompt_tokens":30,"completion_tokens":45}}}
 
             data: [DONE]
 

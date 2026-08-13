@@ -26,8 +26,8 @@ public sealed class YandexPayClientTests
         var url = await CreateClient(handler).CreateOrderAsync(
             orderId: "payment-1",
             amount: 100m,
-            successRedirectUrl: "https://orr.test/ok",
-            failRedirectUrl: "https://orr.test/fail",
+            successRedirectUrl: "https://rwt.test/ok",
+            failRedirectUrl: "https://rwt.test/fail",
             ttlSeconds: 1800,
             CancellationToken.None);
 
@@ -48,7 +48,7 @@ public sealed class YandexPayClientTests
             """{"status":"success","data":{"order":{"paymentUrl":"https://sandbox.pay.yandex.ru/x"}}}"""));
 
         var act = () => CreateClient(handler).CreateOrderAsync(
-            "payment-1", 100m, "https://orr.test/ok", "https://orr.test/fail", 1800, CancellationToken.None);
+            "payment-1", 100m, "https://rwt.test/ok", "https://rwt.test/fail", 1800, CancellationToken.None);
 
         // The body has to travel with the exception: without it a shape drift is
         // indistinguishable from a rejected order.
@@ -66,7 +66,7 @@ public sealed class YandexPayClientTests
         });
 
         var act = () => CreateClient(handler).CreateOrderAsync(
-            "payment-1", 100m, "https://orr.test/ok", "https://orr.test/fail", 1800, CancellationToken.None);
+            "payment-1", 100m, "https://rwt.test/ok", "https://rwt.test/fail", 1800, CancellationToken.None);
 
         (await act.Should().ThrowAsync<InvalidOperationException>())
             .WithMessage("*Unauthorized*")

@@ -6,7 +6,7 @@ namespace OpenRussiaRouter.CollectorService.Application.Quota;
 /// (там модели выводятся из имён квот), а <see cref="ActiveModelQuotaMeasurement"/> видит только
 /// включённые модели.
 /// </summary>
-/// <param name="ModelId">Публичный id каталога (ORR/GLM-4.7), либо routable id ноды, если в каталоге модели нет.</param>
+/// <param name="ModelId">Публичный id каталога (RWT/GLM-4.7), либо routable id ноды, если в каталоге модели нет.</param>
 /// <param name="BillingState">Код из <see cref="ModelBillingStates"/>.</param>
 public sealed record NodeModelCatalogEntry(
     string NodeId,

@@ -104,14 +104,14 @@ console.log(response.choices[0].message.content);</code></pre>
         });
     }
 
-    // Copy the code in the same panel as the clicked button. orrCopyText is global (_Layout.cshtml).
+    // Copy the code in the same panel as the clicked button. rwtCopyText is global (_Layout.cshtml).
     function copyCodeBlock(event) {
         var btn = event.currentTarget;
         var pre = btn.closest('.integ-panel')?.querySelector('pre');
         if (!pre) return;
         var original = btn.getAttribute('data-original') || btn.textContent;
         btn.setAttribute('data-original', original);
-        orrCopyText(pre.textContent).then(function () {
+        rwtCopyText(pre.textContent).then(function () {
             btn.textContent = btn.getAttribute('data-copied') || 'Copied';
             setTimeout(function () { btn.textContent = original; }, 1500);
         }).catch(function (err) { console.error('Copy failed:', err); });

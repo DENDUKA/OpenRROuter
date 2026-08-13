@@ -21,7 +21,7 @@ namespace OpenRussiaRouter.WebApp.Services.Localization;
 public sealed class LocalePrefixMiddleware(RequestDelegate next)
 {
     /// <summary>Key under which the resolved culture is handed to <see cref="RouteCultureProvider"/>.</summary>
-    internal const string CultureItemKey = "orr.locale.culture";
+    internal const string CultureItemKey = "rwt.locale.culture";
 
     public async Task InvokeAsync(HttpContext context)
     {

@@ -18,7 +18,7 @@ public sealed class PreferencesController(
     ILogger<PreferencesController> logger) : Controller
 {
     /// <summary>Cookie that mirrors the saved display currency so the topbar can show the active choice without a profile round-trip.</summary>
-    public const string CurrencyCookie = "orr_ccy";
+    public const string CurrencyCookie = "rwt_ccy";
 
     [HttpPost("currency")]
     [ValidateAntiForgeryToken]
@@ -125,7 +125,7 @@ public sealed class PreferencesController(
         });
 
     /// <summary>Cookie that stores the user's analytics consent choice (1 = accepted, absent = no consent).</summary>
-    public const string ConsentCookie = "orr_consent";
+    public const string ConsentCookie = "rwt_consent";
 
     /// <summary>
     /// Records the user's cookie consent decision. Called from the consent banner via fetch().

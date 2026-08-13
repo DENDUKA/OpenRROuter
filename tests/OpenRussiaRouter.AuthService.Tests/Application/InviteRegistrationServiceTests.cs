@@ -24,7 +24,7 @@ public sealed class InviteRegistrationServiceTests
 
         result.Invite.Email.Should().Be("user@example.com");
         result.Invite.Role.Should().Be(UserRole.User);
-        result.RawToken.Should().StartWith("orr_invite_");
+        result.RawToken.Should().StartWith("rwt_invite_");
         result.RawToken.Should().NotBe(result.Invite.TokenHash);
         result.Invite.IsUsed.Should().BeFalse();
     }

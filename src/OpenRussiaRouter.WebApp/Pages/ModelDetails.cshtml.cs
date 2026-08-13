@@ -199,7 +199,7 @@ public class ModelDetailsModel : CatalogPageModelBase
                 return direct;
             }
 
-            // Prefixed ids ("ORR/Gemini-3.1-Pro") are not addressable by the slug alone — only the
+            // Prefixed ids ("RWT/Gemini-3.1-Pro") are not addressable by the slug alone — only the
             // public catalog maps provider + slug back onto the full id.
             var catalog = await _billingClient.ListPublicModelsAsync(ct);
             return catalog.FirstOrDefault(m =>

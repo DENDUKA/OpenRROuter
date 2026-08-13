@@ -2,7 +2,7 @@
 # deploy-prod.sh / update-prod.sh copy this to /opt/orr/Caddyfile next to compose.yml.
 # Domain + ACME email come from /opt/orr/.env (see .env.example) via the caddy service:
 #
-#   ORR_PUBLIC_DOMAIN   apex domain, A record → 201.51.6.246
+#   RWT_PUBLIC_DOMAIN   apex domain, A record → 201.51.6.246
 #   ACME_EMAIL          Let's Encrypt account email (expiry notices)
 #
 # Caddy obtains + renews Let's Encrypt certs automatically; they persist in the caddy_data
@@ -16,7 +16,7 @@
 # Grafana dashboards are served under /grafana/ — the @grafana matcher routes those
 # requests to grafana:3000 (running with GF_SERVER_SERVE_FROM_SUB_PATH=true so it
 # generates correct self-referential URLs). Anything else falls through to webapp.
-{$ORR_PUBLIC_DOMAIN} {
+{$RWT_PUBLIC_DOMAIN} {
 	encode zstd gzip
 
 	@grafana path /grafana /grafana/*
@@ -40,7 +40,7 @@ openrussianrouter.com, www.openrussianrouter.com, openrussiarouter.com, www.open
 # OpenAI-compatible LLM API on a subdomain. Requires an A record
 # api.<domain> → 201.51.6.246 (added 2026-06-24) so Caddy can complete the ACME HTTP-01
 # challenge; without it Caddy fail-loops on cert issuance for this name.
-api.{$ORR_PUBLIC_DOMAIN} {
+api.{$RWT_PUBLIC_DOMAIN} {
 	encode zstd gzip
 	reverse_proxy api-gateway:8080
 }

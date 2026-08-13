@@ -51,7 +51,7 @@ public sealed class GatewayTestController(
             var client = httpClientFactory.CreateClient("ApiGateway");
             using var request = new HttpRequestMessage(HttpMethod.Post, "v1/chat/completions");
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", rawKey);
-            request.Headers.TryAddWithoutValidation("X-ORR-Admin-Test", "1");
+            request.Headers.TryAddWithoutValidation("X-RWT-Admin-Test", "1");
             request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
 
             using var response = await client.SendAsync(
@@ -103,7 +103,7 @@ public sealed class GatewayTestController(
                 latency_ms = stopwatch.ElapsedMilliseconds,
                 status = upstreamStatus
             });
-            var meta = $"\nevent: orr-meta\ndata: {metaPayload}\n\n";
+            var meta = $"\nevent: rwt-meta\ndata: {metaPayload}\n\n";
             await Response.Body.WriteAsync(Encoding.UTF8.GetBytes(meta), HttpContext.RequestAborted);
             await Response.Body.FlushAsync(HttpContext.RequestAborted);
         }

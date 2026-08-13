@@ -6,9 +6,9 @@ namespace OpenRussiaRouter.E2ETests;
 /// Full browser E2E flow: login → create key → rename → revoke.
 ///
 /// Required env vars:
-///   ORR_E2E_USER_EMAIL    — test user email
-///   ORR_E2E_USER_PASSWORD — test user password
-///   ORR_E2E_BASE_URL      — WebApp URL (default: http://localhost:5004)
+///   RWT_E2E_USER_EMAIL    — test user email
+///   RWT_E2E_USER_PASSWORD — test user password
+///   RWT_E2E_BASE_URL      — WebApp URL (default: http://localhost:5004)
 ///
 /// Before first run, install browsers:
 ///   pwsh bin/Debug/net8.0/playwright.ps1 install chromium

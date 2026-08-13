@@ -5,7 +5,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-ORR_URL="git@github-orr:DENDUKA/OpenRussiaRouter.git"
+RWT_URL="git@github-orr:DENDUKA/OpenRussiaRouter.git"
 F9_URL="git@github-f9:Inc64/F9Router.git"
 
 clone_into() {  # <url> <target>
@@ -23,7 +23,7 @@ GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" ssh -T git@github-orr 
 GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" ssh -T git@github-f9  2>&1 | grep -qi 'successfully authenticated\|does not provide shell' || true
 
 echo "==> cloning repos"
-clone_into "$ORR_URL" app
+clone_into "$RWT_URL" app
 clone_into "$F9_URL"  f9router
 
 echo "==> build + start everything at origin/main"

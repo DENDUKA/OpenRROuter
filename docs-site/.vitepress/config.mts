@@ -96,9 +96,9 @@ export default defineConfig({
           },
           {
             // Юридические документы живут только в WebApp (/legal/*): там их рендерит
-            // LegalDocumentService из docs/mandatory/*.md с подстановкой плейсхолдеров ORR_*.
+            // LegalDocumentService из docs/mandatory/*.md с подстановкой плейсхолдеров RWT_*.
             // Копии в docs-site отставали по содержанию (не было пунктов про «Яндекс Пэй»)
-            // и показывали сырые {{ORR_SERVICE_NAME}} — заводить их здесь заново нельзя.
+            // и показывали сырые {{RWT_SERVICE_NAME}} — заводить их здесь заново нельзя.
             text: 'Документы',
             items: [
               { text: 'Политика конфиденциальности', link: 'https://rawrter.com/legal/privacy' },

@@ -160,7 +160,7 @@ public sealed class GatewayPipeline(
             authorization.IsAdmin);
     }
 
-    private const string AdminTestHeader = "X-ORR-Admin-Test";
+    private const string AdminTestHeader = "X-RWT-Admin-Test";
 
     private static bool IsAdminTestHeaderPresent(HttpContext context)
     {

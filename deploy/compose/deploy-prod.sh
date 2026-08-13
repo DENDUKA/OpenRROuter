@@ -6,7 +6,7 @@
 # the compose file / Caddyfile change. For routine code-only updates use update-prod.sh.
 #
 # Runs ON the box, from /opt/orr/. Prereqs: app/ is a git clone (bootstrap-git.sh), and a
-# filled /opt/orr/.env exists (see deploy/compose/.env.example — needs ORR_PUBLIC_DOMAIN,
+# filled /opt/orr/.env exists (see deploy/compose/.env.example — needs RWT_PUBLIC_DOMAIN,
 # ACME_EMAIL, and, for live payments, ROLLYPAY_* + PAYMENTS_ACTIVE_PROVIDER).
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -58,7 +58,7 @@ done
 # never fails the deploy. Verify the cert manually after.
 echo "==> [prod] caddy"
 docker compose ps caddy --format 'table {{.Service}}\t{{.Status}}' || true
-echo "    (verify TLS: curl -I https://${ORR_PUBLIC_DOMAIN:-<domain>}/login ; logs: docker compose logs --tail=30 caddy)"
+echo "    (verify TLS: curl -I https://${RWT_PUBLIC_DOMAIN:-<domain>}/login ; logs: docker compose logs --tail=30 caddy)"
 
 docker image prune -f >/dev/null
 docker compose ps --format 'table {{.Service}}\t{{.Status}}'

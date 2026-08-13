@@ -37,7 +37,7 @@ public sealed class ApiKeyFactoryTests
     {
         var created = _factory.Create("user-1", "default", DateTimeOffset.UtcNow);
 
-        var result = _factory.VerifyAndMarkUsed("orr_wrong", created.ApiKey, DateTimeOffset.UtcNow);
+        var result = _factory.VerifyAndMarkUsed("rwt_wrong", created.ApiKey, DateTimeOffset.UtcNow);
 
         result.Should().BeFalse();
         created.ApiKey.LastUsedAtUtc.Should().BeNull();

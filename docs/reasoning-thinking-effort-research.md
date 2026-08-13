@@ -117,7 +117,7 @@ ORR forward'ит на ноду как есть (`SseRequestPatcher.PatchModel` �
 
 ```jsonc
 {
-  "model": "ORR/GLM-4.7",
+  "model": "RWT/GLM-4.7",
   "messages": [{ "role": "user", "content": "Реши задачу пошагово" }],
   "reasoning_effort": "high"
   // либо: "reasoning": { "effort": "high" }

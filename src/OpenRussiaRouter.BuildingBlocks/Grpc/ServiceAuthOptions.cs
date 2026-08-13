@@ -9,11 +9,11 @@ namespace OpenRussiaRouter.BuildingBlocks.Grpc;
 /// Two layers of defence:
 /// <list type="number">
 ///   <item>
-///     <b>Caller identity</b>: the client sends <c>x-orr-caller</c> metadata identifying
+///     <b>Caller identity</b>: the client sends <c>x-rwt-caller</c> metadata identifying
 ///     which logical caller it is (e.g. <c>apigateway</c>, <c>webappadmin</c>).
 ///   </item>
 ///   <item>
-///     <b>Shared secret</b>: the same client sends <c>x-orr-s2s-token</c> matching the
+///     <b>Shared secret</b>: the same client sends <c>x-rwt-s2s-token</c> matching the
 ///     configured token for that caller id. The mapping <c>caller-id → token</c> lives in
 ///     <see cref="Tokens"/>; values are compared with a constant-time check.
 ///   </item>
@@ -27,10 +27,10 @@ namespace OpenRussiaRouter.BuildingBlocks.Grpc;
 public sealed class ServiceAuthOptions
 {
     /// <summary>Metadata key carrying the caller identity (e.g. <c>api-gateway</c>).</summary>
-    public const string CallerMetadataKey = "x-orr-caller";
+    public const string CallerMetadataKey = "x-rwt-caller";
 
     /// <summary>Metadata key carrying the shared secret for the declared caller.</summary>
-    public const string TokenMetadataKey = "x-orr-s2s-token";
+    public const string TokenMetadataKey = "x-rwt-s2s-token";
 
     /// <summary>Caller-id → shared token. Caller ids not present here cannot authenticate.</summary>
     public Dictionary<string, string> Tokens { get; set; } = new();

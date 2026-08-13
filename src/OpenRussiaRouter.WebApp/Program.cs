@@ -101,7 +101,7 @@ var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticat
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
     })
-    .AddCookie("External", o => o.Cookie.Name = ".orr.ext");
+    .AddCookie("External", o => o.Cookie.Name = ".rwt.ext");
 
 // Register Google external login only when credentials are configured.
 // Without this guard the OAuth handler fails validation ("ClientId option must be provided")
@@ -147,7 +147,7 @@ builder.Services.AddAuthorization();
 // default (ephemeral store) is used — handy for local dotnet run and unit tests.
 var dataProtectionBuilder = builder.Services
     .AddDataProtection()
-    .SetApplicationName("OpenRussiaRouter.WebApp");
+    .SetApplicationName("Rawrter.WebApp");
 var keyRingPath = builder.Configuration["DataProtection:KeyRingPath"];
 if (!string.IsNullOrWhiteSpace(keyRingPath))
 {

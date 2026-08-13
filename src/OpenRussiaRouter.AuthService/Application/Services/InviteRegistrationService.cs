@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public sealed class InviteRegistrationService(ISecretHasher secretHasher, IPasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
-    private const string InvitePrefix = "orr_invite";
+    private const string InvitePrefix = "rwt_invite";
 
     public CreatedInvite CreateInvite(
         string email,

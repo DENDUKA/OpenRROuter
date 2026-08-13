@@ -46,7 +46,7 @@ public sealed class AuthPersistenceMapperTests
     public void ApiKey_RoundTrip_PreservesLastUsedAndDisabledAt()
     {
         var now = DateTimeOffset.UtcNow;
-        var apiKey = new ApiKey("key-1", "user-1", "default", "orr_1234", "secret-hash", now.AddDays(-1));
+        var apiKey = new ApiKey("key-1", "user-1", "default", "rwt_1234", "secret-hash", now.AddDays(-1));
         apiKey.MarkUsed(now);
         apiKey.Disable(now.AddMinutes(1));
 

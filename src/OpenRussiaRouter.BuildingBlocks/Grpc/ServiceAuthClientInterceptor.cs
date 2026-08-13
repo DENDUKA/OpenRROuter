@@ -69,8 +69,8 @@ public sealed class ServiceAuthClientInterceptor(string callerId, string token) 
         }
 
         // BillingService's interceptor reads exactly these two keys (lowercase, ASCII per gRPC convention).
-        headers.Add("x-orr-caller", callerId);
-        headers.Add("x-orr-s2s-token", token);
+        headers.Add("x-rwt-caller", callerId);
+        headers.Add("x-rwt-s2s-token", token);
 
         return new ClientInterceptorContext<TRequest, TResponse>(
             context.Method,

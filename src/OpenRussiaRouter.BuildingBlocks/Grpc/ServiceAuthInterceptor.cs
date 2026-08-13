@@ -132,7 +132,7 @@ public sealed class ServiceAuthInterceptor(
         var httpContext = context.GetHttpContext();
         if (httpContext is not null)
         {
-            httpContext.Items["__orr_s2s_caller"] = declaredCaller;
+            httpContext.Items["__rwt_s2s_caller"] = declaredCaller;
         }
     }
 

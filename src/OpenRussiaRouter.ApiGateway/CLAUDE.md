@@ -63,7 +63,7 @@
 5. `controlPlaneProvider.SelectRouterNodeAsync(...)` → ControlPlane; `null` → 503 `RouterUnavailable`.
 
 **В ControlPlane передаётся `balanceResult.RouterModelId`** (upstream-ID ноды, напр. `glm-4.7`),
-а не публичный billing-ID (`ORR/GLM-4.7`) — иначе capability-store не сматчит модель.
+а не публичный billing-ID (`RWT/GLM-4.7`) — иначе capability-store не сматчит модель.
 
 Возвращает [GatewayAuthorizedContext](Application/Services/GatewayAuthorizedContext.cs): ключ, user/apiKey-идентификаторы,
 `RouterModelId`, лиза, и **reasoning-метаданные модели** (`SupportsReasoning`, `AllowedReasoningEfforts`,

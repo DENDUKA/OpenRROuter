@@ -278,7 +278,7 @@ cost = (billableInput * inputPrice + OutputTokens * outputPrice + cacheBilled * 
 4. `billingProvider.CheckBalanceAndModelAsync(userId, model, adminBypassDisabled)` → Billing.
 5. `controlPlaneProvider.SelectRouterNodeAsync(routerModelId, …, excludedNodeIds)` → ControlPlane.
 
-**Важно:** в ControlPlane передаётся `balanceResult.RouterModelId` (upstream-ID ноды, напр. `glm-4.7`), а не публичный billing-ID (`ORR/GLM-4.7`) — иначе capability-store не сматчит модель.
+**Важно:** в ControlPlane передаётся `balanceResult.RouterModelId` (upstream-ID ноды, напр. `glm-4.7`), а не публичный billing-ID (`RWT/GLM-4.7`) — иначе capability-store не сматчит модель.
 
 **Admin-bypass:** заголовок `X-ORR-Admin-Test: 1` от админ-ключа разрешает disabled-модели.
 

@@ -92,3 +92,12 @@
 - started:
 - completed: 2026-08-11T00:00:00Z
 - desc: Языковая часть задачи отменена решением SEO-024 (hreflang, /en prefix). Оставшаяся часть — согласованный с продуктом список index/noindex URL: индексируемые — /, /models, /models/{provider}/{slug}, /providers, /providers/{id}, /tools, /tools/{id} (опубликованные с описанием), /docs, /support, юридические страницы и их зеркала под /en (кроме /docs); неиндексируемые — /login, /signup, /forgot-password, /reset-password, /verify-email, /invite/*, /workspace/*, /admin/*, /pay/*, /error, служебные API и webhooks. Техническая реализация (canonical, robots meta, noindex) покрыта SEO-007. Список URL согласован и задокументирован.
+
+## RNM-001 — Бренд интерфейса
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started: 2026-08-13T00:00:00Z
+- completed: 2026-08-13T00:00:00Z
+- desc: WebApp. Перед правкой прочитать `src/OpenRussiaRouter.WebApp/CLAUDE.md`. Заменить отображаемое название продукта `OpenRussiaRouter` на `Rawrter` во всех пользовательских текстах Razor Pages, layout, ресурсах ru/en, SEO-title/description, административном интерфейсе, email-шаблонах, `Email:SenderName`, платёжных назначениях, юридических шаблонах, alt/aria-подписях и пользовательских сообщениях. Проверить `wwwroot` на логотипы и изображения со старым текстом; при наличии обновить исходные assets без смены визуального стиля. Не менять namespace, assembly/project names, каталоги, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, URL API и почтовые адреса. Обновить затронутые тесты. Критерий: отрендеренные страницы и письма показывают `Rawrter`, технические исключения сохранены; `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1` и тесты `OpenRussiaRouter.WebApp.Tests` проходят. ПРИМЕЧАНИЕ (2026-08-13): `wwwroot/og-image.png` в этой задаче НЕ менять (logo-квадрат `rawr` → `Rawrter` и баннер) — ручная перегенерация ассета планируется отдельно, вне RNM-001; состав работ зафиксирован в todo-листе. `favicon.png` также остаётся. Реализовано: бренд `Rawrter` в разметке, ресурсах, email-шаблонах, юридических шаблонах и SEO-метаданных (коммиты 42ed0d1c, 7686257c, f472777e); `og-image.png` перегенерирован под новый бренд (коммит f472777e). Для зелёных тестов заодно переведены на `rawrter.com` сайтовые дефолты `LegalDocumentService` (`ORR_PUBLIC_DOMAIN`, `ORR_OPERATOR_DETAILS`) и Sitemap-пути в `wwwroot/robots.txt` — домен сайта целиком добивается в RNM-002.

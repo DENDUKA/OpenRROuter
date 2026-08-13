@@ -1,6 +1,6 @@
 # Runbook: подключение вебмастеров и аналитики (SEO-002)
 
-Подключение `openrussiarouter.com` к Google Search Console, Яндекс Вебмастеру, Яндекс Метрике
+Подключение `rawrter.com` к Google Search Console, Яндекс Вебмастеру, Яндекс Метрике
 и Google Analytics 4. Итоговый критерий: домен подтверждён в обеих системах, счётчики отдают
 события конверсии (регистрация → подтверждение email → создание API-ключа → первое пополнение).
 
@@ -13,32 +13,32 @@
 
 ## 0. Предусловия
 
-- Прод задеплоен, `https://openrussiarouter.com` отвечает, `/robots.txt` и `/sitemap.xml` отдают 200.
-- Доступ к DNS-панели `openrussiarouter.com`.
+- Прод задеплоен, `https://rawrter.com` отвечает, `/robots.txt` и `/sitemap.xml` отдают 200.
+- Доступ к DNS-панели `rawrter.com`.
 - Аккаунты Google (Search Console + GA4) и Яндекс (Вебмастер + Метрика).
 
 ## 1. Google Search Console (руками)
 
-1. Search Console → «Добавить ресурс» → тип **«Домен»** (`openrussiarouter.com`).
+1. Search Console → «Добавить ресурс» → тип **«Домен»** (`rawrter.com`).
 2. Способ подтверждения → **DNS-запись**, скопировать `google-site-verification=...`.
 3. Добавить эту **TXT-запись** в DNS (пропагация обычно ≤ 1ч).
 4. Подтвердить в консоли.
 
 ## 2. Яндекс Вебмастер (руками)
 
-1. Добавить сайт `openrussiarouter.com` → «Подтверждение прав».
+1. Добавить сайт `rawrter.com` → «Подтверждение прав».
 2. Способ → **DNS-запись**: TXT `yandex-verification: <hex>`.
 3. Добавить в DNS, подтвердить.
 
 ## 3. Google Analytics 4 (руками)
 
-1. Создать GA4-свойство → Web data stream на `https://openrussiarouter.com`.
+1. Создать GA4-свойство → Web data stream на `https://rawrter.com`.
 2. Получить **Measurement ID** `G-XXXXXXX`.
 3. (опционально) Enhanced Measurement.
 
 ## 4. Яндекс Метрика (руками)
 
-1. Создать счётчик (тип «Сайт»), домен `openrussiarouter.com`.
+1. Создать счётчик (тип «Сайт»), домен `rawrter.com`.
 2. Получить **номер счётчика**.
 3. В настройках: включить **анонимизацию IP**; Webvisor — на усмотрение (пишет видео-сессии,
    конфликтует с privacy-позой сервиса «визиты без кук и raw IP», в коде включён

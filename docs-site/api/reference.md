@@ -1,6 +1,6 @@
 # Обзор API
 
-OpenRussiaRouter предоставляет OpenAI-совместимый API. Все эндпоинты доступны по базовому URL:
+Rawrter предоставляет OpenAI-совместимый API. Все эндпоинты доступны по базовому URL:
 
 ```
 https://api.openrussiarouter.com

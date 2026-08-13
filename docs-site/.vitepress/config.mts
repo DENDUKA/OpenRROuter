@@ -1,13 +1,13 @@
 import { defineConfig } from 'vitepress'
 
 // Канонический адрес для каждой страницы /docs/ строится от сырого пути
-// (guide/models.md -> https://openrussiarouter.com/docs/guide/models).
+// (guide/models.md -> https://rawrter.com/docs/guide/models).
 // og-image тот же бренд-баннер, что на основном сайте.
 function canonicalUrl(page: string): string {
   const isIndex = page.replace(/\.md$/, '').match(/(^|\/)index$/) !== null
   const rel = page.replace(/\.md$/, '').replace(/\/?index$/, '')
   const path = rel === '' ? '' : `/${rel}`
-  return `https://openrussiarouter.com/docs${path}${isIndex ? '/' : ''}`
+  return `https://rawrter.com/docs${path}${isIndex ? '/' : ''}`
 }
 
 /**
@@ -35,9 +35,9 @@ function hreflangLinks(page: string): [string, Record<string, string>][] {
 }
 
 export default defineConfig({
-  title: "OpenRussiaRouter Docs",
-  description: "Официальная документация платформы OpenRussiaRouter",
-  // Сайт смонтирован под https://openrussiarouter.com/docs/ — все ассеты и навигация
+  title: "Rawrter Docs",
+  description: "Официальная документация платформы Rawrter",
+  // Сайт смонтирован под https://rawrter.com/docs/ — все ассеты и навигация
   // VitePress префиксятся base, иначе внутренние ссылки уводят на апекс-домен.
   base: '/docs/',
   cleanUrls: true,
@@ -45,7 +45,7 @@ export default defineConfig({
   // динамический sitemap WebApp знает про /docs ровно один URL.
   // hostname обязан включать base — VitePress склеивает его с маршрутом как есть и `base`
   // сам не подмешивает; с голым origin в sitemap уезжают URL без /docs/, то есть 404.
-  sitemap: { hostname: 'https://openrussiarouter.com/docs/' },
+  sitemap: { hostname: 'https://rawrter.com/docs/' },
   // Per-page SEO: canonical + Open Graph/Twitter. Возвращаемые HeadConfig[] mergeHead'ом
   // добавляются к уже собранному head (не перезаписывают его).
   transformHead({ page, title, description }) {
@@ -53,15 +53,15 @@ export default defineConfig({
     return [
       ['link', { rel: 'canonical', href: canonical }],
       ['meta', { property: 'og:url', content: canonical }],
-      ['meta', { property: 'og:site_name', content: 'OpenRussiaRouter' }],
+      ['meta', { property: 'og:site_name', content: 'Rawrter' }],
       ['meta', { property: 'og:type', content: 'website' }],
       ['meta', { property: 'og:title', content: title }],
       ['meta', { property: 'og:description', content: description }],
-      ['meta', { property: 'og:image', content: 'https://openrussiarouter.com/og-image.png' }],
+      ['meta', { property: 'og:image', content: 'https://rawrter.com/og-image.png' }],
       ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
       ['meta', { name: 'twitter:title', content: title }],
       ['meta', { name: 'twitter:description', content: description }],
-      ['meta', { name: 'twitter:image', content: 'https://openrussiarouter.com/og-image.png' }],
+      ['meta', { name: 'twitter:image', content: 'https://rawrter.com/og-image.png' }],
       ...hreflangLinks(page)
     ]
   },
@@ -72,7 +72,7 @@ export default defineConfig({
       lang: 'ru-RU',
       themeConfig: {
         nav: [
-          { text: 'В панель', link: 'https://openrussiarouter.com' },
+          { text: 'В панель', link: 'https://rawrter.com' },
           { text: 'Модели', link: '/guide/models' }
         ],
         sidebar: [
@@ -101,8 +101,8 @@ export default defineConfig({
             // и показывали сырые {{ORR_SERVICE_NAME}} — заводить их здесь заново нельзя.
             text: 'Документы',
             items: [
-              { text: 'Политика конфиденциальности', link: 'https://openrussiarouter.com/legal/privacy' },
-              { text: 'Публичная оферта', link: 'https://openrussiarouter.com/legal/offer' }
+              { text: 'Политика конфиденциальности', link: 'https://rawrter.com/legal/privacy' },
+              { text: 'Публичная оферта', link: 'https://rawrter.com/legal/offer' }
             ]
           }
         ],
@@ -122,7 +122,7 @@ export default defineConfig({
       link: '/en/',
       themeConfig: {
         nav: [
-          { text: 'Dashboard', link: 'https://openrussiarouter.com' },
+          { text: 'Dashboard', link: 'https://rawrter.com' },
           { text: 'Models', link: '/en/guide/models' }
         ],
         sidebar: [
@@ -149,8 +149,8 @@ export default defineConfig({
             // in Russian solely (RU jurisdiction), hence the same canonical links here.
             text: 'Legal',
             items: [
-              { text: 'Privacy Policy', link: 'https://openrussiarouter.com/legal/privacy' },
-              { text: 'Public Offer', link: 'https://openrussiarouter.com/legal/offer' }
+              { text: 'Privacy Policy', link: 'https://rawrter.com/legal/privacy' },
+              { text: 'Public Offer', link: 'https://rawrter.com/legal/offer' }
             ]
           }
         ],

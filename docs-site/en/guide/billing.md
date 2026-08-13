@@ -1,6 +1,6 @@
 # Balance and Billing
 
-OpenRussiaRouter uses a unified prepaid billing system in **US Dollars (USD)**.
+Rawrter uses a unified prepaid billing system in **US Dollars (USD)**.
 
 ## How Charging Works
 

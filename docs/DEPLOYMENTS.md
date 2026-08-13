@@ -9,7 +9,7 @@
 
 - **Что:** ORR-only .NET-стек (9 контейнеров: postgres, seq, auth, billing, control-plane, collector, api-gateway, webapp, caddy). f9router НЕ здесь — 9R внешний (на dev-боксе).
 - **IP:** `201.51.6.246` (zetalink VDS, Ubuntu 24.04)
-- **Домен:** https://openrussiarouter.com (Caddy + Let's Encrypt, авто-renew)
+- **Домен:** https://rawrter.com (Caddy + Let's Encrypt, авто-renew)
 - **Где код:** на боксе `/opt/orr/app/` (git-клон main). Рядом: `compose.yml`, `.env`, `Caddyfile`, скрипты.
 - **SSH:**
   ```

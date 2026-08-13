@@ -22,7 +22,7 @@
 	@grafana path /grafana /grafana/*
 	reverse_proxy @grafana grafana:3000
 
-	# VitePress-документация — https://openrussiarouter.com/docs/.
+	# VitePress-документация — https://rawrter.com/docs/.
 	# docs-контейнер собран с base='/docs/' и держит файлы в /usr/share/nginx/html/docs,
 	# поэтому префикс /docs НЕ-strip'ается: nginx разрешает URI как есть.
 	@docs path /docs /docs/*
@@ -33,8 +33,8 @@
 
 # Typo-guard alt domain → 301 to the canonical domain (path + query preserved).
 # Caddy auto-provisions a Let's Encrypt cert for these names too.
-openrussianrouter.com, www.openrussianrouter.com {
-	redir https://openrussiarouter.com{uri} permanent
+openrussianrouter.com, www.openrussianrouter.com, openrussiarouter.com, www.openrussiarouter.com {
+	redir https://rawrter.com{uri} permanent
 }
 
 # OpenAI-compatible LLM API on a subdomain. Requires an A record

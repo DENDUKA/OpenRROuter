@@ -29,5 +29,5 @@ The main endpoint for interacting with language models.
 
 ## Retry and Failover
 
-The OpenRussiaRouter gateway includes a built-in **failover** mechanism.
+The Rawrter gateway includes a built-in **failover** mechanism.
 If the selected node returns a network error or a status >= 400 **before data transmission begins** (the first byte of the response), the gateway will automatically exclude the problematic node and retry the request on another available node without interrupting your request execution.

@@ -1,6 +1,6 @@
 # API Overview
 
-OpenRussiaRouter provides an OpenAI-compatible API. All endpoints are available at the base URL:
+Rawrter provides an OpenAI-compatible API. All endpoints are available at the base URL:
 
 ```
 https://api.openrussiarouter.com

@@ -1,6 +1,6 @@
 # API Keys Management
 
-The API key is your identifier for accessing the OpenRussiaRouter API. One key works for all models.
+The API key is your identifier for accessing the Rawrter API. One key works for all models.
 
 ## Creating a Key
 
@@ -14,7 +14,7 @@ The full raw key is only shown once upon creation. Only its secure SHA-256 hash 
 
 ## Key Format
 
-All OpenRussiaRouter keys start with the `sk-or-` prefix. Use the key in the `Authorization` header when sending HTTP requests:
+All Rawrter keys start with the `sk-or-` prefix. Use the key in the `Authorization` header when sending HTTP requests:
 
 ```http
 Authorization: Bearer sk-or-xxx

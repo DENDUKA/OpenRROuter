@@ -15,7 +15,7 @@ API-пользователей**. Это не стресс-тест до раз�
 ## 2. Окружение и ограничения
 
 - **Цель теста:** продакшн LLM-API `https://api.openrussiarouter.com` (Caddy маршрутизирует
-  поддомен `api.` → `api-gateway:8080`; apex `openrussiarouter.com` обслуживает WebApp/Grafana —
+  поддомен `api.` → `api-gateway:8080`; apex `rawrter.com` обслуживает WebApp/Grafana —
   это **не** цель теста). На момент тестирования живых
   пользователей нет — риск «уронить сервис для живых людей» отсутствует.
 - **Прод-топология** (`deploy/compose/compose.prod.yml`): один VPS `201.51.6.246`, каждый

@@ -308,7 +308,7 @@ services:
     cpus: 0.75
 
   # ---------------------------------------------------------------------------
-  # VitePress-документация. Раздаётся nginx'ом под https://openrussiarouter.com/docs/
+  # VitePress-документация. Раздаётся nginx'ом под https://rawrter.com/docs/
   # (см. docs-site/Dockerfile + nginx.conf и блок @docs в Caddyfile). Не публикует
   # порт наружу — Caddy проксирует по внутренней сети илиr_default.
   # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ layout: doc
 
 # Quick Start
 
-**OpenRussiaRouter** is a unified API gateway for accessing top language models.
+**Rawrter** is a unified API gateway for accessing top language models.
 
 All requests are sent in the [OpenAI Chat Completion API](https://platform.openai.com/docs/api-reference/chat) format. This means you can switch models just by changing the `model` parameter — without rewriting code.
 

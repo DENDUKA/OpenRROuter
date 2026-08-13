@@ -9,7 +9,7 @@
 | Параметр | Значение |
 |---|---|
 | IP | `31.76.49.2` |
-| Домен | `https://openrussiarouter.com/` (спереди Cloudflare/реверс-прокси) |
+| Домен | `https://rawrter.com/` (спереди Cloudflare/реверс-прокси) |
 | Хостинг | `xorek.cloud` (VPS), hostname `1798389.xorek.cloud` |
 | OS | Ubuntu 24.04, kernel 6.8.0-111-generic |
 | Docker | 29.5.2 |
@@ -38,7 +38,7 @@ Remove-SSHSession -SessionId $s.SessionId | Out-Null
 
 | URL | Назначение | Доступ |
 |---|---|---|
-| `https://openrussiarouter.com/` | WebApp (Razor cabinet + admin) | email+pass пользователя-админа (см. `/opt/orr/.env`: `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`) |
+| `https://rawrter.com/` | WebApp (Razor cabinet + admin) | email+pass пользователя-админа (см. `/opt/orr/.env`: `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD`) |
 | `http://31.76.49.2:5341` | **Seq** (структурированные логи) | пароль `SEQ_ADMIN_PASSWORD` из `/opt/orr/.env` |
 | `http://31.76.49.2:20128` | f9router admin напрямую | Bearer `ROUTER_CONTROL_TOKEN` (= `ORR_NODE_CONTROL_TOKEN` из `.env`) |
 | `http://31.76.49.2:3000` | WebApp напрямую (без TLS) | — |

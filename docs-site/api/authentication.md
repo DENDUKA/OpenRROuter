@@ -1,6 +1,6 @@
 # Аутентификация
 
-API OpenRussiaRouter использует аутентификацию на основе токенов (Bearer Token).
+API Rawrter использует аутентификацию на основе токенов (Bearer Token).
 
 Передавайте ваш API-ключ в заголовке `Authorization` каждого HTTP-запроса:
 

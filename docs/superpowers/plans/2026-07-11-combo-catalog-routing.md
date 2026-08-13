@@ -145,7 +145,7 @@ Expected: PASS.
 ### Task 4: Update live model cards after deployment
 
 **Files:**
-- No repository files; use `https://openrussiarouter.com/admin/models`.
+- No repository files; use `https://rawrter.com/admin/models`.
 
 - [ ] **Step 1: Wait for the Collector poll after the new service image is deployed**
 

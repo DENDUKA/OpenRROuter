@@ -30,4 +30,4 @@ In case of an error, the API returns a response in standard JSON format with an 
 
 ## Upstream Errors
 
-If an error occurred on the model provider's side (e.g., OpenAI or Anthropic) after the gateway successfully routed the request, OpenRussiaRouter proxies this error back to the client in its original form.
+If an error occurred on the model provider's side (e.g., OpenAI or Anthropic) after the gateway successfully routed the request, Rawrter proxies this error back to the client in its original form.

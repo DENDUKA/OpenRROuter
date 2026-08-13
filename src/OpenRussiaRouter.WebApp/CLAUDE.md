@@ -201,7 +201,7 @@ URL). SEO-следствие: несуществующие URL каталога 
 - **`hreflang` ru/en/x-default** — взаимный self-referencing набор из `LocaleUrl.Alternates`,
   на индексируемых страницах кроме `/docs`. Подробности и причины — в разделе «Локали и URL».
   **`SiteBaseUrlResolver` — только для crawler-метаданных** (canonical, `og:url`, `og:image`,
-  `twitter:image`, `<loc>` sitemap): резолвит `PublicSiteBaseUrl` (прод: `https://openrussiarouter.com`)
+  `twitter:image`, `<loc>` sitemap): резолвит `PublicSiteBaseUrl` (прод: `https://rawrter.com`)
   с фолбэком на request origin и **никогда не читает `PublicApiBaseUrl`/админскую настройку** —
   иначе в canonical/og/sitemap утёк бы api-поддомен. API-примеры (`base_url` в `_IntegrationExamples`,
   страницы `/docs`) по-прежнему берут адрес из `ApiBaseUrlResolver`.
@@ -416,7 +416,7 @@ BillingService своей котировкой.
 | `ApiGatewayUrl` | база для named-клиента `ApiGateway` (тест шлюза из админки) |
 | `DataProtection:KeyRingPath` | путь к persistent-кольцу ключей Data Protection; пусто → ephemeral-дефолт (только локал/тесты) |
 | `PublicApiBaseUrl` | фолбэк для `ApiBaseUrlResolver` (примеры интеграции, `/docs`) |
-| `PublicSiteBaseUrl` | канонический сайт для `SiteBaseUrlResolver` (canonical/og/sitemap); пусто → фолбэк на request origin. Прод: `https://openrussiarouter.com` |
+| `PublicSiteBaseUrl` | канонический сайт для `SiteBaseUrlResolver` (canonical/og/sitemap); пусто → фолбэк на request origin. Прод: `https://rawrter.com` |
 | `GrpcServices:{Auth,Billing,ControlPlane,Collector,Content}` | адреса сервисов; `CallDeadlineSeconds` — дедлайн всех gRPC-вызовов |
 | `ServiceAuth:{BillingCaller,BillingToken,ContentCaller,ContentToken}` | s2s-креды; **`BillingToken` обязателен**, Content-пара по умолчанию наследует Billing |
 | `Google:*`, `Yandex:*` | внешний логин; провайдер не регистрируется, пока не заданы оба значения |

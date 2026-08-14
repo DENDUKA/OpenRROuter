@@ -163,9 +163,13 @@
 > Источник: surface-переименование публичного сайта, 2026-08-13.
 > Меняется только видимая пользователям и поисковикам поверхность: бренд `Rawrter` и сайт
 > `https://rawrter.com`. Внутренние имена `OpenRussiaRouter.*`, переменные `ORR_*`, API-ключи
-> `sk-or-*`, model ID `ORR/*`, почтовые адреса и API `https://api.openrussiarouter.com` не меняются.
-> Старый сайт не получает redirect-контур. Существующие задачи SEO-* и архив не переписываются.
-> Порядок: RNM-001 → RNM-002 → RNM-003/RNM-004 → RNM-005 → RNM-006.
+> `sk-or-*`, model ID `ORR/*` и почтовые адреса не меняются.
+> Дополнено 2026-08-14: публичный API переводится на `https://api.rawrter.com` (RNM-007),
+> согласованность canonical/sitemap — RNM-008, запрет индексации API-origin — RNM-009.
+> Редиректы с legacy-доменов не добавляются и не удаляются: существующий 301-контур остаётся
+> как есть, его состояние не является критерием задач RNM-*.
+> Существующие задачи SEO-* и архив не переписываются.
+> Порядок: RNM-001 → RNM-002 → RNM-003/RNM-004 → RNM-005 → RNM-007 → RNM-008/RNM-009 → RNM-006.
 
 ## RNM-002 — Домен сайта
 - status: done
@@ -205,12 +209,45 @@
 - progress: СДЕЛАНО 2026-08-14 — DNS на Porkbun (A `@`/`www`/`api` → 201.51.6.246, URL Forwarding Not Set); `RWT_PUBLIC_DOMAIN=rawrter.com` в `/opt/orr/.env` (бэкап `.env.bak-pre-rawrter`); прод задеплоен `update-prod.sh` (9645de25 → c0579acb), контейнер `docs` пересобран отдельно (VitePress зашивает домен на build-time, скрипт его не трогает); Let's Encrypt выдал сертификаты на `rawrter.com`, `www.rawrter.com`, `api.rawrter.com` и оба старых имени. Проверено снаружи: апекс/`/docs/`/`/en/`/обе sitemap/`/legal/*` = 200, `www.rawrter.com` и старый апекс = 301 с сохранением path+query, `api.openrussiarouter.com` и `api.rawrter.com` = 200, canonical/og/hreflang указывают на `rawrter.com`. Почта: домен аутентифицирован в Brevo, отправитель переключён на `noreply@rawrter.com`. ОСТАЛОСЬ (нужны кабинеты): вебхук Rollypay на `https://rawrter.com/webhook/rollypay` + боевой топап на минималку; redirect URI в Yandex OAuth (`/OAuth-yandex`) и, если включён, Google (`/signin-google`); ресурсы `rawrter.com` в Google Search Console и Яндекс.Вебмастере + обе карты + инструмент смены адреса (для него 301 со старого апекса надо СОХРАНИТЬ, не удалять); адрес сайта в GA4 и Метрике. Отдельно: `Support:Inbox` остаётся на старом домене, пока в Porkbun не заведён алиас `support@rawrter.com`.
 - desc: Внешняя конфигурация без переименования внутренностей. Настроить DNS и TLS для `rawrter.com` и при необходимости `www.rawrter.com`; старый apex отключить после проверки, redirect не создавать. В production `.env` установить `ORR_PUBLIC_DOMAIN=rawrter.com`. Добавить новые Google/Yandex OAuth callback URL на apex, заменить Rollypay webhook и success/fail redirect URL, создать ресурсы `rawrter.com` в Google Search Console и Яндекс Вебмастере, отправить обе sitemap, обновить адрес сайта в GA4 и Метрике. Не менять DNS/TLS `api.openrussiarouter.com`, `PublicApiBaseUrl`, API-примеры, Brevo sender domain и адреса `noreply@openrussiarouter.com`/`support@openrussiarouter.com`. Критерий: сайт и внешние callbacks работают через `rawrter.com`, API и почта продолжают работать по прежним адресам; результаты проверки зафиксированы в актуальном runbook.
 
-## RNM-006 — Проверка поверхности
+## RNM-006 — Проверка публичной поверхности
 - status: blocked
-- blocked_reason: выполнять после RNM-001..RNM-005; для production smoke-test нужен доступ к продакшену
+- blocked_reason: выполнять после RNM-005 и RNM-007..RNM-009; для части внешних проверок нужен доступ к production и кабинетам интеграций
 - category: surface
 - priority: high
 - created: 2026-08-13T17:26:20Z
 - started:
 - completed:
-- desc: Финальный surface-аудит. В репозитории проверить отображаемый бренд, ссылки сайта, canonical, hreflang, robots, обе sitemap, Open Graph/Twitter, JSON-LD, юридические страницы и публичную документацию. На проде проверить HTTP/TLS для ключевых ru/en URL и `/docs/`, OAuth callback, платёжные redirect/webhook URL и отсутствие redirect-контура со старого apex. Отдельными отрицательными проверками подтвердить, что namespace/project names, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, почтовые адреса, `PublicApiBaseUrl`, API-примеры и `api.openrussiarouter.com` не изменены. Выполнить `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1`, `dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1`, `npm run docs:build` и проверку production Compose-конфига. Критерий: публичный сайт называется `Rawrter` и использует `rawrter.com`, все утверждённые исключения сохранены, проверки зелёные.
+- desc: Финальный surface-аудит бренда `Rawrter`, сайта `https://rawrter.com` и API `https://api.rawrter.com`. В репозитории и на production проверить отображаемый бренд, ссылки сайта, canonical, hreflang, robots, обе sitemap, Open Graph/Twitter, JSON-LD, юридические страницы, публичную документацию и все пользовательские API-примеры. Проверить ключевые ru/en URL и `/docs/`, OAuth callback, платёжные redirect/webhook URL, `/health`, `/v1/models`, non-streaming и streaming completions через `api.rawrter.com`. Подтвердить прямой HTTPS 200 для URL из sitemap и запрет индексации API-origin. Исторические документы и архив задач не считать частью актуальной пользовательской поверхности. Существующие 301-редиректы не изменять и не использовать как критерий завершения. Отдельными отрицательными проверками подтвердить, что namespace/project names, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние контракты не переименованы. Выполнить `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1`, `dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1`, `npm run docs:build` и проверку production Compose-конфига. Критерий: посетители и поисковики видят `Rawrter` на `rawrter.com`, вся рекомендуемая API-поверхность использует `api.rawrter.com`, crawler-сигналы согласованы, проверки зелёные.
+
+---
+
+## RNM-007 — Публичный домен API
+- status: todo
+- category: surface
+- priority: high
+- created: 2026-08-14T15:26:07Z
+- started:
+- completed:
+- desc: Перевести видимую пользователям API-поверхность с `https://api.openrussiarouter.com` на `https://api.rawrter.com`. Обновить API reference, curl-команды, Python/Node.js-примеры и `base_url` в русской и английской документации `docs-site`. В production установить `platform_settings.public_api_base_url=https://api.rawrter.com`, чтобы Razor `/docs`, страницы моделей и общие integration-примеры показывали новый endpoint; проверить production fallback `PublicApiBaseUrl` и затронутые тесты. Подтвердить через новый hostname работу `/health`, `/v1/models`, non-streaming и streaming completions. Не менять namespace/project names, классы и переменные ради переименования, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние gRPC-контракты. Существующие 301-редиректы и legacy-hostnames не изменять — они вне задачи. Критерий: актуальные пользовательские страницы и публичная документация показывают только `api.rawrter.com` как рекомендуемый API endpoint; реальные запросы через него работают; `npm run docs:build`, тесты WebApp и обязательная сборка solution проходят.
+
+---
+
+## RNM-008 — Согласованность canonical и sitemap после переезда
+- status: todo
+- category: surface
+- priority: high
+- created: 2026-08-14T15:26:08Z
+- started:
+- completed:
+- desc: Исправить обнаруженные расхождения crawler-facing URL на `rawrter.com`, не меняя существующий redirect-контур. Для английской главной `/en` выводить self-referencing canonical `https://rawrter.com/en`, а не `/en/`, который редиректится обратно. В динамической `/sitemap.xml` публиковать конечный URL документации `https://rawrter.com/docs/` вместо `/docs`, чтобы URL из карты сайта сразу отвечал 200 без redirect-chain и промежуточного HTTP Location. Добавить или обновить тесты canonical, hreflang и sitemap. Критерий: canonical каждой проверяемой страницы совпадает с её конечным URL; все `<loc>` из обеих sitemap отвечают прямым HTTPS 200; существующие 301-редиректы остаются без изменений; тесты WebApp и обязательная сборка solution проходят.
+
+---
+
+## RNM-009 — Запрет индексации API-origin
+- status: todo
+- category: surface
+- priority: medium
+- created: 2026-08-14T15:26:09Z
+- started:
+- completed:
+- desc: Закрыть `https://api.rawrter.com` от поисковой индексации, не меняя публичный OpenAI-совместимый API-контракт. Добавить доступный на API-host `/robots.txt` с `User-agent: *` и `Disallow: /` и/или единый `X-Robots-Tag: noindex, nofollow` для публичных API-ответов, включая `/v1/models` и health endpoints. Решение не должно менять JSON-body, HTTP-коды, streaming, authentication или CORS API. Существующие 301-редиректы и другие hostnames не изменять. Критерий: поисковики получают однозначный запрет индексации `api.rawrter.com`, а `/health`, `/v1/models` и completions сохраняют прежнее поведение; затронутые тесты и обязательная сборка solution проходят.

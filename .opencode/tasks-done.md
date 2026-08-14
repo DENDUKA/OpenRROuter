@@ -141,3 +141,13 @@
 - completed: 2026-08-14T20:26:29.6948590+03:00
 - desc: Исправить обнаруженные расхождения crawler-facing URL на `rawrter.com`, не меняя существующий redirect-контур. Для английской главной `/en` выводить self-referencing canonical `https://rawrter.com/en`, а не `/en/`, который редиректится обратно. В динамической `/sitemap.xml` публиковать конечный URL документации `https://rawrter.com/docs/` вместо `/docs`, чтобы URL из карты сайта сразу отвечал 200 без redirect-chain и промежуточного HTTP Location. Добавить или обновить тесты canonical, hreflang и sitemap. Критерий: canonical каждой проверяемой страницы совпадает с её конечным URL; все `<loc>` из обеих sitemap отвечают прямым HTTPS 200; существующие 301-редиректы остаются без изменений; тесты WebApp и обязательная сборка solution проходят. Сделано (2026-08-14): canonical английской главной теперь `.../en` без хвостового слэша (self-referencing, og:url тоже); sitemap публикует конечный URL `/docs/` вместо `/docs`; тесты canonical/hreflang/sitemap добавлены и обновлены; redirect-контур не менялся. Внешняя проверка «все <loc> отвечают прямым HTTPS 200 на проде» остаётся до деплоя (нет доступа к проду 201.51.6.246).
 
+
+## RNM-009 — Запрет индексации API-origin
+- status: done
+- category: surface
+- priority: medium
+- created: 2026-08-14T15:26:09Z
+- started: 2026-08-14T21:11:59.7284300+03:00
+- completed: 2026-08-14T21:15:31.6031770+03:00
+- desc: Закрыть `https://api.rawrter.com` от поисковой индексации, не меняя публичный OpenAI-совместимый API-контракт. Добавить доступный на API-host `/robots.txt` с `User-agent: *` и `Disallow: /` и/или единый `X-Robots-Tag: noindex, nofollow` для публичных API-ответов, включая `/v1/models` и health endpoints. Решение не должно менять JSON-body, HTTP-коды, streaming, authentication или CORS API. Существующие 301-редиректы и другие hostnames не изменять. Критерий: поисковики получают однозначный запрет индексации `api.rawrter.com`, а `/health`, `/v1/models` и completions сохраняют прежнее поведение; затронутые тесты и обязательная сборка solution проходят. Реализовано через API middleware и публичный `/robots.txt`, добавлены интеграционные проверки.
+

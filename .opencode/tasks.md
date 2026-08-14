@@ -205,12 +205,3 @@
 - desc: Перевести видимую пользователям API-поверхность с `https://api.openrussiarouter.com` на `https://api.rawrter.com`. Обновить API reference, curl-команды, Python/Node.js-примеры и `base_url` в русской и английской документации `docs-site`. В production установить `platform_settings.public_api_base_url=https://api.rawrter.com`, чтобы Razor `/docs`, страницы моделей и общие integration-примеры показывали новый endpoint; проверить production fallback `PublicApiBaseUrl` и затронутые тесты. Подтвердить через новый hostname работу `/health`, `/v1/models`, non-streaming и streaming completions. Не менять namespace/project names, классы и переменные ради переименования, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние gRPC-контракты. Существующие 301-редиректы и legacy-hostnames не изменять — они вне задачи. Критерий: актуальные пользовательские страницы и публичная документация показывают только `api.rawrter.com` как рекомендуемый API endpoint; реальные запросы через него работают; `npm run docs:build`, тесты WebApp и обязательная сборка solution проходят.
 
 ---
-
-## RNM-009 — Запрет индексации API-origin
-- status: todo
-- category: surface
-- priority: medium
-- created: 2026-08-14T15:26:09Z
-- started:
-- completed:
-- desc: Закрыть `https://api.rawrter.com` от поисковой индексации, не меняя публичный OpenAI-совместимый API-контракт. Добавить доступный на API-host `/robots.txt` с `User-agent: *` и `Disallow: /` и/или единый `X-Robots-Tag: noindex, nofollow` для публичных API-ответов, включая `/v1/models` и health endpoints. Решение не должно менять JSON-body, HTTP-коды, streaming, authentication или CORS API. Существующие 301-редиректы и другие hostnames не изменять. Критерий: поисковики получают однозначный запрет индексации `api.rawrter.com`, а `/health`, `/v1/models` и completions сохраняют прежнее поведение; затронутые тесты и обязательная сборка solution проходят.

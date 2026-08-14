@@ -177,6 +177,8 @@ public static class ApiGatewayExtensions
 
     public static WebApplication MapGatewayEndpoints(this WebApplication app)
     {
+        app.MapGet("/robots.txt",
+            () => Results.Text("User-agent: *\nDisallow: /\n", "text/plain"));
         app.MapPost("/v1/chat/completions",
             (ChatCompletionHandler handler, HttpContext ctx) => handler.HandleAsync(ctx))
             .RequireRateLimiting(GatewayRateLimiting.PolicyName);

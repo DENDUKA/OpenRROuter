@@ -37,6 +37,12 @@ public static class Startup
 
         app.Use(async (context, next) =>
         {
+            context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
+            await next(context);
+        });
+
+        app.Use(async (context, next) =>
+        {
             var correlationId = CorrelationIdReader.Get(context.Request);
             context.Response.Headers[CorrelationIds.HeaderName] = correlationId;
             context.Response.Headers["X-Request-Id"] = correlationId;

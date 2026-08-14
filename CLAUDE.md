@@ -208,7 +208,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 ### Эндпоинты gateway и что из них биллится
 
 `MapGatewayEndpoints` (`Application/Extensions/ApiGatewayExtensions.cs`) вешает четыре
-проксирующих POST-а (все под rate-limit-политикой `gateway-chat`) и три GET-а:
+проксирующих POST-а (все под rate-limit-политикой `gateway-chat`) и четыре GET-а:
 
 | Эндпоинт | Handler | Usage / биллинг |
 |---|---|---|
@@ -217,6 +217,9 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 | `POST /v1/audio/speech` | `TextToSpeechHandler` | outbox; **`output_tokens` = число Unicode-символов `input`** |
 | `POST /v1/images/generations` | `ImageGenerationHandler` | **никакого usage не пишется — запросы не биллятся** |
 | `GET /v1/models`, `/health`, `/ready` | `ModelsHandler` / инлайн | — |
+| `GET /robots.txt` | инлайн `User-agent: *` / `Disallow: /` | — |
+
+Все ответы API получают `X-Robots-Tag: noindex, nofollow`; это не меняет тела, коды или streaming-контракт.
 
 Все четыре POST-а идут через один `GatewayPipeline.AuthorizeAndAcquireLeaseAsync`
 и один и тот же retry/failover-цикл по нодам (`MaxRouterAttempts = 5` в image/tts-хендлерах).

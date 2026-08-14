@@ -31,7 +31,7 @@
 | `AddGatewayRateLimiting` | политика `gateway-chat` ([GatewayRateLimiting.cs](Application/Extensions/GatewayRateLimiting.cs)) |
 
 Порядок middleware в `ConfigurePipeline`: `UseHttpLogging` → (вне Development) `UseLoggedExceptionHandler("/error")` + `UseHsts`
-→ инлайн-middleware, проставляющий в ответ `X-Correlation-Id` **и** `X-Request-Id` → `VisitorMetricsMiddleware`
+→ инлайн-middleware, проставляющий `X-Robots-Tag: noindex, nofollow` → middleware с `X-Correlation-Id` **и** `X-Request-Id` → `VisitorMetricsMiddleware`
 → `UseRateLimiter` → `MapGatewayEndpoints`.
 
 ## Эндпоинты (`MapGatewayEndpoints`)
@@ -44,6 +44,7 @@
 | `POST /v1/audio/speech` | [TextToSpeechHandler](Application/Endpoints/TextToSpeechHandler.cs) | `gateway-chat` | outbox, `output_tokens` = кол-во Unicode code points (`EnumerateRunes().Count()`) |
 | `GET /v1/models` | [ModelsHandler](Application/Endpoints/ModelsHandler.cs) | — | — |
 | `GET /health`, `GET /ready` | инлайн-лямбды | — | — |
+| `GET /robots.txt` | inline `User-agent: *` / `Disallow: /` | — | — |
 
 `/v1/models` **сознательно публичный** (без Bearer) — OpenRouter-совместимые клиенты (Cline, opencode-плагин)
 пробуют его до передачи ключа.

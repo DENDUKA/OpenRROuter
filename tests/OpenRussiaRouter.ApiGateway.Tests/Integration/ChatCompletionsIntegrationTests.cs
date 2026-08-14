@@ -404,6 +404,32 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         JsonSerializer.Serialize(record.ToGatewayUsageEvent()).Should().NotContain("secret prompt");
     }
 
+    // --- Crawler signals ---
+
+    [Fact]
+    public async Task RobotsTxt_DisallowsAllPaths()
+    {
+        var client = CreateClient();
+
+        var response = await client.GetAsync("/robots.txt");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType?.MediaType.Should().Be("text/plain");
+        (await response.Content.ReadAsStringAsync()).Should().Be("User-agent: *\nDisallow: /\n");
+    }
+
+    [Fact]
+    public async Task PublicApiResponses_IncludeNoIndexHeader()
+    {
+        var client = CreateClient();
+
+        var modelsResponse = await client.GetAsync("/v1/models");
+        var healthResponse = await client.GetAsync("/health");
+
+        modelsResponse.Headers.GetValues("X-Robots-Tag").Single().Should().Be("noindex, nofollow");
+        healthResponse.Headers.GetValues("X-Robots-Tag").Single().Should().Be("noindex, nofollow");
+    }
+
     // --- Models endpoint ---
 
     [Fact]

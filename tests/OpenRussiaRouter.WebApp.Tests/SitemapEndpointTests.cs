@@ -35,10 +35,12 @@ public sealed class SitemapEndpointTests
         paths.Should().Contain("/models");
         paths.Should().Contain("/providers");
         paths.Should().Contain("/tools");
-        paths.Should().Contain("/docs");
         paths.Should().Contain("/support");
         paths.Should().Contain("/legal/offer");
         paths.Should().Contain("/legal/privacy");
+        // Конечный URL документации — /docs/ (в проде его отдаёт контейнер VitePress);
+        // /docs без слэша уходит редиректом на /docs/.
+        paths.Should().Contain("/docs/");
         // Никаких query-параметров и служебных разделов.
         paths.Should().NotContain(e => e.Contains('?'));
         paths.Should().NotContain(e => e.Contains("/admin"));
@@ -52,8 +54,8 @@ public sealed class SitemapEndpointTests
         // это приложение отдаёт только редиректом, и в карту она попасть не должна.
         var entries = SitemapEndpoint.Collect([], [], []);
 
-        entries.Single(e => e.Path == "/docs").Localized.Should().BeFalse();
-        entries.Where(e => e.Path != "/docs").Should().OnlyContain(e => e.Localized);
+        entries.Single(e => e.Path == "/docs/").Localized.Should().BeFalse();
+        entries.Where(e => e.Path != "/docs/").Should().OnlyContain(e => e.Localized);
     }
 
     [Fact]
@@ -192,9 +194,11 @@ public sealed class SitemapEndpointTests
     [Fact]
     public void BuildXml_NonLocalizedEntry_HasNoAlternateAnnotations()
     {
+        // Sitemap публикует конечный URL документации — /docs/ (в проде его отдаёт VitePress
+        // напрямую), чтобы URL из карты сразу отвечал 200 без redirect-цепочки.
         var xml = SitemapEndpoint.BuildXml(
             "https://example.com",
-            [new SitemapEndpoint.SitemapEntry("/docs", Localized: false)]);
+            [new SitemapEndpoint.SitemapEntry("/docs/", Localized: false)]);
 
         var doc = XDocument.Parse(xml);
         XNamespace sm = "http://www.sitemaps.org/schemas/sitemap/0.9";
@@ -202,7 +206,7 @@ public sealed class SitemapEndpointTests
 
         var urls = doc.Root!.Elements(sm + "url").ToList();
         urls.Should().ContainSingle();
-        urls[0].Element(sm + "loc")!.Value.Should().Be("https://example.com/docs");
+        urls[0].Element(sm + "loc")!.Value.Should().Be("https://example.com/docs/");
         urls[0].Elements(xhtml + "link").Should().BeEmpty();
         xml.Should().NotContain("/en/docs");
     }
@@ -213,7 +217,12 @@ public sealed class SitemapEndpointTests
     public async Task Get_SitemapXml_ReturnsXmlWithStaticAndDynamicUrls()
     {
         using var factory = CreateFactory();
-        using var client = factory.CreateClient();
+        // AllowAutoRedirect=false: критерий «каждый <loc> отвечает прямым 200» проверяется без
+        // молчаливой развязки redirect-цепочек (единственное исключение — /docs/, см. ниже).
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
 
         using var response = await client.GetAsync("/sitemap.xml");
 
@@ -235,12 +244,25 @@ public sealed class SitemapEndpointTests
 
         // Критерий: каждый URL из sitemap реально отдаёт 200. Абсолютный origin (https://example.com)
         // в тестовом хосте недоступен — ходим по локальному пути к тому же приложению.
+        // /docs/ — единственное исключение: в проде его отдаёт контейнер VitePress напрямую,
+        // а в тестовом хосте WebApp /docs/ канонизируется 301-редиректом на /docs
+        // (существующий redirect-контур не меняем).
         var doc = XDocument.Parse(body);
+        body.Should().Contain("<loc>https://example.com/docs/</loc>");
+
         foreach (var loc in doc.Root!.Elements()
                      .Select(u => u.Element(doc.Root.Name.Namespace + "loc")!.Value))
         {
             var path = new Uri(loc).PathAndQuery;
             using var page = await client.GetAsync(path);
+            if (path == "/docs/")
+            {
+                page.StatusCode.Should().Be(HttpStatusCode.MovedPermanently,
+                    "the WebApp host must keep redirecting /docs/ to /docs");
+                page.Headers.Location!.OriginalString.Should().Be("/docs");
+                continue;
+            }
+
             page.StatusCode.Should().Be(HttpStatusCode.OK, $"sitemap URL {loc} should return 200");
         }
     }

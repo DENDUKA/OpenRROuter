@@ -33,7 +33,7 @@ public static class SitemapEndpoint
         "/models",
         "/providers",
         "/tools",
-        "/docs",
+        "/docs/",
         "/support",
         "/legal/offer",
         "/legal/privacy",

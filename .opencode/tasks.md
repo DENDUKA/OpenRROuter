@@ -206,17 +206,6 @@
 
 ---
 
-## RNM-008 — Согласованность canonical и sitemap после переезда
-- status: todo
-- category: surface
-- priority: high
-- created: 2026-08-14T15:26:08Z
-- started:
-- completed:
-- desc: Исправить обнаруженные расхождения crawler-facing URL на `rawrter.com`, не меняя существующий redirect-контур. Для английской главной `/en` выводить self-referencing canonical `https://rawrter.com/en`, а не `/en/`, который редиректится обратно. В динамической `/sitemap.xml` публиковать конечный URL документации `https://rawrter.com/docs/` вместо `/docs`, чтобы URL из карты сайта сразу отвечал 200 без redirect-chain и промежуточного HTTP Location. Добавить или обновить тесты canonical, hreflang и sitemap. Критерий: canonical каждой проверяемой страницы совпадает с её конечным URL; все `<loc>` из обеих sitemap отвечают прямым HTTPS 200; существующие 301-редиректы остаются без изменений; тесты WebApp и обязательная сборка solution проходят.
-
----
-
 ## RNM-009 — Запрет индексации API-origin
 - status: todo
 - category: surface

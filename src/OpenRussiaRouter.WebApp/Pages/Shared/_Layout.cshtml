@@ -66,6 +66,14 @@
         // Pointing both at the Russian URL would tell search engines the English tree is a
         // duplicate and drop it straight back out of the index.
         canonicalUrl = baseUrl + Context.Request.PathBase + path;
+        // The English home renders at /en (PathBase="/en", path="/"); /en/ is only reachable
+        // through a 301. A canonical that itself redirects forces search engines to resolve the
+        // chain and invites duplicate URLs — emit the final /en form instead. The bare root "/"
+        // keeps its single slash.
+        if (canonicalUrl.Length > baseUrl.Length + 1 && canonicalUrl.EndsWith('/'))
+        {
+            canonicalUrl = canonicalUrl.TrimEnd('/');
+        }
     }
 
     string[] noIndexPrefixes =

@@ -132,3 +132,12 @@
 - desc: docs-site и актуальная пользовательская документация. Заменить отображаемый бренд на `Rawrter`, а ссылки на панель, главную и `/legal/*` — на `https://rawrter.com`. Обновить title, description, навигацию и обычный текст, не меняя техническое содержание API. Явно сохранить `https://api.openrussiarouter.com` во всех API reference, curl-командах, Python/Node.js примерах и `base_url`; не менять почтовые адреса, `sk-or-*` и `ORR/*`. Не редактировать `.opencode/tasks-done.md`, существующие блоки SEO-* и датированные исторические планы/specs. Критерий: документация использует бренд `Rawrter` и новый адрес сайта, API-примеры побайтно сохраняют прежний endpoint; `npm run docs:build` проходит.
 
 
+## RNM-008 — Согласованность canonical и sitemap после переезда
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-14T15:26:08Z
+- started: 2026-08-14T20:16:59.3875840+03:00
+- completed: 2026-08-14T20:26:29.6948590+03:00
+- desc: Исправить обнаруженные расхождения crawler-facing URL на `rawrter.com`, не меняя существующий redirect-контур. Для английской главной `/en` выводить self-referencing canonical `https://rawrter.com/en`, а не `/en/`, который редиректится обратно. В динамической `/sitemap.xml` публиковать конечный URL документации `https://rawrter.com/docs/` вместо `/docs`, чтобы URL из карты сайта сразу отвечал 200 без redirect-chain и промежуточного HTTP Location. Добавить или обновить тесты canonical, hreflang и sitemap. Критерий: canonical каждой проверяемой страницы совпадает с её конечным URL; все `<loc>` из обеих sitemap отвечают прямым HTTPS 200; существующие 301-редиректы остаются без изменений; тесты WebApp и обязательная сборка solution проходят. Сделано (2026-08-14): canonical английской главной теперь `.../en` без хвостового слэша (self-referencing, og:url тоже); sitemap публикует конечный URL `/docs/` вместо `/docs`; тесты canonical/hreflang/sitemap добавлены и обновлены; redirect-контур не менялся. Внешняя проверка «все <loc> отвечают прямым HTTPS 200 на проде» остаётся до деплоя (нет доступа к проду 201.51.6.246).
+

@@ -77,6 +77,31 @@ public sealed class SeoHeadTests
     }
 
     [Fact]
+    public async Task Get_EnglishHome_CanonicalIsSelfReferencing_WithoutTrailingSlash()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        // /en is the final form of the English home; /en/ is only reachable through a 301, so the
+        // canonical must be the URL that actually answers 200 — a canonical pointing at a
+        // redirecting URL would make search engines resolve the chain and invite duplicates.
+        using var response = await client.GetAsync("/en");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/en\" />");
+        body.Should().NotContain("<link rel=\"canonical\" href=\"https://example.com/en/\" />");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/en\"");
+        body.Should().NotContain("name=\"robots\"");
+
+        // The English home advertises the same reciprocal cluster as the Russian one — ru at the
+        // bare path, en at /en, x-default at the English version.
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/\" />");
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"en\" href=\"https://example.com/en\" />");
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://example.com/en\" />");
+    }
+
+    [Fact]
     public async Task Get_BothLocales_AdvertiseTheIdenticalAlternateSet()
     {
         using var factory = CreateFactory();

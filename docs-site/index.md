@@ -24,7 +24,7 @@ from openai import OpenAI
 
 client = OpenAI(
     api_key="sk-or-ваш-ключ",
-    base_url="https://api.openrussiarouter.com/v1/",
+    base_url="https://api.rawrter.com/v1/",
 )
 
 response = client.chat.completions.create(
@@ -40,7 +40,7 @@ import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: "sk-or-ваш-ключ",
-  baseURL: "https://api.openrussiarouter.com/v1/",
+  baseURL: "https://api.rawrter.com/v1/",
 });
 
 async function main() {
@@ -56,7 +56,7 @@ main();
 ```
 
 ```bash [cURL]
-curl https://api.openrussiarouter.com/v1/chat/completions \
+curl https://api.rawrter.com/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer sk-or-ваш-ключ" \
   -d '{

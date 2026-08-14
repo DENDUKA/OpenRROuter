@@ -11,7 +11,7 @@ Authorization: Bearer sk-or-your-key
 Example using cURL:
 
 ```bash
-curl https://api.openrussiarouter.com/v1/models \
+curl https://api.rawrter.com/v1/models \
   -H "Authorization: Bearer sk-or-your-key"
 ```
 

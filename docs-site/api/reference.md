@@ -3,7 +3,7 @@
 Rawrter предоставляет OpenAI-совместимый API. Все эндпоинты доступны по базовому URL:
 
 ```
-https://api.openrussiarouter.com
+https://api.rawrter.com
 ```
 
 ## Эндпоинты

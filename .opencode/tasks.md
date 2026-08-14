@@ -195,12 +195,13 @@
 ---
 
 ## RNM-007 — Публичный домен API
-- status: todo
+- status: in_progress
 - category: surface
 - priority: high
 - created: 2026-08-14T15:26:07Z
-- started:
+- started: 2026-08-14T18:00:00Z
 - completed:
+- progress: СДЕЛАНО 2026-08-14 (локальная часть): docs-site (ru+en: index, api/authentication, api/reference) переведён на `https://api.rawrter.com` — curl, Python/Node.js-примеры и base URL; обновлены комментарии `SiteBaseUrlResolver.cs`, `deploy/compose/Caddyfile` и `.env.example` (api.rawrter.com — рекомендуемый, legacy hostname остаётся контрактом). WebApp `/docs` и integration-примеры динамические (`ApiBaseUrlResolver` ← `platform_settings.public_api_base_url`), код не менялся. `npm run docs:build`, `dotnet build OpenRussiaRouter.sln`, `dotnet test OpenRussiaRouter.WebApp.Tests` (375/375), `docker compose -f compose.prod.yml config` — зелёные. Проверено снаружи через `api.rawrter.com`: `/health`=200, `/v1/models`=200 (реальные модели), `POST /v1/chat/completions` и `/stream`=401 без ключа (маршруты работают). ОСТАЛОСЬ (нужен доступ к проду 201.51.6.246 — пароль root из PROD-ACCESS.md не подходит, SSH только на старый хост 31.76.49.2): выставить `platform_settings.public_api_base_url=https://api.rawrter.com` в БД/админке прода, проверить прод-fallback `PublicApiBaseUrl` в `/opt/orr/.env`, задеплоить (пересборка docs-контейнера + WebApp через update-prod.sh), прогнать non-streaming и streaming completions с реальным API-ключом. Прод-документация rawrter.com/docs пока показывает старый endpoint — пересоберётся при деплое.
 - desc: Перевести видимую пользователям API-поверхность с `https://api.openrussiarouter.com` на `https://api.rawrter.com`. Обновить API reference, curl-команды, Python/Node.js-примеры и `base_url` в русской и английской документации `docs-site`. В production установить `platform_settings.public_api_base_url=https://api.rawrter.com`, чтобы Razor `/docs`, страницы моделей и общие integration-примеры показывали новый endpoint; проверить production fallback `PublicApiBaseUrl` и затронутые тесты. Подтвердить через новый hostname работу `/health`, `/v1/models`, non-streaming и streaming completions. Не менять namespace/project names, классы и переменные ради переименования, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние gRPC-контракты. Существующие 301-редиректы и legacy-hostnames не изменять — они вне задачи. Критерий: актуальные пользовательские страницы и публичная документация показывают только `api.rawrter.com` как рекомендуемый API endpoint; реальные запросы через него работают; `npm run docs:build`, тесты WebApp и обязательная сборка solution проходят.
 
 ---

@@ -48,7 +48,7 @@ www.rawrter.com, openrussianrouter.com, www.openrussianrouter.com, openrussiarou
 # api.openrussiarouter.com is the contract: every customer has it baked into their client's
 # base_url, so the API surface did not move with the 2026-08 site rename (RNM-002) and this
 # name must never be dropped. api.rawrter.com is the brand-aligned alias — documentation and
-# examples still print the openrussiarouter one, so nothing depends on it yet.
+# examples print the rawrter one since RNM-007, but legacy clients keep using the old name.
 #
 # Do NOT collapse either into api.{$RWT_PUBLIC_DOMAIN}: that expands to the rawrter name only
 # and leaves the contract hostname without a site block at all, killing every customer

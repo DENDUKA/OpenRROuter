@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.WebApp.Services;
 /// <c>PublicSiteBaseUrl</c> config → current request origin.
 /// Deliberately separate from <see cref="ApiBaseUrlResolver"/>: the API base URL is admin-
 /// configurable via <c>platform_settings.public_api_base_url</c> and points at the api subdomain
-/// (<c>https://api.openrussiarouter.com</c>), which must never leak into crawler metadata — search
+/// (<c>https://api.rawrter.com</c>), which must never leak into crawler metadata — search
 /// engines only index the canonical site. The site origin is a fixed deployment property (the apex
 /// domain), so it is read from configuration, not from the admin setting or the API base.
 /// </summary>

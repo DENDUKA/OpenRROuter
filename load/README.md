@@ -21,7 +21,7 @@ k6 version
    прода — 60 запросов/мин на ключ; один ключ задушит тест на 1 RPS. k6 раздаёт ключи
    round-robin по VU (`apiKeyForVU()` в `lib/config.js`).
 3. **`.env`:** `cp load/.env.example load/.env`, заполнить `K6_API_KEYS` (через запятую).
-4. **Сверить модель:** `GET https://api.openrussiarouter.com/v1/models` → `K6_MODEL_ID`
+4. **Сверить модель:** `GET https://api.rawrter.com/v1/models` → `K6_MODEL_ID`
    (дефолт `gemini-3.5-flash`).
 
 ## Сценарии

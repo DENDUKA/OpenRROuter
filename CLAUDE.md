@@ -417,6 +417,37 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 - Health-чек ноды 9Router: в dev-оверлее обязателен `RouterHealthChecks__HealthPath=/api/health`.
   Базовый дефолт `/v1/models` отдаёт 401 от f9router, и нода никогда не станет Healthy.
 
+### SSH-деплой на прод (201.51.6.246)
+
+Прод-сервер: `201.51.6.246`, пользователь `root`, репо в `/opt/orr`.
+
+**SSH-ключ** (без пароля): `~/.ssh/id_ed25519_opencode` (ed25519, fingerprint `SHA256:amHOzogynksICpE1pFQfJeu5wsDAk70e4uz3V9ghcBw`).
+Ключ уже в `~/.ssh/authorized_keys` на сервере. ssh.exe использует его через `-i`:
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "<команда>"
+```
+
+**Деплой всех сервисов** — `update-prod.sh` (git pull → sync compose → build → restart → health-gate → rollback при ошибке):
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "cd /opt/orr && bash update-prod.sh"
+```
+
+**Один сервис:**
+
+```powershell
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "cd /opt/orr && bash update-prod.sh api-gateway"
+```
+
+Допустимые имена: `auth-service`, `billing-service`, `control-plane`, `content-service`, `collector`, `api-gateway`, `webapp`.
+
+**Для подключения через plink** (PuTTY):
+
+```powershell
+& "C:\Program Files\PuTTY\plink.exe" -hostkey "ssh-ed25519 255 SHA256:0wUJ9GDwPh1tByk1H5m0o3sy2owKN2ZY7qOn7PBL5YA" -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" root@201.51.6.246 "<команда>"
+```
+
 Полная пошаговая регистрация ноды 9Router в kind-кластере (секреты, endpoint URL,
 маппинг `RouterNodeTokens`, ручной пуш ключа) — в [README.md](README.md), раздел
 «9Router node setup in Kubernetes». Локальный k8s-runbook — `docs/argo-k8s-dev-runbook.md`,

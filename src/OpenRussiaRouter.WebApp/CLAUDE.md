@@ -286,14 +286,66 @@ onclick ссылкой не считает**. Пока имена моделей
   **`wss:` пишется отдельной записью** (`yandexMetrikaWssHosts`, только `connect-src`): браузер
   не считает `https://host` покрывающим `wss://host`, и без неё в консоли висит
   «Connecting to 'wss://mc.yandex.com/solid.ws' violates … connect-src».
-- **Конверсионные события** — механизм `ViewData["AnalyticsEvents"]` (список имён): page model
-  кладёт флаг (обычно через `TempData` из POST-редиректа, см. `signup`/`email_verified`/
-  `api_key_created`; `topup_completed` — по query `?topup=success` на `/workspace/credits`),
-  layout в конце `<body>` рендерит inline-скрипт `gtag('event', …)` + `ym(…,'reachGoal',…)`
-  для каждого события. Пустой список/нет аналитики → ничего.
-- Прод-значения зашиты в `deploy/compose/compose.prod.yml` (Analytics__GoogleTagId /
-  Analytics__YandexCounterId) — это не секреты, они и так уходят в публичный HTML.
-  Полный runbook подключения — `docs/seo/webmasters-analytics-runbook.md`.
+- **Баннер согласия гейтится по любому счётчику, не только по GA.** Условие в `_Layout` —
+  `googleTagId || yandexCounterId`, а `gtag('consent','update',…)` внутри его обработчика обёрнут
+  в проверку `googleTagId`. Раньше и то и другое зависело только от GA: при работе одной Метрикой
+  баннер не показывался вовсе, `rwt_consent` никогда не выставлялся, и вебвизор с кликмапой
+  оставались выключены навсегда. Не «упрощать» обратно.
+- **`ecommerce:"dataLayer"` в init убран** — в `dataLayer` никто не пушил, а сама переменная
+  существует только внутри GA4-блока. Ценность цели едет параметрами `reachGoal`.
+- **Прод-значения продублированы** в `appsettings.json` и `deploy/compose/compose.prod.yml`
+  (`Analytics__*`) — это не секреты, они и так уходят в публичный HTML. **В
+  `appsettings.Development.json` секция намеренно пустая**: без неё любой локальный `dotnet run`
+  льёт хиты и достижения целей в боевой счётчик. Полный runbook подключения —
+  `docs/seo/webmasters-analytics-runbook.md`.
+
+### Цели (`Services/Analytics/`)
+
+**Единственный источник истины имён — [`AnalyticsGoals`](Services/Analytics/AnalyticsGoals.cs)**
+(константы + `All` + `Macro`). Инлайн-строк имён в коде быть не должно: счётчик матчит имя
+буквально, опечатку не поймает ни компилятор, ни отчёт. Раннбук — производное зеркало реестра.
+Не путать с `BuildingBlocks/Analytics/AnalyticsEvents` — то внутренний конвейер `analytics.events`,
+имена и формы у них разные намеренно.
+
+- **Серверные цели** — `PageModelBase.TrackGoal(...)` / `TrackGoals(...)`, накапливаются
+  **списком** в `ViewData[AnalyticsGoal.ViewDataKey]`. Именно накопление, а не одно поле:
+  раньше `email_verified` и `api_key_created` стояли под `else if` и были взаимоисключающими.
+- **Перенос через редирект** — [`AnalyticsTempData`](Services/Analytics/AnalyticsTempData.cs)
+  (`Enqueue`/`Dequeue`, `SetPendingTopUp`/`TakePendingTopUp`). Хранит **строку с JSON**:
+  `CookieTempDataProvider` умеет только примитивы и падает на сложном объекте. `Dequeue`/`Take*`
+  после чтения ещё и `Remove` — чтение через индексатор снимает ключ для следующего запроса,
+  `Remove` для текущего.
+- **Ошибочные ветки POST не должны звать GET-хендлер.** В `ApiKeys` загрузка данных вынесена
+  в `LoadAsync()`; проход через `OnGetAsync` съедал pending-цель и засчитывал конверсию на
+  странице с ошибкой валидации.
+- **`topup_completed` — с ценностью.** `OnPostTopUpAsync` кладёт `ProviderAmount`/`ProviderCurrency`
+  (реальную сумму списания, не набранную в форме), возврат на `?topup=success` забирает её,
+  ставит цель и **редиректит на чистый URL** — это и есть дедупликация по F5. Если cookie не
+  доехала, цель ставится **без** суммы: платёж состоялся, терять конверсию нельзя. Admin-only
+  чекаут Yandex Pay всегда идёт по этой ветке — это не баг.
+- **OAuth-регистрация закрывает `signup` + `email_verified` одним рендером** из
+  `ExternalCallback`, по новому полю `LoginResponse.is_new_user` (`auth.proto`, номер 6).
+  У внешнего провайдера нет шага подтверждения почты. Линковка провайдера к существующему
+  аккаунту новой регистрацией не считается.
+- **Клиентские микро-цели — атрибут `data-goal="<имя>"`**, один делегированный обработчик
+  в `_Layout`. Он **обязан быть в capture-фазе**: `copyModelId` вызывает `stopPropagation()`,
+  и слушатель на всплытии не увидит кликов по кнопкам копирования — самых ценных здесь целей.
+  Дедуп в пределах страницы — `dataset.goalFired`.
+- **Уводящие ссылки намеренно не задерживаются `preventDefault`** (сломало бы ctrl/средний клик
+  и добавило задержку каждому CTA). Клик в первые ~200 мс, пока `tag.js` не приехал, теряется —
+  осознанный размен, ни одна **макро**-цель на клик не завязана.
+- **Рендер — JSON-остров + статический раннер**: `<script type="application/json"
+  id="orr-analytics-goals">` c payload'ом (`AnalyticsGoalScript.BuildPayloadJson`) и скрипт,
+  в котором нет ни одного серверного значения. Разведение форматов (`value`/`currency` у GA4 vs
+  `order_price`/`currency` у Метрики) живёт **только** в раннере — page model называет сумму один
+  раз. Сериализация — `System.Text.Json` дефолтным энкодером (экранирует `<`, `>`, `&`, из
+  `<script>` не выйти) и инвариантным `decimal` (под `ru-RU` склейка строк дала бы `1500,50`
+  и синтаксическую ошибку JS).
+- **`setUserID` — только псевдоним** ([`AnalyticsUserIdProvider`](Services/Analytics/AnalyticsUserIdProvider.cs)),
+  только для авторизованных и только при `hasConsent`. Резолвить `UserPseudonymizer` из layout
+  напрямую **нельзя** — его фабрика бросает при пустом `ProductAnalytics:IdentitySalt`, а он пуст
+  в dev и тестах, так что упали бы все страницы; обёртка возвращает `null`. **Ротация соли рвёт
+  связь с уже накопленными профилями** в Метрике и GA4.
 
 ## Платежи ([Services/Payments](Services/Payments))
 

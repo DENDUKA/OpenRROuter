@@ -91,6 +91,12 @@ DI-расширения — [AuthServiceExtensions.cs](Application/Extensions/Au
 (`AddExternalLoginAsync`), иначе `UserAccount.CreateForExternalLogin` + `ExternalLogin`
 одной транзакцией. Аналитика `UserVerified` эмитится только на ветке нового аккаунта.
 
+**`LoginResult.IsNewUser` → `LoginResponse.is_new_user`** (proto, поле 6) выставляется по тому же
+условию, что и `UserVerified`: только когда этот вызов **создал** аккаунт. Линковка провайдера
+к существующему по email — не регистрация. По этому флагу WebApp засчитывает OAuth-регистрацию
+в воронку веб-аналитики; `Login` и `VerifyEmail` обязаны оставлять его `false`, иначе конверсия
+на парольном пути задвоится.
+
 ## Секреты и хеши
 
 - **Формат API-ключа**: `sk-or-<base64url(36 random bytes)>` (`SecretGenerator`, separator `-`).

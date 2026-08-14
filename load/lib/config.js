@@ -1,6 +1,6 @@
 import exec from 'k6/execution';
 
-const baseUrl = (__ENV.K6_BASE_URL || 'https://api.openrussiarouter.com').replace(/\/+$/, '');
+const baseUrl = (__ENV.K6_BASE_URL || 'https://api.rawrter.com').replace(/\/+$/, '');
 const modelId = __ENV.K6_MODEL_ID || 'gemini-3.5-flash';
 
 const apiKeys = (__ENV.K6_API_KEYS || '')

@@ -70,14 +70,14 @@
             <div class="ws-topup-actions">
                 @if (Model.IsAdmin && Model.YandexPayEnabled)
                 {
-                    <button type="button" class="btn-yapay" id="yandexPayBtn"
+                    <button type="button" class="btn-yapay" id="yandexPayBtn" data-goal="checkout_started"
                             title="Оплатить через Yandex Pay" aria-label="Оплатить через Yandex Pay"
                             onclick="yandexPayCheckout()">
                         <img class="btn-yapay-logo" src="~/icons/yandex-pay.png" alt="Yandex Pay" width="90" height="30" />
                         <span class="btn-yapay-status" hidden>Создание платежа…</span>
                     </button>
                 }
-                <button type="submit" class="btn btn-primary">@Localizer["Credits_TopUpSubmit"]</button>
+                <button type="submit" class="btn btn-primary" data-goal="checkout_started">@Localizer["Credits_TopUpSubmit"]</button>
             </div>
             @* Show the limit in the user's own currency first: it is enforced in USD, so someone
                typing rubles cannot tell from "$1.00" that 50 ₽ will bounce. *@

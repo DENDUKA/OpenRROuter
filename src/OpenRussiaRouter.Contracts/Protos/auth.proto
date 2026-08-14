@@ -56,6 +56,10 @@ message LoginResponse {
   string user_id = 3;
   string role = 4;
   string error_code = 5;
+  // True only when this call created the account, which today means an external-provider
+  // signup. Login and VerifyEmail never create a user and must leave it false: the password
+  // signup path already reports its own conversion, and setting it here would double-count.
+  bool is_new_user = 6;
 }
 
 message RegisterUserRequest {

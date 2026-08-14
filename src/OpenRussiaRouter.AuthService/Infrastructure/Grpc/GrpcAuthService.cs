@@ -58,6 +58,7 @@ public sealed class GrpcAuthService(
             SessionToken = result.Session!.Token,
             UserId = result.Session.UserId,
             Role = result.Session.Role.ToString()
+            // IsNewUser stays false: signing in never creates an account.
         };
     }
 
@@ -148,7 +149,8 @@ public sealed class GrpcAuthService(
             Succeeded = true,
             SessionToken = result.Session!.Token,
             UserId = result.Session.UserId,
-            Role = result.Session.Role.ToString()
+            Role = result.Session.Role.ToString(),
+            IsNewUser = result.IsNewUser
         };
     }
 
@@ -171,7 +173,8 @@ public sealed class GrpcAuthService(
             Succeeded = true,
             SessionToken = result.Session!.Token,
             UserId = result.Session.UserId,
-            Role = result.Session.Role.ToString()
+            Role = result.Session.Role.ToString(),
+            IsNewUser = result.IsNewUser
         };
     }
 

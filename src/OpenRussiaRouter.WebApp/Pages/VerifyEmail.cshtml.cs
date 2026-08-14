@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 
@@ -45,8 +46,7 @@ public class VerifyEmailModel : PageModelBase
             return RedirectToPage("/Workspace/ApiKeys");
 
         StatusMessage = TempData["StatusMessage"] as string;
-        if (TempData["AnalyticsSignup"] is true)
-            ViewData["AnalyticsEvents"] = new[] { "signup" };
+        TrackGoals(AnalyticsTempData.Dequeue(TempData));
         return Page();
     }
 
@@ -97,7 +97,7 @@ public class VerifyEmailModel : PageModelBase
                 _logger.LogWarning(ex, "Failed to grant start balance after email verification. UserId={UserId}", response.UserId);
             }
 
-            TempData["AnalyticsEmailVerified"] = true;
+            AnalyticsTempData.Enqueue(TempData, AnalyticsGoal.Named(AnalyticsGoals.EmailVerified));
             return RedirectToPage("/Workspace/ApiKeys");
         }
         catch (AuthException ex)

@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Pages;
 using OpenRussiaRouter.WebApp;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -101,6 +102,11 @@ public class MockModel : PageModelBase
             ErrorMessage = _localizer["Mock_CheckoutFailed"];
             return Page();
         }
+
+        // The dev mock returns here instead of /workspace/credits?topup=success, so it has to
+        // queue the goal itself — otherwise the paid path is untestable outside production.
+        AnalyticsTempData.Enqueue(TempData, AnalyticsGoal.Valued(
+            AnalyticsGoals.TopUpCompleted, payment.ProviderAmount, payment.ProviderCurrency));
 
         return RedirectToPage("/Workspace/PaymentSuccess");
     }

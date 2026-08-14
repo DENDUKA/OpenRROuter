@@ -83,7 +83,10 @@ public sealed class ExternalLoginService(
                 () => productAnalytics!.UserVerified(newlyCreatedUserId, provider));
         }
 
-        return LoginResult.Success(session);
+        // Same condition as the analytics emission above: only the branch that actually created
+        // an account counts as a signup. Linking a provider to an account that registered by
+        // password earlier is a login, and reporting it would inflate the funnel.
+        return LoginResult.Success(session, isNewUser: newlyCreatedUserId is not null);
     }
 
     private void EmitAnalytics(string eventName, Action emit)

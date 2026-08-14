@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Services.Payments;
@@ -62,10 +63,24 @@ public class CreditsModel(
         return currencyFormatter.Format(usdAmount, dc);
     }
 
-    public async Task OnGetAsync()
+    public async Task<IActionResult> OnGetAsync()
     {
+        // Return leg from the payment provider. Turn the query flag into a one-shot goal and
+        // bounce to the clean URL: with the flag gone from the address bar and TempData consumed
+        // on read, refreshing the page can no longer re-report the conversion.
         if (string.Equals(Request.Query["topup"], "success", StringComparison.OrdinalIgnoreCase))
-            ViewData["AnalyticsEvents"] = new[] { "topup_completed" };
+        {
+            var pending = AnalyticsTempData.TakePendingTopUp(TempData);
+            AnalyticsTempData.Enqueue(TempData, pending is { } paid
+                ? AnalyticsGoal.Valued(AnalyticsGoals.TopUpCompleted, paid.Amount, paid.Currency)
+                // The cookie did not make it back (cleared cookies, another browser, the
+                // admin-only Yandex Pay checkout that never sets it). The payment still happened,
+                // so count it — losing the value understates revenue, dropping the goal loses it.
+                : AnalyticsGoal.Named(AnalyticsGoals.TopUpCompleted));
+            return RedirectToPage();
+        }
+
+        TrackGoals(AnalyticsTempData.Dequeue(TempData));
 
         var userId = User.GetUserId();
         try
@@ -79,6 +94,7 @@ public class CreditsModel(
         }
 
         await LoadDataAsync(userId);
+        return Page();
     }
 
     public async Task<IActionResult> OnPostTopUpAsync()
@@ -117,6 +133,10 @@ public class CreditsModel(
                 userId, topUpAmount, SelectedCurrency,
                 providerName: null, clientToken,
                 HttpContext.RequestAborted);
+
+            // Carry the amount the provider will actually charge (not what was typed) over to the
+            // return leg, where it becomes the goal value.
+            AnalyticsTempData.SetPendingTopUp(TempData, result.ProviderAmount, result.ProviderCurrency);
 
             return Redirect(result.PayUrl);
         }

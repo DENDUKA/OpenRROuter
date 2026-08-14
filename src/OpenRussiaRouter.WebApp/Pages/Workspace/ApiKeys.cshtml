@@ -21,7 +21,7 @@
                 <strong>@Localizer["ApiKeys_SaveKey"]</strong>
                 <div class="ws-key-copy-row">
                     <div class="ws-key-preview" id="newKeyValue" data-testid="new-key-value">@Model.NewKeyValue</div>
-                    <button type="button" class="btn btn-sm btn-secondary ws-key-copy-btn" data-testid="btn-copy-key"
+                    <button type="button" class="btn btn-sm btn-secondary ws-key-copy-btn" data-testid="btn-copy-key" data-goal="copy_api_key"
                             onclick="copyApiKey(this, 'newKeyValue')" data-copied="@Localizer["Btn_Copied"]" title="@Localizer["Btn_Copy"]">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>

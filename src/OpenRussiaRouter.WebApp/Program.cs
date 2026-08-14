@@ -85,6 +85,9 @@ builder.Services.Configure<RequestLocalizationOptions>(o =>
 // Web-analytics tags (Yandex Metrika / Google Analytics 4). Emitted by the shared layout
 // only when a tag/counter id is configured; CSP hosts below are added the same way.
 builder.Services.Configure<AnalyticsOptions>(builder.Configuration.GetSection(AnalyticsOptions.SectionName));
+// Pseudonymous id for setUserID. Wrapped rather than resolving UserPseudonymizer directly: that
+// one throws on an empty ProductAnalytics:IdentitySalt, which would take down every page in dev.
+builder.Services.AddSingleton<AnalyticsUserIdProvider>();
 
 var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

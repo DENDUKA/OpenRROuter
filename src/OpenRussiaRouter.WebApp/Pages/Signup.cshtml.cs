@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 
@@ -82,7 +83,7 @@ public class SignupModel : PageModelBase
             }
 
             TempData["StatusMessage"] = _localizer["Auth_VerificationCodeSent", result.Email].Value;
-            TempData["AnalyticsSignup"] = true;
+            AnalyticsTempData.Enqueue(TempData, AnalyticsGoal.Named(AnalyticsGoals.Signup));
             return RedirectToPage("/VerifyEmail", new { email = result.Email });
         }
         catch (AuthException ex)

@@ -1,6 +1,7 @@
 @using OpenRussiaRouter.WebApp.Services.State
 @inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @inject Microsoft.Extensions.Options.IOptions<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsOptions> AnalyticsOptions
+@inject OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsUserIdProvider AnalyticsUserIds
 @{
     var path = Context.Request.Path.Value ?? "";
     var googleTagId = AnalyticsOptions.Value.GoogleTagId;
@@ -45,6 +46,13 @@
     // Cookie consent: read server-side to decide analytics loading mode.
     var hasConsent = Context.Request.Cookies.TryGetValue("orr_consent", out var consentVal)
         && consentVal == "1";
+
+    // Pseudonymous id for setUserID / GA user_id. Only for signed-in visitors who accepted
+    // analytics cookies, and never the raw user id — see AnalyticsUserIdProvider.
+    var analyticsUserId = hasConsent ? AnalyticsUserIds.Compute(user?.UserId) : null;
+    var analyticsUserIdJson = analyticsUserId is null
+        ? null
+        : System.Text.Json.JsonSerializer.Serialize(analyticsUserId);
 
     // ViewData["Title"] is often a LocalizedHtmlString (set from the view localizer); string-concat
     // on it prints the type name instead of the text, so render IHtmlContent titles to plain text.
@@ -183,6 +191,10 @@
         <script async src="https://www.googletagmanager.com/gtag/js?id=@googleTagId"></script>
         <script>
             gtag('js', new Date());
+            @if (analyticsUserIdJson is not null)
+            {
+                @:gtag('set', { 'user_id': @Html.Raw(analyticsUserIdJson) });
+            }
             gtag('config', '@googleTagId');
         </script>
     }
@@ -197,7 +209,13 @@
                 k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
             })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=@yandexCounterId', 'ym');
 
-            ym(@yandexCounterId, 'init', {ssr:true, webvisor:@(hasConsent ? "true" : "false"), clickmap:@(hasConsent ? "true" : "false"), ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true, consent:'@(hasConsent ? "advertising" : "no")'});
+            // No "ecommerce" option on purpose: goal value travels as reachGoal parameters
+            // (order_price/currency), and nothing ever pushed to a dataLayer here.
+            ym(@yandexCounterId, 'init', {ssr:true, webvisor:@(hasConsent ? "true" : "false"), clickmap:@(hasConsent ? "true" : "false"), referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true, consent:'@(hasConsent ? "advertising" : "no")'});
+            @if (analyticsUserIdJson is not null)
+            {
+                @:ym(@yandexCounterId, 'setUserID', @Html.Raw(analyticsUserIdJson));
+            }
         </script>
         <noscript><div><img src="https://mc.yandex.ru/watch/@yandexCounterId" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
         <!-- /Yandex.Metrika counter -->
@@ -456,29 +474,60 @@
         });
     </script>
     @{
-        // Conversion events set by page models (e.g. signup, email_verified). Fired once per
-        // page view into whichever counter is configured; nothing is emitted when the list is
-        // empty or no analytics is configured.
-        var analyticsEvents = ViewData["AnalyticsEvents"] as IEnumerable<string>;
-        var analyticsEventScript = "";
-        if (analyticsEvents is { } evts && evts.Any())
-        {
-            var eventsJson = System.Text.Json.JsonSerializer.Serialize(evts);
-            var calls = new List<string>();
-            if (!string.IsNullOrWhiteSpace(googleTagId))
-                calls.Add("gtag('event', name);");
-            if (!string.IsNullOrWhiteSpace(yandexCounterId))
-                calls.Add($"ym({yandexCounterId}, 'reachGoal', name);");
-            if (calls.Count > 0)
-            {
-                analyticsEventScript =
-                    "<script>(function () { var events = " + eventsJson + "; " +
-                    "events.forEach(function (name) { " + string.Join(" ", calls) + " }); })();</script>";
-            }
-        }
+        // Goal runner. The payload — counter ids, server-side goals, goal values — travels as an
+        // inert JSON island; the script below is a static string with no server values in it, so
+        // there is nothing to inject into. Source of truth for the names is AnalyticsGoals.
+        var analyticsGoalsJson = OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsGoalScript.BuildPayloadJson(
+            ViewData[OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsGoal.ViewDataKey]
+                as IEnumerable<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsGoal>,
+            googleTagId,
+            yandexCounterId,
+            analyticsUserId);
     }
-    @Html.Raw(analyticsEventScript)
-    @if (!hasConsent && !string.IsNullOrWhiteSpace(googleTagId))
+    @if (analyticsGoalsJson is not null)
+    {
+        <script type="application/json" id="orr-analytics-goals">@Html.Raw(analyticsGoalsJson)</script>
+        <script>
+            (function () {
+                var node = document.getElementById('orr-analytics-goals');
+                if (!node) return;
+                var cfg;
+                try { cfg = JSON.parse(node.textContent); } catch (e) { return; }
+
+                // The two counters spell goal value differently — GA4 wants value/currency,
+                // Metrika wants order_price/currency. That split lives here and nowhere else,
+                // so page models state the amount once.
+                function fire(name, value, currency) {
+                    if (!name) return;
+                    if (cfg.ga && typeof gtag === 'function') {
+                        gtag('event', name, value == null ? {} : { value: value, currency: currency || 'RUB' });
+                    }
+                    if (cfg.ym && typeof window.ym === 'function') {
+                        window.ym(Number(cfg.ym), 'reachGoal', name,
+                            value == null ? undefined : { order_price: value, currency: currency || 'RUB' });
+                    }
+                }
+
+                (cfg.goals || []).forEach(function (g) { fire(g.n, g.v, g.c); });
+
+                // Declarative micro goals. Capture phase on purpose: copyModelId() calls
+                // stopPropagation(), so a bubbling listener would never see clicks on the copy
+                // buttons — which are the goals worth the most here.
+                document.addEventListener('click', function (e) {
+                    var el = e.target && e.target.closest ? e.target.closest('[data-goal]') : null;
+                    if (!el) return;
+                    // One report per element per page view: hammering a copy button is one intent.
+                    if (el.dataset.goalFired === '1') return;
+                    el.dataset.goalFired = '1';
+                    fire(el.getAttribute('data-goal'));
+                }, true);
+            })();
+        </script>
+    }
+    @* Any configured counter needs consent, not just GA: gating this on googleTagId alone meant a
+       Metrika-only setup never showed the banner, never set rwt_consent, and left webvisor and the
+       click map switched off forever. *@
+    @if (!hasConsent && (!string.IsNullOrWhiteSpace(googleTagId) || !string.IsNullOrWhiteSpace(yandexCounterId)))
     {
         <div class="cookie-consent" id="cookie-consent" role="alert">
             <span class="cookie-consent-text">@Localizer["CookieConsent_Message"]</span>
@@ -505,7 +554,10 @@
                         .then(function() {
                             document.getElementById('cookie-consent').remove();
                             if (consent === '1') {
-                                gtag('consent', 'update', { analytics_storage: 'granted' });
+                                @if (!string.IsNullOrWhiteSpace(googleTagId))
+                                {
+                                    @:gtag('consent', 'update', { analytics_storage: 'granted' });
+                                }
                                 @if (!string.IsNullOrWhiteSpace(yandexCounterId))
                                 {
                                     @:ym(@yandexCounterId, 'setUserParams', { consent: 'advertising' });

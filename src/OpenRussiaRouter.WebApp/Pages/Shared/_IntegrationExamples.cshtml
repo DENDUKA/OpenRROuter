@@ -13,7 +13,7 @@
     </div>
 
     <div class="integ-panel active" data-panel="py">
-        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
+        <button type="button" class="integ-copy" data-goal="copy_code_sample" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>from openai import OpenAI
 
 client = OpenAI(
@@ -29,7 +29,7 @@ print(response.choices[0].message.content)</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="node">
-        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
+        <button type="button" class="integ-copy" data-goal="copy_code_sample" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>import OpenAI from "openai";
 
 const client = new OpenAI({
@@ -45,7 +45,7 @@ console.log(response.choices[0].message.content);</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="json">
-        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
+        <button type="button" class="integ-copy" data-goal="copy_code_sample" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>{
   "providers": {
     "openrussiarouter": {
@@ -68,7 +68,7 @@ console.log(response.choices[0].message.content);</code></pre>
     </div>
 
     <div class="integ-panel" data-panel="curl">
-        <button type="button" class="integ-copy" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
+        <button type="button" class="integ-copy" data-goal="copy_code_sample" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>curl @Model.V1BaseUrl/chat/completions \
   -H "Authorization: Bearer &lt;YOUR_API_KEY&gt;" \
   -H "Content-Type: application/json" \

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 
 namespace OpenRussiaRouter.WebApp.Pages.Login;
@@ -39,6 +40,17 @@ public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
             new ClaimsPrincipal(identity),
             new AuthenticationProperties { IsPersistent = true, ExpiresUtc = DateTimeOffset.UtcNow.AddDays(30) });
         await HttpContext.SignOutAsync("External");
+
+        if (loginResult.IsNewUser)
+        {
+            // This branch has no verification step — the provider already vouched for the
+            // mailbox — so both funnel steps close here. Without it every OAuth registration was
+            // invisible: the counters only ever saw signups that went through /verify-email.
+            AnalyticsTempData.Enqueue(
+                TempData,
+                AnalyticsGoal.Named(AnalyticsGoals.Signup),
+                AnalyticsGoal.Named(AnalyticsGoals.EmailVerified));
+        }
 
         return loginResult.Role == "Admin"
             ? RedirectToPage("/Admin/Index")

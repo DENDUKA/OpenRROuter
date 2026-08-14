@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp.Pages;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Pages;
@@ -83,6 +84,9 @@ public class SupportModel : PageModelBase
                 EmailTemplates.SupportRequestEmail(inbox, Input.Email, Input.Subject, Input.Message, BuildMeta()));
             _logger.LogInformation("Support request queued from {Email}.", Input.Email);
             Sent = true;
+            // Server-side rather than a data-goal on the submit button: a click also happens on
+            // failed validation and on a honeypot drop, neither of which is a support request.
+            TrackGoal(AnalyticsGoals.SupportSubmitted);
         }
         catch (Exception ex)
         {

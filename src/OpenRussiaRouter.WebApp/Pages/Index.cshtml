@@ -38,8 +38,8 @@
                 </div>
             }
             <div class="cta-row" aria-label="@Localizer["A11y_PrimaryActions"]">
-                <a href="/signup" class="btn btn-primary">@Localizer["Home_CtaSignup"]</a>
-                <a href="/models" class="btn btn-secondary">@Localizer["Home_CtaExplore"]</a>
+                <a href="/signup" class="btn btn-primary" data-goal="cta_signup_hero">@Localizer["Home_CtaSignup"]</a>
+                <a href="/models" class="btn btn-secondary" data-goal="cta_models_hero">@Localizer["Home_CtaExplore"]</a>
             </div>
         </div>
 
@@ -48,7 +48,7 @@
             <h2 id="quickstart-title">@Localizer["Home_QuickstartTitle"]</h2>
             <ol class="quickstart-list">
                 <li>
-                    <a class="quickstart-link" href="/signup">
+                    <a class="quickstart-link" href="/signup" data-goal="cta_signup_quickstart">
                         @if (Model.CurrentUser != null)
                         {
                             <span class="step-number step-done"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
@@ -131,7 +131,7 @@
             </p>
         </div>
         <div class="section-action">
-            <a href="/models" class="btn btn-secondary">@Localizer["Home_CtaExplore"]</a>
+            <a href="/models" class="btn btn-secondary" data-goal="cta_models_catalog">@Localizer["Home_CtaExplore"]</a>
         </div>
     </section>
 
@@ -195,8 +195,8 @@
             <p>@Localizer["Home_FinalLead"]</p>
         </div>
         <div class="cta-row">
-            <a href="/signup" class="btn btn-primary">@Localizer["Home_FinalCtaSignup"]</a>
-            <a href="/models" class="btn btn-secondary">@Localizer["Home_FinalCtaModels"]</a>
+            <a href="/signup" class="btn btn-primary" data-goal="cta_signup_final">@Localizer["Home_FinalCtaSignup"]</a>
+            <a href="/models" class="btn btn-secondary" data-goal="cta_models_final">@Localizer["Home_FinalCtaModels"]</a>
         </div>
     </section>
 </div>

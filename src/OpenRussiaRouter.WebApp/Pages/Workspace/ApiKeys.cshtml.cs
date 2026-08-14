@@ -5,6 +5,7 @@ using Microsoft.Extensions.Localization;
 using OpenRussiaRouter.Contracts.Auth;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.State;
@@ -39,11 +40,17 @@ public class ApiKeysModel(
 
     public async Task OnGetAsync()
     {
-        if (TempData["AnalyticsEmailVerified"] is true)
-            ViewData["AnalyticsEvents"] = new[] { "email_verified" };
-        else if (TempData["AnalyticsApiKeyCreated"] is true)
-            ViewData["AnalyticsEvents"] = new[] { "api_key_created" };
+        TrackGoals(AnalyticsTempData.Dequeue(TempData));
+        await LoadAsync();
+    }
 
+    /// <summary>
+    /// Loads everything the page renders. Error branches of the POST handlers call this rather
+    /// than <see cref="OnGetAsync"/>: going through the GET handler consumed the pending goals
+    /// and reported a conversion on a page that is showing a validation error.
+    /// </summary>
+    private async Task LoadAsync()
+    {
         try
         {
             Keys = await _authClient.ListApiKeysAsync(User.GetUserId(), cancellationToken: HttpContext.RequestAborted);
@@ -79,7 +86,7 @@ public class ApiKeysModel(
         if (string.IsNullOrWhiteSpace(Create.Name))
         {
             ModelState.AddModelError("Create.Name", _localizer["ApiKey_NameRequired"]);
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
         try
@@ -98,7 +105,7 @@ public class ApiKeysModel(
             {
                 _logger.LogWarning(ex, "Failed to push new API key to router nodes. UserId={UserId} KeyId={KeyId}", User.GetUserId(), result.ApiKeyId);
             }
-            TempData["AnalyticsApiKeyCreated"] = true;
+            AnalyticsTempData.Enqueue(TempData, AnalyticsGoal.Named(AnalyticsGoals.ApiKeyCreated));
             return RedirectToPage();
         }
         catch (AuthException ex)
@@ -111,14 +118,14 @@ public class ApiKeysModel(
                 "validation_failed" => _localizer["ApiKey_LimitInvalid"],
                 _ => _localizer["ApiKey_CreateFailed"]
             };
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to create API key. UserId={UserId} Name={Name}", User.GetUserId(), Create.Name);
             ErrorMessage = _localizer["ApiKey_CreateFailed"];
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
     }
@@ -128,7 +135,7 @@ public class ApiKeysModel(
         if (string.IsNullOrWhiteSpace(Rename.Name))
         {
             ModelState.AddModelError("Rename.Name", _localizer["ApiKey_RenameRequired"]);
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
         try
@@ -140,7 +147,7 @@ public class ApiKeysModel(
         {
             _logger.LogError(ex, "Failed to rename API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = _localizer["ApiKey_RenameFailed"];
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
     }
@@ -157,7 +164,7 @@ public class ApiKeysModel(
         {
             _logger.LogError(ex, "Failed to disable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = _localizer["ApiKey_DisableFailed"];
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
     }
@@ -174,7 +181,7 @@ public class ApiKeysModel(
         {
             _logger.LogError(ex, "Failed to enable API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = _localizer["ApiKey_EnableFailed"];
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
     }
@@ -194,7 +201,7 @@ public class ApiKeysModel(
         {
             _logger.LogError(ex, "Failed to delete API key. UserId={UserId} KeyId={KeyId}", User.GetUserId(), keyId);
             ErrorMessage = _localizer["ApiKey_DeleteFailed"];
-            await OnGetAsync();
+            await LoadAsync();
             return Page();
         }
     }

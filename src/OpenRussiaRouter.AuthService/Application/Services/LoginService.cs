@@ -84,10 +84,15 @@ public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerato
     }
 }
 
-public sealed record LoginResult(bool Succeeded, UserSession? Session, string? ErrorCode)
+/// <param name="IsNewUser">
+/// Whether this call created the account. Only the external-provider path can set it — signing in
+/// and verifying an email never create a user.
+/// </param>
+public sealed record LoginResult(bool Succeeded, UserSession? Session, string? ErrorCode, bool IsNewUser = false)
 {
 
-    public static LoginResult Success(UserSession session) => new(true, session, null);
+    public static LoginResult Success(UserSession session, bool isNewUser = false) =>
+        new(true, session, null, isNewUser);
 
     public static LoginResult Failed(string errorCode) => new(false, null, errorCode);
 }

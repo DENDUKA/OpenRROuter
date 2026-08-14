@@ -1,11 +1,14 @@
 using System.Security.Claims;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Email;
 using OpenRussiaRouter.WebApp.Pages;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Tests;
@@ -103,8 +106,67 @@ public class SupportModelTests
         {
             PageContext = new PageContext
             {
-                HttpContext = new DefaultHttpContext { User = user }
+                HttpContext = new DefaultHttpContext { User = user },
+                ViewData = new ViewDataDictionary(
+                    new EmptyModelMetadataProvider(), new ModelStateDictionary())
             }
         };
+    }
+
+    private static IReadOnlyList<string> GoalsOn(SupportModel model) =>
+        (model.ViewData[AnalyticsGoal.ViewDataKey] as IEnumerable<AnalyticsGoal>)?
+            .Select(g => g.Name).ToList() ?? [];
+
+    [Fact]
+    public async Task OnPostAsync_valid_submission_reports_the_support_goal()
+    {
+        var queue = new EmailDispatchQueue();
+        var model = CreateModel(queue, inbox: "support@orr.com");
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "user@example.com",
+            Subject = "Help please",
+            Message = "Something is broken.",
+        };
+
+        await model.OnPostAsync();
+
+        GoalsOn(model).Should().Equal(AnalyticsGoals.SupportSubmitted);
+    }
+
+    [Fact]
+    public async Task OnPostAsync_honeypot_reports_no_goal()
+    {
+        var queue = new EmailDispatchQueue();
+        var model = CreateModel(queue, inbox: "support@orr.com");
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "bot@spam.com",
+            Subject = "Buy now",
+            Message = "spam",
+            Website = "http://spam.example",
+        };
+
+        await model.OnPostAsync();
+
+        // The bot sees the same success screen, but a dropped submission is not a conversion.
+        GoalsOn(model).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task OnPostAsync_without_configured_inbox_reports_no_goal()
+    {
+        var queue = new EmailDispatchQueue();
+        var model = CreateModel(queue, inbox: null);
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "user@example.com",
+            Subject = "Hi",
+            Message = "Question.",
+        };
+
+        await model.OnPostAsync();
+
+        GoalsOn(model).Should().BeEmpty("nothing was delivered, so nothing converted");
     }
 }

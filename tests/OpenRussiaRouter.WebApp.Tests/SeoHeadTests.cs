@@ -252,7 +252,48 @@ public sealed class SeoHeadTests
         var body = await response.Content.ReadAsStringAsync();
         body.Should().NotContain("googletagmanager.com");
         body.Should().NotContain("mc.yandex.ru");
-        body.Should().NotContain("AnalyticsEvents");
+        body.Should().NotContain("orr-analytics-goals");
+        body.Should().NotContain("reachGoal");
+    }
+
+    [Fact]
+    public async Task Get_Root_AnalyticsConfigured_EmitsGoalRunnerAndLandingCtaHooks()
+    {
+        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("orr-analytics-goals");
+        body.Should().Contain("'reachGoal'");
+        foreach (var goal in new[]
+                 {
+                     "cta_signup_hero", "cta_signup_quickstart", "cta_signup_final",
+                     "cta_models_hero", "cta_models_catalog", "cta_models_final",
+                 })
+        {
+            body.Should().Contain($"data-goal=\"{goal}\"", $"the landing must expose the {goal} hook");
+        }
+    }
+
+    [Fact]
+    public async Task Get_Root_MetrikaOnly_StillShowsConsentBannerWithoutGtag()
+    {
+        // Gating the banner on the GA tag alone left a Metrika-only setup unable to ever record
+        // consent, which silently disabled webvisor and the click map.
+        using var factory = CreateFactory(googleAnalytics: false, yandexMetrika: true);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        body.Should().Contain("cookie-consent");
+        // The Accept handler used to call gtag unconditionally, so with GA off it threw and the
+        // banner never went away — leaving rwt_consent unset forever.
+        body.Should().NotContain("gtag('consent'");
     }
 
     [Fact]

@@ -7,6 +7,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.WebApp.Pages.Workspace;
 using OpenRussiaRouter.WebApp;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using System.Security.Claims;
 
@@ -88,7 +90,7 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     [Fact]
     public async Task TopUp_WithoutConsent_DoesNotCreateCheckout()
     {
-        var (model, billing) = CreateCreditsModel(acceptLegal: false);
+        var (model, billing, _) = CreateCreditsModel(acceptLegal: false);
 
         var result = await model.OnPostTopUpAsync();
 
@@ -100,7 +102,7 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     [Fact]
     public async Task TopUp_WithConsent_CreatesCheckout()
     {
-        var (model, billing) = CreateCreditsModel(acceptLegal: true);
+        var (model, billing, _) = CreateCreditsModel(acceptLegal: true);
         model.TopUpAmountRaw = "10.50";
 
         var result = await model.OnPostTopUpAsync();
@@ -114,7 +116,7 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     [Fact]
     public async Task TopUp_WithInvalidInvariantAmount_DoesNotCreateCheckout()
     {
-        var (model, billing) = CreateCreditsModel(acceptLegal: true);
+        var (model, billing, _) = CreateCreditsModel(acceptLegal: true);
         model.TopUpAmountRaw = "not-an-amount";
 
         var result = await model.OnPostTopUpAsync();
@@ -125,30 +127,83 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task Get_WithTopUpSuccessQuery_FiresTopUpCompletedEvent()
+    public async Task Get_WithTopUpSuccessQuery_RedirectsAndQueuesValuedGoal()
     {
-        var (model, _) = CreateCreditsModel(acceptLegal: true);
+        var (model, _, _) = CreateCreditsModel(acceptLegal: true);
+        AnalyticsTempData.SetPendingTopUp(model.TempData, 1500.50m, "RUB");
         model.PageContext!.HttpContext!.Request.QueryString =
             new QueryString("?topup=success");
 
-        await model.OnGetAsync();
+        var result = await model.OnGetAsync();
 
-        var events = model.ViewData["AnalyticsEvents"] as IEnumerable<string>;
-        Assert.NotNull(events);
-        Assert.Equal(["topup_completed"], events);
+        // Bouncing to the clean URL is what stops F5 from re-reporting the conversion.
+        Assert.IsType<RedirectToPageResult>(result);
+        var goal = Assert.Single(AnalyticsTempData.Dequeue(model.TempData));
+        Assert.Equal(AnalyticsGoals.TopUpCompleted, goal.Name);
+        Assert.Equal(1500.50m, goal.Value);
+        Assert.Equal("RUB", goal.Currency);
     }
 
     [Fact]
-    public async Task Get_WithoutTopUpSuccessQuery_FiresNoEvent()
+    public async Task Get_WithTopUpSuccessQuery_WithoutPendingAmount_StillQueuesGoal()
     {
-        var (model, _) = CreateCreditsModel(acceptLegal: true);
+        var (model, _, _) = CreateCreditsModel(acceptLegal: true);
+        model.PageContext!.HttpContext!.Request.QueryString =
+            new QueryString("?topup=success");
+
+        var result = await model.OnGetAsync();
+
+        Assert.IsType<RedirectToPageResult>(result);
+        // The payment happened; losing the carrier cookie may cost the value but never the goal.
+        var goal = Assert.Single(AnalyticsTempData.Dequeue(model.TempData));
+        Assert.Equal(AnalyticsGoals.TopUpCompleted, goal.Name);
+        Assert.Null(goal.Value);
+    }
+
+    [Fact]
+    public async Task Get_WithPendingGoal_ReportsItOnceAndNotOnRefresh()
+    {
+        var (model, _, scope) = CreateCreditsModel(acceptLegal: true);
+        AnalyticsTempData.Enqueue(model.TempData, AnalyticsGoal.Named(AnalyticsGoals.TopUpCompleted));
 
         await model.OnGetAsync();
 
-        Assert.Null(model.ViewData["AnalyticsEvents"]);
+        var goals = model.ViewData[AnalyticsGoal.ViewDataKey] as IEnumerable<AnalyticsGoal>;
+        Assert.Equal(AnalyticsGoals.TopUpCompleted, Assert.Single(goals!).Name);
+
+        // Refresh: the goal was consumed, so the second render reports nothing.
+        var (refreshed, _, _) = CreateCreditsModel(acceptLegal: true, tempData: scope.Next(model.TempData));
+        await refreshed.OnGetAsync();
+        Assert.Null(refreshed.ViewData[AnalyticsGoal.ViewDataKey]);
     }
 
-    private static (CreditsModel Model, CheckoutFakeBilling Billing) CreateCreditsModel(bool acceptLegal)
+    [Fact]
+    public async Task Get_WithoutTopUpSuccessQuery_FiresNoGoal()
+    {
+        var (model, _, _) = CreateCreditsModel(acceptLegal: true);
+
+        var result = await model.OnGetAsync();
+
+        Assert.IsType<PageResult>(result);
+        Assert.Null(model.ViewData[AnalyticsGoal.ViewDataKey]);
+    }
+
+    [Fact]
+    public async Task TopUp_WithConsent_RemembersChargedAmountForTheReturnLeg()
+    {
+        var (model, _, _) = CreateCreditsModel(acceptLegal: true);
+        model.TopUpAmountRaw = "10.50";
+
+        await model.OnPostTopUpAsync();
+
+        var pending = AnalyticsTempData.TakePendingTopUp(model.TempData);
+        Assert.NotNull(pending);
+        Assert.Equal("RUB", pending!.Value.Currency);
+    }
+
+    private static (CreditsModel Model, CheckoutFakeBilling Billing, TempDataScope Scope) CreateCreditsModel(
+        bool acceptLegal,
+        TempDataDictionary? tempData = null)
     {
         var billing = new CheckoutFakeBilling();
         var provider = new StubProvider("mock");
@@ -159,6 +214,13 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
             billing,
             registry,
             NullLogger<PaymentCheckoutService>.Instance);
+
+        var httpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim(ClaimTypes.NameIdentifier, "user-1")],
+                "test"))
+        };
 
         var model = new CreditsModel(
             billing,
@@ -174,18 +236,18 @@ public class LegalConsentTests : IClassFixture<WebAppFactory>
             AcceptLegal = acceptLegal,
             PageContext = new Microsoft.AspNetCore.Mvc.RazorPages.PageContext
             {
-                HttpContext = new DefaultHttpContext
-                {
-                    User = new ClaimsPrincipal(new ClaimsIdentity(
-                        [new Claim(ClaimTypes.NameIdentifier, "user-1")],
-                        "test"))
-                },
+                HttpContext = httpContext,
                 ViewData = new Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary(
                     new Microsoft.AspNetCore.Mvc.ModelBinding.EmptyModelMetadataProvider(),
                     new Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary())
             }
         };
 
-        return (model, billing);
+        // The page now carries goals through TempData; without this the bare DefaultHttpContext
+        // has no ITempDataDictionaryFactory to resolve one from and every handler throws.
+        var scope = new TempDataScope(httpContext);
+        model.TempData = tempData ?? scope.Create();
+
+        return (model, billing, scope);
     }
 }

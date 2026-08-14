@@ -5,8 +5,7 @@ namespace OpenRussiaRouter.WebApp.Tests;
 
 /// <summary>
 /// In-memory <see cref="ITempDataProvider"/> so page-model unit tests can exercise the
-/// POST-redirect-GET handoff without a cookie or data protection. Keeping one provider instance
-/// across two dictionaries reproduces the real round trip: what one request saves, the next loads.
+/// POST-redirect-GET handoff without cookies or data protection.
 /// </summary>
 internal sealed class InMemoryTempDataProvider : ITempDataProvider
 {
@@ -19,18 +18,26 @@ internal sealed class InMemoryTempDataProvider : ITempDataProvider
         _store = new Dictionary<string, object>(values, StringComparer.Ordinal);
 }
 
-internal static class TestTempData
+/// <summary>
+/// One backing store shared by successive <see cref="TempDataDictionary"/> instances, so
+/// <see cref="Next"/> reproduces a real redirect: only keys the previous request left unread
+/// survive, which is exactly what makes a queued goal fire once and not twice.
+/// </summary>
+internal sealed class TempDataScope(HttpContext context)
 {
-    public static TempDataDictionary Create(HttpContext context) =>
-        new(context, new InMemoryTempDataProvider());
+    private readonly InMemoryTempDataProvider _provider = new();
 
-    /// <summary>Persists <paramref name="tempData"/> and returns what the next request would see.</summary>
-    public static TempDataDictionary RoundTrip(TempDataDictionary tempData, HttpContext context)
+    public TempDataDictionary Create()
     {
-        var provider = new InMemoryTempDataProvider();
-        provider.SaveTempData(context, tempData);
-        var next = new TempDataDictionary(context, provider);
-        next.Load();
-        return next;
+        var tempData = new TempDataDictionary(context, _provider);
+        tempData.Load();
+        return tempData;
+    }
+
+    /// <summary>Saves <paramref name="current"/> and returns what the next request would see.</summary>
+    public TempDataDictionary Next(ITempDataDictionary current)
+    {
+        current.Save();
+        return Create();
     }
 }

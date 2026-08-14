@@ -23,6 +23,9 @@ public sealed class ExternalLoginServiceTests
         result.Session.Should().NotBeNull();
         result.Session!.Token.Should().StartWith("orr_session_");
         result.Session.Role.Should().Be(UserRole.User);
+        // This is the only branch that creates an account, and the only one the web funnel may
+        // count as a signup.
+        result.IsNewUser.Should().BeTrue();
 
         var user = await _repo.GetUserByEmailAsync("new@example.com");
         user.Should().NotBeNull();
@@ -51,6 +54,7 @@ public sealed class ExternalLoginServiceTests
         result.Succeeded.Should().BeTrue();
         result.Session!.UserId.Should().Be("user-existing");
         result.Session.Role.Should().Be(UserRole.Admin);
+        result.IsNewUser.Should().BeFalse("signing in again is not a registration");
     }
 
     [Fact]
@@ -68,6 +72,8 @@ public sealed class ExternalLoginServiceTests
         result.Succeeded.Should().BeTrue();
         result.Session!.UserId.Should().Be("user-invited");
         result.Session.Role.Should().Be(UserRole.Admin);
+        // Linking a provider to an account that already existed would double-count the funnel.
+        result.IsNewUser.Should().BeFalse();
 
         var link = await _repo.GetExternalLoginAsync("google", "google-sub-invited");
         link.Should().NotBeNull();

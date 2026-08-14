@@ -37,15 +37,21 @@ openrussianrouter.com, www.openrussianrouter.com, openrussiarouter.com, www.open
 	redir https://rawrter.com{uri} permanent
 }
 
-# OpenAI-compatible LLM API. The hostname is a LITERAL and deliberately still on the OLD
-# domain: every customer has https://api.openrussiarouter.com baked into their client's
-# base_url, so the API surface did not move with the 2026-08 site rename (RNM-002).
-# Do NOT write api.{$RWT_PUBLIC_DOMAIN} here — that resolves to api.rawrter.com, leaves the
-# real API hostname without a site block at all, and kills every customer integration on the
-# next deploy. Do NOT add api.rawrter.com either: it has no A record, so Caddy would
-# fail-loop on ACME HTTP-01 for a name that is not supposed to exist.
-# Requires the A record api.openrussiarouter.com → 201.51.6.246 (added 2026-06-24).
-api.openrussiarouter.com {
+# OpenAI-compatible LLM API, served on BOTH hostnames. Both are LITERALS on purpose.
+#
+# api.openrussiarouter.com is the contract: every customer has it baked into their client's
+# base_url, so the API surface did not move with the 2026-08 site rename (RNM-002) and this
+# name must never be dropped. api.rawrter.com is the brand-aligned alias — documentation and
+# examples still print the openrussiarouter one, so nothing depends on it yet.
+#
+# Do NOT collapse either into api.{$RWT_PUBLIC_DOMAIN}: that expands to the rawrter name only
+# and leaves the contract hostname without a site block at all, killing every customer
+# integration on the next deploy.
+#
+# Each name needs its own A record → 201.51.6.246 before Caddy can complete the ACME HTTP-01
+# challenge (api.openrussiarouter.com since 2026-06-24, api.rawrter.com since 2026-08-14);
+# adding a name here without the record makes Caddy fail-loop on cert issuance for it.
+api.openrussiarouter.com, api.rawrter.com {
 	encode zstd gzip
 	reverse_proxy api-gateway:8080
 }

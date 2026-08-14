@@ -169,39 +169,6 @@
 > Редиректы с legacy-доменов не добавляются и не удаляются: существующий 301-контур остаётся
 > как есть, его состояние не является критерием задач RNM-*.
 > Существующие задачи SEO-* и архив не переписываются.
-> Порядок: RNM-001 → RNM-002 → RNM-003/RNM-004 → RNM-005 → RNM-007 → RNM-008/RNM-009 → RNM-006.
-
-## RNM-005 — Внешний переход
-- status: in_progress
-- blocked_reason: инфраструктурная часть выполнена; остаток требует входа в кабинеты Rollypay / OAuth / вебмастеров / аналитики
-- category: surface
-- priority: high
-- created: 2026-08-13T17:26:20Z
-- started: 2026-08-14T11:00:00Z
-- completed:
-- progress: СДЕЛАНО 2026-08-14 — DNS на Porkbun (A `@`/`www`/`api` → 201.51.6.246, URL Forwarding Not Set); `RWT_PUBLIC_DOMAIN=rawrter.com` в `/opt/orr/.env` (бэкап `.env.bak-pre-rawrter`); прод задеплоен `update-prod.sh` (9645de25 → c0579acb), контейнер `docs` пересобран отдельно (VitePress зашивает домен на build-time, скрипт его не трогает); Let's Encrypt выдал сертификаты на `rawrter.com`, `www.rawrter.com`, `api.rawrter.com` и оба старых имени. Проверено снаружи: апекс/`/docs/`/`/en/`/обе sitemap/`/legal/*` = 200, `www.rawrter.com` и старый апекс = 301 с сохранением path+query, `api.openrussiarouter.com` и `api.rawrter.com` = 200, canonical/og/hreflang указывают на `rawrter.com`. Почта: домен аутентифицирован в Brevo, отправитель переключён на `noreply@rawrter.com`. СДЕЛАНО 2026-08-14 (подтверждено владельцем): ресурс `rawrter.com` подтверждён DNS-записью в Google Search Console и Яндекс.Вебмастере; старый ресурс `openrussiarouter.com` также подтверждён DNS-записью в том же аккаунте GSC и Вебмастере — предусловия инструмента смены адреса выполнены (оба ресурса в одном аккаунте, 301 со старого апекса на месте); обе sitemap (`/sitemap.xml` и `/docs/sitemap.xml`) отправлены в обе системы; связка GSC ↔ GA4 сделана; заведены новые счётчики под `rawrter.com` — GA4 `G-38042Y9GW4` и Метрика `111582266`, ID обновлены в `appsettings.json`, `deploy/compose/compose.prod.yml`, `docs/mandatory/privacy-policy.md` и `docs/seo/webmasters-analytics-runbook.md` (структура сниппетов в `_Layout.cshtml` не менялась — уже совпадает с новыми тегами, включая consent-aware webvisor/clickmap). СДЕЛАНО 2026-08-14 (подтверждено владельцем): переезд завершён в Google Search Console («Смена адреса»: `openrussiarouter.com` → `rawrter.com`) и Яндекс.Вебмастере («Переезд сайта»); 301 со старого апекса сохранён. ОСТАЛОСЬ (нужны кабинеты): вебхук Rollypay на `https://rawrter.com/webhook/rollypay` + боевой топап на минималку; redirect URI в Yandex OAuth (`/OAuth-yandex`); фиксация результатов в runbook. Отдельно: `Support:Inbox` остаётся на старом домене, пока в Porkbun не заведён алиас `support@rawrter.com`.
-- desc: Внешняя конфигурация без переименования внутренностей. Настроить DNS и TLS для `rawrter.com` и при необходимости `www.rawrter.com`; старый apex отключить после проверки, redirect не создавать. В production `.env` установить `ORR_PUBLIC_DOMAIN=rawrter.com`. Добавить новые Google/Yandex OAuth callback URL на apex, заменить Rollypay webhook и success/fail redirect URL, создать ресурсы `rawrter.com` в Google Search Console и Яндекс Вебмастере, отправить обе sitemap, обновить адрес сайта в GA4 и Метрике. Не менять DNS/TLS `api.openrussiarouter.com`, `PublicApiBaseUrl`, API-примеры, Brevo sender domain и адреса `noreply@openrussiarouter.com`/`support@openrussiarouter.com`. Критерий: сайт и внешние callbacks работают через `rawrter.com`, API и почта продолжают работать по прежним адресам; результаты проверки зафиксированы в актуальном runbook.
-
-## RNM-006 — Проверка публичной поверхности
-- status: blocked
-- blocked_reason: выполнять после RNM-005 и RNM-007..RNM-009; для части внешних проверок нужен доступ к production и кабинетам интеграций
-- category: surface
-- priority: high
-- created: 2026-08-13T17:26:20Z
-- started:
-- completed:
-- desc: Финальный surface-аудит бренда `Rawrter`, сайта `https://rawrter.com` и API `https://api.rawrter.com`. В репозитории и на production проверить отображаемый бренд, ссылки сайта, canonical, hreflang, robots, обе sitemap, Open Graph/Twitter, JSON-LD, юридические страницы, публичную документацию и все пользовательские API-примеры. Проверить ключевые ru/en URL и `/docs/`, OAuth callback, платёжные redirect/webhook URL, `/health`, `/v1/models`, non-streaming и streaming completions через `api.rawrter.com`. Подтвердить прямой HTTPS 200 для URL из sitemap и запрет индексации API-origin. Исторические документы и архив задач не считать частью актуальной пользовательской поверхности. Существующие 301-редиректы не изменять и не использовать как критерий завершения. Отдельными отрицательными проверками подтвердить, что namespace/project names, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние контракты не переименованы. Выполнить `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1`, `dotnet test OpenRussiaRouter.sln --no-build -nr:false -m:1`, `npm run docs:build` и проверку production Compose-конфига. Критерий: посетители и поисковики видят `Rawrter` на `rawrter.com`, вся рекомендуемая API-поверхность использует `api.rawrter.com`, crawler-сигналы согласованы, проверки зелёные.
-
----
-
-## RNM-007 — Публичный домен API
-- status: in_progress
-- category: surface
-- priority: high
-- created: 2026-08-14T15:26:07Z
-- started: 2026-08-14T18:00:00Z
-- completed:
-- progress: СДЕЛАНО 2026-08-14 (локальная часть): docs-site (ru+en: index, api/authentication, api/reference) переведён на `https://api.rawrter.com` — curl, Python/Node.js-примеры и base URL; обновлены комментарии `SiteBaseUrlResolver.cs`, `deploy/compose/Caddyfile` и `.env.example` (api.rawrter.com — рекомендуемый, legacy hostname остаётся контрактом). WebApp `/docs` и integration-примеры динамические (`ApiBaseUrlResolver` ← `platform_settings.public_api_base_url`), код не менялся. `npm run docs:build`, `dotnet build OpenRussiaRouter.sln`, `dotnet test OpenRussiaRouter.WebApp.Tests` (375/375), `docker compose -f compose.prod.yml config` — зелёные. Проверено снаружи через `api.rawrter.com`: `/health`=200, `/v1/models`=200 (реальные модели), `POST /v1/chat/completions` и `/stream`=401 без ключа (маршруты работают). ОСТАЛОСЬ (нужен доступ к проду 201.51.6.246 — пароль root из PROD-ACCESS.md не подходит, SSH только на старый хост 31.76.49.2): выставить `platform_settings.public_api_base_url=https://api.rawrter.com` в БД/админке прода, проверить прод-fallback `PublicApiBaseUrl` в `/opt/orr/.env`, задеплоить (пересборка docs-контейнера + WebApp через update-prod.sh), прогнать non-streaming и streaming completions с реальным API-ключом. Прод-документация rawrter.com/docs пока показывает старый endpoint — пересоберётся при деплое.
-- desc: Перевести видимую пользователям API-поверхность с `https://api.openrussiarouter.com` на `https://api.rawrter.com`. Обновить API reference, curl-команды, Python/Node.js-примеры и `base_url` в русской и английской документации `docs-site`. В production установить `platform_settings.public_api_base_url=https://api.rawrter.com`, чтобы Razor `/docs`, страницы моделей и общие integration-примеры показывали новый endpoint; проверить production fallback `PublicApiBaseUrl` и затронутые тесты. Подтвердить через новый hostname работу `/health`, `/v1/models`, non-streaming и streaming completions. Не менять namespace/project names, классы и переменные ради переименования, `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*` и внутренние gRPC-контракты. Существующие 301-редиректы и legacy-hostnames не изменять — они вне задачи. Критерий: актуальные пользовательские страницы и публичная документация показывают только `api.rawrter.com` как рекомендуемый API endpoint; реальные запросы через него работают; `npm run docs:build`, тесты WebApp и обязательная сборка solution проходят.
+> Порядок: RNM-001 → RNM-002 → RNM-003/RNM-004 → RNM-008/RNM-009. RNM-005, RNM-007, RNM-006 выполнены 2026-08-14.
 
 ---

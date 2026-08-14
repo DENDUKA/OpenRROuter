@@ -151,3 +151,30 @@
 - completed: 2026-08-14T21:15:31.6031770+03:00
 - desc: Закрыть `https://api.rawrter.com` от поисковой индексации, не меняя публичный OpenAI-совместимый API-контракт. Добавить доступный на API-host `/robots.txt` с `User-agent: *` и `Disallow: /` и/или единый `X-Robots-Tag: noindex, nofollow` для публичных API-ответов, включая `/v1/models` и health endpoints. Решение не должно менять JSON-body, HTTP-коды, streaming, authentication или CORS API. Существующие 301-редиректы и другие hostnames не изменять. Критерий: поисковики получают однозначный запрет индексации `api.rawrter.com`, а `/health`, `/v1/models` и completions сохраняют прежнее поведение; затронутые тесты и обязательная сборка solution проходят. Реализовано через API middleware и публичный `/robots.txt`, добавлены интеграционные проверки.
 
+## RNM-005 — Внешний переход
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started: 2026-08-14T11:00:00Z
+- completed: 2026-08-14T23:30:00Z
+- desc: Внешняя конфигурация без переименования внутренностей. DNS, TLS, сертификаты, GSC/Яндекс Вебмастер, GA4/Метрика, Brevo, OAuth redirect URIs — всё на `rawrter.com`. Сделано (2026-08-14): DNS A-записи на 201.51.6.246; `RWT_PUBLIC_DOMAIN=rawrter.com` в .env; Let's Encrypt сертификаты; GSC/Яндекс — смена адреса завершена; GA4 `G-38042Y9GW4` + Метрика `111582266`; Brevo `noreply@rawrter.com`; Яндекс OAuth redirect URI `https://rawrter.com/OAuth-yandex`; Rollypay webhook `https://rawrter.com/webhook/rollypay` зарегистрирован в кассе; `PAYMENTS_ACTIVE_PROVIDER=rollypay` + ключи в .env; `www.rawrter.com` → 301 на apex. Финальная проверка 2026-08-14: SSH 201.51.6.246, `docker compose ps` все контейнеры Up, health endpoints 200, canonical/og/hreflang/sitemap/robots на `rawrter.com`.
+
+## RNM-007 — Публичный домен API
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-14T15:26:07Z
+- started: 2026-08-14T18:00:00Z
+- completed: 2026-08-14T23:30:00Z
+- desc: Перевести видимую пользователям API-поверхность с `api.openrussiarouter.com` на `api.rawrter.com`. Сделано: docs-site (ru+en) переведён на `api.rawrter.com`; K6-тесты обновлены; добавлен unit-тест `ApiBaseUrlResolverTests` (3 теста); `platform_settings.public_api_base_url` обновлён в БД прода на `https://api.rawrter.com` (SSH 201.51.6.246); WebApp перезапущен для сброса кеша; docs-контейнер пересобран; `api.rawrter.com/health`=200, `/v1/models`=200; `api.rawrter.com/robots.txt`=Disallow: /; `dotnet build` 0 ошибок, `dotnet test` 1101 зелёный, `npm run docs:build` зелёный. Legacy `api.openrussiarouter.com` сохранён как контракт для существующих клиентов.
+
+## RNM-006 — Проверка публичной поверхности
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started: 2026-08-14T23:00:00Z
+- completed: 2026-08-14T23:30:00Z
+- desc: Финальный surface-аудит. Результаты (2026-08-14, SSH 201.51.6.246): canonical на `/` = `https://rawrter.com/`; hreflang ru/en/x-default (3 шт.); og:url + og:image = rawrter.com; sitemap = 83 URL; docs sitemap = 200; robots.txt site = Allow + Disallow служебных; robots.txt API = `Disallow: /`; www.rawrter.com = 301; /docs/ = 200; OAuth Yandex callback = 500 (ожидаемо — ClientSecret не задан в .env); dotnet build 0 ошибок; dotnet test 1101 зелёный; npm run docs:build зелёный. Контракты `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, namespace'ы, почтовые адреса, `api.openrussiarouter.com` как legacy не изменены.
+

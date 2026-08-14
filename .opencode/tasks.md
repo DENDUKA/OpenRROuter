@@ -195,13 +195,14 @@
 - desc: docs-site и актуальная пользовательская документация. Заменить отображаемый бренд на `Rawrter`, а ссылки на панель, главную и `/legal/*` — на `https://rawrter.com`. Обновить title, description, навигацию и обычный текст, не меняя техническое содержание API. Явно сохранить `https://api.openrussiarouter.com` во всех API reference, curl-командах, Python/Node.js примерах и `base_url`; не менять почтовые адреса, `sk-or-*` и `ORR/*`. Не редактировать `.opencode/tasks-done.md`, существующие блоки SEO-* и датированные исторические планы/specs. Критерий: документация использует бренд `Rawrter` и новый адрес сайта, API-примеры побайтно сохраняют прежний endpoint; `npm run docs:build` проходит.
 
 ## RNM-005 — Внешний переход
-- status: blocked
-- blocked_reason: нужен доступ к DNS, OAuth, платёжным, аналитическим и SEO-кабинетам; выполнять после RNM-001..RNM-004
+- status: in_progress
+- blocked_reason: инфраструктурная часть выполнена; остаток требует входа в кабинеты Rollypay / OAuth / вебмастеров / аналитики
 - category: surface
 - priority: high
 - created: 2026-08-13T17:26:20Z
-- started:
+- started: 2026-08-14T11:00:00Z
 - completed:
+- progress: СДЕЛАНО 2026-08-14 — DNS на Porkbun (A `@`/`www`/`api` → 201.51.6.246, URL Forwarding Not Set); `RWT_PUBLIC_DOMAIN=rawrter.com` в `/opt/orr/.env` (бэкап `.env.bak-pre-rawrter`); прод задеплоен `update-prod.sh` (9645de25 → c0579acb), контейнер `docs` пересобран отдельно (VitePress зашивает домен на build-time, скрипт его не трогает); Let's Encrypt выдал сертификаты на `rawrter.com`, `www.rawrter.com`, `api.rawrter.com` и оба старых имени. Проверено снаружи: апекс/`/docs/`/`/en/`/обе sitemap/`/legal/*` = 200, `www.rawrter.com` и старый апекс = 301 с сохранением path+query, `api.openrussiarouter.com` и `api.rawrter.com` = 200, canonical/og/hreflang указывают на `rawrter.com`. Почта: домен аутентифицирован в Brevo, отправитель переключён на `noreply@rawrter.com`. ОСТАЛОСЬ (нужны кабинеты): вебхук Rollypay на `https://rawrter.com/webhook/rollypay` + боевой топап на минималку; redirect URI в Yandex OAuth (`/OAuth-yandex`) и, если включён, Google (`/signin-google`); ресурсы `rawrter.com` в Google Search Console и Яндекс.Вебмастере + обе карты + инструмент смены адреса (для него 301 со старого апекса надо СОХРАНИТЬ, не удалять); адрес сайта в GA4 и Метрике. Отдельно: `Support:Inbox` остаётся на старом домене, пока в Porkbun не заведён алиас `support@rawrter.com`.
 - desc: Внешняя конфигурация без переименования внутренностей. Настроить DNS и TLS для `rawrter.com` и при необходимости `www.rawrter.com`; старый apex отключить после проверки, redirect не создавать. В production `.env` установить `ORR_PUBLIC_DOMAIN=rawrter.com`. Добавить новые Google/Yandex OAuth callback URL на apex, заменить Rollypay webhook и success/fail redirect URL, создать ресурсы `rawrter.com` в Google Search Console и Яндекс Вебмастере, отправить обе sitemap, обновить адрес сайта в GA4 и Метрике. Не менять DNS/TLS `api.openrussiarouter.com`, `PublicApiBaseUrl`, API-примеры, Brevo sender domain и адреса `noreply@openrussiarouter.com`/`support@openrussiarouter.com`. Критерий: сайт и внешние callbacks работают через `rawrter.com`, API и почта продолжают работать по прежним адресам; результаты проверки зафиксированы в актуальном runbook.
 
 ## RNM-006 — Проверка поверхности

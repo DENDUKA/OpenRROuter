@@ -31,9 +31,15 @@
 	reverse_proxy webapp:8080
 }
 
-# Typo-guard alt domain → 301 to the canonical domain (path + query preserved).
-# Caddy auto-provisions a Let's Encrypt cert for these names too.
-openrussianrouter.com, www.openrussianrouter.com, openrussiarouter.com, www.openrussiarouter.com {
+# Everything that is not the canonical apex → 301 to it (path + query preserved): the
+# pre-rename domain and its www, the typo-guard domain and its www, and the canonical
+# domain's own www. Caddy auto-provisions a Let's Encrypt cert for each of these names,
+# so every name listed here needs an A record → 201.51.6.246; a name with an A record but
+# NOT listed here is worse than either (it resolves to the box and then fails the TLS
+# handshake, because Caddy has no certificate for a host it does not serve).
+# Keep the openrussiarouter redirects: Search Console / Вебмастер "change of address"
+# needs live 301s, and dropping them throws away the indexed history.
+www.rawrter.com, openrussianrouter.com, www.openrussianrouter.com, openrussiarouter.com, www.openrussiarouter.com {
 	redir https://rawrter.com{uri} permanent
 }
 

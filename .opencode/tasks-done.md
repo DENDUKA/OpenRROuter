@@ -110,3 +110,25 @@
 - started: 2026-08-13T19:08:43Z
 - completed: 2026-08-13T19:21:20Z
 - desc: Перевести только публичный сайт с `https://openrussiarouter.com` на `https://rawrter.com`. Обновить актуальные значения и ссылки в WebApp (`PublicSiteBaseUrl`, юридический `ORR_PUBLIC_DOMAIN`, robots и связанные тесты), docs-site, `deploy/compose`, `PROD-ACCESS.md`, актуальных deploy/runbook-файлах и комментариях, описывающих текущий прод. Имя переменной `ORR_PUBLIC_DOMAIN` сохранить; её production-значение должно стать `rawrter.com`. Caddy развязать так, чтобы apex обслуживался на `rawrter.com`, а API продолжал обслуживаться только на `api.openrussiarouter.com`; не создавать `api.rawrter.com`. Удалить redirect-блоки старого/опечаточного сайта, новые редиректы не добавлять. Не менять `PublicApiBaseUrl`, API-примеры, почтовые адреса и API DNS. Критерий: рабочие ссылки сайта используют `rawrter.com`, `api.openrussiarouter.com` сохранён как явное исключение; `docker compose -f deploy/compose/compose.prod.yml config` валиден и обязательная сборка solution проходит. Сделано (2026-08-13): Caddy развязан на `rawrter.com` (apex + docs), API закреплён за `api.openrussiarouter.com` без `api.rawrter.com`, redirect-блок старого/опечаточного сайта удалён; обновлены `deploy/compose/{Caddyfile,compose.prod.yml,.env.example}`, `PROD-ACCESS.md`, `docs/DEPLOYMENTS.md`, `src/OpenRussiaRouter.WebApp/CLAUDE.md`, комментарий монтажа `docs-site/.vitepress/config.mts`; SEO-сигналы `config.mts` и runbook вебмастеров остались задачам RNM-003/RNM-005; сборка solution и `OpenRussiaRouter.WebApp.Tests` (375/375) зелёные.
+
+
+## RNM-003 — SEO-контур
+- status: done
+- category: surface
+- priority: high
+- created: 2026-08-13T17:26:20Z
+- started: 2026-08-14T00:30:00Z
+- completed: 2026-08-14T00:50:00Z
+- desc: WebApp + docs-site. Перед правкой WebApp прочитать его `CLAUDE.md`. Перевести crawler-facing сигналы сайта на `https://rawrter.com`: canonical, `og:url`, `og:image`, Twitter image, JSON-LD, взаимные hreflang ru/en/x-default, `<loc>` динамической `/sitemap.xml`, hostname `/docs/sitemap.xml` и обе записи Sitemap в `/robots.txt`. Сохранить структуру локалей и `/docs/`, не подменять сайт API-origin'ом. Обновить `SeoHeadTests`, `SitemapEndpointTests`, `RobotsTxtTests` и другие затронутые ожидания. Не менять `https://api.openrussiarouter.com` в API-контракте и примерах. Критерий: сгенерированный SEO-контур содержит `rawrter.com` для сайта и документации, API-исключение сохранено; тесты WebApp, обязательная сборка solution и `npm run docs:build` в `docs-site` проходят.
+
+
+## RNM-004 — Публичная документация
+- status: done
+- category: surface
+- priority: medium
+- created: 2026-08-13T17:26:20Z
+- started: 2026-08-14T00:30:00Z
+- completed: 2026-08-14T00:50:00Z
+- desc: docs-site и актуальная пользовательская документация. Заменить отображаемый бренд на `Rawrter`, а ссылки на панель, главную и `/legal/*` — на `https://rawrter.com`. Обновить title, description, навигацию и обычный текст, не меняя техническое содержание API. Явно сохранить `https://api.openrussiarouter.com` во всех API reference, curl-командах, Python/Node.js примерах и `base_url`; не менять почтовые адреса, `sk-or-*` и `ORR/*`. Не редактировать `.opencode/tasks-done.md`, существующие блоки SEO-* и датированные исторические планы/specs. Критерий: документация использует бренд `Rawrter` и новый адрес сайта, API-примеры побайтно сохраняют прежний endpoint; `npm run docs:build` проходит.
+
+

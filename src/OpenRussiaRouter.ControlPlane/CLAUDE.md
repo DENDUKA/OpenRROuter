@@ -79,7 +79,7 @@ cleanup группирует удалённые лизы по ноде и уме
 
 ## Capability-aware routing
 
-- **`modelId` здесь — это `RouterModelId`** (`glm-4.7`), а не публичный `ModelId` (`RWT/GLM-4.7`):
+- **`modelId` здесь — это `RouterModelId`** (`glm-4.7`), а не публичный `ModelId` (`ORR/GLM-4.7`):
   store наполняется тем, что ноды сами репортят. ApiGateway передаёт `balanceResult.RouterModelId`
   (`GatewayPipeline.AuthorizeAndAcquireLeaseAsync`); передать публичный id = ни одна нода не сматчится.
 - `NodeModelCapabilityStore` ([файл](Application/Services/NodeModelCapabilityStore.cs)) —

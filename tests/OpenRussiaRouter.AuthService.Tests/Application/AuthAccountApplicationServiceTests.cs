@@ -17,7 +17,7 @@ public sealed class AuthAccountApplicationServiceTests
 
         var created = await service.CreateInviteAsync("USER@example.com", UserRole.User, "admin-1", now.AddDays(1), now);
 
-        created.RawToken.Should().StartWith("rwt_invite_");
+        created.RawToken.Should().StartWith("orr_invite_");
         repository.Invites.Should().ContainSingle();
         created.RawToken.Should().NotBe(repository.Invites.Single().TokenHash);
         repository.Invites.Single().Email.Should().Be("user@example.com");

@@ -144,7 +144,7 @@ public class NodePollingWorkerTests
 
         var catalog = quotaStore.Current.ModelCatalog;
         catalog.Should().HaveCount(3);
-        catalog.Should().ContainSingle(e => e.ModelId == "RWT/On")
+        catalog.Should().ContainSingle(e => e.ModelId == "ORR/On")
             .Which.Should().BeEquivalentTo(new
             {
                 NodeId = "n1",
@@ -153,7 +153,7 @@ public class NodePollingWorkerTests
                 RouterModelId = "m-on",
                 BillingState = ModelBillingStates.Enabled
             });
-        catalog.Should().ContainSingle(e => e.ModelId == "RWT/Off")
+        catalog.Should().ContainSingle(e => e.ModelId == "ORR/Off")
             .Which.BillingState.Should().Be(ModelBillingStates.Disabled);
         catalog.Should().ContainSingle(e => e.ModelId == "m-unknown")
             .Which.Should().BeEquivalentTo(new
@@ -173,7 +173,7 @@ public class NodePollingWorkerTests
 
         quotaStore.Current.ActiveModelMeasurements
             .Should().ContainSingle()
-            .Which.ModelId.Should().Be("RWT/On");
+            .Which.ModelId.Should().Be("ORR/On");
     }
 
     /// <summary>Нода отдаёт три модели: включённую у нас, выключенную и вовсе неизвестную каталогу.</summary>
@@ -221,8 +221,8 @@ public class NodePollingWorkerTests
 
         var billingModels = CatalogModels(
         [
-            new BillingCatalogModel("RWT/On", "m-on", true),
-            new BillingCatalogModel("RWT/Off", "m-off", false)
+            new BillingCatalogModel("ORR/On", "m-on", true),
+            new BillingCatalogModel("ORR/Off", "m-off", false)
         ]);
 
         return new NodePollingWorker(

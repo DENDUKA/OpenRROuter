@@ -177,14 +177,14 @@ public static class AlertWebhookEndpoint
                 }
             }
 
-            var subject = $"[RWT {status.ToUpperInvariant()}] {count} alert(s): {firstName}";
+            var subject = $"[ORR {status.ToUpperInvariant()}] {count} alert(s): {firstName}";
             return (subject, sb.ToString());
         }
         catch (JsonException ex)
         {
             logger.LogWarning(ex, "Alert webhook payload was not valid JSON — emailing raw body.");
             var truncated = rawBody.Length > 4000 ? rawBody[..4000] + "…(truncated)" : rawBody;
-            return ("[RWT alert] (unparsed payload)", truncated);
+            return ("[ORR alert] (unparsed payload)", truncated);
         }
     }
 

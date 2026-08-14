@@ -34,13 +34,13 @@ public class EmailTemplatesTests
     public void SupportRequestEmail_goes_to_inbox_and_replies_to_submitter()
     {
         var msg = EmailTemplates.SupportRequestEmail(
-            inbox: "support@rwt.com",
+            inbox: "support@orr.com",
             fromEmail: "user@example.com",
             subject: "Cannot top up",
             message: "My card was declined.",
             meta: "Account: userId=u1, role=User");
 
-        msg.To.Should().Be("support@rwt.com");
+        msg.To.Should().Be("support@orr.com");
         msg.ReplyTo.Should().Be("user@example.com");
         msg.Subject.Should().Contain("Cannot top up");
         msg.TextBody.Should().Contain("user@example.com");

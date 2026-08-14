@@ -45,20 +45,20 @@ public class LegalDocumentServiceTests : IDisposable
     public void GetDocumentHtml_ReplacesAllLegalPlaceholders()
     {
         var markdown = """
-            # Публичная оферта {{ORR_SERVICE_NAME}}
+            # Публичная оферта {{RWT_SERVICE_NAME}}
 
-            Дата: {{ORR_DOCUMENT_DATE}}
-            Домен: {{ORR_PUBLIC_DOMAIN}}
-            Оператор: {{ORR_OPERATOR_NAME}}
-            Реквизиты: {{ORR_OPERATOR_DETAILS}}
-            Поддержка: {{ORR_SUPPORT_CONTACT}}
+            Дата: {{RWT_DOCUMENT_DATE}}
+            Домен: {{RWT_PUBLIC_DOMAIN}}
+            Оператор: {{RWT_OPERATOR_NAME}}
+            Реквизиты: {{RWT_OPERATOR_DETAILS}}
+            Поддержка: {{RWT_SUPPORT_CONTACT}}
             """;
         File.WriteAllText(Path.Combine(_testDocsDirectory, "public-offer.md"), markdown);
 
         var html = _service.GetDocumentHtml("public-offer.md");
 
         Assert.NotNull(html);
-        Assert.DoesNotContain("{{ORR_", html);
+        Assert.DoesNotContain("{{RWT_", html);
         Assert.Contains("Rawrter", html);
         Assert.Contains("05.08.2026", html);
         Assert.Contains("https://rawrter.com", html);

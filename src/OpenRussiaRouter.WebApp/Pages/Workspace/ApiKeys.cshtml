@@ -40,8 +40,8 @@
             var text = document.getElementById(elementId).textContent.trim();
             var span = btn.querySelector('span');
             var original = span.textContent;
-            // rwtCopyText is defined globally in _Layout.cshtml (HTTP-safe fallback).
-            rwtCopyText(text).then(function () {
+            // orrCopyText is defined globally in _Layout.cshtml (HTTP-safe fallback).
+            orrCopyText(text).then(function () {
                 span.textContent = btn.getAttribute('data-copied') || 'Copied!';
                 btn.disabled = true;
                 setTimeout(function () { span.textContent = original; btn.disabled = false; }, 2000);
@@ -159,14 +159,14 @@
 
                                       @if (k.DisabledAtUtc == null)
                                       {
-                                          <form method="post" asp-page-handler="DisableKey" onsubmit="rwtToggleSubmitting(this)">
+                                          <form method="post" asp-page-handler="DisableKey" onsubmit="orrToggleSubmitting(this)">
                                               <input type="hidden" name="keyId" value="@k.Id" />
                                               <button type="submit" class="btn btn-sm btn-outline-warning ws-toggle-btn">@Localizer["ApiKeys_Disable"]</button>
                                           </form>
                                       }
                                       else
                                       {
-                                          <form method="post" asp-page-handler="EnableKey" onsubmit="rwtToggleSubmitting(this)">
+                                          <form method="post" asp-page-handler="EnableKey" onsubmit="orrToggleSubmitting(this)">
                                               <input type="hidden" name="keyId" value="@k.Id" />
                                               <button type="submit" class="btn btn-sm btn-outline-success ws-toggle-btn">@Localizer["ApiKeys_Enable"]</button>
                                           </form>
@@ -240,7 +240,7 @@
         });
     });
 
-    function rwtToggleSubmitting(form) {
+    function orrToggleSubmitting(form) {
         var btn = form.querySelector('button[type="submit"]');
         if (!btn) return;
         // Зафиксировать текущую ширину, чтобы текст "…" не менял габариты

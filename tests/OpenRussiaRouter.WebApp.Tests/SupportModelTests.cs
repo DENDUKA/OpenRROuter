@@ -16,7 +16,7 @@ public class SupportModelTests
     public async Task OnPostAsync_valid_submission_enqueues_one_email_to_inbox_with_reply_to()
     {
         var queue = new EmailDispatchQueue();
-        var model = CreateModel(queue, inbox: "support@rwt.com");
+        var model = CreateModel(queue, inbox: "support@orr.com");
         model.Input = new SupportModel.InputModel
         {
             Email = "user@example.com",
@@ -28,7 +28,7 @@ public class SupportModelTests
 
         model.Sent.Should().BeTrue();
         queue.Reader.TryRead(out var msg).Should().BeTrue();
-        msg!.To.Should().Be("support@rwt.com");
+        msg!.To.Should().Be("support@orr.com");
         msg.ReplyTo.Should().Be("user@example.com");
         msg.TextBody.Should().Contain("Something is broken.");
         queue.Reader.TryRead(out _).Should().BeFalse();
@@ -38,7 +38,7 @@ public class SupportModelTests
     public async Task OnPostAsync_honeypot_filled_drops_submission_silently()
     {
         var queue = new EmailDispatchQueue();
-        var model = CreateModel(queue, inbox: "support@rwt.com");
+        var model = CreateModel(queue, inbox: "support@orr.com");
         model.Input = new SupportModel.InputModel
         {
             Email = "bot@spam.com",
@@ -75,7 +75,7 @@ public class SupportModelTests
     public void OnGet_prefills_email_for_signed_in_user()
     {
         var queue = new EmailDispatchQueue();
-        var model = CreateModel(queue, inbox: "support@rwt.com", signedInEmail: "me@example.com");
+        var model = CreateModel(queue, inbox: "support@orr.com", signedInEmail: "me@example.com");
 
         model.OnGet();
 

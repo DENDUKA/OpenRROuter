@@ -7,8 +7,8 @@ namespace OpenRussiaRouter.E2ETests;
 /// <summary>
 /// E2E: admin opens Sync from 9Router, imports two new models, sees them in billing catalog.
 ///
-/// Required: same credentials as other E2E tests (RWT_E2E_USER_EMAIL / RWT_E2E_USER_PASSWORD).
-/// Optional: RWT_E2E_STUB_ADDRESS — address the ControlPlane process can reach the stub HTTP server
+/// Required: same credentials as other E2E tests (ORR_E2E_USER_EMAIL / ORR_E2E_USER_PASSWORD).
+/// Optional: ORR_E2E_STUB_ADDRESS — address the ControlPlane process can reach the stub HTTP server
 ///           (defaults to "localhost"; set to "host.docker.internal" when running in containers).
 ///
 /// The stub node is registered and deleted within the test. Imported models accumulate in the
@@ -23,7 +23,7 @@ public sealed class ModelSyncTests(PlaywrightFixture fixture, ITestOutputHelper 
     {
         if (!TestConfiguration.IsConfigured)
         {
-            output.WriteLine("E2E credentials are not configured; set RWT_E2E_USER_EMAIL and RWT_E2E_USER_PASSWORD or e2e.local.json.");
+            output.WriteLine("E2E credentials are not configured; set ORR_E2E_USER_EMAIL and ORR_E2E_USER_PASSWORD or e2e.local.json.");
             return;
         }
 

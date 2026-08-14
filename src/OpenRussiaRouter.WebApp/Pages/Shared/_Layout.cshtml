@@ -29,7 +29,7 @@
     var avatarLetter = displayName.Length > 0 ? displayName[0].ToString().ToUpper() : "U";
 
     // Active display currency for the topbar switcher (mirrors the saved profile choice via cookie).
-    var activeCcy = Context.Request.Cookies.TryGetValue("rwt_ccy", out var ccy)
+    var activeCcy = Context.Request.Cookies.TryGetValue("orr_ccy", out var ccy)
         && ccy is "RUB" or "USD" or "EUR" ? ccy : "RUB";
     string CcyBtnClass(string code) => code == activeCcy ? "ccy-btn active" : "ccy-btn";
 
@@ -43,7 +43,7 @@
     var returnUrlForSwitchers = (Context.Request.PathBase + path + Context.Request.QueryString).ToString();
 
     // Cookie consent: read server-side to decide analytics loading mode.
-    var hasConsent = Context.Request.Cookies.TryGetValue("rwt_consent", out var consentVal)
+    var hasConsent = Context.Request.Cookies.TryGetValue("orr_consent", out var consentVal)
         && consentVal == "1";
 
     // ViewData["Title"] is often a LocalizedHtmlString (set from the view localizer); string-concat
@@ -388,7 +388,7 @@
         // Copy text to the clipboard. The async Clipboard API only exists in a secure
         // context (HTTPS or localhost); ORR is served over plain HTTP, so fall back to
         // the legacy execCommand path there. Returns a Promise so callers can show feedback.
-        function rwtCopyText(text) {
+        function orrCopyText(text) {
             if (navigator.clipboard && window.isSecureContext) {
                 return navigator.clipboard.writeText(text);
             }
@@ -411,17 +411,17 @@
 
         // Copy a model id from any "Copy Model ID" button (used on /models and /admin/models).
         // Both buttons carry a clipboard <svg>, so swap it to a checkmark as confirmation.
-        var RWT_COPIED_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        var ORR_COPIED_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
         function copyModelId(event) {
             event.preventDefault();
             event.stopPropagation();
             var btn = event.currentTarget;
             var id = btn.getAttribute('data-model-id');
             if (!id) return;
-            rwtCopyText(id).then(function () {
+            orrCopyText(id).then(function () {
                 var original = btn.innerHTML;
                 btn.classList.add('copied');
-                btn.innerHTML = RWT_COPIED_SVG;
+                btn.innerHTML = ORR_COPIED_SVG;
                 setTimeout(function () {
                     btn.innerHTML = original;
                     btn.classList.remove('copied');

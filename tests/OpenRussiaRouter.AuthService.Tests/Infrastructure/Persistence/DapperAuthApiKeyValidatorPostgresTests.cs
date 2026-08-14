@@ -32,13 +32,13 @@ public sealed class DapperAuthApiKeyValidatorPostgresTests
             insert into auth.api_keys
                 (id, user_id, name, prefix, secret_hash, created_at_utc)
             values
-                ('key-1', 'user-1', 'default', 'rwt_test', @SecretHash, @NowUtc);
+                ('key-1', 'user-1', 'default', 'orr_test', @SecretHash, @NowUtc);
             """,
-            new { NowUtc = DateTimeOffset.UtcNow, SecretHash = hasher.Hash("rwt_test_secret") });
+            new { NowUtc = DateTimeOffset.UtcNow, SecretHash = hasher.Hash("orr_test_secret") });
         var repository = new AuthRepository(new AuthDbConnectionFactory(connectionString));
         var validator = new DapperAuthApiKeyValidator(repository, hasher);
 
-        var result = await validator.ValidateAsync("rwt_test_secret");
+        var result = await validator.ValidateAsync("orr_test_secret");
 
         result.IsValid.Should().BeTrue();
         result.UserId.Should().Be("user-1");

@@ -27,8 +27,8 @@ public static class TokenUsageExtractor
             }
 
             // 9RFork inflates standard usage fields by BUFFER_TOKENS (~2000) for CLI
-            // context tracking. Real counts are duplicated under `_rwt_raw` for billing.
-            if (usageElement.TryGetProperty("_rwt_raw", out var rawElement) &&
+            // context tracking. Real counts are duplicated under `_orr_raw` for billing.
+            if (usageElement.TryGetProperty("_orr_raw", out var rawElement) &&
                 rawElement.ValueKind == JsonValueKind.Object)
             {
                 usage = BuildUsage(

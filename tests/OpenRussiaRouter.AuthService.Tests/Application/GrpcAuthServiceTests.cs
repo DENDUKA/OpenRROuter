@@ -23,7 +23,7 @@ public sealed class GrpcAuthServiceTests
             new ExternalLoginService(repo, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
-        var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "rwt_test" }, context: null!);
+        var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_test" }, context: null!);
 
         response.IsValid.Should().BeTrue();
         response.UserId.Should().Be("user-1");
@@ -44,7 +44,7 @@ public sealed class GrpcAuthServiceTests
             new ExternalLoginService(repo2, new SecretGenerator()),
             NullLogger<GrpcAuthService>.Instance);
 
-        var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "rwt_bad" }, context: null!);
+        var response = await service.ValidateApiKey(new ValidateApiKeyRequest { RawKey = "orr_bad" }, context: null!);
 
         response.IsValid.Should().BeFalse();
         response.UserId.Should().Be(string.Empty);

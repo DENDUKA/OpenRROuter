@@ -187,14 +187,14 @@
 
 @section Scripts {
     <script>
-        // Copy a docs value (base URL etc). rwtCopyText is defined globally in _Layout.cshtml.
+        // Copy a docs value (base URL etc). orrCopyText is defined globally in _Layout.cshtml.
         function copyDocsValue(event) {
             var btn = event.currentTarget;
             var text = btn.getAttribute('data-copy');
             if (!text) return;
             var originalText = btn.getAttribute('data-original') || btn.textContent;
             btn.setAttribute('data-original', originalText);
-            rwtCopyText(text).then(function () {
+            orrCopyText(text).then(function () {
                 btn.textContent = btn.getAttribute('data-copied') || 'Copied';
                 setTimeout(function () { btn.textContent = originalText; }, 1500);
             }).catch(function (err) { console.error('Copy failed:', err); });

@@ -101,7 +101,7 @@ var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticat
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
     })
-    .AddCookie("External", o => o.Cookie.Name = ".rwt.ext");
+    .AddCookie("External", o => o.Cookie.Name = ".orr.ext");
 
 // Register Google external login only when credentials are configured.
 // Without this guard the OAuth handler fails validation ("ClientId option must be provided")

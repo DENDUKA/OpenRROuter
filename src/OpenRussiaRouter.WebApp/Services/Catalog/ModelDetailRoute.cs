@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.WebApp.Services.Catalog;
 /// <remarks>
 /// Canonical form is <c>{provider} = ModelInfo.ProviderId</c> and <c>{slug} =</c> the model id after
 /// its last slash — the public id is <b>not</b> <c>"{provider}/{slug}"</c>: the catalog holds both bare
-/// ids (<c>claude-opus-4-8</c>) and prefixed ones (<c>RWT/Gemini-3.1-Pro</c>), so the id can never be
+/// ids (<c>claude-opus-4-8</c>) and prefixed ones (<c>ORR/Gemini-3.1-Pro</c>), so the id can never be
 /// reassembled from the two route segments. <see cref="Matches"/> additionally accepts the historical
 /// segments (provider display name, the id prefix, the whole id in the slug) so that already-published
 /// links resolve and get redirected onto the canonical URL instead of 404-ing.

@@ -425,12 +425,12 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             PublicModels = new[]
             {
                 new GatewayPublicModel(
-                    "RWT/GPT-5.5",
+                    "ORR/GPT-5.5",
                     "GPT-5.5",
                     SupportsReasoning: true,
                     AllowedReasoningEfforts: ["low", "medium", "high"],
                     DefaultReasoningEffort: "medium"),
-                new GatewayPublicModel("RWT/gpt-4o", "GPT-4o")
+                new GatewayPublicModel("ORR/gpt-4o", "GPT-4o")
             }
         };
         var client = CreateClient(new StubAuthenticator(), billing);
@@ -444,7 +444,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         var data = doc.RootElement.GetProperty("data").EnumerateArray().ToList();
         data.Should().HaveCount(2);
 
-        var reasoning = data.Single(e => e.GetProperty("id").GetString() == "RWT/GPT-5.5");
+        var reasoning = data.Single(e => e.GetProperty("id").GetString() == "ORR/GPT-5.5");
         // OpenRouter-style top-level `reasoning` object present with the canonical fields.
         reasoning.GetProperty("reasoning").GetProperty("mandatory").GetBoolean().Should().BeFalse();
         reasoning.GetProperty("reasoning").GetProperty("supported_efforts")
@@ -458,7 +458,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         parameters.Should().BeInAscendingOrder(StringComparer.Ordinal);
 
         // Non-reasoning model: top-level `reasoning` field must be entirely absent (not null).
-        var plain = data.Single(e => e.GetProperty("id").GetString() == "RWT/gpt-4o");
+        var plain = data.Single(e => e.GetProperty("id").GetString() == "ORR/gpt-4o");
         plain.TryGetProperty("reasoning", out _).Should().BeFalse();
         plain.GetProperty("supported_parameters")
             .EnumerateArray().Select(t => t.GetString()).Should().NotContain("reasoning");

@@ -174,7 +174,7 @@ public sealed class EmailSignupTests
         var repo = new InMemoryAuthRepository();
         var secretHasher = new Sha256SecretHasher();
         var codeHasher = new HmacSecretHasher(System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes("rwt-dev-code-hmac-key-do-not-use-in-production")));
+            System.Text.Encoding.UTF8.GetBytes("orr-dev-code-hmac-key-do-not-use-in-production")));
         var secretGenerator = new SecretGenerator();
         var passwordHasher = new Pbkdf2PasswordHasher();
         var service = new AuthAccountApplicationService(

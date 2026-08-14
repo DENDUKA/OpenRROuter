@@ -19,7 +19,7 @@ public sealed class HmacSecretHasher : ISecretHasher
     /// Production must use the constructor with a real key from configuration.
     /// </summary>
     public static HmacSecretHasher CreateDev() =>
-        new(SHA256.HashData(Encoding.UTF8.GetBytes("rwt-dev-code-hmac-key-do-not-use-in-production")));
+        new(SHA256.HashData(Encoding.UTF8.GetBytes("orr-dev-code-hmac-key-do-not-use-in-production")));
 
     public HmacSecretHasher(byte[] serverKey)
     {

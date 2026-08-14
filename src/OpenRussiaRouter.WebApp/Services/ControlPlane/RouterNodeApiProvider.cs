@@ -52,7 +52,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildRootRelativeUri(node, ProvidersPath));
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + node.ControlToken);
-            request.Headers.TryAddWithoutValidation("X-RWT-Node-Token", node.ControlToken);
+            request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", node.ControlToken);
             using var response = await CreateClient().SendAsync(request, cancellationToken).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
             const int maxBody = 1024;
@@ -102,7 +102,7 @@ public sealed class RouterNodeApiProvider(IHttpClientFactory httpClientFactory)
         {
             using var request = new HttpRequestMessage(HttpMethod.Get, BuildRootRelativeUri(node, IntegrationKeysPath));
             request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + controlToken);
-            request.Headers.TryAddWithoutValidation("X-RWT-Node-Token", controlToken);
+            request.Headers.TryAddWithoutValidation("X-ORR-Node-Token", controlToken);
 
             using var response = await CreateClient().SendAsync(request, cancellationToken).ConfigureAwait(false);
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);

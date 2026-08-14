@@ -17,7 +17,7 @@ public sealed class RouterHealthCheckOptions
     public string HealthPath { get; set; } = "/healthz";
 
     [Required]
-    public string NodeTokenHeader { get; set; } = "X-RWT-Node-Token";
+    public string NodeTokenHeader { get; set; } = "X-ORR-Node-Token";
 
     [Range(1, 100)]
     public int MaxConcurrency { get; set; } = 10;

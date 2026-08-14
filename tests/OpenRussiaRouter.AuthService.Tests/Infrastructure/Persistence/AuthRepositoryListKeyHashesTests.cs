@@ -29,12 +29,12 @@ public sealed class AuthRepositoryListKeyHashesTests
         connection.Execute(
             """
             insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc)
-            values (@Id, 'user-1', 'active', 'rwt_abc', 'hash-active', @Now);
+            values (@Id, 'user-1', 'active', 'orr_abc', 'hash-active', @Now);
             """, new { Id = "key-1", Now = now });
         connection.Execute(
             """
             insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc, disabled_at_utc)
-            values (@Id, 'user-1', 'disabled', 'rwt_xyz', 'hash-disabled', @Now, @DisabledAt);
+            values (@Id, 'user-1', 'disabled', 'orr_xyz', 'hash-disabled', @Now, @DisabledAt);
             """, new { Id = "key-2", Now = now, DisabledAt = now.AddMinutes(1) });
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
@@ -42,7 +42,7 @@ public sealed class AuthRepositoryListKeyHashesTests
 
         hashes.Should().ContainSingle();
         var entry = hashes.Single();
-        entry.Prefix.Should().Be("rwt_abc");
+        entry.Prefix.Should().Be("orr_abc");
         entry.SecretHash.Should().Be("hash-active");
     }
 
@@ -86,7 +86,7 @@ public sealed class AuthRepositoryListKeyHashesTests
                 insert into auth.api_keys (id, user_id, name, prefix, secret_hash, created_at_utc)
                 values (@Id, 'user-1', @Name, @Prefix, @Hash, @Now);
                 """,
-                new { Id = $"key-{i}", Name = $"key{i}", Prefix = $"rwt_{i:D3}", Hash = $"hash-{i}", Now = now.AddSeconds(i) });
+                new { Id = $"key-{i}", Name = $"key{i}", Prefix = $"orr_{i:D3}", Hash = $"hash-{i}", Now = now.AddSeconds(i) });
         }
 
         var repo = new AuthRepository(new AuthDbConnectionFactory(database.ConnectionString));
@@ -94,6 +94,6 @@ public sealed class AuthRepositoryListKeyHashesTests
 
         hashes.Should().HaveCount(5);
         // Verify ordering: most recent first
-        hashes.First().Prefix.Should().Be("rwt_005");
+        hashes.First().Prefix.Should().Be("orr_005");
     }
 }

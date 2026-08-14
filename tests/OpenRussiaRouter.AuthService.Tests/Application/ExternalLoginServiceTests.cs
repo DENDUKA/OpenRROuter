@@ -21,7 +21,7 @@ public sealed class ExternalLoginServiceTests
 
         result.Succeeded.Should().BeTrue();
         result.Session.Should().NotBeNull();
-        result.Session!.Token.Should().StartWith("rwt_session_");
+        result.Session!.Token.Should().StartWith("orr_session_");
         result.Session.Role.Should().Be(UserRole.User);
 
         var user = await _repo.GetUserByEmailAsync("new@example.com");

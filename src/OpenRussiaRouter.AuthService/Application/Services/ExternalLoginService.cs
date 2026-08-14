@@ -12,7 +12,7 @@ public sealed class ExternalLoginService(
     IProductAnalytics? productAnalytics = null,
     ILogger<ExternalLoginService>? logger = null)
 {
-    private const string SessionPrefix = "rwt_session";
+    private const string SessionPrefix = "orr_session";
     private static readonly TimeSpan SessionLifetime = TimeSpan.FromDays(7);
 
     public async Task<LoginResult> LoginOrRegisterAsync(

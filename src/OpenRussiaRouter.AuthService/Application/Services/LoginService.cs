@@ -7,7 +7,7 @@ namespace OpenRussiaRouter.AuthService.Application.Services;
 
 public sealed class LoginService(IPasswordHasher passwordHasher, ISecretGenerator secretGenerator)
 {
-    private const string SessionPrefix = "rwt_session";
+    private const string SessionPrefix = "orr_session";
 
     public const int MaxFailedAttempts = 5;
     public static readonly TimeSpan LockoutDuration = TimeSpan.FromMinutes(15);

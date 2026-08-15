@@ -1,11 +1,26 @@
 @page "/tools/{id}"
 @model ToolDetailsModel
+@inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @{
     var toolSeoName = Model.Tool?.DisplayName ?? Localizer["ToolDetails_Title"].Value;
     ViewData["Title"] = toolSeoName;
     ViewData["MetaDescription"] = string.IsNullOrWhiteSpace(Model.Tagline)
         ? Localizer["MetaDescriptionNoTagline", toolSeoName]
         : Localizer["MetaDescription", toolSeoName, Model.Tagline];
+
+    if (Model.Tool is not null)
+    {
+        var seoBase = SiteUrlResolver.Resolve(Model.Request);
+        ViewData["StructuredData"] = new[]
+        {
+            StructuredData.Breadcrumbs(
+            [
+                (Localizer["Nav_Home"].Value, seoBase + "/"),
+                (Localizer["Tools_Title"].Value, seoBase + "/tools"),
+                (Model.Tool.DisplayName, seoBase + Model.Request.Path),
+            ]),
+        };
+    }
 }
 
 <div class="tool-details-page">
@@ -19,8 +34,10 @@
     else
     {
         <nav class="tool-breadcrumb" aria-label="breadcrumb">
+            <a href="/">@Localizer["Nav_Home"]</a>
+            <span class="breadcrumb-sep" aria-hidden="true">/</span>
             <a href="/tools">@Localizer["Tools_Title"]</a>
-            <span aria-hidden="true">/</span>
+            <span class="breadcrumb-sep" aria-hidden="true">/</span>
             <span>@Model.Tool.DisplayName</span>
         </nav>
 

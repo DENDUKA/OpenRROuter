@@ -173,6 +173,14 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   x-default обслуживает рынки за пределами русскоязычного (см. SEO-024).
 - **Обе карты сайта перечислены в `robots.txt` WebApp**: динамическая `/sitemap.xml` знает про
   `/docs/` ровно один URL (конечный URL документации) и содержимое раздела не покрывает.
+- **Счётчик GA4 у документации свой, но поток — общий с сайтом.** `head` в `config.mts` ставит
+  тот же `G-38042Y9GW4`, что и layout WebApp: layout сюда не доезжает (отдельный контейнер),
+  а отдельное свойство рвало бы сессию на переходе сайт → документация. Consent Mode
+  выставляется **до** `gtag.js` по cookie `orr_consent` (её пишет баннер WebApp, тот же origin);
+  своего баннера у документации нет — зашедший сразу на `/docs` остаётся в `denied`.
+  Переходы внутри VitePress — `pushState`, их считает Enhanced Measurement свойства
+  («page changes based on browser history events»); ручной `page_view` не шлём, он дал бы дубль.
+  Метрики (`ym`) в документации по-прежнему нет.
 - Юридических страниц в docs-site **нет** — их единственный дом это `/legal/*` в WebApp
   (причина — в [WebApp/CLAUDE.md](src/OpenRussiaRouter.WebApp/CLAUDE.md)).
 - **Артефакты сборки в git не хранятся** — `node_modules/` и `.vitepress/{dist,cache}/` закрыты

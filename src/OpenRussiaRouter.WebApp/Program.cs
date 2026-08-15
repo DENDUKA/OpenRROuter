@@ -485,7 +485,23 @@ if (!app.Environment.IsDevelopment())
 // bare path and the resolved culture respectively.
 app.UseLocalePrefix();
 
-app.UseStaticFiles();
+app.UseStaticFiles(new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        // Cache static assets (CSS, JS, images, icons, fonts)
+        // Static files with asp-append-version (like app.min.css?v=...) can be cached indefinitely
+        // while others benefit from a 7-day public cache.
+        if (ctx.Context.Request.Query.ContainsKey("v"))
+        {
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+        }
+        else
+        {
+            ctx.Context.Response.Headers.CacheControl = "public, max-age=604800";
+        }
+    }
+});
 
 // SEO: fold trailing-slash and letter-case duplicates of public URLs onto one canonical URL.
 // After UseStaticFiles so real assets are served untouched, and GET/HEAD only — a 301 on POST

@@ -1,5 +1,10 @@
 import { defineConfig } from 'vitepress'
 
+// Тот же measurement id, что у WebApp (`Analytics:GoogleTagId` в appsettings.json и
+// compose.prod.yml). Один поток на весь rawrter.com — с отдельным свойством переход
+// сайт → документация рвал бы сессию и терял источник трафика.
+const GOOGLE_TAG_ID = 'G-38042Y9GW4'
+
 // Канонический адрес для каждой страницы /docs/ строится от сырого пути
 // (guide/models.md -> https://rawrter.com/docs/guide/models).
 // og-image тот же бренд-баннер, что на основном сайте.
@@ -46,6 +51,23 @@ export default defineConfig({
   // hostname обязан включать base — VitePress склеивает его с маршрутом как есть и `base`
   // сам не подмешивает; с голым origin в sitemap уезжают URL без /docs/, то есть 404.
   sitemap: { hostname: 'https://rawrter.com/docs/' },
+  // Веб-аналитика. Документация — отдельный контейнер за тем же доменом, layout WebApp
+  // сюда не доезжает, поэтому счётчик подключается здесь; без него весь раздел /docs
+  // невидим в GA4, хотя это самая «намеренческая» часть трафика.
+  head: [
+    // Consent Mode обязан встать ДО gtag.js: после загрузки тега default уже не применить.
+    // Согласие лежит в cookie orr_consent (Path=/, HttpOnly=false — читается тем же
+    // origin'ом), её выставляет баннер WebApp. Своего баннера у документации нет и заводить
+    // второй не надо: посетитель, пришедший сразу на /docs, остаётся в denied и считается
+    // безкуковыми пингами — осознанный размен.
+    ['script', {}, `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}` +
+      `gtag('consent','default',{analytics_storage:document.cookie.split('; ').indexOf('orr_consent=1')!==-1?'granted':'denied'});`],
+    ['script', { async: '', src: `https://www.googletagmanager.com/gtag/js?id=${GOOGLE_TAG_ID}` }],
+    // Переходы по внутренним ссылкам VitePress — это history.pushState, а не перезагрузка.
+    // Их считает Enhanced Measurement («Page changes based on browser history events»,
+    // включён у потока по умолчанию); ручной page_view здесь не шлём — он дал бы дубль.
+    ['script', {}, `gtag('js',new Date());gtag('config','${GOOGLE_TAG_ID}');`]
+  ],
   // Per-page SEO: canonical + Open Graph/Twitter. Возвращаемые HeadConfig[] mergeHead'ом
   // добавляются к уже собранному head (не перезаписывают его).
   transformHead({ page, title, description }) {

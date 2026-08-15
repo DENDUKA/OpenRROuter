@@ -65,6 +65,11 @@ GA4 → Admin → Property → **Search Console links** → добавить GSC
   `https://host` покрывающим `wss://host`.
 - Прод-значения — в `deploy/compose/compose.prod.yml` (`Analytics__GoogleTagId`,
   `Analytics__YandexCounterId`).
+- **`/docs` — отдельный контейнер VitePress, layout WebApp туда не доезжает.** GA4 подключён
+  собственным `head` в `docs-site/.vitepress/config.mts` тем же measurement id (общий поток —
+  иначе переход сайт → документация рвёт сессию). Consent Mode ставится до `gtag.js` по cookie
+  `orr_consent`; своего баннера у документации нет. Правка конфига доезжает до прода **только
+  пересборкой контейнера `docs`**. Счётчика Метрики в документации пока нет.
 - Тесты в `SeoHeadTests`: без конфига тегов нет; с конфигом — оба сниппета на месте.
 
 ### Конверсионные события

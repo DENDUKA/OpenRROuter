@@ -29,6 +29,9 @@
       </xsd:complexType>
     </xsd:element>
   </xsd:schema>
+  <data name="Nav_Home" xml:space="preserve">
+    <value>Главная</value>
+  </data>
   <data name="ToolDetails_Title" xml:space="preserve">
     <value>Инструмент</value>
   </data>

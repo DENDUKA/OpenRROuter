@@ -126,11 +126,11 @@
                                     <div class="model-cell">
                                         @if (!string.IsNullOrEmpty(m.ProviderId))
                                         {
-                                             <img class="model-icon" src="/providers/logo/@m.ProviderId" alt="" aria-hidden="true" width="28" height="28" />
+                                             <img class="model-icon" src="/providers/logo/@m.ProviderId" alt="" aria-hidden="true" width="28" height="28" loading="lazy" decoding="async" />
                                         }
                                         else if (ModelsModel.TryGetStaticIcon(m.Provider, out var iconPath))
                                         {
-                                             <img class="model-icon" src="@iconPath" alt="" aria-hidden="true" width="28" height="28" />
+                                             <img class="model-icon" src="@iconPath" alt="" aria-hidden="true" width="28" height="28" loading="lazy" decoding="async" />
                                         }
                                         else
                                         {

@@ -15,7 +15,7 @@
                 @foreach (var p in Model.Providers)
                 {
                     <span class="provider-icon provider-icon-dynamic">
-                        <img src="/providers/logo/@Uri.EscapeDataString(p.Id)" alt="@p.DisplayName" width="24" height="24" />
+                        <img src="/providers/logo/@Uri.EscapeDataString(p.Id)" alt="@p.DisplayName" width="24" height="24" loading="lazy" decoding="async" />
                     </span>
                 }
 

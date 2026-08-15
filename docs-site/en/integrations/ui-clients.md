@@ -28,7 +28,7 @@ endpoints:
 
 ## Open-WebUI
 
-1. Open **Admin Panel** $\rightarrow$ **Settings** $\rightarrow$ **Connections**.
+1. Open **Admin Panel** → **Settings** → **Connections**.
 2. In the **OpenAI API** section, add a new connection:
    * **URL:** `https://api.rawrter.com/v1`
    * **API Key:** `sk-or-your-key`
@@ -49,7 +49,7 @@ endpoints:
 
 ## Chatbox (Desktop & Mobile)
 
-1. Open **Settings** $\rightarrow$ **Model**.
+1. Open **Settings** → **Model**.
 2. **Provider:** `OpenAI API`.
 3. **API Host:** `https://api.rawrter.com`
 4. **API Key:** `sk-or-your-key`
@@ -59,7 +59,7 @@ endpoints:
 
 ## TypingMind
 
-1. Open **Settings** $\rightarrow$ **AI Model Providers** $\rightarrow$ **Add custom provider (OpenAI Compatible)**.
+1. Open **Settings** → **AI Model Providers** → **Add custom provider (OpenAI Compatible)**.
 2. **Provider Name:** `Rawrter`
 3. **Endpoint URL:** `https://api.rawrter.com/v1`
 4. **API Key:** `sk-or-your-key`

@@ -35,6 +35,6 @@ To protect against accidental overspending (for example, while debugging infinit
 - **Daily Spend Limit:** the maximum USD amount this key can spend in the current day.
 - **Weekly Spend Limit:** the maximum USD spending allowed over a rolling 7-day window.
 
-Limits can be configured in the dashboard: navigate to **API Keys** $\rightarrow$ click **Limits** next to the desired key.
+Limits can be configured in the dashboard: navigate to **API Keys** → click **Limits** next to the desired key.
 
 Once a limit is reached, the gateway will reject subsequent requests with the error code `api_key_limit_exceeded` (HTTP 402).

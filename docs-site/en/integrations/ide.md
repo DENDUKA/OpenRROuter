@@ -6,7 +6,7 @@ Thanks to Rawrter's full compatibility with the OpenAI API format, you can conne
 
 ## Cursor / Windsurf
 
-1. Open editor **Settings** $\rightarrow$ **Models** (or **AI** section).
+1. Open editor **Settings** → **Models** (or **AI** section).
 2. Enable **OpenAI API Key** or choose **Custom OpenAI Provider**.
 3. Configure connection details:
    * **API Base URL:** `https://api.rawrter.com/v1`
@@ -21,7 +21,7 @@ Thanks to Rawrter's full compatibility with the OpenAI API format, you can conne
 Popular autonomous coding agents support Rawrter natively through OpenAI-Compatible or OpenRouter provider modes:
 
 1. Open the **Cline** or **Roo Code** extension in the sidebar.
-2. Go to settings (Gear icon $\rightarrow$ **API Configuration**).
+2. Go to settings (Gear icon → **API Configuration**).
 3. Select **API Provider:** `OpenAI Compatible` (or `OpenRouter`).
 4. Fill in the fields:
    * **Base URL:** `https://api.rawrter.com/v1`

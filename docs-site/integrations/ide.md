@@ -6,7 +6,7 @@
 
 ## Cursor / Windsurf
 
-1. Откройте **Settings** (Настройки) редактора $\rightarrow$ раздел **Models** (или **AI**).
+1. Откройте **Settings** (Настройки) редактора → раздел **Models** (или **AI**).
 2. Включите опцию **OpenAI API Key** или выберите **Custom OpenAI Provider**.
 3. Укажите параметры подключения:
    * **API Base URL:** `https://api.rawrter.com/v1`
@@ -21,7 +21,7 @@
 Популярные автономные агенты кодинга поддерживают Rawrter через режим OpenAI-Compatible или OpenRouter:
 
 1. Откройте расширение **Cline** или **Roo Code** в боковой панели.
-2. Перейдите в настройки (иконка шестеренки $\rightarrow$ **API Configuration**).
+2. Перейдите в настройки (иконка шестеренки → **API Configuration**).
 3. Выберите **API Provider:** `OpenAI Compatible` (или `OpenRouter`).
 4. Заполните поля:
    * **Base URL:** `https://api.rawrter.com/v1`

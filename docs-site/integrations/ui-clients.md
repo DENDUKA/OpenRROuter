@@ -28,7 +28,7 @@ endpoints:
 
 ## Open-WebUI
 
-1. Откройте **Панель администратора** (Admin Panel) $\rightarrow$ **Настройки** (Settings) $\rightarrow$ **Подключения** (Connections).
+1. Откройте **Панель администратора** (Admin Panel) → **Настройки** (Settings) → **Подключения** (Connections).
 2. В разделе **OpenAI API** добавьте новое подключение:
    * **URL:** `https://api.rawrter.com/v1`
    * **Ключ API:** `sk-or-ваш-ключ`
@@ -49,7 +49,7 @@ endpoints:
 
 ## Chatbox (Desktop & Mobile)
 
-1. Откройте **Настройки** $\rightarrow$ **Модель**.
+1. Откройте **Настройки** → **Модель**.
 2. **Провайдер:** `OpenAI API`.
 3. **API Host:** `https://api.rawrter.com`
 4. **API Key:** `sk-or-ваш-ключ`
@@ -59,7 +59,7 @@ endpoints:
 
 ## TypingMind
 
-1. Откройте **Settings** $\rightarrow$ **AI Model Providers** $\rightarrow$ **Add custom provider (OpenAI Compatible)**.
+1. Откройте **Settings** → **AI Model Providers** → **Add custom provider (OpenAI Compatible)**.
 2. **Provider Name:** `Rawrter`
 3. **Endpoint URL:** `https://api.rawrter.com/v1`
 4. **API Key:** `sk-or-ваш-ключ`

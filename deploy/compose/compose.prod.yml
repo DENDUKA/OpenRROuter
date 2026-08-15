@@ -299,6 +299,11 @@ services:
       # button on /login and /signup. Empty values hide the button (OAuth disabled).
       Yandex__ClientId: "${YANDEX_CLIENT_ID:-}"
       Yandex__ClientSecret: "${YANDEX_CLIENT_SECRET:-}"
+      # Google OAuth: login + signup via Google account. Enables the "Sign in with Google"
+      # button on /login and /signup. Empty values hide the button (OAuth disabled).
+      # Redirect URI registered in Google Cloud Console: https://rawrter.com/signin-google
+      Google__ClientId: "${GOOGLE_CLIENT_ID:-}"
+      Google__ClientSecret: "${GOOGLE_CLIENT_SECRET:-}"
       # Data Protection key ring: persisted to a Docker volume so the antiforgery tokens
       # and cookie-auth session tickets survive container restarts. Without this every
       # restart silently mints a new key ring, logged-in users are kicked out, and stale

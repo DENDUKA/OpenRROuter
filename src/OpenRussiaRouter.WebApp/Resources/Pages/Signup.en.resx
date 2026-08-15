@@ -71,6 +71,9 @@
   <data name="Signup_Divider" xml:space="preserve">
     <value>or</value>
   </data>
+  <data name="Signup_Google" xml:space="preserve">
+    <value>Sign up with Google</value>
+  </data>
   <data name="Signup_Yandex" xml:space="preserve">
     <value>Sign up with Yandex</value>
   </data>

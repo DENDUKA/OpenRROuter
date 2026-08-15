@@ -27,6 +27,68 @@ The main endpoint for interacting with language models.
 }
 ```
 
+---
+
+## Streaming Mode (SSE)
+
+For interactive real-time output, set `"stream": true`. The gateway automatically injects `stream_options: {"include_usage": true}` so that the final chunk contains accurate token usage statistics.
+
+::: code-group
+
+```python [Python (Streaming)]
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="sk-or-your-key",
+    base_url="https://api.rawrter.com/v1",
+)
+
+stream = client.chat.completions.create(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Write a short poem."}],
+    stream=True,
+    stream_options={"include_usage": True},
+)
+
+for chunk in stream:
+    if chunk.choices and chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+    
+    if chunk.usage:
+        print(f"\n\n[Tokens Used: {chunk.usage.total_tokens}]")
+```
+
+```javascript [Node.js (Streaming)]
+import OpenAI from "openai";
+
+const client = new OpenAI({
+  apiKey: "sk-or-your-key",
+  baseURL: "https://api.rawrter.com/v1",
+});
+
+async function main() {
+  const stream = await client.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: "Write a short poem." }],
+    stream: true,
+    stream_options: { include_usage: true },
+  });
+
+  for await (const chunk of stream) {
+    process.stdout.write(chunk.choices[0]?.delta?.content || "");
+    if (chunk.usage) {
+      console.log(`\n\n[Tokens Used: ${chunk.usage.total_tokens}]`);
+    }
+  }
+}
+
+main();
+```
+
+:::
+
+---
+
 ## Retry and Failover
 
 The Rawrter gateway includes a built-in **failover** mechanism.

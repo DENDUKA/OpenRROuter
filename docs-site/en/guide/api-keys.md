@@ -25,3 +25,16 @@ Authorization: Bearer sk-or-xxx
 - **Do not commit keys to code.** Use environment variables (`.env`).
 - **Promptly revoke keys** if you suspect they have been compromised.
 - You can create multiple keys for different projects or development environments.
+
+---
+
+## Spend Limits
+
+To protect against accidental overspending (for example, while debugging infinite loops in scripts or providing a key to third-party tools), you can configure individual spending limits for each API key:
+
+- **Daily Spend Limit:** the maximum USD amount this key can spend in the current day.
+- **Weekly Spend Limit:** the maximum USD spending allowed over a rolling 7-day window.
+
+Limits can be configured in the dashboard: navigate to **API Keys** $\rightarrow$ click **Limits** next to the desired key.
+
+Once a limit is reached, the gateway will reject subsequent requests with the error code `api_key_limit_exceeded` (HTTP 402).

@@ -12,8 +12,13 @@ Cost calculation formula:
 
 ### Token Accounting Details
 
-- **Caching:** If the model supports caching (e.g., Anthropic Prompt Caching), tokens that hit the cache are billed at a special (usually discounted) `CachePrice`. These tokens are subtracted from total `InputTokens` when calculating the base price cost.
+- **Prompt Caching:** Leading models (Anthropic Claude, DeepSeek, OpenAI) support automatic prompt caching for repeated prefix contexts (system prompts, documentation files, long conversation histories). Tokens read from the cache are billed at a discounted `CachePrice` (often 2–10x cheaper than standard input tokens). In the billing formula, cached tokens are subtracted from total input tokens:
+  ```
+  Billable Input = max(0, InputTokens - CacheTokens)
+  Cost = (Billable Input * InputPrice + OutputTokens * OutputPrice + CacheTokens * CachePrice) / 1,000,000
+  ```
 - **Rounding:** Rounding is done to 6 decimal places (microcents).
+- **Free Models:** For models with zero input and output prices, requests are allowed even with a zero balance.
 
 ## Topping Up Balance
 

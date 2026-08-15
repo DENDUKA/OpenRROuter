@@ -95,7 +95,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'В панель', link: 'https://rawrter.com' },
-          { text: 'Модели', link: '/guide/models' }
+          { text: 'Модели', link: '/guide/models' },
+          { text: 'Интеграции', link: '/integrations/ide' }
         ],
         sidebar: [
           {
@@ -113,7 +114,18 @@ export default defineConfig({
               { text: 'Обзор API', link: '/api/reference' },
               { text: 'Аутентификация', link: '/api/authentication' },
               { text: 'Chat Completions', link: '/api/chat-completions' },
+              { text: 'Reasoning (Мышление)', link: '/api/reasoning' },
+              { text: 'Function Calling & Tools', link: '/api/tools' },
+              { text: 'Structured Outputs', link: '/api/structured-outputs' },
               { text: 'Обработка ошибок', link: '/api/errors' }
+            ]
+          },
+          {
+            text: 'Интеграции',
+            items: [
+              { text: 'IDE и редакторы', link: '/integrations/ide' },
+              { text: 'UI-клиенты', link: '/integrations/ui-clients' },
+              { text: 'Фреймворки и SDK', link: '/integrations/frameworks' }
             ]
           },
           {
@@ -145,7 +157,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: 'Dashboard', link: 'https://rawrter.com' },
-          { text: 'Models', link: '/en/guide/models' }
+          { text: 'Models', link: '/en/guide/models' },
+          { text: 'Integrations', link: '/en/integrations/ide' }
         ],
         sidebar: [
           {
@@ -163,7 +176,18 @@ export default defineConfig({
               { text: 'API Overview', link: '/en/api/reference' },
               { text: 'Authentication', link: '/en/api/authentication' },
               { text: 'Chat Completions', link: '/en/api/chat-completions' },
+              { text: 'Reasoning', link: '/en/api/reasoning' },
+              { text: 'Function Calling & Tools', link: '/en/api/tools' },
+              { text: 'Structured Outputs', link: '/en/api/structured-outputs' },
               { text: 'Error Handling', link: '/en/api/errors' }
+            ]
+          },
+          {
+            text: 'Integrations',
+            items: [
+              { text: 'IDE & Editors', link: '/en/integrations/ide' },
+              { text: 'UI Clients', link: '/en/integrations/ui-clients' },
+              { text: 'Frameworks & SDKs', link: '/en/integrations/frameworks' }
             ]
           },
           {

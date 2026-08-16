@@ -15,5 +15,6 @@ public sealed record ApiKeySummary(
     DateTimeOffset CreatedAtUtc,
     DateTimeOffset? LastUsedAtUtc,
     DateTimeOffset? DisabledAtUtc,
-    bool IsDeleted);
+    bool IsDeleted,
+    string? RawKey = null);
 

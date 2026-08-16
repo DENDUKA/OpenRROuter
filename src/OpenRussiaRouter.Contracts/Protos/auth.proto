@@ -184,6 +184,7 @@ message ApiKeyInfo {
   int64 disabled_at_unix_time_seconds = 6;
   bool is_active = 7;
   bool is_deleted = 8;
+  string raw_key = 9;
 }
 
 message RenameApiKeyRequest {

@@ -331,7 +331,8 @@ public sealed class GrpcAuthService(
                     LastUsedAtUnixTimeSeconds = k.LastUsedAtUtc?.ToUnixTimeSeconds() ?? 0,
                     DisabledAtUnixTimeSeconds = k.DisabledAtUtc?.ToUnixTimeSeconds() ?? 0,
                     IsActive = k.IsActive,
-                    IsDeleted = k.IsDeleted
+                    IsDeleted = k.IsDeleted,
+                    RawKey = k.RawKey ?? ""
                 })
             }
         };

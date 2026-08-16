@@ -249,6 +249,22 @@ public sealed class GrpcAuthServiceTests
         response.Keys.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task ListApiKeys_WithKeys_ReturnsRawKey()
+    {
+        var (service, repo) = CreateServiceWithSharedRepo();
+        var key = new OpenRussiaRouter.AuthService.Domain.Entities.ApiKey(
+            "k-1", "u-1", "Test Key", "sk-or-123456", "hash", DateTimeOffset.UtcNow, "sk-or-1234567890abcdef");
+        await repo.AddApiKeyAsync(key);
+
+        var response = await service.ListApiKeys(
+            new ListApiKeysRequest { UserId = "u-1" },
+            context: null!);
+
+        response.Keys.Should().HaveCount(1);
+        response.Keys[0].RawKey.Should().Be("sk-or-1234567890abcdef");
+    }
+
     private sealed class StubValidator(ValidateApiKeyResult result) : IAuthApiKeyValidator
     {
         public Task<ValidateApiKeyResult> ValidateAsync(string rawKey, CancellationToken ct = default) =>

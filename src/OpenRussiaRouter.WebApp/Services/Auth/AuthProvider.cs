@@ -126,7 +126,8 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
             DateTimeOffset.FromUnixTimeSeconds(k.CreatedAtUnixTimeSeconds),
             k.LastUsedAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.LastUsedAtUnixTimeSeconds) : null,
             k.DisabledAtUnixTimeSeconds > 0 ? DateTimeOffset.FromUnixTimeSeconds(k.DisabledAtUnixTimeSeconds) : null,
-            k.IsDeleted
+            k.IsDeleted,
+            string.IsNullOrEmpty(k.RawKey) ? null : k.RawKey
         )).ToList();
     }
 

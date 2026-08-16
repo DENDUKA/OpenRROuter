@@ -42,10 +42,9 @@ public sealed class OpenRouterCatalogClient(
             }
         }
         catch (Exception ex) when (
-            ex is HttpRequestException or JsonException ||
-            (ex is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+            ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            logger.LogWarning(ex, "Failed to resolve node list for OpenRouter catalog polling");
+            logger.LogWarning(ex, "Failed to resolve node list for OpenRouter catalog polling (will try direct fetch)");
         }
 
         // 2. Direct fallback: query OpenRouter public endpoint directly.

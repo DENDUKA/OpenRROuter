@@ -34,6 +34,16 @@ public sealed class OpenRouterCatalogPoller(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        // Brief initial delay so ControlPlane has finished booting and accepting gRPC calls on container start.
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            return;
+        }
+
         while (!stoppingToken.IsCancellationRequested)
         {
             try

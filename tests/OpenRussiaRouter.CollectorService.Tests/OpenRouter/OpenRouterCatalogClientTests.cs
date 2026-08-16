@@ -3,6 +3,8 @@ using System.Net.Http;
 using System.Text;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using OpenRussiaRouter.CollectorService.Application.Collection;
 using OpenRussiaRouter.CollectorService.Application.OpenRouter;
 
 namespace OpenRussiaRouter.CollectorService.Tests.OpenRouter;
@@ -15,14 +17,19 @@ public class OpenRouterCatalogClientTests
             => Task.FromResult(new HttpResponseMessage(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") });
     }
 
-    private static OpenRouterCatalogClient Build(HttpStatusCode status, string body)
+    private static OpenRouterCatalogClient Build(HttpStatusCode status, string body, IReadOnlyList<CollectorNode>? nodes = null)
     {
-        var http = new HttpClient(new StubHandler(status, body)) { BaseAddress = new Uri("https://openrouter.ai/") };
-        return new OpenRouterCatalogClient(http, NullLogger<OpenRouterCatalogClient>.Instance);
+        var http = new HttpClient(new StubHandler(status, body));
+        var mockNodeListProvider = new Mock<INodeListProvider>();
+        mockNodeListProvider
+            .Setup(p => p.GetNodesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(nodes ?? []);
+
+        return new OpenRouterCatalogClient(http, mockNodeListProvider.Object, NullLogger<OpenRouterCatalogClient>.Instance);
     }
 
     [Fact]
-    public async Task LoadAsync_FlattensEntries_AndPricing()
+    public async Task LoadAsync_FlattensEntries_AndPricing_DirectFallback()
     {
         const string body = """
         {"data":[{"id":"openai/gpt-4o","name":"OpenAI: GPT-4o","author_display_name":"OpenAI",
@@ -38,6 +45,33 @@ public class OpenRouterCatalogClientTests
         e.ContextLength.Should().Be(128000);
         e.InputModalities.Should().Equal("text", "image");
         e.PricePrompt.Should().Be("0.000005");
+    }
+
+    [Fact]
+    public async Task LoadAsync_FetchesViaActiveNode()
+    {
+        const string body = """
+        {"data":[{"id":"z-ai/glm-5.2","name":"Z.ai: GLM 5.2",
+        "description":"desc","context_length":128000,
+        "architecture":{"input_modalities":["text"],"output_modalities":["text"]},
+        "pricing":{"prompt":"0.000000308","completion":"0.000000968","input_cache_read":"0.0000000572"}}]}
+        """;
+
+        var node = new CollectorNode(
+            NodeId: "node-1",
+            EndpointUrl: new Uri("http://31.76.49.2:20128/"),
+            ControlToken: "tok-123",
+            Enabled: true,
+            Status: "Healthy",
+            HasBeenHealthChecked: true);
+
+        var entries = await Build(HttpStatusCode.OK, body, [node]).LoadAsync(CancellationToken.None);
+
+        entries.Should().ContainSingle();
+        var e = entries[0];
+        e.Slug.Should().Be("z-ai/glm-5.2");
+        e.PricePrompt.Should().Be("0.000000308");
+        e.PriceCompletion.Should().Be("0.000000968");
     }
 
     [Fact]

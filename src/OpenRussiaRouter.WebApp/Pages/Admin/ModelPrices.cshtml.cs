@@ -65,6 +65,10 @@ public class ModelPricesModel(
         BillingModelCount = models.Count;
         CatalogEntryCount = catalog.Count;
 
+        logger.LogInformation(
+            "Price comparison page loaded: BillingModels={BillingCount}, OpenRouterCatalogEntries={CatalogCount}, EnabledOnly={EnabledOnly}",
+            BillingModelCount, CatalogEntryCount, EnabledOnly);
+
         if (catalog.Count == 0)
         {
             CatalogUnavailable = true;

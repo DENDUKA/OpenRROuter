@@ -106,7 +106,10 @@ public sealed class OpenRouterCatalogClient(
         string upstreamModelId)
     {
         if (string.IsNullOrWhiteSpace(upstreamModelId) || catalog.Count == 0)
+        {
+            logger.LogDebug("OpenRouter match skipped: upstreamModelId is empty or catalog count is 0. (UpstreamId='{UpstreamId}', CatalogCount={Count})", upstreamModelId, catalog.Count);
             return null;
+        }
 
         var id = upstreamModelId.Trim();
         var normId = Normalize(id);
@@ -159,9 +162,21 @@ public sealed class OpenRouterCatalogClient(
                     .FirstOrDefault();
         }
 
-        if (match is null) return null;
+        if (match is null)
+        {
+            logger.LogInformation("OpenRouter model search: NO MATCH for upstream id '{UpstreamModelId}' (CatalogSize={CatalogCount})", upstreamModelId, catalog.Count);
+            return null;
+        }
 
         var pricing = match.Pricing;
+        var inPrice = PerMillion(pricing?.Prompt);
+        var outPrice = PerMillion(pricing?.Completion);
+        var cachePrice = PerMillion(pricing?.InputCacheRead);
+
+        logger.LogInformation(
+            "OpenRouter model search: MATCHED upstream id '{UpstreamModelId}' -> '{MatchedSlug}'. Prices (in/out/cache per 1M): ${InputPrice:N4} / ${OutputPrice:N4} / ${CachePrice:N4}",
+            upstreamModelId, match.Slug, inPrice, outPrice, cachePrice);
+
         return new OpenRouterMatchResult(
             match.Slug,
             string.IsNullOrWhiteSpace(match.Description) ? null : match.Description.Trim(),
@@ -170,9 +185,9 @@ public sealed class OpenRouterCatalogClient(
             FormatModalities(match.InputModalities),
             "text",
             ParseProvider(match),
-            PerMillion(pricing?.Prompt),
-            PerMillion(pricing?.Completion),
-            PerMillion(pricing?.InputCacheRead));
+            inPrice,
+            outPrice,
+            cachePrice);
     }
 
     private static string StripSuffix(string modelId)

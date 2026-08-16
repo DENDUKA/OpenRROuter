@@ -33,6 +33,7 @@ using AspNet.Security.OAuth.Yandex;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Mvc;
 using OpenRussiaRouter.WebApp.Services.Localization;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 
@@ -56,6 +57,13 @@ builder.Services.AddRazorPages()
     .AddViewLocalization()
     .AddDataAnnotationsLocalization(o =>
         o.DataAnnotationLocalizerProvider = (_, factory) => factory.Create(typeof(SharedResource)));
+builder.Services.Configure<CookieTempDataProviderOptions>(options =>
+{
+    // TempData uses a cookie to round-trip values across POST-redirect-GET.
+    // Setting Cookie.Path = "/" ensures TempData is accessible across both the bare
+    // routes and prefixed routes (/en/...), preventing lost TempData (e.g. newly created API keys).
+    options.Cookie.Path = "/";
+});
 builder.Services.AddControllers();
 // Без SizeLimit намеренно: с ним каждая запись обязана указывать Size, а забытый Size
 // роняет вызов InvalidOperationException'ом (так падал каталог на /models). Кеш ограничен

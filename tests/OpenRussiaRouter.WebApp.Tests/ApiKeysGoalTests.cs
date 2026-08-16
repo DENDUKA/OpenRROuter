@@ -74,6 +74,18 @@ public class ApiKeysGoalTests
         refreshed.ViewData[AnalyticsGoal.ViewDataKey].Should().BeNull("F5 must not re-report it");
     }
 
+    [Fact]
+    public async Task OnGetAsync_WithNewKeyValueInTempData_PreservesKeyForRendering()
+    {
+        var (model, scope) = CreateModel();
+        model.TempData["NewKeyValue"] = "sk-or-v1-test-key-12345";
+
+        var (nextModel, _) = CreateModel(scope.Next(model.TempData));
+        nextModel.NewKeyValue = nextModel.TempData["NewKeyValue"] as string;
+
+        nextModel.NewKeyValue.Should().Be("sk-or-v1-test-key-12345");
+    }
+
     private static IReadOnlyList<string> GoalsOn(ApiKeysModel model) =>
         (model.ViewData[AnalyticsGoal.ViewDataKey] as IEnumerable<AnalyticsGoal>)?
             .Select(g => g.Name).ToList() ?? [];

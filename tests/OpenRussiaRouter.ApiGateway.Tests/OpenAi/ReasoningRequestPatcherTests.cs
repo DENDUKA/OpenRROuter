@@ -42,7 +42,8 @@ public sealed class ReasoningRequestPatcherTests
         var result = ReasoningRequestPatcher.TryNormalize(json, supportsReasoning: true, ["low", "high"]);
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
     }
 
@@ -61,7 +62,8 @@ public sealed class ReasoningRequestPatcherTests
         var result = ReasoningRequestPatcher.TryNormalize(json, supportsReasoning: true, ["medium", "high"]);
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("medium");
         document.RootElement.TryGetProperty("reasoning", out _).Should().BeFalse();
     }
@@ -81,7 +83,8 @@ public sealed class ReasoningRequestPatcherTests
         var result = ReasoningRequestPatcher.TryNormalize(json, supportsReasoning: true, ["high"]);
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
         document.RootElement.TryGetProperty("reasoning", out _).Should().BeFalse();
     }
@@ -148,7 +151,8 @@ public sealed class ReasoningRequestPatcherTests
         var result = ReasoningRequestPatcher.TryNormalize(json, supportsReasoning: true, ["none", "low"]);
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("none");
     }
 
@@ -164,7 +168,8 @@ public sealed class ReasoningRequestPatcherTests
             defaultEffort: "high");
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
     }
 
@@ -212,7 +217,8 @@ public sealed class ReasoningRequestPatcherTests
             defaultEffort: "high");
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
     }
 
@@ -280,7 +286,8 @@ public sealed class ReasoningRequestPatcherTests
             defaultEffort: "HIGH");
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("high");
     }
 
@@ -297,7 +304,8 @@ public sealed class ReasoningRequestPatcherTests
             defaultEffort: "medium");
 
         result.IsSuccess.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.PatchedJson);
+        result.PatchedJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(result.PatchedJson!);
         document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("medium");
         document.RootElement.TryGetProperty("reasoning", out _).Should().BeFalse();
     }

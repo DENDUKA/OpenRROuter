@@ -78,7 +78,7 @@
     <value>Без лимита</value>
   </data>
   <data name="ApiKeys_Limit_Spent" xml:space="preserve">
-    <value>Потрачено {0} из {1}; осталось {2}</value>
+    <value>{0} / {1}</value>
   </data>
   <data name="Auth_AccountLocked" xml:space="preserve">
     <value>Слишком много неудачных попыток. Аккаунт временно заблокирован — повторите через 15 минут или сбросьте пароль.</value>

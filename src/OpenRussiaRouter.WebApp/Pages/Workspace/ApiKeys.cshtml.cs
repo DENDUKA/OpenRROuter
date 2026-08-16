@@ -247,7 +247,7 @@ public class ApiKeysModel(
 
         var spent = daily ? summary.DailySpentUsd : summary.WeeklySpentUsd;
         var remaining = daily ? summary.DailyRemainingUsd : summary.WeeklyRemainingUsd;
-        return _localizer["ApiKeys_Limit_Spent", FormatUsd(spent), FormatUsd(limit.Value), FormatUsd(remaining)];
+        return _localizer["ApiKeys_Limit_Spent", FormatUsd(spent), FormatUsd(limit.Value)];
     }
 
     private int RemainingPercent(string apiKeyId, bool daily)

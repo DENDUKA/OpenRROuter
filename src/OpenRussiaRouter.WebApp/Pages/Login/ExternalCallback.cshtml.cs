@@ -1,10 +1,12 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Localization;
 
 namespace OpenRussiaRouter.WebApp.Pages.Login;
 
@@ -26,6 +28,22 @@ public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
         var loginResult = await AuthProvider.LoginOrRegisterWithExternalProviderAsync(provider, providerSub, email);
         if (loginResult is null)
             return RedirectToPage("/Login");
+
+        if (result.Properties?.Items.TryGetValue("culture", out var culture) == true
+            && SupportedCultures.IsSupported(culture)
+            && culture is not null)
+        {
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions
+                {
+                    Path = "/",
+                    MaxAge = TimeSpan.FromDays(365),
+                    IsEssential = true,
+                    SameSite = SameSiteMode.Lax
+                });
+        }
 
         var claims = new[]
         {

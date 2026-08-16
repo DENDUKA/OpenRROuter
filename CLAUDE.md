@@ -275,7 +275,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 `/workspace/paymentsuccess`, `/workspace/settings`.
 
 Админка: `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`,
-`/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`,
+`/admin/models/sync`, `/admin/models/prices`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`,
 `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`,
 `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`,
 `/admin/gatewaytest`.

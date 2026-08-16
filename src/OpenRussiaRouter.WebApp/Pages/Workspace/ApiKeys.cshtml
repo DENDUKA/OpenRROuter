@@ -107,7 +107,14 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>@Localizer["ApiKeys_Th_Name"]</th><th>@Localizer["ApiKeys_Th_Prefix"]</th><th>@Localizer["ApiKeys_Th_Created"]</th><th>@Localizer["ApiKeys_Th_LastUsed"]</th><th>@Localizer["ApiKeys_Th_Status"]</th><th>@Localizer["ApiKeys_Th_DailyLimit"]</th><th>@Localizer["ApiKeys_Th_WeeklyLimit"]</th><th></th>
+                        <th>@Localizer["ApiKeys_Th_Name"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_Prefix"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_Created"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_LastUsed"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_Status"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_DailyLimit"]</th>
+                        <th class="ws-col-nowrap">@Localizer["ApiKeys_Th_WeeklyLimit"]</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -115,10 +122,10 @@
                     {
                         <tr data-testid="key-row" data-key-name="@k.Name">
                             <td data-testid="key-name">@k.Name</td>
-                            <td><code>@k.Prefix***</code></td>
-                            <td>@k.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                            <td>@(k.LastUsedAtUtc?.ToLocalTime().ToString("g") ?? Localizer["ApiKeys_LastUsed_Never"].Value)</td>
-                            <td>
+                            <td class="ws-col-nowrap"><code>@k.Prefix***</code></td>
+                            <td class="ws-col-nowrap">@k.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                            <td class="ws-col-nowrap">@(k.LastUsedAtUtc?.ToLocalTime().ToString("g") ?? Localizer["ApiKeys_LastUsed_Never"].Value)</td>
+                            <td class="ws-col-nowrap">
                                 <span class="badge @(k.DisabledAtUtc == null ? "badge-success" : "badge-secondary")" data-testid="key-status">
                                     @(k.DisabledAtUtc == null ? Localizer["ApiKeys_Status_Active"].Value : Localizer["ApiKeys_Status_Disabled"].Value)
                                 </span>
@@ -199,6 +206,9 @@
 </div>
 
 <style>
+    .ws-col-nowrap {
+        white-space: nowrap;
+    }
     /* Фиксированная ширина — Enable/Disable не прыгают при смене статуса и во время сабмита */
     .ws-toggle-btn {
         min-width: 84px;
@@ -209,12 +219,13 @@
         cursor: progress;
     }
     .ws-limit-cell {
-        min-width: 160px;
+        min-width: 95px;
         white-space: nowrap;
         font-variant-numeric: tabular-nums;
     }
     .ws-limit-progress {
-        width: 160px;
+        width: 100%;
+        max-width: 110px;
         height: 6px;
         margin-top: 6px;
         overflow: hidden;
@@ -236,6 +247,7 @@
         color: var(--color-body-mid);
         font-size: .78rem;
         font-variant-numeric: tabular-nums;
+        white-space: nowrap;
     }
 </style>
 

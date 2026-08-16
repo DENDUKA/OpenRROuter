@@ -75,7 +75,7 @@ public class ApiKeysGoalTests
     }
 
     [Fact]
-    public async Task OnGetAsync_WithNewKeyValueInTempData_PreservesKeyForRendering()
+    public void OnGetAsync_WithNewKeyValueInTempData_PreservesKeyForRendering()
     {
         var (model, scope) = CreateModel();
         model.TempData["NewKeyValue"] = "sk-or-v1-test-key-12345";

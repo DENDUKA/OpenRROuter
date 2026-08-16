@@ -16,6 +16,10 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   (callback `/signin-google`), Yandex при `Yandex:ClientId`/`ClientSecret` (callback `/OAuth-yandex`),
   оба с `SignInScheme = "External"`. Без гварда OAuth-хендлер падает 500 на `/Login`
   («ClientId option must be provided»).
+  Канонический `redirect_uri` (`https://<host>/signin-google` и `https://<host>/OAuth-yandex`) принудительно
+  нормализуется в `OnRedirectToAuthorizationEndpoint` без префикса локали `PathBase` (`/en`), чтобы
+  провайдеры не выдавали `redirect_uri_mismatch`, а выбранная культура прокидывается через `AuthenticationProperties.Items["culture"]`
+  и сохраняется в куку `.AspNetCore.Culture` в `ExternalCallback`.
 - **gRPC-клиенты**: Auth(5001), Billing(5002), ControlPlane(5003), Collector(5005), Content(5007) —
   keep-alive `SocketsHttpHandler` + `GrpcDeadlineInterceptor` (`GrpcServices:CallDeadlineSeconds`,
   дефолт 30). Billing и Content дополнительно с `ServiceAuthClientInterceptor`:
@@ -98,7 +102,7 @@ PascalCase-путь файла. Источник истины — директи
 | Публичные | `/` (лендинг, `Pages/Index`), `/models`, `/models/{provider}/{slug}`, `/providers`, `/providers/{id}`, `/tools`, `/tools/{id}`, `/docs`, `/support`, `/legal/offer`, `/legal/privacy`, `/error` |
 | Аутентификация | `/login`, `/signup` → `/verify-email`, `/forgot-password` → `/reset-password`, `/invite/{token}`, `/logout`, `/login/externalcallback` |
 | Кабинет (`[Authorize]`) | `/workspace` (редирект на `/workspace/apikeys`), `/workspace/apikeys`, `/workspace/apikeys/limits`, `/workspace/activity`, `/workspace/credits`, `/workspace/paymentsuccess`, `/workspace/settings` |
-| Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest` |
+| Админка (`[Authorize(Roles = "Admin")]`) | `/admin`, `/admin/users`, `/admin/users/{userId}/edit`, `/admin/topups`, `/admin/models`, `/admin/models/sync`, `/admin/models/prices`, `/admin/tags`, `/admin/providers`, `/admin/tools`, `/admin/tools/edit/{id?}`, `/admin/nodes`, `/admin/nodes/{nodeId}`, `/admin/nodes/{nodeId}/edit`, `/admin/nodes/{nodeId}/provider-limits`, `/admin/anomalies`, `/admin/requests`, `/admin/broadcast`, `/admin/gatewaytest` |
 | Платежи | `/pay/mock/{paymentId}` (dev-заглушка, `[Authorize]`), `POST /workspace/credits/yandexpay/checkout` (admin-only, JSON), `POST /v1/webhook` (Yandex Pay JWT ES256, анонимный) |
 | Контроллеры | `POST /preferences/currency` (`[Authorize]`), `POST /preferences/language` (анонимно, ставит culture-cookie), `GET /providers/logo/{id}`, `GET /tools/logo/{id}` (фолбэк — монограмма), `GET /tools/image/{id:guid}`, `GET /admin/providers/logo/{id}`, `POST /admin/gatewaytest/stream` (SSE) |
 | Служебные | `POST /webhook/{provider}`, `POST /internal/alerts/grafana`, `GET /health`, `GET /sitemap.xml` (динамический XML-sitemap, `Api/SitemapEndpoint.cs`), OTel-эндпоинты |

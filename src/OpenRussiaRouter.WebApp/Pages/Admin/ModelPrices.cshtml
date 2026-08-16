@@ -1,0 +1,169 @@
+@page "/admin/models/prices"
+@using OpenRussiaRouter.WebApp.Pages.Admin
+@model Admin.ModelPricesModel
+@{
+    Layout = "~/Pages/Shared/_AdminLayout.cshtml";
+    ViewData["Title"] = "Price Comparison - Admin";
+
+    string Money(decimal? value) => value is null ? "—" : "$" + value.Value.ToString("N4");
+
+    // Negative delta = we are cheaper (green), positive = we are pricier (red).
+    string DiffClass(decimal? diff) => diff switch
+    {
+        null => "diff-none",
+        < 0 => "diff-cheaper",
+        > 0 => "diff-pricier",
+        _ => "diff-equal",
+    };
+
+    string DiffText(decimal? diff) => diff is null
+        ? "—"
+        : (diff > 0 ? "+" : string.Empty) + diff.Value.ToString("N1") + "%";
+}
+
+<style>
+    .price-table-wrap { overflow-x: auto; }
+    .price-table { min-width: 900px; }
+    .price-table th, .price-table .nowrap { white-space: nowrap; }
+    .price-table td { vertical-align: top; }
+    .price-table td.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .price-table .col-sep { border-left: 1px solid var(--border, rgba(255,255,255,.12)); }
+    /* in / out / cache stacked on top of each other; the three columns share the same
+       line height so each row lines up with its own percentage on the right. */
+    .price-stack { display: flex; flex-direction: column; gap: .15rem; }
+    .price-stack span { line-height: 1.35; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .price-stack--num span { text-align: right; }
+    .price-stack .price-label { color: var(--text-muted, #94a3b8); font-size: .8rem; text-transform: uppercase; letter-spacing: .03em; }
+    .diff-cheaper { color: var(--color-success); font-weight: 600; }
+    .diff-pricier { color: var(--color-danger); font-weight: 600; }
+    .diff-equal, .diff-none { color: var(--text-muted, #94a3b8); }
+    .price-summary { display: flex; flex-wrap: wrap; gap: 1.5rem; margin-bottom: 1rem; }
+    .price-summary div { font-size: .9rem; }
+    .price-summary strong { display: block; font-size: 1.4rem; line-height: 1.2; }
+    .price-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 1rem; }
+    .price-filters .form-group { margin-bottom: 0; }
+</style>
+
+<div class="adm-section-head">
+    <h2>Price Comparison</h2>
+    <p>Our selling prices vs OpenRouter list prices, $ per 1M tokens. Green — we are cheaper, red — we are pricier.</p>
+</div>
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert @(Model.CatalogUnavailable ? "alert-warning" : "alert-danger")" role="alert">@Model.ErrorMessage</div>
+}
+
+<div class="adm-card">
+    <div class="adm-card-header adm-card-header--split">
+        <span>Models (@Model.Rows.Count)</span>
+        <div class="adm-btn-row">
+            <a class="btn btn-sm btn-secondary" href="/admin/models">Back to Models</a>
+        </div>
+    </div>
+    <div class="adm-card-body">
+        <div class="price-summary">
+            <div><strong class="diff-cheaper">@Model.CheaperCount</strong> cheaper than OpenRouter</div>
+            <div><strong class="diff-pricier">@Model.PricierCount</strong> pricier than OpenRouter</div>
+            <div><strong>@Model.EqualCount</strong> same price</div>
+            <div><strong>@Model.UnmatchedCount</strong> not found on OpenRouter</div>
+        </div>
+
+        <form method="get" class="price-filters" style="margin-bottom:1rem">
+            <div class="form-group">
+                <label for="sort" class="form-label">Sort by</label>
+                <select id="sort" name="sort" class="form-control">
+                    <option value="diff" selected="@(Model.Sort == "diff")">Difference (pricier first)</option>
+                    <option value="id" selected="@(Model.Sort == "id")">Model ID</option>
+                    <option value="name" selected="@(Model.Sort == "name")">Display name</option>
+                    <option value="price" selected="@(Model.Sort == "price")">Our price</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="enabledOnly">
+                    <input type="checkbox" id="enabledOnly" name="enabledOnly" value="true" checked="@Model.EnabledOnly" />
+                    Only enabled models
+                </label>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+            </div>
+        </form>
+
+        @if (Model.Rows.Count == 0)
+        {
+            <p class="text-muted">No models to compare.</p>
+        }
+        else
+        {
+            <div class="price-table-wrap">
+                <table class="table price-table" data-testid="model-prices-table">
+                    <thead>
+                        <tr>
+                            <th>Model ID</th>
+                            <th>Display Name</th>
+                            <th>Status</th>
+                            <th class="col-sep"></th>
+                            <th>Our price</th>
+                            <th>OpenRouter</th>
+                            <th>Δ</th>
+                            <th class="col-sep">OpenRouter model</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in Model.Rows)
+                        {
+                            <tr data-testid="model-prices-row" data-model-id="@row.ModelId">
+                                <td><code>@row.ModelId</code></td>
+                                <td class="nowrap">@row.DisplayName</td>
+                                <td>
+                                    <span class="badge @(row.Enabled ? "badge-success" : "badge-secondary")">
+                                        @(row.Enabled ? "Enabled" : "Disabled")
+                                    </span>
+                                </td>
+                                <td class="col-sep">
+                                    <div class="price-stack">
+                                        <span class="price-label">in</span>
+                                        <span class="price-label">out</span>
+                                        <span class="price-label">cache</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="price-stack price-stack--num">
+                                        <span>@Money(row.OurInput)</span>
+                                        <span>@Money(row.OurOutput)</span>
+                                        <span>@Money(row.OurCache)</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="price-stack price-stack--num">
+                                        <span>@Money(row.OrInput)</span>
+                                        <span>@Money(row.OrOutput)</span>
+                                        <span>@Money(row.OrCache)</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="price-stack price-stack--num">
+                                        <span class="@DiffClass(row.InputDiffPercent)">@DiffText(row.InputDiffPercent)</span>
+                                        <span class="@DiffClass(row.OutputDiffPercent)">@DiffText(row.OutputDiffPercent)</span>
+                                        <span class="@DiffClass(row.CacheDiffPercent)">@DiffText(row.CacheDiffPercent)</span>
+                                    </div>
+                                </td>
+                                <td class="col-sep">
+                                    @if (row.MatchedOpenRouterId is null)
+                                    {
+                                        <span class="text-muted" title="Router model: @row.RouterModelId">not found</span>
+                                    }
+                                    else
+                                    {
+                                        <code title="Router model: @row.RouterModelId">@row.MatchedOpenRouterId</code>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>

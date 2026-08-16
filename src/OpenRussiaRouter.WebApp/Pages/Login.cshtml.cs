@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
@@ -112,7 +113,11 @@ public class LoginModel : PageModelBase
         var props = new AuthenticationProperties
         {
             RedirectUri = "/Login/ExternalCallback",
-            Items = { ["provider"] = "google" }
+            Items =
+            {
+                ["provider"] = "google",
+                ["culture"] = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            }
         };
         return Challenge(props, GoogleDefaults.AuthenticationScheme);
     }
@@ -125,7 +130,11 @@ public class LoginModel : PageModelBase
         var props = new AuthenticationProperties
         {
             RedirectUri = "/Login/ExternalCallback",
-            Items = { ["provider"] = "yandex" }
+            Items =
+            {
+                ["provider"] = "yandex",
+                ["culture"] = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName
+            }
         };
         return Challenge(props, YandexAuthenticationDefaults.AuthenticationScheme);
     }

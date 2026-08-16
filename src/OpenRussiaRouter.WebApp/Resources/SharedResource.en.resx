@@ -78,7 +78,7 @@
     <value>No limit</value>
   </data>
   <data name="ApiKeys_Limit_Spent" xml:space="preserve">
-    <value>Spent {0} / {1}; Left {2}</value>
+    <value>{0} / {1}</value>
   </data>
   <data name="Auth_AccountLocked" xml:space="preserve">
     <value>Too many failed attempts. The account is temporarily locked — try again in 15 minutes or reset your password.</value>

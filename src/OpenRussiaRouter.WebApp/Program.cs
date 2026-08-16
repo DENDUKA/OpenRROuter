@@ -117,6 +117,13 @@ var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticat
 // Register Google external login only when credentials are configured.
 // Without this guard the OAuth handler fails validation ("ClientId option must be provided")
 // the moment the authentication middleware initializes the scheme, returning 500 on /Login.
+//
+// OAuth redirect_uri invariant:
+// RemoteAuthenticationHandler.BuildRedirectUri includes Request.PathBase. When a user initiates
+// OAuth from /en/login or /en/signup, PathBase is "/en", making redirect_uri
+// "https://rawrter.com/en/signin-google". Providers reject this with redirect_uri_mismatch.
+// OnRedirectToAuthorizationEndpoint ensures the authorization request redirect_uri is always
+// canonical (unprefixed), matching the callback path when the provider redirects back.
 var googleClientId = builder.Configuration["Google:ClientId"];
 var googleClientSecret = builder.Configuration["Google:ClientSecret"];
 if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
@@ -128,6 +135,19 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
         options.Scope.Add("email");
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            var bareRedirectUri = $"{context.Request.Scheme}://{context.Request.Host}{options.CallbackPath}";
+            var uri = new Uri(context.RedirectUri);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            var items = query.ToDictionary(k => k.Key, v => (string?)v.Value.ToString());
+            items["redirect_uri"] = bareRedirectUri;
+            var cleanAuthorizationEndpoint = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
+                uri.GetLeftPart(UriPartial.Path),
+                items);
+            context.Response.Redirect(cleanAuthorizationEndpoint);
+            return Task.CompletedTask;
+        };
     });
 }
 
@@ -144,6 +164,19 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
         options.CallbackPath = "/OAuth-yandex";
         options.Scope.Add("login:info");
         options.Scope.Add("login:email");
+        options.Events.OnRedirectToAuthorizationEndpoint = context =>
+        {
+            var bareRedirectUri = $"{context.Request.Scheme}://{context.Request.Host}{options.CallbackPath}";
+            var uri = new Uri(context.RedirectUri);
+            var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+            var items = query.ToDictionary(k => k.Key, v => (string?)v.Value.ToString());
+            items["redirect_uri"] = bareRedirectUri;
+            var cleanAuthorizationEndpoint = Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
+                uri.GetLeftPart(UriPartial.Path),
+                items);
+            context.Response.Redirect(cleanAuthorizationEndpoint);
+            return Task.CompletedTask;
+        };
     });
 }
 

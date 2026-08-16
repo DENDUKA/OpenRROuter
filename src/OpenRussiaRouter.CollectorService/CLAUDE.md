@@ -174,7 +174,9 @@ combo-алиас) схлопываются по `(NodeId, ConnectionId, ModelId)
 ## OpenRouter — `OpenRouterCatalogPoller` ([файл](Application/OpenRouter/OpenRouterCatalogPoller.cs))
 
 Тянет каталог (slug, имя, автор, описание, `context_length`, input-модальности, цены строками
-как есть) в `OpenRouterCatalogStore`. **Пустой/упавший fetch не затирает снапшот** (log warning),
+как есть) в `OpenRouterCatalogStore`. `OpenRouterCatalogClient` запрашивает каталог через активные
+ноды 9Router (`GET /api/integrations/openrouter/models` с `Authorization: Bearer <control_token>`)
+с фолбэком на прямой запрос к `openrouter.ai`. **Пустой/упавший fetch не затирает снапшот** (log warning),
 `Available` остаётся `false` до первой успешной загрузки — потребитель по этому флагу понимает,
 что данных не было никогда, и включает свой фолбэк.
 

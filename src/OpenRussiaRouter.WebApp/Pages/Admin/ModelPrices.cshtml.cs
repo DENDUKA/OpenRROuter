@@ -19,6 +19,12 @@ public class ModelPricesModel(
     public string? ErrorMessage { get; private set; }
     public bool CatalogUnavailable { get; private set; }
 
+    /// <summary>Models returned by Billing before filtering — shown so an empty table is always explainable.</summary>
+    public int BillingModelCount { get; private set; }
+
+    /// <summary>Entries in the OpenRouter catalog (collector cache or direct fetch).</summary>
+    public int CatalogEntryCount { get; private set; }
+
     /// <summary>Show only enabled models (query <c>?enabledOnly=true</c>).</summary>
     [BindProperty(SupportsGet = true, Name = "enabledOnly")]
     public bool EnabledOnly { get; set; }
@@ -55,6 +61,9 @@ public class ModelPricesModel(
         {
             logger.LogError(ex, "Failed to load OpenRouter catalog for price comparison");
         }
+
+        BillingModelCount = models.Count;
+        CatalogEntryCount = catalog.Count;
 
         if (catalog.Count == 0)
         {

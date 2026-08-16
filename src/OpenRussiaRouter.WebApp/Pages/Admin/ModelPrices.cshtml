@@ -69,6 +69,11 @@
             <div><strong>@Model.UnmatchedCount</strong> not found on OpenRouter</div>
         </div>
 
+        <p class="text-muted" style="margin-top:-.5rem;font-size:.85rem">
+            Billing models: @Model.BillingModelCount · OpenRouter catalog entries: @Model.CatalogEntryCount ·
+            matched by the model's <strong>Router Model</strong> id.
+        </p>
+
         <form method="get" class="price-filters" style="margin-bottom:1rem">
             <div class="form-group">
                 <label for="sort" class="form-label">Sort by</label>

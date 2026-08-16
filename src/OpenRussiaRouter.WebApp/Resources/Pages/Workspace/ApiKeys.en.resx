@@ -51,7 +51,7 @@
     <value>Delete</value>
   </data>
   <data name="ApiKeys_Desc" xml:space="preserve">
-    <value>Manage API keys for programmatic access. Keys are shown only once at creation.</value>
+    <value>Manage API keys for programmatic access.</value>
   </data>
   <data name="ApiKeys_Disable" xml:space="preserve">
     <value>Disable</value>
@@ -93,7 +93,7 @@
     <value>Save</value>
   </data>
   <data name="ApiKeys_SaveKey" xml:space="preserve">
-    <value>Save your key — it won't be shown again!</value>
+    <value>Your new API key is ready to use.</value>
   </data>
   <data name="ApiKeys_Th_Created" xml:space="preserve">
     <value>Created</value>

@@ -157,8 +157,8 @@
                                   <div class="d-flex gap-2 align-items-center">
                                       @if (!string.IsNullOrEmpty(k.RawKey))
                                       {
-                                          <button type="button" class="btn btn-icon copy-btn" data-key-value="@k.RawKey" data-goal="copy_api_key" onclick="copyTableApiKey(event)" title="@Localizer["Btn_Copy"]" aria-label="@Localizer["Btn_Copy"]" data-testid="btn-copy-table-key">
-                                              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                          <button type="button" class="btn btn-sm btn-outline-secondary ws-toggle-btn" data-key-value="@k.RawKey" data-goal="copy_api_key" onclick="copyTableApiKey(event)" data-copied="@Localizer["Btn_Copied"]" title="@Localizer["Btn_Copy"]" data-testid="btn-copy-table-key">
+                                              <span>@Localizer["Btn_Copy"]</span>
                                           </button>
                                       }
 
@@ -262,13 +262,22 @@
         var btn = event.currentTarget;
         var key = btn.getAttribute('data-key-value');
         if (!key) return;
+        var span = btn.querySelector('span');
+        var original = span ? span.textContent : btn.textContent;
         orrCopyText(key).then(function () {
-            var original = btn.innerHTML;
-            btn.classList.add('copied');
-            btn.innerHTML = typeof ORR_COPIED_SVG !== 'undefined' ? ORR_COPIED_SVG : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+            if (span) {
+                span.textContent = btn.getAttribute('data-copied') || 'Copied!';
+            } else {
+                btn.textContent = btn.getAttribute('data-copied') || 'Copied!';
+            }
+            btn.disabled = true;
             setTimeout(function () {
-                btn.innerHTML = original;
-                btn.classList.remove('copied');
+                if (span) {
+                    span.textContent = original;
+                } else {
+                    btn.textContent = original;
+                }
+                btn.disabled = false;
             }, 1500);
         }).catch(function (err) { console.error('Copy failed:', err); });
     }

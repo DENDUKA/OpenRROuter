@@ -51,7 +51,7 @@
     <value>Удалить</value>
   </data>
   <data name="ApiKeys_Desc" xml:space="preserve">
-    <value>Управляйте API-ключами для программного доступа. Ключи показываются только один раз при создании.</value>
+    <value>Управляйте API-ключами для программного доступа.</value>
   </data>
   <data name="ApiKeys_Disable" xml:space="preserve">
     <value>Отключить</value>
@@ -93,7 +93,7 @@
     <value>Сохранить</value>
   </data>
   <data name="ApiKeys_SaveKey" xml:space="preserve">
-    <value>Сохраните ключ — он не будет показан повторно!</value>
+    <value>Ваш новый API-ключ готов к использованию.</value>
   </data>
   <data name="ApiKeys_Th_Created" xml:space="preserve">
     <value>Создан</value>

@@ -19,6 +19,10 @@
 {$RWT_PUBLIC_DOMAIN} {
 	encode zstd gzip
 
+	# Блокируем внешний доступ к метрикам (Prometheus собирает их внутри Docker-сети)
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
+
 	@grafana path /grafana /grafana/*
 	reverse_proxy @grafana grafana:3000
 
@@ -59,5 +63,10 @@ www.rawrter.com, openrussianrouter.com, www.openrussianrouter.com, openrussiarou
 # adding a name here without the record makes Caddy fail-loop on cert issuance for it.
 api.openrussiarouter.com, api.rawrter.com {
 	encode zstd gzip
+
+	# Блокируем внешний доступ к метрикам шлюза
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
+
 	reverse_proxy api-gateway:8080
 }

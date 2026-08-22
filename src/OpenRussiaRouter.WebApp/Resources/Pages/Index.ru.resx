@@ -135,7 +135,7 @@
     <value>Регистрация</value>
   </data>
   <data name="Home_Title" xml:space="preserve">
-    <value>OpenAI-совместимый API для AI-моделей в России</value>
+    <value>OpenAI-совместимый API для AI-моделей без VPN</value>
   </data>
   <data name="A11y_PlatformCapabilities" xml:space="preserve">
     <value>Возможности платформы</value>
@@ -147,6 +147,6 @@
     <value>Rawrter — единый OpenAI-совместимый API для работы с AI-моделями: каталог моделей, цены за токены, пополнение баланса и один API-ключ.</value>
   </data>
   <data name="Title" xml:space="preserve">
-    <value>OpenAI-совместимый API для AI-моделей в России</value>
+    <value>OpenAI-совместимый API для AI-моделей без VPN</value>
   </data>
 </root>

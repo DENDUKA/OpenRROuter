@@ -44,6 +44,8 @@ public sealed class ModelDetailsPageTests
     [InlineData("/ru/models/ORR/Gemini-3.1-Pro", "/ru/models/google/Gemini-3.1-Pro")]
     // Чужой провайдер в сегменте: слаг определяет модель однозначно.
     [InlineData("/ru/models/openai/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
+    // Запрос по UpstreamModelId (с другим регистром или провайдером из upstream) -> 301 на канонический URL
+    [InlineData("/en/models/DeepSeek/deepseek-v4-flash", "/en/models/deepseek/deepseek-v4-flash")]
     public async Task Get_LegacyUrl_RedirectsToCanonical(string url, string expectedLocation)
     {
         using var factory = CreateFactory();
@@ -97,10 +99,11 @@ public sealed class ModelDetailsPageTests
 
     private sealed class FakeBillingClient : BillingGrpc.BillingServiceClient
     {
-        private static readonly (string Id, string DisplayName, string Provider, string ProviderId)[] Catalog =
+        private static readonly (string Id, string DisplayName, string Provider, string ProviderId, string UpstreamId)[] Catalog =
         [
-            ("claude-opus-4-8", "Claude Opus 4.8", "Antropic", "antropic"),
-            ("ORR/Gemini-3.1-Pro", "Gemini 3.1 Pro", "Google", "google"),
+            ("claude-opus-4-8", "Claude Opus 4.8", "Antropic", "antropic", "claude-opus-4-8"),
+            ("ORR/Gemini-3.1-Pro", "Gemini 3.1 Pro", "Google", "google", "google/gemini-3.1-pro"),
+            ("deepseek-v4-flash", "DeepSeek V4 Flash", "DeepSeek", "deepseek", "deepseek/deepseek-v4-flash"),
         ];
 
         public override AsyncUnaryCall<BillingProto.ListPublicModelsResponse> ListPublicModelsAsync(
@@ -110,13 +113,13 @@ public sealed class ModelDetailsPageTests
             CancellationToken cancellationToken = default)
         {
             var response = new BillingProto.ListPublicModelsResponse();
-            foreach (var (id, displayName, provider, providerId) in Catalog)
+            foreach (var (id, displayName, provider, providerId, upstreamId) in Catalog)
             {
                 response.Models.Add(new BillingProto.PublicModel
                 {
                     Id = id,
                     DisplayName = displayName,
-                    UpstreamModelId = id,
+                    UpstreamModelId = upstreamId,
                     InputPricePer1MUsd = "1",
                     OutputPricePer1MUsd = "2",
                     CachePricePer1MUsd = "0",
@@ -135,7 +138,7 @@ public sealed class ModelDetailsPageTests
             CancellationToken cancellationToken = default)
         {
             var response = new BillingProto.GetModelResponse();
-            foreach (var (id, displayName, provider, providerId) in Catalog)
+            foreach (var (id, displayName, provider, providerId, upstreamId) in Catalog)
             {
                 if (!string.Equals(id, request.ModelId, StringComparison.Ordinal))
                 {
@@ -147,7 +150,7 @@ public sealed class ModelDetailsPageTests
                 {
                     Id = id,
                     DisplayName = displayName,
-                    UpstreamModelId = id,
+                    UpstreamModelId = upstreamId,
                     Provider = provider,
                     ProviderId = providerId,
                 };
@@ -166,6 +169,7 @@ public sealed class ModelDetailsPageTests
             var response = new BillingProto.ListProvidersResponse();
             response.Providers.Add(new BillingProto.ModelProvider { Id = "antropic", DisplayName = "Antropic" });
             response.Providers.Add(new BillingProto.ModelProvider { Id = "google", DisplayName = "Google" });
+            response.Providers.Add(new BillingProto.ModelProvider { Id = "deepseek", DisplayName = "DeepSeek" });
             return UnaryCall(response);
         }
 

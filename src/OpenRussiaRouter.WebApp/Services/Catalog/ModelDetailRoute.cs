@@ -88,16 +88,21 @@ public static class ModelDetailRoute
 
     /// <summary>
     /// True when the route values address this catalog entry in any accepted form: the slug must match
-    /// the model's slug, and the provider segment must be its id, its display name or its id prefix.
+    /// the model's slug (or upstream model id slug), and the provider segment must be its id, its display name or its id prefix.
     /// </summary>
     public static bool Matches(
         string? modelId,
         string? providerId,
         string? providerDisplayName,
         string? providerSegment,
-        string? slugSegment)
+        string? slugSegment,
+        string? upstreamModelId = null)
     {
-        if (!string.Equals(SlugOf(modelId), NormalizeSlug(slugSegment), StringComparison.OrdinalIgnoreCase))
+        var normalizedSlug = NormalizeSlug(slugSegment);
+        var slugMatches = string.Equals(SlugOf(modelId), normalizedSlug, StringComparison.OrdinalIgnoreCase)
+            || (!string.IsNullOrWhiteSpace(upstreamModelId) && string.Equals(SlugOf(upstreamModelId), normalizedSlug, StringComparison.OrdinalIgnoreCase));
+
+        if (!slugMatches)
         {
             return false;
         }
@@ -112,9 +117,14 @@ public static class ModelDetailRoute
         var firstSlash = id.IndexOf('/');
         var idPrefix = firstSlash > 0 ? id[..firstSlash] : null;
 
+        var upstreamId = (upstreamModelId ?? string.Empty).Trim();
+        var upstreamFirstSlash = upstreamId.IndexOf('/');
+        var upstreamIdPrefix = upstreamFirstSlash > 0 ? upstreamId[..upstreamFirstSlash] : null;
+
         return Equal(segment, providerId)
             || Equal(segment, providerDisplayName)
-            || Equal(segment, idPrefix);
+            || Equal(segment, idPrefix)
+            || Equal(segment, upstreamIdPrefix);
     }
 
     private static bool Equal(string segment, string? candidate) =>

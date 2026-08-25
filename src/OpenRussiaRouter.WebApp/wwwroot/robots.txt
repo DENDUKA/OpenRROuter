@@ -9,6 +9,16 @@ Disallow: /internal/
 Disallow: /health
 Disallow: /metrics
 
+# Авторизация, онбординг и платежи (закрыты тегом noindex)
+Disallow: /login
+Disallow: /signup
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /verify-email
+Disallow: /preferences
+Disallow: /invite/
+Disallow: /pay/
+
 # Две карты сайта: динамическая от WebApp (каталог) и статическая от VitePress
 # (раздел /docs — отдельный контейнер со своим base, в первую он не попадает).
 Sitemap: https://rawrter.com/sitemap.xml

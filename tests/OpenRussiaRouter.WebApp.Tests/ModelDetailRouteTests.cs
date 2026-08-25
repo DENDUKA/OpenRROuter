@@ -62,17 +62,31 @@ public sealed class ModelDetailRouteTests
 
     [Theory]
     // Канонический URL.
-    [InlineData("google", "Gemini-3.1-Pro", true)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "google", "Gemini-3.1-Pro", true)]
     // Старые ссылки: отображаемое имя провайдера, префикс id, полный id в слаге (в т.ч. с %2F).
-    [InlineData("Google", "Gemini-3.1-Pro", true)]
-    [InlineData("ORR", "Gemini-3.1-Pro", true)]
-    [InlineData("Google", "ORR/Gemini-3.1-Pro", true)]
-    [InlineData("Google", "ORR%2FGemini-3.1-Pro", true)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "Google", "Gemini-3.1-Pro", true)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "ORR", "Gemini-3.1-Pro", true)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "Google", "ORR/Gemini-3.1-Pro", true)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "Google", "ORR%2FGemini-3.1-Pro", true)]
     // Чужой провайдер или чужой слаг — не эта модель.
-    [InlineData("openai", "Gemini-3.1-Pro", false)]
-    [InlineData("google", "GPT-5.5", false)]
-    [InlineData("", "Gemini-3.1-Pro", false)]
-    public void Matches_AcceptsCanonicalAndLegacySegments(string provider, string slug, bool expected) =>
-        ModelDetailRoute.Matches("ORR/Gemini-3.1-Pro", "google", "Google", provider, slug)
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "openai", "Gemini-3.1-Pro", false)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "google", "GPT-5.5", false)]
+    [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "", "Gemini-3.1-Pro", false)]
+    public void Matches_AcceptsCanonicalAndLegacySegments(
+        string modelId, string providerId, string providerName, string provider, string slug, bool expected) =>
+        ModelDetailRoute.Matches(modelId, providerId, providerName, provider, slug)
             .Should().Be(expected);
+
+    [Fact]
+    public void Matches_AcceptsUpstreamModelIdMatching()
+    {
+        ModelDetailRoute.Matches(
+            modelId: "DeepSeek-V4-Flash-Raw",
+            providerId: "deepseek",
+            providerDisplayName: "DeepSeek",
+            providerSegment: "DeepSeek",
+            slugSegment: "deepseek-v4-flash",
+            upstreamModelId: "deepseek/deepseek-v4-flash"
+        ).Should().BeTrue();
+    }
 }

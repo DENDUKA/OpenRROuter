@@ -200,15 +200,16 @@ public class ModelDetailsModel : CatalogPageModelBase
                 return direct;
             }
 
-            // Prefixed ids ("ORR/Gemini-3.1-Pro") are not addressable by the slug alone — only the
-            // public catalog maps provider + slug back onto the full id.
+            // Prefixed ids ("ORR/Gemini-3.1-Pro") or upstream ids ("deepseek/deepseek-v4-flash")
+            // are resolved dynamically from the public catalog.
             var catalog = await _billingClient.ListPublicModelsAsync(ct);
             return catalog.FirstOrDefault(m =>
-                       ModelDetailRoute.Matches(m.Id, m.ProviderId, m.Provider, Provider, slug))
+                       ModelDetailRoute.Matches(m.Id, m.ProviderId, m.Provider, Provider, slug, m.UpstreamModelId))
                    // Wrong provider segment (old link, hand-typed URL): the slug alone identifies the
                    // model and the canonical redirect above sends the request to the right provider.
                    ?? catalog.FirstOrDefault(m =>
-                       string.Equals(ModelDetailRoute.SlugOf(m.Id), slug, StringComparison.OrdinalIgnoreCase));
+                       string.Equals(ModelDetailRoute.SlugOf(m.Id), slug, StringComparison.OrdinalIgnoreCase)
+                       || (!string.IsNullOrWhiteSpace(m.UpstreamModelId) && string.Equals(ModelDetailRoute.SlugOf(m.UpstreamModelId), slug, StringComparison.OrdinalIgnoreCase)));
         }
         catch (Exception ex)
         {

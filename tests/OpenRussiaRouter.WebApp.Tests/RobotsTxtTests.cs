@@ -33,6 +33,14 @@ public class RobotsTxtTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("Disallow: /internal/", content);
         Assert.Contains("Disallow: /health", content);
         Assert.Contains("Disallow: /metrics", content);
+        Assert.Contains("Disallow: /login", content);
+        Assert.Contains("Disallow: /signup", content);
+        Assert.Contains("Disallow: /forgot-password", content);
+        Assert.Contains("Disallow: /reset-password", content);
+        Assert.Contains("Disallow: /verify-email", content);
+        Assert.Contains("Disallow: /preferences", content);
+        Assert.Contains("Disallow: /invite/", content);
+        Assert.Contains("Disallow: /pay/", content);
     }
 
     [Fact]

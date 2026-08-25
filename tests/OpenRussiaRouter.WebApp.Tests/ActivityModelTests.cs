@@ -161,6 +161,31 @@ public class ActivityModelTests
         Assert.Contains("gpt-4", model.AvailableModels);
     }
 
+    [Theory]
+    [InlineData("today")]
+    [InlineData("24h")]
+    [InlineData("7d")]
+    [InlineData("30d")]
+    public async Task OnGetAsync_OverviewTab_PeriodQueriesBillingSummary(string period)
+    {
+        var auth = new ActivityFakeAuth([
+            new ApiKeySummary("k1", "Key 1", "sk-1", Now, Now, null, false)
+        ]);
+        var billing = new ActivityFakeBilling(
+            activity: [],
+            summary: new ActivitySummaryInfo(0, 0, 0, 0, 0m, [], []));
+
+        var model = CreateModel(billing, auth);
+        model.Tab = "overview";
+        model.Period = period;
+
+        await model.OnGetAsync();
+
+        Assert.NotNull(billing.LastFromUtc);
+        Assert.NotNull(billing.LastToUtc);
+        Assert.Equal(["k1"], billing.LastKeyIds);
+    }
+
     [Fact]
     public async Task OnGetAsync_DetailsTab_FiltersPassedToBilling()
     {

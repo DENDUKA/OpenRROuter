@@ -18,14 +18,14 @@ public class ActivityModel : PageModelBase
     private readonly AuthProvider _authClient;
     private readonly IStringLocalizer<SharedResource> _localizer;
 
-    // Tab & filters
-    [FromQuery(Name = "tab")] public string Tab { get; set; } = "details";
-    [FromQuery(Name = "from")] public string? FromDate { get; set; }
-    [FromQuery(Name = "to")] public string? ToDate { get; set; }
-    [FromQuery(Name = "model")] public string? ModelFilter { get; set; }
-    [FromQuery(Name = "key")] public string? KeyFilter { get; set; }
-    [FromQuery(Name = "after")] public string? After { get; set; }
-    [FromQuery(Name = "period")] public string Period { get; set; } = "7d";
+    // Tab & filters - BindProperty(SupportsGet = true) is standard in Razor Pages
+    [BindProperty(SupportsGet = true, Name = "tab")] public string Tab { get; set; } = "details";
+    [BindProperty(SupportsGet = true, Name = "from")] public string? FromDate { get; set; }
+    [BindProperty(SupportsGet = true, Name = "to")] public string? ToDate { get; set; }
+    [BindProperty(SupportsGet = true, Name = "model")] public string? ModelFilter { get; set; }
+    [BindProperty(SupportsGet = true, Name = "key")] public string? KeyFilter { get; set; }
+    [BindProperty(SupportsGet = true, Name = "after")] public string? After { get; set; }
+    [BindProperty(SupportsGet = true, Name = "period")] public string Period { get; set; } = "7d";
 
     // Number of records per page in the Details tab.
     public const int PageSize = 100;

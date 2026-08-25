@@ -14,14 +14,11 @@ namespace OpenRussiaRouter.WebApp.TagHelpers;
 /// The views link with literal paths (<c>href="/models"</c>) rather than <c>asp-page</c>, and a
 /// literal path is the one kind of URL ASP.NET Core does <b>not</b> rewrite with
 /// <see cref="HttpRequest.PathBase"/>. Without this tag helper the first click on <c>/en/models</c>
-/// would drop the visitor back onto the Russian tree — and a crawler following that link would
-/// conclude the English pages are orphans.
+/// or <c>/ru/models</c> would drop the visitor back onto a bare URL.
 /// </para>
 /// <para>
 /// It keys off <c>PathBase</c>, not off the current culture: links stay in the contour the visitor
-/// is already browsing. A signed-in user whose cookie says English but who is on a bare URL keeps
-/// bare URLs, which is what leaves the private areas (workspace, admin) cookie-driven and free of
-/// indexable locale variants.
+/// is already browsing.
 /// </para>
 /// </remarks>
 [HtmlTargetElement("a", Attributes = HrefAttribute)]
@@ -32,13 +29,14 @@ public sealed class LocalePathTagHelper : TagHelper
     private const string ActionAttribute = "action";
 
     /// <summary>
-    /// Paths that must keep their bare form in every locale: machine endpoints with no UI, and the
-    /// crawler-facing files that are defined to live at the origin root.
+    /// Paths that must keep their bare form in every locale: machine endpoints with no UI,
+    /// preference controllers, and the crawler-facing files that are defined to live at the origin root.
     /// </summary>
     private static readonly string[] NeverLocalized =
     [
         "/webhook", "/internal", "/health", "/metrics", "/.well-known",
         "/sitemap.xml", "/robots.txt", "/og-image.png", "/favicon.png",
+        "/preferences",
     ];
 
     /// <summary>Runs after the framework's anchor/form tag helpers so it sees the final URL.</summary>
@@ -101,6 +99,17 @@ public sealed class LocalePathTagHelper : TagHelper
             return string.Equals(docs, path, StringComparison.Ordinal) ? null : docs + tail;
         }
 
+        // If the path is already prefixed by any addressable culture, leave it alone
+        foreach (var culture in LocaleUrl.AddressableCultures)
+        {
+            var prefix = "/" + culture;
+            if (path.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+        }
+
         if (path.StartsWith(pathBase, StringComparison.OrdinalIgnoreCase)
             && (path.Length == pathBase.Length || path[pathBase.Length] == '/'))
         {
@@ -117,7 +126,7 @@ public sealed class LocalePathTagHelper : TagHelper
             }
         }
 
-        // "/en/" would 301 to "/en" — never link to a URL that redirects.
+        // "/en/" would 301 to "/en", "/ru/" would 301 to "/ru" — never link to a URL that redirects.
         return path == "/" ? pathBase + tail : pathBase + url;
     }
 }

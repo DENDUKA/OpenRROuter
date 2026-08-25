@@ -158,7 +158,7 @@ public sealed class SitemapEndpointTests
 
         var urls = doc.Root!.Elements(sm + "url").ToList();
         urls.Select(u => u.Element(sm + "loc")!.Value).Should().Equal(
-            "https://example.com/models",
+            "https://example.com/ru/models",
             "https://example.com/en/models");
 
         // Каждая версия обязана перечислять все версии, включая саму себя, плюс x-default —
@@ -171,7 +171,7 @@ public sealed class SitemapEndpointTests
 
             links.Should().BeEquivalentTo(new[]
             {
-                ("ru", "https://example.com/models"),
+                ("ru", "https://example.com/ru/models"),
                 ("en", "https://example.com/en/models"),
                 ("x-default", "https://example.com/en/models"),
             }.Select(t => (Lang: t.Item1, Href: t.Item2)));
@@ -180,13 +180,15 @@ public sealed class SitemapEndpointTests
     }
 
     [Fact]
-    public void BuildXml_HomePage_EnglishLocIsPrefixWithoutTrailingSlash()
+    public void BuildXml_HomePage_LocsArePrefixWithoutTrailingSlash()
     {
-        // "/en/" редиректит на "/en"; карта сайта обязана перечислять ту форму, которая отдаёт 200.
+        // "/en/" и "/ru/" редиректят; карта сайта обязана перечислять ту форму, которая отдаёт 200.
         var xml = SitemapEndpoint.BuildXml(
             "https://example.com",
             [new SitemapEndpoint.SitemapEntry("/")]);
 
+        xml.Should().Contain("<loc>https://example.com/ru</loc>");
+        xml.Should().NotContain("<loc>https://example.com/ru/</loc>");
         xml.Should().Contain("<loc>https://example.com/en</loc>");
         xml.Should().NotContain("<loc>https://example.com/en/</loc>");
     }
@@ -209,6 +211,7 @@ public sealed class SitemapEndpointTests
         urls[0].Element(sm + "loc")!.Value.Should().Be("https://example.com/docs/");
         urls[0].Elements(xhtml + "link").Should().BeEmpty();
         xml.Should().NotContain("/en/docs");
+        xml.Should().NotContain("/ru/docs");
     }
 
     // ── integration: GET /sitemap.xml ───────────────────────────────────────
@@ -230,9 +233,9 @@ public sealed class SitemapEndpointTests
         response.Content.Headers.ContentType!.MediaType.Should().Be("application/xml");
 
         var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("https://example.com/models/xiaomi/mimo-v2.5-pro");
-        body.Should().Contain("https://example.com/providers/xiaomi");
-        body.Should().Contain("https://example.com/tools/cline");
+        body.Should().Contain("https://example.com/ru/models/xiaomi/mimo-v2.5-pro");
+        body.Should().Contain("https://example.com/ru/providers/xiaomi");
+        body.Should().Contain("https://example.com/ru/tools/cline");
         body.Should().Contain("<lastmod>2026-08-06</lastmod>");
         body.Should().NotContain("providers/empty");
         body.Should().NotContain("tools/draft");
@@ -241,6 +244,11 @@ public sealed class SitemapEndpointTests
         body.Should().Contain("<loc>https://example.com/en/models/xiaomi/mimo-v2.5-pro</loc>");
         body.Should().Contain("<loc>https://example.com/en/providers/xiaomi</loc>");
         body.Should().Contain("<loc>https://example.com/en/tools/cline</loc>");
+
+        // Русская ветка адресуема под /ru.
+        body.Should().Contain("<loc>https://example.com/ru/models/xiaomi/mimo-v2.5-pro</loc>");
+        body.Should().Contain("<loc>https://example.com/ru/providers/xiaomi</loc>");
+        body.Should().Contain("<loc>https://example.com/ru/tools/cline</loc>");
 
         // Критерий: каждый URL из sitemap реально отдаёт 200. Абсолютный origin (https://example.com)
         // в тестовом хосте недоступен — ходим по локальному пути к тому же приложению.
@@ -496,13 +504,6 @@ public sealed class SitemapEndpointTests
             CancellationToken cancellationToken = default)
         {
             var response = new ContentProto.ListToolCategoriesResponse();
-            response.Categories.Add(new ContentProto.ToolCategory
-            {
-                Id = "ide",
-                NameRu = "IDE и редакторы",
-                NameEn = "IDEs & editors",
-                SortOrder = 100,
-            });
             return UnaryCall(response);
         }
     }
@@ -519,11 +520,6 @@ public sealed class SitemapEndpointTests
         }
     }
 
-    private static AsyncUnaryCall<TResponse> UnaryCall<TResponse>(TResponse response)
-        where TResponse : class => new(
-            Task.FromResult(response),
-            Task.FromResult(new Metadata()),
-            () => Status.DefaultSuccess,
-            () => new Metadata(),
-            () => { });
+    private static AsyncUnaryCall<T> UnaryCall<T>(T response) =>
+        new(Task.FromResult(response), Task.FromResult(new Metadata()), () => Status.DefaultSuccess, () => new Metadata(), () => { });
 }

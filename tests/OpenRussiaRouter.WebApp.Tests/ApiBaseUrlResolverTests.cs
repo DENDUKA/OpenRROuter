@@ -50,10 +50,10 @@ public sealed class ApiBaseUrlResolverTests
         using var factory = CreateFactory(platformApiBaseUrl: "https://api.rawrter.com", configApiBaseUrl: null);
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/");
+        using var response = await client.GetAsync("/ru");
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        body.Should().Contain("property=\"og:url\" content=\"https://example.com/\"");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/ru\"");
         body.Should().NotContain("api.rawrter.com");
     }
 

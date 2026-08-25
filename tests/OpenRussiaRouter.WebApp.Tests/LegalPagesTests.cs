@@ -17,7 +17,7 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task PrivacyPage_ReturnsOk()
     {
-        var response = await _client.GetAsync("/legal/privacy");
+        var response = await _client.GetAsync("/ru/legal/privacy");
         response.EnsureSuccessStatusCode();
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
@@ -25,16 +25,16 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task OfferPage_ReturnsOk()
     {
-        var response = await _client.GetAsync("/legal/offer");
+        var response = await _client.GetAsync("/ru/legal/offer");
         response.EnsureSuccessStatusCode();
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
     }
 
     [Theory]
-    [InlineData("/legal/privacy", "ru", "Политика конфиденциальности")]
-    [InlineData("/legal/privacy", "en", "Privacy Policy")]
-    [InlineData("/legal/offer", "ru", "Публичная оферта")]
-    [InlineData("/legal/offer", "en", "Public Offer")]
+    [InlineData("/ru/legal/privacy", "ru", "Политика конфиденциальности")]
+    [InlineData("/en/legal/privacy", "en", "Privacy Policy")]
+    [InlineData("/ru/legal/offer", "ru", "Публичная оферта")]
+    [InlineData("/en/legal/offer", "en", "Public Offer")]
     public async Task LegalPage_ContainsLocalizedTitle(string path, string culture, string title)
     {
         using var request = new HttpRequestMessage(HttpMethod.Get, path);
@@ -47,7 +47,7 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task PrivacyPage_DoesNotContainWpgVpnTelegram()
     {
-        var response = await _client.GetAsync("/legal/privacy");
+        var response = await _client.GetAsync("/ru/legal/privacy");
         var content = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("Web Point Gateway", content);
         Assert.DoesNotContain("WPG", content);
@@ -58,7 +58,7 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task OfferPage_DoesNotContainWpgVpnTelegram()
     {
-        var response = await _client.GetAsync("/legal/offer");
+        var response = await _client.GetAsync("/ru/legal/offer");
         var content = await response.Content.ReadAsStringAsync();
         Assert.DoesNotContain("Web Point Gateway", content);
         Assert.DoesNotContain("WPG", content);
@@ -69,7 +69,7 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task PrivacyPage_ContainsLlmApiService()
     {
-        var response = await _client.GetAsync("/legal/privacy");
+        var response = await _client.GetAsync("/ru/legal/privacy");
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("LLM", content);
     }
@@ -77,14 +77,14 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task OfferPage_ContainsLlmApiService()
     {
-        var response = await _client.GetAsync("/legal/offer");
+        var response = await _client.GetAsync("/ru/legal/offer");
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("API", content);
     }
 
     [Theory]
-    [InlineData("/legal/privacy", "Политика конфиденциальности")]
-    [InlineData("/legal/offer", "Публичная оферта")]
+    [InlineData("/ru/legal/privacy", "Политика конфиденциальности")]
+    [InlineData("/ru/legal/offer", "Публичная оферта")]
     public async Task LegalPages_ContainDocumentHeadingMarkersAndFooter(string path, string heading)
     {
         var response = await _client.GetAsync(path);
@@ -94,8 +94,8 @@ public class LegalPagesTests : IClassFixture<WebApplicationFactory<Program>>
         Assert.Contains("Rawrter", content);
         Assert.DoesNotContain("{{ORR_", content);
         Assert.Contains("https://rawrter.com", content);
-        Assert.Contains("href=\"/legal/privacy\"", content);
-        Assert.Contains("href=\"/legal/offer\"", content);
+        Assert.Contains("href=\"/ru/legal/privacy\"", content);
+        Assert.Contains("href=\"/ru/legal/offer\"", content);
     }
 
     [Theory]

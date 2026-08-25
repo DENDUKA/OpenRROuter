@@ -132,7 +132,8 @@ public class ModelDetailsModel : CatalogPageModelBase
         if (!ModelDetailRoute.IsCanonical(ModelData.Id, ModelData.ProviderId, ModelData.Provider, Provider, Slug)
             && ModelDetailRoute.TryBuildPath(ModelData.Id, ModelData.ProviderId, ModelData.Provider) is { } canonical)
         {
-            return RedirectPermanent(canonical);
+            var target = Request.PathBase + canonical + Request.QueryString;
+            return RedirectPermanent(target);
         }
 
         RelatedModels = await LoadRelatedModelsAsync(ModelData, HttpContext.RequestAborted);

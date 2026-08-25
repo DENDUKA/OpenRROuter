@@ -14,15 +14,15 @@ using CollectorProto = OpenRussiaRouter.Contracts.Grpc.Collector.V1;
 namespace OpenRussiaRouter.WebApp.Tests;
 
 /// <summary>
-/// <c>/models/{provider}/{slug}</c> над каталогом продовой формы: публичный id модели — это не
-/// <c>"{provider}/{slug}"</c>, он бывает как без префикса (<c>claude-opus-4-8</c>), так и с ним
-/// (<c>ORR/Gemini-3.1-Pro</c>). Страница обязана резолвить оба и канонизировать старые ссылки.
+/// <c>/ru/models/{provider}/{slug}</c> and <c>/en/models/{provider}/{slug}</c> model details routing.
 /// </summary>
 public sealed class ModelDetailsPageTests
 {
     [Theory]
-    [InlineData("/models/antropic/claude-opus-4-8", "claude-opus-4-8")]
-    [InlineData("/models/google/Gemini-3.1-Pro", "ORR/Gemini-3.1-Pro")]
+    [InlineData("/ru/models/antropic/claude-opus-4-8", "claude-opus-4-8")]
+    [InlineData("/ru/models/google/Gemini-3.1-Pro", "ORR/Gemini-3.1-Pro")]
+    [InlineData("/en/models/antropic/claude-opus-4-8", "claude-opus-4-8")]
+    [InlineData("/en/models/google/Gemini-3.1-Pro", "ORR/Gemini-3.1-Pro")]
     public async Task Get_CanonicalUrl_RendersModel(string url, string expectedPublicId)
     {
         using var factory = CreateFactory();
@@ -36,12 +36,14 @@ public sealed class ModelDetailsPageTests
     }
 
     [Theory]
+    // Bare legacy URLs redirect to /ru canonical
+    [InlineData("/models/antropic/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
     // Ссылка старого каталога: отображаемое имя провайдера в сегменте.
-    [InlineData("/models/Antropic/claude-opus-4-8", "/models/antropic/claude-opus-4-8")]
+    [InlineData("/ru/models/Antropic/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
     // Ссылка старого sitemap: префикс id вместо провайдера.
-    [InlineData("/models/ORR/Gemini-3.1-Pro", "/models/google/Gemini-3.1-Pro")]
+    [InlineData("/ru/models/ORR/Gemini-3.1-Pro", "/ru/models/google/Gemini-3.1-Pro")]
     // Чужой провайдер в сегменте: слаг определяет модель однозначно.
-    [InlineData("/models/openai/claude-opus-4-8", "/models/antropic/claude-opus-4-8")]
+    [InlineData("/ru/models/openai/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
     public async Task Get_LegacyUrl_RedirectsToCanonical(string url, string expectedLocation)
     {
         using var factory = CreateFactory();
@@ -59,7 +61,7 @@ public sealed class ModelDetailsPageTests
         using var factory = CreateFactory();
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/models/antropic/no-such-model");
+        using var response = await client.GetAsync("/ru/models/antropic/no-such-model");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }

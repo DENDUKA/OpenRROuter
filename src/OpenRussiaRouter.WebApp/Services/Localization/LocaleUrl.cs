@@ -5,10 +5,8 @@ namespace OpenRussiaRouter.WebApp.Services.Localization;
 /// </summary>
 /// <remarks>
 /// <para>
-/// Russian lives at the bare path (<c>/models</c>) and English under a <c>/en</c> prefix
-/// (<c>/en/models</c>). Russian is deliberately <b>not</b> prefixed: every already-indexed URL keeps
-/// its address, so introducing the English contour costs no redirects and no ranking churn on the
-/// side that currently earns the traffic.
+/// Russian lives under a <c>/ru</c> prefix (<c>/ru/models</c>) and English under a <c>/en</c> prefix
+/// (<c>/en/models</c>). Both locales have explicit, addressable URL prefixes.
 /// </para>
 /// <para>
 /// The prefix is stripped into <see cref="Microsoft.AspNetCore.Http.HttpRequest.PathBase"/> by
@@ -20,7 +18,10 @@ namespace OpenRussiaRouter.WebApp.Services.Localization;
 /// </remarks>
 public static class LocaleUrl
 {
-    /// <summary>The prefix segment of the non-default locale, without a trailing slash.</summary>
+    /// <summary>The prefix segment of the Russian locale, without a trailing slash.</summary>
+    public const string RussianPrefix = "/ru";
+
+    /// <summary>The prefix segment of the English locale, without a trailing slash.</summary>
     public const string EnglishPrefix = "/en";
 
     /// <summary>
@@ -38,16 +39,17 @@ public static class LocaleUrl
     public const string XDefaultCulture = "en";
 
     /// <summary>
-    /// The path prefix carried by <paramref name="culture"/>, or <see cref="string.Empty"/> for the
-    /// default (unprefixed) culture.
+    /// The path prefix carried by <paramref name="culture"/>.
     /// </summary>
     public static string PrefixFor(string? culture) =>
-        string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase) ? EnglishPrefix : string.Empty;
+        string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase) ? EnglishPrefix :
+        string.Equals(culture, "ru", StringComparison.OrdinalIgnoreCase) ? RussianPrefix :
+        RussianPrefix;
 
     /// <summary>
     /// Splits a raw incoming path into its locale and the bare path underneath it.
-    /// <paramref name="path"/> is expected to be a rooted request path (<c>/en/models</c>).
-    /// A bare <c>/en</c> maps to <c>/</c> so the English home page is not a special case downstream.
+    /// <paramref name="path"/> is expected to be a rooted request path (<c>/en/models</c> or <c>/ru/models</c>).
+    /// A bare <c>/en</c> or <c>/ru</c> maps to <c>/</c> so the home page is not a special case downstream.
     /// </summary>
     public static (string Culture, string Path) Split(string? path)
     {
@@ -86,13 +88,8 @@ public static class LocaleUrl
         var bare = string.IsNullOrEmpty(path) ? "/" : path;
         var prefix = PrefixFor(culture);
 
-        if (prefix.Length == 0)
-        {
-            return bare;
-        }
-
         // "/en" + "/" would render as "/en/", which the canonical normalizer then redirects away
-        // from — emit the same "/en" the middleware and the sitemap agree on.
+        // from — emit the same "/en" (or "/ru") the middleware and the sitemap agree on.
         return bare == "/" ? prefix : prefix + bare;
     }
 
@@ -125,17 +122,17 @@ public static class LocaleUrl
     /// The documentation URL for <paramref name="culture"/>. VitePress nests its English tree
     /// <b>inside</b> the docs base (<c>/docs/en/...</c>) rather than under the site-wide <c>/en</c>
     /// prefix, so docs links cannot be prefixed like the rest of the site. Mirrors 1:1, so the tail
-    /// carries over unchanged.
+    /// carries over unchanged. Russian lives directly under <c>/docs/...</c>.
     /// </summary>
     public static string DocsFor(string? path, string? culture)
     {
         var bare = string.IsNullOrEmpty(path) ? DocsPath : path;
-        if (PrefixFor(culture).Length == 0)
+        if (string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase))
         {
-            return bare;
+            var rest = bare[DocsPath.Length..];
+            return rest.Length == 0 ? DocsPath + "/en/" : DocsPath + "/en" + rest;
         }
 
-        var rest = bare[DocsPath.Length..];
-        return rest.Length == 0 ? DocsPath + "/en/" : DocsPath + "/en" + rest;
+        return bare.Length == DocsPath.Length ? DocsPath + "/" : bare;
     }
 }

@@ -16,7 +16,7 @@ using OpenRussiaRouter.WebApp.Services.Billing;
 namespace OpenRussiaRouter.WebApp.Tests;
 
 /// <summary>
-/// TS-010: covers the UI culture switching (cookie + Accept-Language),
+/// TS-010: covers the UI culture switching (cookie + URL prefix),
 /// the language switcher in the topbar, and the localized resource scan.
 /// </summary>
 public class LocalizationTests : IClassFixture<WebAppFactory>
@@ -35,9 +35,9 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task HomePage_WithRussianCookie_RendersRussianNav()
+    public async Task RussianHome_WithRussianCookie_RendersRussianNav()
     {
-        var req = NewRequest("/", $"{CultureCookie}=c=ru|uic=ru");
+        var req = NewRequest("/ru", $"{CultureCookie}=c=ru|uic=ru");
         var body = await ReadBodyAsync(req);
 
         Assert.Equal("ru", ExtractHtmlLang(body));
@@ -46,28 +46,14 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task HomePage_WithEnglishCookie_RendersEnglishNav()
+    public async Task EnglishHome_WithEnglishCookie_RendersEnglishNav()
     {
-        var req = NewRequest("/", $"{CultureCookie}=c=en|uic=en");
+        var req = NewRequest("/en", $"{CultureCookie}=c=en|uic=en");
         var body = await ReadBodyAsync(req);
 
         Assert.Equal("en", ExtractHtmlLang(body));
         AssertContainsText(body, ">Models<");
         AssertContainsText(body, ">Setup guide<");
-    }
-
-    [Fact]
-    public async Task HomePage_AcceptLanguage_IsIgnored_UnprefixedUrlIsAlwaysRussian()
-    {
-        // SEO-024: AcceptLanguageHeaderRequestCultureProvider was removed from the chain. While it
-        // was there, one URL served two languages depending on a request header, which contradicts
-        // that URL's own canonical and hreflang. English now has its own address.
-        var req = NewRequest("/");
-        req.Headers.Add("Accept-Language", "en-US,en;q=0.9");
-        var body = await ReadBodyAsync(req);
-
-        Assert.Equal("ru", ExtractHtmlLang(body));
-        AssertContainsText(body, ">Модели<");
     }
 
     [Theory]
@@ -79,9 +65,6 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     [InlineData("/en/legal/privacy")]
     public async Task EnglishPrefixedUrl_Returns200AndRendersEnglish_WithoutAnyCookie(string path)
     {
-        // The crawler case: no cookie, no Accept-Language. The URL alone must decide.
-        // Asserting the status code matters — the re-executed /NotFound page also renders with
-        // <html lang="en">, so a body-only check would pass on a 404.
         using var response = await _client.SendAsync(NewRequest(path));
         var body = await response.Content.ReadAsStringAsync();
 
@@ -89,11 +72,25 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
         Assert.Equal("en", ExtractHtmlLang(body));
     }
 
+    [Theory]
+    [InlineData("/ru")]
+    [InlineData("/ru/models")]
+    [InlineData("/ru/providers")]
+    [InlineData("/ru/tools")]
+    [InlineData("/ru/support")]
+    [InlineData("/ru/legal/privacy")]
+    public async Task RussianPrefixedUrl_Returns200AndRendersRussian_WithoutAnyCookie(string path)
+    {
+        using var response = await _client.SendAsync(NewRequest(path));
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("ru", ExtractHtmlLang(body));
+    }
+
     [Fact]
     public async Task EnglishPrefixedUrl_BeatsRussianCookie()
     {
-        // Arriving from a search result must show the language the URL promises, whatever an
-        // earlier visit left in the cookie — otherwise the page contradicts its own hreflang.
         var req = NewRequest("/en/models", $"{CultureCookie}=c=ru|uic=ru");
         var body = await ReadBodyAsync(req);
 
@@ -102,23 +99,46 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
+    public async Task RussianPrefixedUrl_BeatsEnglishCookie()
+    {
+        var req = NewRequest("/ru/models", $"{CultureCookie}=c=en|uic=en");
+        var body = await ReadBodyAsync(req);
+
+        Assert.Equal("ru", ExtractHtmlLang(body));
+        AssertContainsText(body, ">Модели<");
+    }
+
+    [Fact]
     public async Task EnglishPage_InternalLinks_StayInsideTheEnglishTree()
     {
-        // Views link with literal href="/..." paths, which ASP.NET Core does not rewrite with
-        // PathBase. Without LocalePathTagHelper the first click would drop the visitor back onto
-        // the Russian tree and a crawler would read the English pages as orphans.
         var body = await ReadBodyAsync(NewRequest("/en"));
 
         Assert.Contains("href=\"/en/models\"", body);
         Assert.DoesNotContain("href=\"/models\"", body);
     }
 
+    [Fact]
+    public async Task RussianPage_InternalLinks_StayInsideTheRussianTree()
+    {
+        var body = await ReadBodyAsync(NewRequest("/ru"));
+
+        Assert.Contains("href=\"/ru/models\"", body);
+        Assert.DoesNotContain("href=\"/models\"", body);
+    }
+
     [Theory]
-    [InlineData("/ru", "/")]
-    [InlineData("/ru/models", "/models")]
+    [InlineData("/", "/ru")]
+    [InlineData("/models", "/ru/models")]
+    [InlineData("/providers", "/ru/providers")]
+    [InlineData("/tools", "/ru/tools")]
+    [InlineData("/support", "/ru/support")]
+    [InlineData("/legal/privacy", "/ru/legal/privacy")]
+    [InlineData("/legal/offer", "/ru/legal/offer")]
+    [InlineData("/ru/", "/ru")]
+    [InlineData("/RU/models", "/ru/models")]
     [InlineData("/en/", "/en")]
     [InlineData("/EN/models", "/en/models")]
-    public async Task DuplicateLocaleSpellings_301ToTheCanonicalUrl(string requested, string expected)
+    public async Task DuplicateAndBareRoutes_301ToTheCanonicalUrl(string requested, string expected)
     {
         using var response = await _client.SendAsync(NewRequest(requested));
 
@@ -129,7 +149,6 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     [Fact]
     public async Task EnglishDocs_301ToTheVitePressEnglishTree()
     {
-        // /docs is served by a separate container that nests its English tree inside its own base.
         using var response = await _client.SendAsync(NewRequest("/en/docs"));
 
         Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
@@ -137,10 +156,17 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
+    public async Task RussianDocs_301ToTheVitePressRussianTree()
+    {
+        using var response = await _client.SendAsync(NewRequest("/ru/docs"));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal("/docs/", response.Headers.Location!.ToString());
+    }
+
+    [Fact]
     public async Task TrailingSlashUnderEnglishPrefix_301Preserves_ThePrefix()
     {
-        // The canonical normalizer runs on the bare path; dropping PathBase from its redirect
-        // would silently send every sloppy English URL to its Russian twin.
         using var response = await _client.SendAsync(NewRequest("/en/models/"));
 
         Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
@@ -148,10 +174,17 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
+    public async Task TrailingSlashUnderRussianPrefix_301Preserves_ThePrefix()
+    {
+        using var response = await _client.SendAsync(NewRequest("/ru/models/"));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal("/ru/models", response.Headers.Location!.ToString());
+    }
+
+    [Fact]
     public async Task PrivateAreas_HaveNoLocalePrefix_AndStayCookieDriven()
     {
-        // Workspace/admin/auth are noindex and behind auth: they have no indexable URL to prefix,
-        // so the cookie remains their language carrier.
         var req = NewRequest("/login", $"{CultureCookie}=c=en|uic=en");
         var body = await ReadBodyAsync(req);
 
@@ -159,47 +192,14 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task HomePage_NoLanguageSignal_UsesDefaultRu()
-    {
-        var req = NewRequest("/");
-        var body = await ReadBodyAsync(req);
-
-        Assert.Equal("ru", ExtractHtmlLang(body));
-        AssertContainsText(body, ">Модели<");
-    }
-
-    [Fact]
-    public async Task HomePage_CultureCookieOverridesAcceptLanguage()
-    {
-        var req = NewRequest("/", $"{CultureCookie}=c=ru|uic=ru");
-        req.Headers.Add("Accept-Language", "en");
-        var body = await ReadBodyAsync(req);
-
-        Assert.Equal("ru", ExtractHtmlLang(body));
-        AssertContainsText(body, ">Модели<");
-    }
-
-    [Fact]
-    public async Task HomePage_QueryStringCulture_IsIgnored()
-    {
-        // Spec: QueryStringRequestCultureProvider must NOT be in the provider chain.
-        var req = NewRequest("/?culture=en&ui-culture=en");
-        var body = await ReadBodyAsync(req);
-
-        Assert.Equal("ru", ExtractHtmlLang(body));
-        AssertContainsText(body, ">Модели<");
-    }
-
-    [Fact]
     public async Task Topbar_HasLanguageSwitcherForm_AndHighlightsActive()
     {
-        var req = NewRequest("/", $"{CultureCookie}=c=ru|uic=ru");
+        var req = NewRequest("/ru", $"{CultureCookie}=c=ru|uic=ru");
         var body = await ReadBodyAsync(req);
 
         Assert.Contains("action=\"/preferences/language\"", body);
         Assert.Contains("value=\"ru\"", body);
         Assert.Contains("value=\"en\"", body);
-        // The switcher form has the antiforgery token + returnUrl hidden field
         Assert.Contains("name=\"returnUrl\"", body);
         Assert.Contains("name=\"__RequestVerificationToken\"", body);
     }
@@ -221,12 +221,12 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
     [Fact]
     public async Task FooterLinks_AreLocalized()
     {
-        var ruReq = NewRequest("/", $"{CultureCookie}=c=ru|uic=ru");
+        var ruReq = NewRequest("/ru", $"{CultureCookie}=c=ru|uic=ru");
         var ruBody = await ReadBodyAsync(ruReq);
         AssertContainsText(ruBody, "Политика конфиденциальности");
         AssertContainsText(ruBody, "Публичная оферта");
 
-        var enReq = NewRequest("/", $"{CultureCookie}=c=en|uic=en");
+        var enReq = NewRequest("/en", $"{CultureCookie}=c=en|uic=en");
         var enBody = await ReadBodyAsync(enReq);
         AssertContainsText(enBody, "Privacy Policy");
         AssertContainsText(enBody, "Public Offer");
@@ -297,12 +297,6 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
         Assert.Equal(0, factory.Services.GetRequiredService<CheckoutFakeBilling>().CreateCalls);
     }
 
-    /// <summary>
-    /// TS-010 acceptance: every resource key referenced in any view
-    /// (<c>@Localizer[...]</c> via <c>IStringLocalizer&lt;SharedResource&gt;</c>)
-    /// and in any PageModel / DataAnnotations attribute must be present in both
-    /// <c>.ru.resx</c> and <c>.en.resx</c>. The user must never see the raw key.
-    /// </summary>
     [Fact]
     public void EveryUsedResourceKey_IsPresentInBothCultures()
     {
@@ -401,19 +395,11 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
         return m.Groups[1].Value;
     }
 
-    /// <summary>
-    /// Asserts the body contains the given text somewhere — either as-is, or in
-    /// one of the forms Razor might emit. Razor's default encoder replaces
-    /// non-ASCII characters with <c>&amp;#xHEX;</c> numeric character references,
-    /// so we accept both the literal form and the numeric-encoded form.
-    /// </summary>
     private static void AssertContainsText(string body, string literal)
     {
         if (body.Contains(literal)) return;
         if (body.Contains(System.Net.WebUtility.HtmlEncode(literal))) return;
 
-        // Razor's <c>IHtmlEncoder</c> emits &#x{HEX}; for code points > 0x7F.
-        // Build a regex that matches either the raw char or the numeric entity.
         var pattern = new System.Text.StringBuilder();
         foreach (var ch in literal)
         {

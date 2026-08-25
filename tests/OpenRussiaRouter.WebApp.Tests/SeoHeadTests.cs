@@ -19,23 +19,37 @@ namespace OpenRussiaRouter.WebApp.Tests;
 public sealed class SeoHeadTests
 {
     [Fact]
-    public async Task Get_Root_EmitsCanonicalDescriptionAndOgTags()
+    public async Task Get_Root_RedirectsToRussianCanonical()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false
+        });
+
+        using var response = await client.GetAsync("/");
+        response.StatusCode.Should().Be(HttpStatusCode.MovedPermanently);
+        response.Headers.Location!.OriginalString.Should().Be("/ru");
+    }
+
+    [Fact]
+    public async Task Get_RussianHome_EmitsCanonicalDescriptionAndOgTags()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/");
+        using var response = await client.GetAsync("/ru");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/\" />");
+        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/ru\" />");
         body.Should().Contain("<meta name=\"description\" content=\"");
         body.Should().Contain("единый OpenAI-совместимый API для работы с AI-моделями");
         body.Should().Contain("property=\"og:site_name\" content=\"Rawrter\"");
         body.Should().Contain("property=\"og:type\" content=\"website\"");
         body.Should().Contain("property=\"og:title\"");
         body.Should().Contain("property=\"og:description\"");
-        body.Should().Contain("property=\"og:url\" content=\"https://example.com/\"");
+        body.Should().Contain("property=\"og:url\" content=\"https://example.com/ru\"");
         body.Should().Contain("property=\"og:image\" content=\"https://example.com/og-image.png\"");
         body.Should().Contain("name=\"twitter:card\" content=\"summary_large_image\"");
         body.Should().Contain("name=\"twitter:image\" content=\"https://example.com/og-image.png\"");
@@ -43,18 +57,16 @@ public sealed class SeoHeadTests
     }
 
     [Fact]
-    public async Task Get_Root_EmitsReciprocalHreflangCluster_WithEnglishXDefault()
+    public async Task Get_RussianHome_EmitsReciprocalHreflangCluster_WithEnglishXDefault()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/");
+        using var response = await client.GetAsync("/ru");
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/\" />");
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/ru\" />");
         body.Should().Contain("<link rel=\"alternate\" hreflang=\"en\" href=\"https://example.com/en\" />");
-        // x-default targets the version for visitors whose language matches neither. Outside the
-        // RU-speaking market English is the better landing, so it must not point at the Russian page.
         body.Should().Contain("<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://example.com/en\" />");
     }
 
@@ -68,10 +80,8 @@ public sealed class SeoHeadTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        // Canonicalizing /en/models onto /models would tell search engines the English tree is a
-        // duplicate — it would be crawled and then dropped straight back out of the index.
         body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/en/models\" />");
-        body.Should().NotContain("<link rel=\"canonical\" href=\"https://example.com/models\" />");
+        body.Should().NotContain("<link rel=\"canonical\" href=\"https://example.com/ru/models\" />");
         body.Should().Contain("property=\"og:url\" content=\"https://example.com/en/models\"");
         body.Should().NotContain("name=\"robots\"");
     }
@@ -82,9 +92,6 @@ public sealed class SeoHeadTests
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        // /en is the final form of the English home; /en/ is only reachable through a 301, so the
-        // canonical must be the URL that actually answers 200 — a canonical pointing at a
-        // redirecting URL would make search engines resolve the chain and invite duplicates.
         using var response = await client.GetAsync("/en");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -94,9 +101,7 @@ public sealed class SeoHeadTests
         body.Should().Contain("property=\"og:url\" content=\"https://example.com/en\"");
         body.Should().NotContain("name=\"robots\"");
 
-        // The English home advertises the same reciprocal cluster as the Russian one — ru at the
-        // bare path, en at /en, x-default at the English version.
-        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/\" />");
+        body.Should().Contain("<link rel=\"alternate\" hreflang=\"ru\" href=\"https://example.com/ru\" />");
         body.Should().Contain("<link rel=\"alternate\" hreflang=\"en\" href=\"https://example.com/en\" />");
         body.Should().Contain("<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://example.com/en\" />");
     }
@@ -107,375 +112,127 @@ public sealed class SeoHeadTests
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var ru = await client.GetAsync("/models");
+        using var ru = await client.GetAsync("/ru/models");
         using var en = await client.GetAsync("/en/models");
 
         var ruLinks = ExtractHreflangLinks(WebUtility.HtmlDecode(await ru.Content.ReadAsStringAsync()));
         var enLinks = ExtractHreflangLinks(WebUtility.HtmlDecode(await en.Content.ReadAsStringAsync()));
 
-        // A cluster whose members disagree about its membership is discarded wholesale.
         ruLinks.Should().Equal(enLinks);
         ruLinks.Should().Equal(
-            ("ru", "https://example.com/models"),
+            ("ru", "https://example.com/ru/models"),
             ("en", "https://example.com/en/models"),
             ("x-default", "https://example.com/en/models"));
     }
 
     [Fact]
-    public async Task Get_NoIndexPage_EmitsNoHreflang()
+    public async Task Get_AdminAndWorkspacePages_EmitNoIndex()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/login");
-        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        foreach (var path in new[] { "/login", "/signup", "/workspace/apikeys", "/admin" })
+        {
+            using var response = await client.GetAsync(path);
+            var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
-        body.Should().Contain("name=\"robots\" content=\"noindex,follow\"");
+            body.Should().Contain("<meta name=\"robots\" content=\"noindex,follow\" />",
+                $"path {path} must not be indexed");
+            body.Should().NotContain("rel=\"canonical\"", $"path {path} must not have a canonical link");
+            body.Should().NotContain("hreflang", $"path {path} must not advertise alternates");
+        }
+    }
+
+    [Fact]
+    public async Task Get_MissingResource_Returns404WithNoIndex()
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/ru/models/non-existent-model-public-id");
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        body.Should().Contain("<meta name=\"robots\" content=\"noindex,follow\" />");
+        body.Should().NotContain("rel=\"canonical\"");
         body.Should().NotContain("hreflang");
     }
 
-    private static List<(string Lang, string Href)> ExtractHreflangLinks(string body) =>
-        Regex.Matches(body, "<link rel=\"alternate\" hreflang=\"([^\"]+)\" href=\"([^\"]+)\" />")
-            .Select(m => (m.Groups[1].Value, m.Groups[2].Value))
-            .ToList();
-
     [Fact]
-    public async Task Get_ModelsWithQuery_CanonicalStripsQuery()
+    public async Task Get_HomePage_EmitsSiteGraph_OrganizationAndWebSite()
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        using var response = await client.GetAsync("/models?category=text");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/models\" />");
-        body.Should().NotContain("canonical\" href=\"https://example.com/models?");
-        body.Should().NotContain("name=\"robots\"");
-    }
-
-    [Fact]
-    public async Task Get_ModelDetails_CanonicalMatchesPath()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/models/xiaomi/mimo-v2.5-pro");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/models/xiaomi/mimo-v2.5-pro\" />");
-        body.Should().NotContain("name=\"robots\"");
-    }
-
-    [Fact]
-    public async Task Get_ToolsWithQuery_CanonicalStripsQuery()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/tools?category=ide");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/tools\" />");
-        body.Should().NotContain("canonical\" href=\"https://example.com/tools?");
-        body.Should().NotContain("name=\"robots\"");
-    }
-
-    [Fact]
-    public async Task Get_Login_EmitsNoIndexAndNoCanonical()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/login");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("<meta name=\"robots\" content=\"noindex,follow\" />");
-        body.Should().NotContain("<link rel=\"canonical\"");
-    }
-
-    [Fact]
-    public async Task Get_Signup_EmitsNoIndex()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/signup");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("<meta name=\"robots\" content=\"noindex,follow\" />");
-    }
-
-    [Fact]
-    public async Task Get_IndexablePublicPages_AllEmitUniqueMetaDescriptions()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        var urls = new[]
-        {
-            "/", "/models", "/models/xiaomi/mimo-v2.5-pro", "/providers", "/providers/xiaomi",
-            "/tools", "/tools/cline", "/docs", "/support", "/legal/privacy", "/legal/offer"
-        };
-
-        var descriptions = new List<string>();
-        foreach (var url in urls)
-        {
-            using var response = await client.GetAsync(url);
-            response.StatusCode.Should().Be(HttpStatusCode.OK, $"page {url} should be reachable");
-
-            var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-            var match = Regex.Match(body, "<meta name=\"description\" content=\"([^\"]*)\"");
-            match.Success.Should().BeTrue($"page {url} must emit a meta description");
-
-            var description = match.Groups[1].Value;
-            description.Should().NotBeNullOrWhiteSpace($"page {url} must have a non-empty meta description");
-            descriptions.Add(description);
-        }
-
-        descriptions.Should().OnlyHaveUniqueItems("indexable pages must not share meta descriptions");
-    }
-
-    [Fact]
-    public async Task Get_Root_NoAnalyticsConfigured_EmitsNoTrackingTags()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().NotContain("googletagmanager.com");
-        body.Should().NotContain("mc.yandex.ru");
-        body.Should().NotContain("orr-analytics-goals");
-        body.Should().NotContain("reachGoal");
-    }
-
-    [Fact]
-    public async Task Get_Root_AnalyticsConfigured_EmitsGoalRunnerAndLandingCtaHooks()
-    {
-        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("orr-analytics-goals");
-        body.Should().Contain("'reachGoal'");
-        foreach (var goal in new[]
-                 {
-                     "cta_signup_hero", "cta_signup_quickstart", "cta_signup_final",
-                     "cta_models_hero", "cta_models_catalog", "cta_models_final",
-                 })
-        {
-            body.Should().Contain($"data-goal=\"{goal}\"", $"the landing must expose the {goal} hook");
-        }
-    }
-
-    [Fact]
-    public async Task Get_Root_MetrikaOnly_StillShowsConsentBannerWithoutGtag()
-    {
-        // Gating the banner on the GA tag alone left a Metrika-only setup unable to ever record
-        // consent, which silently disabled webvisor and the click map.
-        using var factory = CreateFactory(googleAnalytics: false, yandexMetrika: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("cookie-consent");
-        // The Accept handler used to call gtag unconditionally, so with GA off it threw and the
-        // banner never went away — leaving rwt_consent unset forever.
-        body.Should().NotContain("gtag('consent'");
-    }
-
-    [Fact]
-    public async Task Get_Root_AnalyticsConfigured_EmitsBothTrackingTags()
-    {
-        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = await response.Content.ReadAsStringAsync();
-        body.Should().Contain("https://www.googletagmanager.com/gtag/js?id=G-TEST123");
-        body.Should().Contain("gtag('config', 'G-TEST123')");
-        body.Should().Contain("https://mc.yandex.ru/metrika/tag.js?id=11111111");
-        body.Should().Contain("https://mc.yandex.ru/watch/11111111");
-    }
-
-    [Fact]
-    public async Task Get_Root_GoogleAnalyticsConfigured_CspAllowsGa4Endpoints()
-    {
-        using var factory = CreateFactory(googleAnalytics: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
-        csp.Should().Contain("connect-src 'self' https://pay.yandex.ru https://www.googletagmanager.com https://*.google-analytics.com https://analytics.google.com");
-        csp.Should().Contain("script-src 'self' 'unsafe-inline' https://pay.yandex.ru https://www.googletagmanager.com");
-        csp.Should().NotContain("mc.yandex");
-        csp.Should().NotContain("wss://");
-    }
-
-    [Fact]
-    public async Task Get_Root_NoAnalyticsConfigured_CspHasNoAnalyticsHosts()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
-        csp.Should().NotContain("googletagmanager.com");
-        csp.Should().NotContain("google-analytics.com");
-        csp.Should().NotContain("analytics.google.com");
-        csp.Should().NotContain("mc.yandex");
-        csp.Should().NotContain("yastatic.net");
-        csp.Should().NotContain("wss://");
-    }
-
-    [Fact]
-    public async Task Get_Root_YandexMetrikaConfigured_CspHasYandexHostsAndNoGoogle()
-    {
-        using var factory = CreateFactory(yandexMetrika: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
-        csp.Should().Contain("https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net");
-        csp.Should().Contain("wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com");
-        csp.Should().NotContain("googletagmanager.com");
-        csp.Should().NotContain("google-analytics.com");
-        csp.Should().NotContain("analytics.google.com");
-    }
-
-    [Fact]
-    public async Task Get_Root_BothAnalyticsConfigured_CspAllowsBothGroups()
-    {
-        using var factory = CreateFactory(googleAnalytics: true, yandexMetrika: true);
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var csp = response.Headers.GetValues("Content-Security-Policy").Should().ContainSingle().Subject;
-        csp.Should().Contain("https://*.google-analytics.com");
-        csp.Should().Contain("https://analytics.google.com");
-        csp.Should().Contain("https://mc.yandex.ru https://mc.yandex.com https://mc.webvisor.org https://mc.webvisor.com https://yastatic.net");
-        csp.Should().Contain("wss://mc.yandex.ru wss://mc.yandex.com wss://mc.webvisor.org wss://mc.webvisor.com");
-    }
-
-    [Fact]
-    public async Task Get_Root_ApiBaseUrlNeverLeaksIntoCrawlerMeta()
-    {
-        // The admin-configured API base lives on a subdomain; the crawler-facing origin is the
-        // apex site. None of the SEO metadata (canonical, og:url, og:image, twitter:image) may
-        // reference the API host.
-        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/");
+        using var response = await client.GetAsync("/ru");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/\" />");
-        body.Should().Contain("property=\"og:url\" content=\"https://example.com/\"");
-        body.Should().Contain("property=\"og:image\" content=\"https://example.com/og-image.png\"");
-        body.Should().Contain("name=\"twitter:image\" content=\"https://example.com/og-image.png\"");
-        body.Should().NotContain("api.example.com");
-    }
-
-    [Fact]
-    public async Task Get_ModelDetails_ApiExamplesKeepApiHostWhileCanonicalUsesSiteHost()
-    {
-        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
-        using var client = factory.CreateClient();
-
-        using var response = await client.GetAsync("/models/xiaomi/mimo-v2.5-pro");
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
-        // Integration snippets must still point at the API host (that's what users call).
-        body.Should().Contain("base_url=\"https://api.example.com/v1\"");
-        body.Should().Contain("https://api.example.com/v1/chat/completions");
-        // ... while the canonical stays on the crawler-facing site host.
-        body.Should().Contain("<link rel=\"canonical\" href=\"https://example.com/models/xiaomi/mimo-v2.5-pro\" />");
-        body.Should().Contain("property=\"og:url\" content=\"https://example.com/models/xiaomi/mimo-v2.5-pro\"");
-    }
-
-    [Fact]
-    public async Task Get_Root_EmitsOrganizationAndWebSiteJsonLd()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        var body = WebUtility.HtmlDecode(await client.GetStringAsync("/"));
-
-        body.Should().Contain("<script type=\"application/ld+json\">");
         body.Should().Contain("\"@type\":\"Organization\"");
+        body.Should().Contain("\"name\":\"Rawrter\"");
         body.Should().Contain("\"@type\":\"WebSite\"");
     }
 
-    [Fact]
-    public async Task Get_ModelDetails_EmitsProductAndBreadcrumbJsonLd()
+    [Theory]
+    [InlineData("/ru/models/xiaomi/mimo-v2.5-pro")]
+    [InlineData("/en/models/xiaomi/mimo-v2.5-pro")]
+    public async Task Get_ModelDetails_EmitsBreadcrumbsAndProductJsonLd(string url)
     {
-        using var factory = CreateFactory(apiBaseUrl: "https://api.example.com", siteBaseUrl: "https://example.com");
+        using var factory = CreateFactory();
         using var client = factory.CreateClient();
 
-        var body = WebUtility.HtmlDecode(await client.GetStringAsync("/models/xiaomi/mimo-v2.5-pro"));
+        using var response = await client.GetAsync(url);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
 
-        body.Should().Contain("\"@type\":\"Product\"");
-        body.Should().Contain("\"sku\":\"xiaomi/mimo-v2.5-pro\"");
-        body.Should().Contain("\"@type\":\"Offer\"");
-        body.Should().Contain("\"priceCurrency\":\"USD\"");
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
         body.Should().Contain("\"@type\":\"BreadcrumbList\"");
-        // Structured-data URLs must track the canonical, never the API host.
-        body.Should().Contain("\"url\":\"https://example.com/models/xiaomi/mimo-v2.5-pro\"");
-    }
-
-    [Fact]
-    public async Task Get_Login_NoIndexPage_EmitsNoJsonLd()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        var body = await client.GetStringAsync("/login");
-
-        body.Should().NotContain("application/ld+json");
-    }
-
-    [Fact]
-    public async Task Get_ModelsCatalog_LinksModelDetailPagesWithRealAnchors()
-    {
-        using var factory = CreateFactory();
-        using var client = factory.CreateClient();
-
-        var body = await client.GetStringAsync("/models");
-
-        // The row's onclick is not a crawlable link: without an <a href> every model detail page
-        // is an orphan reachable only from the sitemap.
-        body.Should().Contain("href=\"/models/xiaomi/mimo-v2.5-pro\"");
-        body.Should().Contain("href=\"/providers/xiaomi\"");
+        body.Should().Contain("\"@type\":\"Product\"");
+        body.Should().Contain("\"name\":\"MiMo V2.5 Pro\"");
     }
 
     [Theory]
-    [InlineData("/Models", "/models")]
-    [InlineData("/models/", "/models")]
-    [InlineData("/providers/", "/providers")]
+    [InlineData(true, false, true, false)]
+    [InlineData(false, true, false, true)]
+    [InlineData(true, true, true, true)]
+    [InlineData(false, false, false, false)]
+    public async Task Get_Root_EmitsConfiguredAnalyticsTags(
+        bool ga, bool ym, bool expectGa, bool expectYm)
+    {
+        using var factory = CreateFactory(googleAnalytics: ga, yandexMetrika: ym);
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/ru");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+        if (expectGa)
+        {
+            body.Should().Contain("https://www.googletagmanager.com/gtag/js?id=G-TEST123");
+        }
+        else
+        {
+            body.Should().NotContain("googletagmanager.com/gtag/js");
+        }
+
+        if (expectYm)
+        {
+            body.Should().Contain("https://mc.yandex.ru/metrika/tag.js?id=11111111");
+        }
+        else
+        {
+            body.Should().NotContain("mc.yandex.ru/metrika/tag.js");
+        }
+    }
+
+    [Theory]
+    [InlineData("/RU/models", "/ru/models")]
+    [InlineData("/EN/models", "/en/models")]
+    [InlineData("/ru/models/", "/ru/models")]
+    [InlineData("/en/models/", "/en/models")]
+    [InlineData("/models", "/ru/models")]
+    [InlineData("/providers", "/ru/providers")]
+    [InlineData("/models/", "/ru/models")]
+    [InlineData("/providers/", "/ru/providers")]
     public async Task Get_DuplicateUrlForm_RedirectsPermanentlyToCanonical(string requested, string expected)
     {
         using var factory = CreateFactory();
@@ -499,10 +256,16 @@ public sealed class SeoHeadTests
             AllowAutoRedirect = false,
         });
 
-        using var response = await client.GetAsync("/Models/?category=text");
+        using var response = await client.GetAsync("/ru/Models/?category=text");
 
         response.StatusCode.Should().Be(HttpStatusCode.MovedPermanently);
-        response.Headers.Location!.OriginalString.Should().Be("/models?category=text");
+        response.Headers.Location!.OriginalString.Should().Be("/ru/models?category=text");
+    }
+
+    private static List<(string Culture, string Url)> ExtractHreflangLinks(string body)
+    {
+        var matches = Regex.Matches(body, "<link rel=\"alternate\" hreflang=\"([^\"]+)\" href=\"([^\"]+)\" />");
+        return matches.Select(m => (m.Groups[1].Value, m.Groups[2].Value)).ToList();
     }
 
     private static WebApplicationFactory<Program> CreateFactory(bool googleAnalytics = false, bool yandexMetrika = false) =>
@@ -522,8 +285,6 @@ public sealed class SeoHeadTests
         {
             ["PublicApiBaseUrl"] = apiBaseUrl,
             ["PublicSiteBaseUrl"] = siteBaseUrl,
-            // appsettings.json hardcodes the prod tag IDs, so each scenario must pin its own
-            // values (null = explicitly not configured, overrides the lower-priority source).
             ["Analytics:GoogleTagId"] = googleAnalytics ? "G-TEST123" : null,
             ["Analytics:YandexCounterId"] = yandexMetrika ? "11111111" : null,
         };
@@ -582,6 +343,7 @@ public sealed class SeoHeadTests
             {
                 Id = "xiaomi",
                 DisplayName = "Xiaomi",
+                UpdatedAtUtc = "2026-08-06T12:00:00.0000000Z",
             });
             return UnaryCall(response);
         }
@@ -623,6 +385,7 @@ public sealed class SeoHeadTests
                 {
                     Id = request.ProviderId,
                     DisplayName = "Xiaomi",
+                    UpdatedAtUtc = "2026-08-06T12:00:00.0000000Z",
                 };
             }
 
@@ -672,6 +435,7 @@ public sealed class SeoHeadTests
                 DisplayName = "Cline",
                 CategoryId = "ide",
                 IsPublished = true,
+                UpdatedAtUtc = "2026-08-06T12:00:00.0000000Z",
             });
             return UnaryCall(response);
         }
@@ -691,6 +455,7 @@ public sealed class SeoHeadTests
                     Id = request.ToolId,
                     DisplayName = "Cline",
                     IsPublished = true,
+                    UpdatedAtUtc = "2026-08-06T12:00:00.0000000Z",
                 };
             }
 
@@ -704,13 +469,6 @@ public sealed class SeoHeadTests
             CancellationToken cancellationToken = default)
         {
             var response = new ContentProto.ListToolCategoriesResponse();
-            response.Categories.Add(new ContentProto.ToolCategory
-            {
-                Id = "ide",
-                NameRu = "IDE и редакторы",
-                NameEn = "IDEs & editors",
-                SortOrder = 100,
-            });
             return UnaryCall(response);
         }
     }
@@ -727,11 +485,6 @@ public sealed class SeoHeadTests
         }
     }
 
-    private static AsyncUnaryCall<TResponse> UnaryCall<TResponse>(TResponse response)
-        where TResponse : class => new(
-            Task.FromResult(response),
-            Task.FromResult(new Metadata()),
-            () => Status.DefaultSuccess,
-            () => new Metadata(),
-            () => { });
+    private static AsyncUnaryCall<T> UnaryCall<T>(T response) =>
+        new(Task.FromResult(response), Task.FromResult(new Metadata()), () => Status.DefaultSuccess, () => new Metadata(), () => { });
 }

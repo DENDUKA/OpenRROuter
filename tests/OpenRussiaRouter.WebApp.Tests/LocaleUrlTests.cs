@@ -6,17 +6,16 @@ using OpenRussiaRouter.WebApp.TagHelpers;
 namespace OpenRussiaRouter.WebApp.Tests;
 
 /// <summary>
-/// SEO-024: unit coverage for the locale-prefixed URL contract. Everything that emits a public URL
+/// Unit coverage for the locale-prefixed URL contract (/ru and /en). Everything that emits a public URL
 /// — the middleware, the link tag helper, hreflang in the layout, the sitemap and the language
 /// switcher — is built on <see cref="LocaleUrl"/>, so these rules are the ones that must not drift.
 /// </summary>
 public sealed class LocaleUrlTests
 {
     [Theory]
-    [InlineData("/", "ru", "/")]
-    [InlineData("/models", "ru", "/models")]
-    // The English home page is "/en", never "/en/": the canonical normalizer redirects the
-    // trailing-slash form away, so emitting it anywhere would publish a URL that 301s.
+    [InlineData("/", "ru", "/ru")]
+    [InlineData("/models", "ru", "/ru/models")]
+    [InlineData("/models/xiaomi/mimo-v2.5-pro", "ru", "/ru/models/xiaomi/mimo-v2.5-pro")]
     [InlineData("/", "en", "/en")]
     [InlineData("/models", "en", "/en/models")]
     [InlineData("/models/xiaomi/mimo-v2.5-pro", "en", "/en/models/xiaomi/mimo-v2.5-pro")]
@@ -27,6 +26,7 @@ public sealed class LocaleUrlTests
     [InlineData("/en/models", "en", "/models")]
     [InlineData("/en", "en", "/")]
     [InlineData("/ru/models", "ru", "/models")]
+    [InlineData("/ru", "ru", "/")]
     [InlineData("/models", "ru", "/models")]
     [InlineData("/", "ru", "/")]
     public void Split_SeparatesLocaleFromPath(string input, string culture, string path)
@@ -40,9 +40,10 @@ public sealed class LocaleUrlTests
     [InlineData("/entrypoint")]
     [InlineData("/english")]
     [InlineData("/runtime")]
+    [InlineData("/russia")]
     public void Split_OnlyMatchesWholeSegments(string path)
     {
-        // "/entrypoint" must not be read as "/en" + "trypoint".
+        // "/entrypoint" must not be read as "/en" + "trypoint", nor "/russia" as "/ru" + "ssia".
         var result = LocaleUrl.Split(path);
         result.Culture.Should().Be("ru");
         result.Path.Should().Be(path);
@@ -54,7 +55,7 @@ public sealed class LocaleUrlTests
         var alternates = LocaleUrl.Alternates("https://example.com/", "/tools").ToList();
 
         alternates.Should().Equal(
-            ("ru", "https://example.com/tools"),
+            ("ru", "https://example.com/ru/tools"),
             ("en", "https://example.com/en/tools"));
     }
 
@@ -69,11 +70,11 @@ public sealed class LocaleUrlTests
     [Theory]
     [InlineData("/docs", "en", "/docs/en/")]
     [InlineData("/docs/guide", "en", "/docs/en/guide")]
-    [InlineData("/docs", "ru", "/docs")]
+    [InlineData("/docs", "ru", "/docs/")]
     [InlineData("/docs/guide", "ru", "/docs/guide")]
     public void DocsFor_NestsEnglishInsideTheDocsBase(string path, string culture, string expected) =>
         // VitePress serves /docs/ and /docs/en/ from its own container; docs links cannot take the
-        // site-wide /en prefix.
+        // site-wide /en or /ru prefix.
         LocaleUrl.DocsFor(path, culture).Should().Be(expected);
 
     // ── link rewriting ──────────────────────────────────────────────────────
@@ -83,8 +84,16 @@ public sealed class LocaleUrlTests
     [InlineData("/", "/en")]
     [InlineData("/models?category=text", "/en/models?category=text")]
     [InlineData("/support#form", "/en/support#form")]
-    public void Localize_PrefixesRootRelativeLinks(string href, string expected) =>
+    public void Localize_PrefixesRootRelativeLinks_ForEnglish(string href, string expected) =>
         LocalePathTagHelper.Localize(href, "/en").Should().Be(expected);
+
+    [Theory]
+    [InlineData("/models", "/ru/models")]
+    [InlineData("/", "/ru")]
+    [InlineData("/models?category=text", "/ru/models?category=text")]
+    [InlineData("/support#form", "/ru/support#form")]
+    public void Localize_PrefixesRootRelativeLinks_ForRussian(string href, string expected) =>
+        LocalePathTagHelper.Localize(href, "/ru").Should().Be(expected);
 
     [Theory]
     [InlineData("https://example.com/models")]   // absolute
@@ -92,6 +101,7 @@ public sealed class LocaleUrlTests
     [InlineData("#anchor")]
     [InlineData("mailto:support@example.com")]
     [InlineData("/en/models")]                   // already inside the contour
+    [InlineData("/ru/models")]
     [InlineData("/sitemap.xml")]                 // defined to live at the origin root
     [InlineData("/robots.txt")]
     [InlineData("/webhook/rollypay")]            // machine endpoint, no UI
@@ -111,11 +121,17 @@ public sealed class LocaleUrlTests
 
     [Theory]
     [InlineData("/models", "en", "/en/models")]
-    [InlineData("/en/models", "ru", "/models")]
+    [InlineData("/models", "ru", "/ru/models")]
+    [InlineData("/en/models", "ru", "/ru/models")]
+    [InlineData("/ru/models", "en", "/en/models")]
     [InlineData("/en/models", "en", "/en/models")]
+    [InlineData("/ru/models", "ru", "/ru/models")]
     [InlineData("/models?category=text", "en", "/en/models?category=text")]
-    [InlineData("/en/tools#list", "ru", "/tools#list")]
+    [InlineData("/models?category=text", "ru", "/ru/models?category=text")]
+    [InlineData("/en/tools#list", "ru", "/ru/tools#list")]
+    [InlineData("/ru/tools#list", "en", "/en/tools#list")]
     [InlineData("/workspace/apikeys", "en", "/en/workspace/apikeys")]
+    [InlineData("/workspace/apikeys", "ru", "/ru/workspace/apikeys")]
     public void TranslateReturnUrl_RepointsTheUrlAtTheTargetLocale(
         string returnUrl, string culture, string expected) =>
         PreferencesController.TranslateReturnUrl(returnUrl, culture).Should().Be(expected);

@@ -35,7 +35,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
     /// </summary>
     private async Task<HttpResponseMessage> PostLanguageAsync(Dictionary<string, string> form)
     {
-        var bootstrap = await _client.GetAsync("/");
+        var bootstrap = await _client.GetAsync("/ru");
         bootstrap.EnsureSuccessStatusCode();
         var bootstrapBody = await bootstrap.Content.ReadAsStringAsync();
 
@@ -68,13 +68,10 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         var resp = await PostLanguageAsync(new Dictionary<string, string>
         {
             { "culture", "en" },
-            { "returnUrl", "/models" },
+            { "returnUrl", "/ru/models" },
         });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
-        // SEO-024: the public site addresses locales by path, so the switch has to move the visitor
-        // onto the English URL. Leaving them on /models would put them on a page whose canonical and
-        // hreflang say Russian.
         Assert.Equal(new Uri("/en/models", UriKind.Relative), resp.Headers.Location);
 
         // The response sets the .AspNetCore.Culture cookie with the new value.
@@ -85,7 +82,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
     }
 
     [Fact]
-    public async Task PostLanguage_SwitchingBackToRussian_DropsThePrefix()
+    public async Task PostLanguage_SwitchingBackToRussian_UsesRuPrefix()
     {
         var resp = await PostLanguageAsync(new Dictionary<string, string>
         {
@@ -94,7 +91,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
-        Assert.Equal(new Uri("/models", UriKind.Relative), resp.Headers.Location);
+        Assert.Equal(new Uri("/ru/models", UriKind.Relative), resp.Headers.Location);
     }
 
     [Fact]
@@ -103,7 +100,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         var resp = await PostLanguageAsync(new Dictionary<string, string>
         {
             { "culture", "en" },
-            { "returnUrl", "/models?category=text" },
+            { "returnUrl", "/ru/models?category=text" },
         });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
@@ -116,7 +113,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         var resp = await PostLanguageAsync(new Dictionary<string, string> { { "culture", "en" } });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);
-        Assert.NotNull(resp.Headers.Location);
+        Assert.Equal(new Uri("/en", UriKind.Relative), resp.Headers.Location);
     }
 
     [Fact]
@@ -125,7 +122,7 @@ public class LanguagePreferenceTests : IClassFixture<WebAppFactory>
         var resp = await PostLanguageAsync(new Dictionary<string, string>
         {
             { "culture", "klingon" },
-            { "returnUrl", "/models" },
+            { "returnUrl", "/ru/models" },
         });
 
         Assert.Equal(HttpStatusCode.Redirect, resp.StatusCode);

@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.AspNetCore.Html;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.AspNetCore.Razor.TagHelpers;
@@ -70,8 +72,11 @@ public sealed class LocalePathTagHelper : TagHelper
             return;
         }
 
+        // Use HtmlString so Razor won't HTML-encode already-encoded entity characters in query strings like &amp; -> &amp;amp;
         output.Attributes.SetAttribute(new TagHelperAttribute(
-            attribute.Name, localized, attribute.ValueStyle));
+            attribute.Name,
+            new HtmlString(localized),
+            attribute.ValueStyle));
     }
 
     /// <summary>

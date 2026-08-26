@@ -178,3 +178,11 @@
 - completed: 2026-08-14T23:30:00Z
 - desc: Финальный surface-аудит. Результаты (2026-08-14, SSH 201.51.6.246): canonical на `/` = `https://rawrter.com/`; hreflang ru/en/x-default (3 шт.); og:url + og:image = rawrter.com; sitemap = 83 URL; docs sitemap = 200; robots.txt site = Allow + Disallow служебных; robots.txt API = `Disallow: /`; www.rawrter.com = 301; /docs/ = 200; OAuth Yandex callback = 500 (ожидаемо — ClientSecret не задан в .env); dotnet build 0 ошибок; dotnet test 1101 зелёный; npm run docs:build зелёный. Контракты `ORR_*`, `orr_*`, `sk-or-*`, `ORR/*`, namespace'ы, почтовые адреса, `api.openrussiarouter.com` как legacy не изменены.
 
+## SEO-025 — 301-редирект запросов документации без /docs/ в WebApp
+- status: done
+- priority: high
+- created: 2026-08-26T20:16:00Z
+- started: 2026-08-26T20:28:45+03:00
+- completed: 2026-08-26T20:37:00+03:00
+- desc: WebApp. В `LocalePrefixMiddleware` и `LocaleUrl` настроен 301 Permanent Redirect для путей документации без префикса `/docs/`: `/guide/*` → `/docs/guide/*`, `/api/*` → `/docs/api/*`, `/integrations/*` → `/docs/integrations/*`, `/en/guide/*` → `/docs/en/guide/*`, `/en/api/*` → `/docs/en/api/*`, `/en/integrations/*` → `/docs/en/integrations/*` (и `/ru/...` аналогично), с полным сохранением query string. В `LocaleUrl` добавлены `DocsSectionPrefixes` (`/guide`, `/api`, `/integrations`), `IsDocsSectionPath` и расширены `IsDocsPath` и `DocsFor`. Добавлены unit и integration тесты в `LocaleUrlTests` и `LocalizationTests` (проверены обе локали, query string, коды 301 и работа существующих страниц).
+

@@ -158,14 +158,6 @@
 - completed:
 - desc: Юридическая точка из SEO-002 (отложена по решению продукта). На проде активны Яндекс Метрика и Google Analytics 4, которые ставят cookies и собирают обезличенную статистику посещений. В docs/mandatory/privacy-policy.md дописать раздел про эти системы и cookies (положение по 152-ФЗ); возможно потребуется consent-баннер — в коде его нет. Формулировку согласовать с продуктом/юристом. Критерий: /legal/privacy упоминает Метрику/GA4 и cookies; решение по consent-баннеру зафиксировано.
 
-## SEO-025 — 301-редирект запросов документации без /docs/ в WebApp
-- status: todo
-- priority: high
-- created: 2026-08-26T20:16:00Z
-- started:
-- completed:
-- desc: WebApp. Перед правкой прочитать `src/OpenRussiaRouter.WebApp/CLAUDE.md`. Краулер Googlebot извлекает относительные пути из сериализованного VitePress JSON (`window.__VP_SITE_DATA__` в index.html документации) без базового префикса `/docs/` (`/guide/*`, `/api/*`, `/integrations/*`, `/en/api/*` и т.д.) и запрашивает их от корня апекс-домена (`https://rawrter.com/...`), что приводит к ошибкам 404 в WebApp и засоряет Google Search Console. Реализовать в WebApp (в `LocalePrefixMiddleware` или отдельном middleware/fallback): если входящий запрос не соответствует ни одной существующей Razor Page/статическому файлу и попадает под префиксы разделов документации (`guide/`, `api/`, `integrations/`), выполнять HTTP 301 постоянный редирект на соответствующий канонический URL с префиксом `/docs/`: `/guide/*` → `/docs/guide/*`, `/api/*` → `/docs/api/*`, `/integrations/*` → `/docs/integrations/*`, `/en/guide/*` → `/docs/en/guide/*`, `/en/api/*` → `/docs/en/api/*`, `/en/integrations/*` → `/docs/en/integrations/*` (с сохранением query-параметров). Важно: не перехватывать существующие или будущие маршруты WebApp и сохранять контракт `LocaleUrl.DocsFor`. Добавить unit/integration тесты в `OpenRussiaRouter.WebApp.Tests` (проверка 301 редиректов для путей документации без /docs/ для обеих локалей ru/en). Критерий: запросы к путям документации без `/docs/` отдают 301 редирект на `/docs/...` и `/docs/en/...` соответственно; существующие маршруты WebApp работают без изменений; обязательная сборка `dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1` и тесты проходят без ошибок и предупреждений.
-
 ---
 
 > Источник: surface-переименование публичного сайта, 2026-08-13.

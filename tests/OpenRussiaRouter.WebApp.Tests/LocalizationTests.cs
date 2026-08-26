@@ -164,6 +164,57 @@ public class LocalizationTests : IClassFixture<WebAppFactory>
         Assert.Equal("/docs/", response.Headers.Location!.ToString());
     }
 
+    [Theory]
+    // Bare docs section paths (without /docs/) -> 301 to /docs/...
+    [InlineData("/guide/api-keys", "/docs/guide/api-keys")]
+    [InlineData("/guide/billing", "/docs/guide/billing")]
+    [InlineData("/api/chat-completions", "/docs/api/chat-completions")]
+    [InlineData("/api/reference", "/docs/api/reference")]
+    [InlineData("/integrations/frameworks", "/docs/integrations/frameworks")]
+    [InlineData("/integrations/ide", "/docs/integrations/ide")]
+    [InlineData("/guide", "/docs/guide")]
+    [InlineData("/api", "/docs/api")]
+    [InlineData("/integrations", "/docs/integrations")]
+    // English-prefixed docs section paths -> 301 to /docs/en/...
+    [InlineData("/en/guide/api-keys", "/docs/en/guide/api-keys")]
+    [InlineData("/en/guide/billing", "/docs/en/guide/billing")]
+    [InlineData("/en/api/chat-completions", "/docs/en/api/chat-completions")]
+    [InlineData("/en/api/reference", "/docs/en/api/reference")]
+    [InlineData("/en/integrations/frameworks", "/docs/en/integrations/frameworks")]
+    [InlineData("/en/integrations/ide", "/docs/en/integrations/ide")]
+    [InlineData("/en/guide", "/docs/en/guide")]
+    [InlineData("/en/api", "/docs/en/api")]
+    [InlineData("/en/integrations", "/docs/en/integrations")]
+    // Russian-prefixed docs section paths -> 301 to /docs/...
+    [InlineData("/ru/guide/api-keys", "/docs/guide/api-keys")]
+    [InlineData("/ru/guide/billing", "/docs/guide/billing")]
+    [InlineData("/ru/api/chat-completions", "/docs/api/chat-completions")]
+    [InlineData("/ru/api/reference", "/docs/api/reference")]
+    [InlineData("/ru/integrations/frameworks", "/docs/integrations/frameworks")]
+    [InlineData("/ru/integrations/ide", "/docs/integrations/ide")]
+    [InlineData("/ru/guide", "/docs/guide")]
+    [InlineData("/ru/api", "/docs/api")]
+    [InlineData("/ru/integrations", "/docs/integrations")]
+    public async Task DocsSectionRoutes_WithoutDocsPrefix_301ToCanonicalDocsUrl(string requested, string expected)
+    {
+        using var response = await _client.SendAsync(NewRequest(requested));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal(expected, response.Headers.Location!.ToString());
+    }
+
+    [Theory]
+    [InlineData("/guide/api-keys?tab=python&ref=google", "/docs/guide/api-keys?tab=python&ref=google")]
+    [InlineData("/en/api/chat-completions?model=gpt-4o", "/docs/en/api/chat-completions?model=gpt-4o")]
+    [InlineData("/ru/integrations/ide?v=2", "/docs/integrations/ide?v=2")]
+    public async Task DocsSectionRoutes_PreserveQueryString_On301Redirect(string requested, string expected)
+    {
+        using var response = await _client.SendAsync(NewRequest(requested));
+
+        Assert.Equal(HttpStatusCode.MovedPermanently, response.StatusCode);
+        Assert.Equal(expected, response.Headers.Location!.ToString());
+    }
+
     [Fact]
     public async Task TrailingSlashUnderEnglishPrefix_301Preserves_ThePrefix()
     {

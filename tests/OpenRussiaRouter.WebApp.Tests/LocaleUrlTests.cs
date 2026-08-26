@@ -68,10 +68,56 @@ public sealed class LocaleUrlTests
     }
 
     [Theory]
+    [InlineData("/guide", true)]
+    [InlineData("/guide/", true)]
+    [InlineData("/guide/api-keys", true)]
+    [InlineData("/api", true)]
+    [InlineData("/api/", true)]
+    [InlineData("/api/chat-completions", true)]
+    [InlineData("/integrations", true)]
+    [InlineData("/integrations/", true)]
+    [InlineData("/integrations/ide", true)]
+    [InlineData("/guidelines", false)]
+    [InlineData("/apikeys", false)]
+    [InlineData("/ai-api", false)]
+    [InlineData("/integration", false)]
+    [InlineData("/models", false)]
+    [InlineData("/", false)]
+    public void IsDocsSectionPath_MatchesOnlyKnownDocsSectionPrefixes(string path, bool expected) =>
+        LocaleUrl.IsDocsSectionPath(path).Should().Be(expected);
+
+    [Theory]
+    [InlineData("/docs", true)]
+    [InlineData("/docs/", true)]
+    [InlineData("/docs/guide", true)]
+    [InlineData("/guide", true)]
+    [InlineData("/guide/api-keys", true)]
+    [InlineData("/api", true)]
+    [InlineData("/api/reference", true)]
+    [InlineData("/integrations", true)]
+    [InlineData("/integrations/ui-clients", true)]
+    [InlineData("/models", false)]
+    [InlineData("/providers", false)]
+    public void IsDocsPath_MatchesBothDocsPrefixAndSectionPrefixes(string path, bool expected) =>
+        LocaleUrl.IsDocsPath(path).Should().Be(expected);
+
+    [Theory]
     [InlineData("/docs", "en", "/docs/en/")]
     [InlineData("/docs/guide", "en", "/docs/en/guide")]
     [InlineData("/docs", "ru", "/docs/")]
     [InlineData("/docs/guide", "ru", "/docs/guide")]
+    [InlineData("/guide", "en", "/docs/en/guide")]
+    [InlineData("/guide", "ru", "/docs/guide")]
+    [InlineData("/guide/api-keys", "en", "/docs/en/guide/api-keys")]
+    [InlineData("/guide/api-keys", "ru", "/docs/guide/api-keys")]
+    [InlineData("/api", "en", "/docs/en/api")]
+    [InlineData("/api", "ru", "/docs/api")]
+    [InlineData("/api/chat-completions", "en", "/docs/en/api/chat-completions")]
+    [InlineData("/api/chat-completions", "ru", "/docs/api/chat-completions")]
+    [InlineData("/integrations", "en", "/docs/en/integrations")]
+    [InlineData("/integrations", "ru", "/docs/integrations")]
+    [InlineData("/integrations/ide", "en", "/docs/en/integrations/ide")]
+    [InlineData("/integrations/ide", "ru", "/docs/integrations/ide")]
     public void DocsFor_NestsEnglishInsideTheDocsBase(string path, string culture, string expected) =>
         // VitePress serves /docs/ and /docs/en/ from its own container; docs links cannot take the
         // site-wide /en or /ru prefix.

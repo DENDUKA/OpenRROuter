@@ -110,29 +110,82 @@ public static class LocaleUrl
     public const string DocsPath = "/docs";
 
     /// <summary>
+    /// Prefixes of documentation sections in the VitePress documentation tree that crawlers
+    /// (e.g. Googlebot) may discover from client-side JSON without the <c>/docs</c> base prefix.
+    /// </summary>
+    public static readonly string[] DocsSectionPrefixes = ["/guide", "/api", "/integrations"];
+
+    /// <summary>
+    /// Whether <paramref name="path"/> matches one of the known documentation section prefixes
+    /// (<c>/guide</c>, <c>/api</c>, <c>/integrations</c>).
+    /// </summary>
+    public static bool IsDocsSectionPath(string? path)
+    {
+        if (string.IsNullOrEmpty(path)) return false;
+
+        foreach (var prefix in DocsSectionPrefixes)
+        {
+            if (path.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+                || path.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Whether <paramref name="path"/> belongs to the documentation tree, which is served by a
-    /// separate container with its own bilingual layout and its own sitemap.
+    /// separate container with its own bilingual layout and its own sitemap. Matches both
+    /// canonical <c>/docs/...</c> paths and bare documentation section paths (<c>/guide/...</c>,
+    /// <c>/api/...</c>, <c>/integrations/...</c>).
     /// </summary>
     public static bool IsDocsPath(string? path) =>
         path is not null
         && (path.Equals(DocsPath, StringComparison.OrdinalIgnoreCase)
-            || path.StartsWith(DocsPath + "/", StringComparison.OrdinalIgnoreCase));
+            || path.StartsWith(DocsPath + "/", StringComparison.OrdinalIgnoreCase)
+            || IsDocsSectionPath(path));
 
     /// <summary>
     /// The documentation URL for <paramref name="culture"/>. VitePress nests its English tree
     /// <b>inside</b> the docs base (<c>/docs/en/...</c>) rather than under the site-wide <c>/en</c>
     /// prefix, so docs links cannot be prefixed like the rest of the site. Mirrors 1:1, so the tail
     /// carries over unchanged. Russian lives directly under <c>/docs/...</c>.
+    /// Handles both canonical <c>/docs/...</c> paths and bare section paths (<c>/guide/...</c>, etc.).
     /// </summary>
     public static string DocsFor(string? path, string? culture)
     {
-        var bare = string.IsNullOrEmpty(path) ? DocsPath : path;
-        if (string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase))
+        var isEnglish = string.Equals(culture, "en", StringComparison.OrdinalIgnoreCase);
+
+        if (string.IsNullOrEmpty(path))
         {
-            var rest = bare[DocsPath.Length..];
-            return rest.Length == 0 ? DocsPath + "/en/" : DocsPath + "/en" + rest;
+            return isEnglish ? DocsPath + "/en/" : DocsPath + "/";
         }
 
-        return bare.Length == DocsPath.Length ? DocsPath + "/" : bare;
+        if (path.Equals(DocsPath, StringComparison.OrdinalIgnoreCase))
+        {
+            return isEnglish ? DocsPath + "/en/" : DocsPath + "/";
+        }
+
+        if (path.StartsWith(DocsPath + "/", StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = path[DocsPath.Length..];
+            if (rest.Equals("/en", StringComparison.OrdinalIgnoreCase) || rest.StartsWith("/en/", StringComparison.OrdinalIgnoreCase))
+            {
+                if (isEnglish)
+                {
+                    return rest.Length == 3 ? DocsPath + "/en/" : path;
+                }
+
+                var tail = rest[3..];
+                return tail.Length == 0 ? DocsPath + "/" : DocsPath + tail;
+            }
+
+            return isEnglish ? DocsPath + "/en" + rest : path;
+        }
+
+        var normalizedBare = path.StartsWith('/') ? path : "/" + path;
+        return isEnglish ? DocsPath + "/en" + normalizedBare : DocsPath + normalizedBare;
     }
 }

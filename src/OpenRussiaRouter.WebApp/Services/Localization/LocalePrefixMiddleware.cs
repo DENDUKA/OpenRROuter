@@ -30,7 +30,7 @@ public sealed class LocalePrefixMiddleware(RequestDelegate next)
     [
         "/webhook", "/internal", "/health", "/metrics", "/.well-known",
         "/sitemap.xml", "/robots.txt", "/og-image.png", "/favicon.png",
-        "/docs", "/signin-google", "/oauth-yandex"
+        "/docs", "/guide", "/api", "/integrations", "/signin-google", "/oauth-yandex"
     ];
 
     public async Task InvokeAsync(HttpContext context)
@@ -43,6 +43,14 @@ public sealed class LocalePrefixMiddleware(RequestDelegate next)
 
         if (!hasPrefix)
         {
+            // SEO-025: Documentation section routes without /docs/ (e.g. /guide/*, /api/*, /integrations/*)
+            // 301 redirect to canonical /docs/... routes
+            if (isSafeMethod && LocaleUrl.IsDocsSectionPath(barePath))
+            {
+                Redirect(context, LocaleUrl.DocsFor(barePath, culture));
+                return;
+            }
+
             // If the incoming request is a GET/HEAD to a public indexable page or root, redirect to /ru/...
             if (isSafeMethod && ShouldRedirectBarePathToDefaultLocale(path))
             {
@@ -57,19 +65,20 @@ public sealed class LocalePrefixMiddleware(RequestDelegate next)
 
         if (isSafeMethod)
         {
+            // Documentation is served by the VitePress container at /docs/ (ru) and /docs/en/ (en).
+            // Redirect /docs, /en/docs, /ru/docs as well as bare section paths (/en/guide/*, /ru/guide/*, etc.)
+            if (LocaleUrl.IsDocsPath(barePath))
+            {
+                Redirect(context, LocaleUrl.DocsFor(barePath, culture));
+                return;
+            }
+
             // "/RU/models" -> "/ru/models", "/EN/models" -> "/en/models"
             var prefix = path[..(path.Length - (barePath == "/" ? 0 : barePath.Length))];
             var canonicalPrefix = LocaleUrl.PrefixFor(culture);
             if (!string.Equals(prefix, canonicalPrefix, StringComparison.Ordinal))
             {
                 Redirect(context, LocaleUrl.For(barePath, culture));
-                return;
-            }
-
-            // Documentation is served by the VitePress container at /docs/ (ru) and /docs/en/ (en)
-            if (LocaleUrl.IsDocsPath(barePath))
-            {
-                Redirect(context, LocaleUrl.DocsFor(barePath, culture));
                 return;
             }
         }

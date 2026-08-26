@@ -186,3 +186,11 @@
 - completed: 2026-08-26T20:37:00+03:00
 - desc: WebApp. В `LocalePrefixMiddleware` и `LocaleUrl` настроен 301 Permanent Redirect для путей документации без префикса `/docs/`: `/guide/*` → `/docs/guide/*`, `/api/*` → `/docs/api/*`, `/integrations/*` → `/docs/integrations/*`, `/en/guide/*` → `/docs/en/guide/*`, `/en/api/*` → `/docs/en/api/*`, `/en/integrations/*` → `/docs/en/integrations/*` (и `/ru/...` аналогично), с полным сохранением query string. В `LocaleUrl` добавлены `DocsSectionPrefixes` (`/guide`, `/api`, `/integrations`), `IsDocsSectionPath` и расширены `IsDocsPath` и `DocsFor`. Добавлены unit и integration тесты в `LocaleUrlTests` и `LocalizationTests` (проверены обе локали, query string, коды 301 и работа существующих страниц).
 
+## SEO-026 — Устранить Soft 404 на страницах документации docs/**/api/errors
+- status: done
+- priority: medium
+- created: 2026-08-26T20:43:00Z
+- started: 2026-08-26T20:55:40+03:00
+- completed: 2026-08-26T21:26:30+03:00
+- desc: docs-site (VitePress). Устранен риск Soft 404 на страницах документации /api/errors и /en/api/errors за счет расширения контента в развернутое руководство разработчика по обработке ошибок API (>1000 слов). Добавлен YAML frontmatter с title и description для SEO. Описан формат JSON-ответа OpenAI (message, type, code, param, request_id). Добавлена подробная сводная таблица HTTP-статусов (400, 401, 402, 403, 404, 429, 500, 502, 503) и платформенных кодов ошибок (validation_failed, authentication_required, invalid_api_key, insufficient_balance, api_key_limit_exceeded, access_denied, model_unavailable, rate_limited, internal_error, bad_gateway, router_unavailable) с причинами и действиями клиента. Разработаны практические примеры обработки ошибок с экспоненциальным backoff для Python (OpenAI SDK), TypeScript/Node.js и cURL (с разбором через jq). Описана retry-стратегия с обработкой заголовка Retry-After, джиттером и разделением на повторяемые/неповторяемые ошибки. Описано поведение проксирования ошибок upstream и автоматический failover нод. Обеспечена 1:1 зеркальность ru/en версий. Сборка `npm run docs:build` успешно протестирована.
+

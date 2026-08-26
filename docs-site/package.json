@@ -9,6 +9,7 @@
     "docs:build": "vitepress build",
     "docs:preview": "vitepress preview"
   },
+  "postcss": {},
   "keywords": [],
   "author": "",
   "license": "ISC",

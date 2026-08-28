@@ -94,7 +94,7 @@ export default defineConfig({
       lang: 'ru-RU',
       themeConfig: {
         nav: [
-          { text: 'В панель', link: 'https://rawrter.com' },
+          { text: 'В панель', link: 'https://rawrter.com/ru' },
           { text: 'Модели', link: '/guide/models' },
           { text: 'Интеграции', link: '/integrations/ide' }
         ],
@@ -135,8 +135,8 @@ export default defineConfig({
             // и показывали сырые {{RWT_SERVICE_NAME}} — заводить их здесь заново нельзя.
             text: 'Документы',
             items: [
-              { text: 'Политика конфиденциальности', link: 'https://rawrter.com/legal/privacy' },
-              { text: 'Публичная оферта', link: 'https://rawrter.com/legal/offer' }
+              { text: 'Политика конфиденциальности', link: 'https://rawrter.com/ru/legal/privacy' },
+              { text: 'Публичная оферта', link: 'https://rawrter.com/ru/legal/offer' }
             ]
           }
         ],
@@ -156,7 +156,7 @@ export default defineConfig({
       link: '/en/',
       themeConfig: {
         nav: [
-          { text: 'Dashboard', link: 'https://rawrter.com' },
+          { text: 'Dashboard', link: 'https://rawrter.com/en' },
           { text: 'Models', link: '/en/guide/models' },
           { text: 'Integrations', link: '/en/integrations/ide' }
         ],
@@ -195,8 +195,8 @@ export default defineConfig({
             // in Russian solely (RU jurisdiction), hence the same canonical links here.
             text: 'Legal',
             items: [
-              { text: 'Privacy Policy', link: 'https://rawrter.com/legal/privacy' },
-              { text: 'Public Offer', link: 'https://rawrter.com/legal/offer' }
+              { text: 'Privacy Policy', link: 'https://rawrter.com/en/legal/privacy' },
+              { text: 'Public Offer', link: 'https://rawrter.com/en/legal/offer' }
             ]
           }
         ],

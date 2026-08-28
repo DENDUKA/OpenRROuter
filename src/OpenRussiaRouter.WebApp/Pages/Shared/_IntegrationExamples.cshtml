@@ -48,7 +48,7 @@ console.log(response.choices[0].message.content);</code></pre>
         <button type="button" class="integ-copy" data-goal="copy_code_sample" data-copied="@Localizer["Btn_Copied"]" onclick="copyCodeBlock(event)">@Localizer["Btn_Copy"]</button>
 <pre><code>{
   "providers": {
-    "openrussiarouter": {
+    "rawrter": {
       "baseURL": "@Model.V1BaseUrl",
       "apiKey": "&lt;YOUR_API_KEY&gt;",
       "compat": {
@@ -59,7 +59,7 @@ console.log(response.choices[0].message.content);</code></pre>
   },
   "models": {
     "@Model.ModelId": {
-      "provider": "openrussiarouter",
+      "provider": "rawrter",
       "id": "@Model.ModelId",
       "contextWindow": @Model.ContextWindow
     }

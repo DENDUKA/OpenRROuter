@@ -4,14 +4,14 @@ using CollectorGrpc = OpenRussiaRouter.Contracts.Grpc.Collector.V1.Collector;
 
 namespace OpenRussiaRouter.WebApp.Services.Collector;
 
-public sealed class CollectorProvider(
+public class CollectorProvider(
     CollectorGrpc.CollectorClient client,
     ILogger<CollectorProvider> logger)
 {
     private static readonly TimeSpan NodeModelCatalogTimeout = TimeSpan.FromSeconds(15);
     private static readonly TimeSpan NodeModelDropdownTimeout = TimeSpan.FromSeconds(8);
 
-    public async Task<NodeModelCatalogResult> ListNodeModelCatalogAsync(CancellationToken cancellationToken = default)
+    public virtual async Task<NodeModelCatalogResult> ListNodeModelCatalogAsync(CancellationToken cancellationToken = default)
     {
         try
         {

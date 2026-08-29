@@ -70,44 +70,44 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
 
     // ── Catalog: Models ──────────────────────────────────────────────────────
 
-    public Task<IReadOnlyList<ModelInfo>> ListPublicModelsAsync(CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<ModelInfo>> ListPublicModelsAsync(CancellationToken cancellationToken = default)
         => _catalog.ListPublicModelsAsync(cancellationToken);
 
-    public Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
         => _catalog.ListModelsAsync(cancellationToken);
 
-    public Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
+    public virtual Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
         => _catalog.GetModelAsync(modelId, cancellationToken);
 
-    public Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
+    public virtual Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
         => _catalog.UpsertModelAsync(model, cancellationToken);
 
-    public Task<(int UpsertedCount, IReadOnlyList<string> FailedModelIds)> UpsertModelsAsync(IReadOnlyList<ModelInfo> models, CancellationToken cancellationToken = default)
+    public virtual Task<(int UpsertedCount, IReadOnlyList<string> FailedModelIds)> UpsertModelsAsync(IReadOnlyList<ModelInfo> models, CancellationToken cancellationToken = default)
         => _catalog.UpsertModelsAsync(models, cancellationToken);
 
     // ── Catalog: Providers ───────────────────────────────────────────────────
 
-    public Task<IReadOnlyList<ProviderInfo>> ListModelProvidersAsync(CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<ProviderInfo>> ListModelProvidersAsync(CancellationToken cancellationToken = default)
         => _catalog.ListModelProvidersAsync(cancellationToken);
 
-    public Task<ProviderInfo?> GetModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
+    public virtual Task<ProviderInfo?> GetModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
         => _catalog.GetModelProviderAsync(providerId, cancellationToken);
 
-    public Task UpsertModelProviderAsync(ProviderInfo provider, CancellationToken cancellationToken = default)
+    public virtual Task UpsertModelProviderAsync(ProviderInfo provider, CancellationToken cancellationToken = default)
         => _catalog.UpsertModelProviderAsync(provider, cancellationToken);
 
-    public Task DeleteModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
+    public virtual Task DeleteModelProviderAsync(string providerId, CancellationToken cancellationToken = default)
         => _catalog.DeleteModelProviderAsync(providerId, cancellationToken);
 
     // ── Catalog: Tags ────────────────────────────────────────────────────────
 
-    public Task<IReadOnlyList<TagInfo>> ListTagsAsync(CancellationToken cancellationToken = default)
+    public virtual Task<IReadOnlyList<TagInfo>> ListTagsAsync(CancellationToken cancellationToken = default)
         => _catalog.ListTagsAsync(cancellationToken);
 
-    public Task UpsertTagAsync(TagInfo tag, CancellationToken cancellationToken = default)
+    public virtual Task UpsertTagAsync(TagInfo tag, CancellationToken cancellationToken = default)
         => _catalog.UpsertTagAsync(tag, cancellationToken);
 
-    public Task DeleteTagAsync(string id, CancellationToken cancellationToken = default)
+    public virtual Task DeleteTagAsync(string id, CancellationToken cancellationToken = default)
         => _catalog.DeleteTagAsync(id, cancellationToken);
 
     // ── Platform Settings ────────────────────────────────────────────────────

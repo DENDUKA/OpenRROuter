@@ -37,16 +37,8 @@ sealed class ModelsAdminPage(IPage page, string baseUrl)
 
         await page.ClickAsync("button.btn-primary");
 
-        // After save the handler redirects to the edit form for the saved model (?action=edit&modelId=...)
-        await page.WaitForURLAsync(
-            url => url.Contains("action=edit") && url.Contains(Uri.EscapeDataString(id)),
-            new() { Timeout = 15_000 });
-
-        // Navigate back to the list to verify it appears in the table
-        await page.GotoAsync(_listUrl);
-
-        // The model ID should now appear as a <code> cell in the list table
-        await page.WaitForSelectorAsync($"code:text-is('{id}')");
+        // The model ID should now appear as a <code> cell in the list table after saving and redirecting back to list
+        await page.WaitForSelectorAsync($"code:text-is('{id}')", new() { Timeout = 15_000 });
     }
 
     // ── Sync helpers ──────────────────────────────────────────────────────────

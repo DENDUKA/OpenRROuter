@@ -3,7 +3,7 @@ using ControlGrpc = OpenRussiaRouter.Contracts.Grpc.ControlPlane.V1.RouterContro
 
 namespace OpenRussiaRouter.WebApp.Services.ControlPlane;
 
-public sealed class ControlPlaneProvider(
+public class ControlPlaneProvider(
     ControlGrpc.RouterControlPlaneClient client)
 {
     public async Task<IReadOnlyList<RouterNodeInfo>> ListRouterNodesAsync(CancellationToken cancellationToken = default)

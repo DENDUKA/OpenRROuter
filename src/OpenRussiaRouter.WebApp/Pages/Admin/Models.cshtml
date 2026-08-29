@@ -192,7 +192,9 @@
                 {
                     <div class="adm-form-row">
                         <div class="form-group" style="grid-column: span 3">
-                            <button type="submit" asp-page-handler="SyncReasoning" class="btn btn-secondary"
+                            <button type="submit" formmethod="post" asp-page-handler="SyncReasoning"
+                                    asp-route-action="edit" asp-route-modelId="@Model.Form.Id"
+                                    class="btn btn-secondary"
                                     title="Load the exact reasoning levels from the current 9Router catalog into this form. Changes are saved only after clicking Save.">
                                 Sync reasoning from 9Router
                             </button>

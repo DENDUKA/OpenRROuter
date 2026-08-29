@@ -11,7 +11,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   провайдеры только **cookie → Accept-Language** (query-string нет).
   `UseRequestLocalization()` стоит после `UseStaticFiles` и **до** `UseAuthentication`.
 - **Cookie-auth**: основная схема `Cookies` (LoginPath/AccessDeniedPath `/Login`, HttpOnly,
-  SameSite=Lax, 30 дней, sliding) + вторая схема `External` (`.orr.ext`) для OAuth.
+  SameSite=Lax, 30 дней, sliding) + вторая схема `External` (`.orr.ext`, Path=/, SameSite=Lax, SecurePolicy=Always) для OAuth.
 - **Внешний логин регистрируется условно** — Google при заданных `Google:ClientId`/`ClientSecret`
   (callback `/signin-google`), Yandex при `Yandex:ClientId`/`ClientSecret` (callback `/OAuth-yandex`),
   оба с `SignInScheme = "External"`. Без гварда OAuth-хендлер падает 500 на `/Login`
@@ -20,6 +20,9 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
   нормализуется в `OnRedirectToAuthorizationEndpoint` без префикса локали `PathBase` (`/en`), чтобы
   провайдеры не выдавали `redirect_uri_mismatch`, а выбранная культура прокидывается через `AuthenticationProperties.Items["culture"]`
   и сохраняется в куку `.AspNetCore.Culture` в `ExternalCallback`.
+  `CorrelationCookie` обязана иметь `Path = "/"`, `SameSite = None`, `SecurePolicy = Always`, чтобы кука корреляции
+  не привязывалась к префиксу `/en` при старте с английской локали и успешно возвращалась браузером на callback.
+  `OnRemoteFailure` ловит ошибки/отмены OAuth и мягко редиректит на `/login?error=oauth_failed`.
 - **gRPC-клиенты**: Auth(5001), Billing(5002), ControlPlane(5003), Collector(5005), Content(5007) —
   keep-alive `SocketsHttpHandler` + `GrpcDeadlineInterceptor` (`GrpcServices:CallDeadlineSeconds`,
   дефолт 30). Billing и Content дополнительно с `ServiceAuthClientInterceptor`:

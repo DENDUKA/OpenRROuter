@@ -40,12 +40,17 @@ public class LoginModel : PageModelBase
                      && !string.IsNullOrWhiteSpace(configuration["Yandex:ClientSecret"]);
     }
 
-    public IActionResult OnGet(string? returnUrl = null)
+    public IActionResult OnGet(string? returnUrl = null, string? error = null)
     {
         if (User.Identity?.IsAuthenticated == true)
         {
             var role = User.FindFirstValue(ClaimTypes.Role);
             return RedirectTo(string.IsNullOrEmpty(role) ? "/Workspace" : $"/{role}");
+        }
+
+        if (error == "oauth_failed")
+        {
+            ErrorMessage = _localizer["Auth_LoginFailed"];
         }
 
         ReturnUrl = returnUrl;

@@ -112,18 +112,30 @@ var authenticationBuilder = builder.Services.AddAuthentication(CookieAuthenticat
         options.ExpireTimeSpan = TimeSpan.FromDays(30);
         options.SlidingExpiration = true;
     })
-    .AddCookie("External", o => o.Cookie.Name = ".orr.ext");
+    .AddCookie("External", o =>
+    {
+        o.Cookie.Name = ".orr.ext";
+        o.Cookie.Path = "/";
+        o.Cookie.SameSite = SameSiteMode.Lax;
+        o.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+    });
 
 // Register Google external login only when credentials are configured.
 // Without this guard the OAuth handler fails validation ("ClientId option must be provided")
 // the moment the authentication middleware initializes the scheme, returning 500 on /Login.
 //
-// OAuth redirect_uri invariant:
-// RemoteAuthenticationHandler.BuildRedirectUri includes Request.PathBase. When a user initiates
-// OAuth from /en/login or /en/signup, PathBase is "/en", making redirect_uri
-// "https://rawrter.com/en/signin-google". Providers reject this with redirect_uri_mismatch.
-// OnRedirectToAuthorizationEndpoint ensures the authorization request redirect_uri is always
-// canonical (unprefixed), matching the callback path when the provider redirects back.
+// OAuth redirect_uri and Correlation Cookie invariants:
+// 1. RemoteAuthenticationHandler.BuildRedirectUri includes Request.PathBase. When a user initiates
+//    OAuth from /en/login or /en/signup, PathBase is "/en", making redirect_uri
+//    "https://rawrter.com/en/signin-google". Providers reject this with redirect_uri_mismatch.
+//    OnRedirectToAuthorizationEndpoint ensures the authorization request redirect_uri is always
+//    canonical (unprefixed), matching the callback path when the provider redirects back.
+// 2. CorrelationCookie MUST have Path = "/", SameSite = SameSiteMode.None, SecurePolicy = Always.
+//    Otherwise, when starting challenge from /en/login (where PathBase is /en), the correlation cookie
+//    defaults to Path = /en, and the browser will NOT send it to /signin-google (path mismatch).
+//    Additionally, SameSite=None and SecurePolicy=Always ensure the correlation cookie is sent
+//    on cross-site redirects back from Google/Yandex.
+// 3. OnRemoteFailure gracefully redirects back to /login with an error message instead of 500.
 var googleClientId = builder.Configuration["Google:ClientId"];
 var googleClientSecret = builder.Configuration["Google:ClientSecret"];
 if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(googleClientSecret))
@@ -135,6 +147,9 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
         options.ClientSecret = googleClientSecret;
         options.CallbackPath = "/signin-google";
         options.Scope.Add("email");
+        options.CorrelationCookie.Path = "/";
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Events.OnRedirectToAuthorizationEndpoint = context =>
         {
             var bareRedirectUri = $"{context.Request.Scheme}://{context.Request.Host}{options.CallbackPath}";
@@ -146,6 +161,15 @@ if (!string.IsNullOrWhiteSpace(googleClientId) && !string.IsNullOrWhiteSpace(goo
                 uri.GetLeftPart(UriPartial.Path),
                 items);
             context.Response.Redirect(cleanAuthorizationEndpoint);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRemoteFailure = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("OpenRussiaRouter.WebApp.GoogleOAuth");
+            logger.LogWarning(context.Failure, "Google OAuth remote failure: {Message}", context.Failure?.Message);
+            context.Response.Redirect("/login?error=oauth_failed");
+            context.HandleResponse();
             return Task.CompletedTask;
         };
     });
@@ -164,6 +188,9 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
         options.CallbackPath = "/OAuth-yandex";
         options.Scope.Add("login:info");
         options.Scope.Add("login:email");
+        options.CorrelationCookie.Path = "/";
+        options.CorrelationCookie.SameSite = SameSiteMode.None;
+        options.CorrelationCookie.SecurePolicy = CookieSecurePolicy.Always;
         options.Events.OnRedirectToAuthorizationEndpoint = context =>
         {
             var bareRedirectUri = $"{context.Request.Scheme}://{context.Request.Host}{options.CallbackPath}";
@@ -175,6 +202,15 @@ if (!string.IsNullOrWhiteSpace(yandexClientId) && !string.IsNullOrWhiteSpace(yan
                 uri.GetLeftPart(UriPartial.Path),
                 items);
             context.Response.Redirect(cleanAuthorizationEndpoint);
+            return Task.CompletedTask;
+        };
+        options.Events.OnRemoteFailure = context =>
+        {
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILoggerFactory>()
+                .CreateLogger("OpenRussiaRouter.WebApp.YandexOAuth");
+            logger.LogWarning(context.Failure, "Yandex OAuth remote failure: {Message}", context.Failure?.Message);
+            context.Response.Redirect("/login?error=oauth_failed");
+            context.HandleResponse();
             return Task.CompletedTask;
         };
     });

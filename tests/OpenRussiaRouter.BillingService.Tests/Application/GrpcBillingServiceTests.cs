@@ -230,10 +230,15 @@ public sealed class GrpcBillingServiceTests
             InputPricePer1MUsd = "10",
             OutputPricePer1MUsd = "20",
             CachePricePer1MUsd = "1",
+            OpenrouterInputPricePer1MUsd = "8.125",
+            OpenrouterOutputPricePer1MUsd = "18.25",
+            OpenrouterCachePricePer1MUsd = "0",
             Enabled = true,
             IsFlagship = true
         }, context: null!);
         var models = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
+        var adminModels = await service.ListModels(new ListModelsRequest(), context: null!);
+        var detail = await service.GetModel(new GetModelRequest { ModelId = "gpt-admin" }, context: null!);
 
         response.Upserted.Should().BeTrue();
         response.ModelId.Should().Be("gpt-admin");
@@ -243,6 +248,46 @@ public sealed class GrpcBillingServiceTests
         model.InputPricePer1MUsd.Should().Be("10");
         model.OutputPricePer1MUsd.Should().Be("20");
         model.IsFlagship.Should().BeTrue();
+        model.OpenrouterInputPricePer1MUsd.Should().Be("8.125");
+        model.OpenrouterOutputPricePer1MUsd.Should().Be("18.25");
+        model.OpenrouterCachePricePer1MUsd.Should().Be("0");
+        var adminModel = adminModels.Models.Should().ContainSingle().Which;
+        adminModel.OpenrouterInputPricePer1MUsd.Should().Be("8.125");
+        adminModel.OpenrouterOutputPricePer1MUsd.Should().Be("18.25");
+        adminModel.OpenrouterCachePricePer1MUsd.Should().Be("0");
+        detail.Found.Should().BeTrue();
+        detail.Model.OpenrouterInputPricePer1MUsd.Should().Be("8.125");
+        detail.Model.OpenrouterOutputPricePer1MUsd.Should().Be("18.25");
+        detail.Model.OpenrouterCachePricePer1MUsd.Should().Be("0");
+    }
+
+    [Fact]
+    public async Task UpsertModelPriceAsync_FlagshipWithoutOpenRouterPrice_ReturnsValidationFailedAsync()
+    {
+        var billing = new BillingApplicationService(
+            new InMemoryBillingRepository(),
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance);
+        var service = new GrpcBillingService(billing, NullLogger<GrpcBillingService>.Instance);
+
+        var response = await service.UpsertModelPrice(new UpsertModelPriceRequest
+        {
+            ModelId = "gpt-incomplete",
+            DisplayName = "GPT Incomplete",
+            UpstreamModelId = "router/gpt-incomplete",
+            PriceVersion = "v1",
+            InputPricePer1MUsd = "10",
+            OutputPricePer1MUsd = "20",
+            CachePricePer1MUsd = "1",
+            OpenrouterInputPricePer1MUsd = "8",
+            OpenrouterOutputPricePer1MUsd = "18",
+            Enabled = true,
+            IsFlagship = true
+        }, context: null!);
+
+        response.Upserted.Should().BeFalse();
+        response.ErrorCode.Should().Be("validation_failed");
     }
 
     [Fact]

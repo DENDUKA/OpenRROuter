@@ -34,7 +34,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             Priority: m.Priority,
             ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
-            IsFlagship: m.IsFlagship)).ToList();
+            IsFlagship: m.IsFlagship,
+            OpenRouterInputPrice: ParseOptionalDecimal(m.OpenrouterInputPricePer1MUsd),
+            OpenRouterOutputPrice: ParseOptionalDecimal(m.OpenrouterOutputPricePer1MUsd),
+            OpenRouterCachePrice: ParseOptionalDecimal(m.OpenrouterCachePricePer1MUsd))).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -65,7 +68,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             Priority: m.Priority,
             ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
             ReasoningEffortsOverridden: m.ReasoningEffortsOverridden,
-            IsFlagship: m.IsFlagship)).ToList();
+            IsFlagship: m.IsFlagship,
+            OpenRouterInputPrice: ParseOptionalDecimal(m.OpenrouterInputPricePer1MUsd),
+            OpenRouterOutputPrice: ParseOptionalDecimal(m.OpenrouterOutputPricePer1MUsd),
+            OpenRouterCachePrice: ParseOptionalDecimal(m.OpenrouterCachePricePer1MUsd))).ToList();
     }
 
     public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
@@ -100,7 +106,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             Priority: m.Priority,
             ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
             ReasoningEffortsOverridden: m.ReasoningEffortsOverridden,
-            IsFlagship: m.IsFlagship);
+            IsFlagship: m.IsFlagship,
+            OpenRouterInputPrice: ParseOptionalDecimal(m.OpenrouterInputPricePer1MUsd),
+            OpenRouterOutputPrice: ParseOptionalDecimal(m.OpenrouterOutputPricePer1MUsd),
+            OpenRouterCachePrice: ParseOptionalDecimal(m.OpenrouterCachePricePer1MUsd));
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -129,7 +138,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             ModelType = model.ModelType ?? "text",
             Priority = model.Priority,
-            IsFlagship = model.IsFlagship
+            IsFlagship = model.IsFlagship,
+            OpenrouterInputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterInputPrice),
+            OpenrouterOutputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterOutputPrice),
+            OpenrouterCachePricePer1MUsd = FormatOptionalDecimal(model.OpenRouterCachePrice)
         };
         if (model.TagIds != null)
             request.TagIds.AddRange(model.TagIds);
@@ -172,7 +184,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
                 ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType ?? "text",
                 Priority = model.Priority,
-                IsFlagship = model.IsFlagship
+                IsFlagship = model.IsFlagship,
+                OpenrouterInputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterInputPrice),
+                OpenrouterOutputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterOutputPrice),
+                OpenrouterCachePricePer1MUsd = FormatOptionalDecimal(model.OpenRouterCachePrice)
             };
             if (model.TagIds != null)
                 request.TagIds.AddRange(model.TagIds);
@@ -276,4 +291,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
 
     private static decimal ParseDecimal(string value) =>
         string.IsNullOrWhiteSpace(value) ? 0m : decimal.Parse(value, CultureInfo.InvariantCulture);
+
+    private static decimal? ParseOptionalDecimal(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : decimal.Parse(value, CultureInfo.InvariantCulture);
+
+    private static string FormatOptionalDecimal(decimal? value) =>
+        value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 }

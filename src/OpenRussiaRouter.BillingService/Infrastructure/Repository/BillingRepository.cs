@@ -51,7 +51,10 @@ public sealed partial class BillingRepository(IBillingDbConnectionFactory connec
             billing.model_prices.reasoning_efforts_overridden as ReasoningEffortsOverridden,
             billing.model_prices.model_type as ModelType,
             billing.model_prices.priority as Priority,
-            billing.model_prices.is_flagship as IsFlagship
+            billing.model_prices.is_flagship as IsFlagship,
+            billing.model_prices.openrouter_input_per_million_amount as OpenRouterInputPrice,
+            billing.model_prices.openrouter_output_per_million_amount as OpenRouterOutputPrice,
+            billing.model_prices.openrouter_cache_per_million_amount as OpenRouterCachePrice
         from billing.model_prices
         left join billing.model_providers model_provider
             on model_provider.id = billing.model_prices.provider_id

@@ -20,7 +20,8 @@ public sealed partial class BillingRepository
                 description_ru, description_en, context_length, modalities, input_modalities, output_modalities, description_source,
                 tag_ids, provider, provider_id,
                 supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, reasoning_efforts_overridden, model_type,
-                priority, is_flagship
+                priority, is_flagship,
+                openrouter_input_per_million_amount, openrouter_output_per_million_amount, openrouter_cache_per_million_amount
             )
             values (
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
@@ -29,7 +30,8 @@ public sealed partial class BillingRepository
                 @DescriptionRu, @DescriptionEn, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider, @ProviderId,
                 @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @DefaultReasoningEffortsOverridden, @ModelType,
-                @Priority, @IsFlagship
+                @Priority, @IsFlagship,
+                @OpenRouterInputPrice, @OpenRouterOutputPrice, @OpenRouterCachePrice
             )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
@@ -50,6 +52,9 @@ public sealed partial class BillingRepository
                 model_type = excluded.model_type,
                 priority = excluded.priority,
                 is_flagship = excluded.is_flagship,
+                openrouter_input_per_million_amount = excluded.openrouter_input_per_million_amount,
+                openrouter_output_per_million_amount = excluded.openrouter_output_per_million_amount,
+                openrouter_cache_per_million_amount = excluded.openrouter_cache_per_million_amount,
                 description_ru = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description_ru
@@ -113,7 +118,10 @@ public sealed partial class BillingRepository
                 DefaultReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType,
                 model.Priority,
-                model.IsFlagship
+                model.IsFlagship,
+                model.OpenRouterInputPrice,
+                model.OpenRouterOutputPrice,
+                model.OpenRouterCachePrice
             },
             cancellationToken: ct)).ConfigureAwait(false);
     }

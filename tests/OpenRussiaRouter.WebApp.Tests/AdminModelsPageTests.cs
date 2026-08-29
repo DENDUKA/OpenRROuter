@@ -60,6 +60,44 @@ public class AdminModelsPageTests
         redirect.RouteValues.Should().BeNull();
     }
 
+    [Fact]
+    public async Task OnPostSaveAsync_FlagshipWithoutCompleteOpenRouterPrices_DoesNotSaveAsync()
+    {
+        var billing = new FakeBillingProvider([]);
+        var httpContext = new DefaultHttpContext();
+        var modelState = new ModelStateDictionary();
+        var actionContext = new ActionContext(httpContext, new RouteData(), new PageActionDescriptor(), modelState);
+        var pageModel = new ModelsModel(
+            billing,
+            new FakeControlPlaneProvider(),
+            new FakeCollectorProvider(),
+            new FakeOpenRouterCatalogClient(),
+            NullLogger<ModelsModel>.Instance)
+        {
+            PageContext = new PageContext(actionContext)
+            {
+                ViewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), modelState)
+            },
+            Form = new ModelsModel.ModelFormInput
+            {
+                Id = "gpt-flagship",
+                DisplayName = "GPT Flagship",
+                InputPrice = 1,
+                OutputPrice = 2,
+                IsFlagship = true,
+                OpenRouterInputPrice = 3,
+                OpenRouterOutputPrice = 4
+            },
+            TempData = new TempDataScope(httpContext).Create()
+        };
+
+        var result = await pageModel.OnPostSaveAsync(isNew: true);
+
+        result.Should().BeOfType<PageResult>();
+        billing.UpsertCalls.Should().Be(0);
+        pageModel.ModelState.Should().ContainKey("Form.OpenRouterCachePrice");
+    }
+
     private sealed class FakeBillingProvider : BillingProvider
     {
         private readonly List<ModelInfo> _models;
@@ -69,14 +107,19 @@ public class AdminModelsPageTests
             _models = models.ToList();
         }
 
+        public int UpsertCalls { get; private set; }
+
         public override Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ModelInfo>>(_models);
 
         public override Task<IReadOnlyList<ProviderInfo>> ListModelProvidersAsync(CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<ProviderInfo>>([]);
 
-        public override Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default) =>
-            Task.CompletedTask;
+        public override Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
+        {
+            UpsertCalls++;
+            return Task.CompletedTask;
+        }
     }
 
     private sealed class FakeControlPlaneProvider : ControlPlaneProvider
@@ -100,4 +143,3 @@ public class AdminModelsPageTests
         public OpenRouterMatchResult? FindMatch(IReadOnlyList<OpenRouterModelEntry> catalog, string modelId) => null;
     }
 }
-

@@ -157,12 +157,12 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
  По образцу `PaymentStartupGuard`; ни в коем случае не ослаблять — иначе интерцептору не с чем
   сравнивать токен, и любой, кто дотянется до порта 5002, обходят s2s полностью.
 
-## Схема БД (`db/migrations/billing/`, 25 файлов)
+## Схема БД (`db/migrations/billing/`, 30 файлов)
 
 | Таблица | Что |
 |---|---|
 | `billing.ledger_entries` | append-only леджер; unique `idempotency_key`; `is_user_payment` (023) отделяет реальные платежи от промо; check `currency='Usd'` (010) |
-| `billing.model_prices` | одна строка на `model_id` + unique-индекс на `router_model_id` (008); `description_ru`/`description_en` (022, старый `description` удалён), `tag_ids`, `provider`/`provider_id`, `model_type` (019, check `in ('text','audio')`), `priority` (016), `supports_reasoning`/`allowed_reasoning_efforts` (CSV)/`default_reasoning_effort` (014), `input_modalities`/`output_modalities` (016), `reasoning_efforts_overridden` (028), `is_flagship` (029) |
+| `billing.model_prices` | одна строка на `model_id` + unique-индекс на `router_model_id` (008); `description_ru`/`description_en` (022, старый `description` удалён), `tag_ids`, `provider`/`provider_id`, `model_type` (019, check `in ('text','audio')`), `priority` (016), `supports_reasoning`/`allowed_reasoning_efforts` (CSV)/`default_reasoning_effort` (014), `input_modalities`/`output_modalities` (016), `reasoning_efforts_overridden` (028), `is_flagship` (029), nullable ручные справочные цены OpenRouter input/output/cache с check `>= 0` (030) |
 | `billing.usage_records` | строка на каждый запрос, у которого нашлась цена и токены > 0 (в т.ч. с нулевой стоимостью у бесплатных моделей), PK `request_id`; источник правды для spend-лимитов и админских отчётов |
 | `billing.activity_by_token` | то же в разрезе API-ключа для кабинета (004); пишется **всегда**, даже когда usage/ledger пропущены |
 | `billing.billing_anomalies` | `invalid_token_count`, `model_price_missing`, `payment_amount_mismatch` |
@@ -212,6 +212,11 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
   первого успешного refresh — снова fallback. Котировка старше **48 ч** → `FxQuoteUnavailable`.
 - **Один active-row на модель** в `billing.model_prices` — versioned price history нет (BILLING-003).
   `price_version` пишется в usage для аудита, но прошлые цены не сохраняются.
+- **Флагман требует полный набор ручных цен OpenRouter**: input, output и cache должны быть
+  заполнены, причём `0` считается заполненным. Инвариант проверяет `BillingApplicationService`,
+  поэтому он действует для одиночного и batch gRPC upsert; отрицательные значения запрещены также
+  DB constraints. Сравнение с нашими ценами намеренно не валидируется: это маркетинговый справочник.
+  Синхронизация и enrichment из OpenRouter/9Router эти три поля не изменяют.
 - **`InsertPaymentEventAsync` пишет событие отдельным соединением, до транзакции применения** —
   именно поэтому существует `PaymentEventRecoveryWorker`: он добирает `processed=false`
   (`for update skip locked`, батч 20, раз в 30 с) и доводит побочные эффекты до конца. Воркер обязан передавать `Payments:AutoReverseChargeback` в `AcquireUnprocessedEventsAsync`, иначе recovery-путь расходится с прямой обработкой вебхука.

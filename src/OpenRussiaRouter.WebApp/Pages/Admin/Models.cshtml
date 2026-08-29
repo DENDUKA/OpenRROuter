@@ -149,6 +149,28 @@
                     </div>
                 </div>
 
+                <h5 class="adm-form-group-title">OpenRouter reference prices</h5>
+                <p class="text-muted" style="margin-top:-0.5rem;">
+                    Manual OpenRouter list prices in $ per 1M tokens. All three values are required for flagship models.
+                </p>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.OpenRouterInputPrice" class="form-label">OpenRouter Input ($/1M)</label>
+                        <input asp-for="Form.OpenRouterInputPrice" class="form-control" type="number" min="0" step="0.000001" data-openrouter-reference-price />
+                        <span asp-validation-for="Form.OpenRouterInputPrice" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.OpenRouterOutputPrice" class="form-label">OpenRouter Output ($/1M)</label>
+                        <input asp-for="Form.OpenRouterOutputPrice" class="form-control" type="number" min="0" step="0.000001" data-openrouter-reference-price />
+                        <span asp-validation-for="Form.OpenRouterOutputPrice" class="validation-message"></span>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="Form.OpenRouterCachePrice" class="form-label">OpenRouter Cache ($/1M)</label>
+                        <input asp-for="Form.OpenRouterCachePrice" class="form-control" type="number" min="0" step="0.000001" data-openrouter-reference-price />
+                        <span asp-validation-for="Form.OpenRouterCachePrice" class="validation-message"></span>
+                    </div>
+                </div>
+
                 <h5 class="adm-form-group-title">Capabilities & Modalities</h5>
                 <div class="adm-form-row">
                     <div class="form-group">
@@ -513,6 +535,22 @@
             .map(cb => cb.dataset.modality);
         hidden.value = checked.join(', ');
     }
+
+    (() => {
+        const flagship = document.getElementById('Form_IsFlagship');
+        const referencePrices = Array.from(document.querySelectorAll('[data-openrouter-reference-price]'));
+
+        if (!flagship || referencePrices.length === 0) return;
+
+        const syncReferencePriceRequirements = () => {
+            referencePrices.forEach(input => {
+                input.required = flagship.checked;
+            });
+        };
+
+        flagship.addEventListener('change', syncReferencePriceRequirements);
+        syncReferencePriceRequirements();
+    })();
 
     (() => {
         const supports = document.getElementById('supportsReasoning');

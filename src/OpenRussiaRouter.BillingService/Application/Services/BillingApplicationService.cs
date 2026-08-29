@@ -61,6 +61,7 @@ public sealed partial class BillingApplicationService(
         _ = Preconditions.RequireValue(model.RouterModelId, nameof(model.RouterModelId));
         _ = Preconditions.RequireValue(model.PriceVersion, nameof(model.PriceVersion));
         model.Price.EnsureValid();
+        ValidateOpenRouterReferencePrices(model);
 
         var allowedReasoningEfforts = ReasoningEffort.NormalizeList(model.AllowedReasoningEfforts);
         var defaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort);
@@ -98,6 +99,31 @@ public sealed partial class BillingApplicationService(
         };
 
         await repository.UpsertModelAsync(model, ct).ConfigureAwait(false);
+    }
+
+    private static void ValidateOpenRouterReferencePrices(ModelPrice model)
+    {
+        ValidateNonNegative(model.OpenRouterInputPrice, nameof(model.OpenRouterInputPrice));
+        ValidateNonNegative(model.OpenRouterOutputPrice, nameof(model.OpenRouterOutputPrice));
+        ValidateNonNegative(model.OpenRouterCachePrice, nameof(model.OpenRouterCachePrice));
+
+        if (model.IsFlagship &&
+            (model.OpenRouterInputPrice is null ||
+             model.OpenRouterOutputPrice is null ||
+             model.OpenRouterCachePrice is null))
+        {
+            throw new ArgumentException(
+                "Flagship models require OpenRouter input, output, and cache reference prices.",
+                nameof(model));
+        }
+    }
+
+    private static void ValidateNonNegative(decimal? value, string parameterName)
+    {
+        if (value is < 0m)
+        {
+            throw new ArgumentOutOfRangeException(parameterName, value, "OpenRouter reference price cannot be negative.");
+        }
     }
 
     public Task<ModelPrice?> GetModelAsync(string modelId, CancellationToken ct = default) =>

@@ -106,6 +106,30 @@ public sealed class SeoHeadTests
         body.Should().Contain("<link rel=\"alternate\" hreflang=\"x-default\" href=\"https://example.com/en\" />");
     }
 
+    [Theory]
+    [InlineData("/ru", "Флагманские модели. Ниже цена.", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro")]
+    [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro")]
+    public async Task Get_Home_RendersLocalizedFlagshipPriceComparisonAsync(
+        string path,
+        string title,
+        string ourPriceLabel,
+        string modelPath)
+    {
+        using var factory = CreateFactory();
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync(path);
+        var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        body.Should().Contain(title);
+        body.Should().Contain(ourPriceLabel);
+        body.Should().Contain("<del>$3</del>");
+        body.Should().Contain("<strong>$1</strong>");
+        body.Should().Contain("color: var(--color-success)");
+        body.Should().Contain($"href=\"{modelPath}\"");
+    }
+
     [Fact]
     public async Task Get_BothLocales_AdvertiseTheIdenticalAlternateSet()
     {
@@ -326,6 +350,11 @@ public sealed class SeoHeadTests
                 CachePricePer1MUsd = "0",
                 Provider = "Xiaomi",
                 ProviderId = "xiaomi",
+                Priority = 10,
+                IsFlagship = true,
+                OpenrouterInputPricePer1MUsd = "3",
+                OpenrouterOutputPricePer1MUsd = "5",
+                OpenrouterCachePricePer1MUsd = "0",
             };
             var response = new BillingProto.ListPublicModelsResponse();
             response.Models.Add(model);

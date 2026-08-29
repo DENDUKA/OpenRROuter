@@ -25,4 +25,7 @@ public sealed record ModelInfo(
     int Priority = 0,
     string? ProviderId = null,
     bool ReasoningEffortsOverridden = false,
-    bool IsFlagship = false);
+    bool IsFlagship = false,
+    decimal? OpenRouterInputPrice = null,
+    decimal? OpenRouterOutputPrice = null,
+    decimal? OpenRouterCachePrice = null);

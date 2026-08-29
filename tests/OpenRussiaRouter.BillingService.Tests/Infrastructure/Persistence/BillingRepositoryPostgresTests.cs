@@ -241,6 +241,48 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task ModelOpenRouterReferencePrices_RoundTripNullAndZeroValuesAsync()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null)
+        {
+            return;
+        }
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+
+        await repository.UpsertModelAsync(new ModelPrice(
+            "gpt-reference",
+            "GPT Reference",
+            "router/gpt-reference",
+            "v1",
+            new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
+            Enabled: true));
+
+        var withoutPrices = await repository.GetModelAsync("gpt-reference");
+        withoutPrices.Should().NotBeNull();
+        withoutPrices!.OpenRouterInputPrice.Should().BeNull();
+        withoutPrices.OpenRouterOutputPrice.Should().BeNull();
+        withoutPrices.OpenRouterCachePrice.Should().BeNull();
+
+        await repository.UpsertModelAsync(withoutPrices with
+        {
+            OpenRouterInputPrice = 0m,
+            OpenRouterOutputPrice = 0m,
+            OpenRouterCachePrice = 0m
+        });
+
+        var withZeroPrices = await repository.GetModelAsync("gpt-reference");
+        withZeroPrices.Should().NotBeNull();
+        withZeroPrices!.OpenRouterInputPrice.Should().Be(0m);
+        withZeroPrices.OpenRouterOutputPrice.Should().Be(0m);
+        withZeroPrices.OpenRouterCachePrice.Should().Be(0m);
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task ModelPriority_RoundTripsAndUpdatesThroughRepository()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

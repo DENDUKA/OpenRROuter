@@ -169,7 +169,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         ThinkingOptions = thinkingOptions,
                         ReasoningEffortsOverridden = m.ReasoningEffortsOverridden,
                         Priority = m.Priority,
-                        IsFlagship = m.IsFlagship
+                        IsFlagship = m.IsFlagship,
+                        OpenRouterInputPrice = m.OpenRouterInputPrice,
+                        OpenRouterOutputPrice = m.OpenRouterOutputPrice,
+                        OpenRouterCachePrice = m.OpenRouterCachePrice
                     };
                 }
             }
@@ -196,6 +199,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         await LoadNodeReasoningAsync();
         NormalizeAndValidateReasoning();
+        ValidateFlagshipReferencePrices();
 
         if (!ModelState.IsValid)
         {
@@ -257,7 +261,10 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     Priority: Form.Priority,
                     ProviderId: providerId,
                     ReasoningEffortsOverridden: Form.ReasoningEffortsOverridden,
-                    IsFlagship: Form.IsFlagship);
+                    IsFlagship: Form.IsFlagship,
+                    OpenRouterInputPrice: Form.OpenRouterInputPrice,
+                    OpenRouterOutputPrice: Form.OpenRouterOutputPrice,
+                    OpenRouterCachePrice: Form.OpenRouterCachePrice);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -613,6 +620,26 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         return preference.FirstOrDefault(efforts.Contains);
     }
 
+    private void ValidateFlagshipReferencePrices()
+    {
+        if (!Form.IsFlagship)
+        {
+            return;
+        }
+
+        AddRequiredReferencePriceError(Form.OpenRouterInputPrice, nameof(Form.OpenRouterInputPrice));
+        AddRequiredReferencePriceError(Form.OpenRouterOutputPrice, nameof(Form.OpenRouterOutputPrice));
+        AddRequiredReferencePriceError(Form.OpenRouterCachePrice, nameof(Form.OpenRouterCachePrice));
+    }
+
+    private void AddRequiredReferencePriceError(decimal? value, string propertyName)
+    {
+        if (value is null)
+        {
+            ModelState.AddModelError($"Form.{propertyName}", "Required for flagship models.");
+        }
+    }
+
     private static string? DetermineSource(ModelInfo? orig, ModelFormInput form)
     {
         var descRuChanged = (form.DescriptionRu?.Trim() ?? string.Empty) != (orig?.DescriptionRu ?? string.Empty);
@@ -703,6 +730,15 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         [Range(0, 1000000)] public decimal OutputPrice { get; set; }
 
         [Range(0, 1000000)] public decimal CachePrice { get; set; }
+
+        [Range(typeof(decimal), "0", "1000000")]
+        public decimal? OpenRouterInputPrice { get; set; }
+
+        [Range(typeof(decimal), "0", "1000000")]
+        public decimal? OpenRouterOutputPrice { get; set; }
+
+        [Range(typeof(decimal), "0", "1000000")]
+        public decimal? OpenRouterCachePrice { get; set; }
 
         public bool Enabled { get; set; } = true;
 

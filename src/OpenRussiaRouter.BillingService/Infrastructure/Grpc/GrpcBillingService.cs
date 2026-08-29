@@ -81,6 +81,9 @@ public sealed class GrpcBillingService(
                         Priority = model.Priority,
                         DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                         IsFlagship = model.IsFlagship,
+                        OpenrouterInputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterInputPrice),
+                        OpenrouterOutputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterOutputPrice),
+                        OpenrouterCachePricePer1MUsd = FormatOptionalDecimal(model.OpenRouterCachePrice),
                     };
                     if (model.AllowedReasoningEfforts is not null)
                     {
@@ -297,7 +300,10 @@ public sealed class GrpcBillingService(
                 DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort,
                 Priority: request.Priority,
                 ReasoningEffortsOverridden: request.ReasoningEffortsOverridden,
-                IsFlagship: request.IsFlagship),
+                IsFlagship: request.IsFlagship,
+                OpenRouterInputPrice: ParseOptionalDecimal(request.OpenrouterInputPricePer1MUsd),
+                OpenRouterOutputPrice: ParseOptionalDecimal(request.OpenrouterOutputPricePer1MUsd),
+                OpenRouterCachePrice: ParseOptionalDecimal(request.OpenrouterCachePricePer1MUsd)),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -350,7 +356,10 @@ public sealed class GrpcBillingService(
                     DefaultReasoningEffort: string.IsNullOrEmpty(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort,
                     Priority: model.Priority,
                     ReasoningEffortsOverridden: model.ReasoningEffortsOverridden,
-                    IsFlagship: model.IsFlagship),
+                    IsFlagship: model.IsFlagship,
+                    OpenRouterInputPrice: ParseOptionalDecimal(model.OpenrouterInputPricePer1MUsd),
+                    OpenRouterOutputPrice: ParseOptionalDecimal(model.OpenrouterOutputPricePer1MUsd),
+                    OpenRouterCachePrice: ParseOptionalDecimal(model.OpenrouterCachePricePer1MUsd)),
                     ct).ConfigureAwait(false);
                 response.UpsertedCount++;
             }
@@ -425,6 +434,9 @@ public sealed class GrpcBillingService(
                     ModelType = model.ModelType ?? "text",
                     Priority = model.Priority,
                     IsFlagship = model.IsFlagship,
+                    OpenrouterInputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterInputPrice),
+                    OpenrouterOutputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterOutputPrice),
+                    OpenrouterCachePricePer1MUsd = FormatOptionalDecimal(model.OpenRouterCachePrice),
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {
@@ -481,6 +493,9 @@ public sealed class GrpcBillingService(
             ModelType = model.ModelType ?? "text",
             Priority = model.Priority,
             IsFlagship = model.IsFlagship,
+            OpenrouterInputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterInputPrice),
+            OpenrouterOutputPricePer1MUsd = FormatOptionalDecimal(model.OpenRouterOutputPrice),
+            OpenrouterCachePricePer1MUsd = FormatOptionalDecimal(model.OpenRouterCachePrice),
         };
         if (model.AllowedReasoningEfforts is not null)
             m.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);
@@ -488,6 +503,14 @@ public sealed class GrpcBillingService(
             m.TagIds.AddRange(model.TagIds);
         return m;
     }
+
+    private static decimal? ParseOptionalDecimal(string value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? null
+            : decimal.Parse(value, CultureInfo.InvariantCulture);
+
+    private static string FormatOptionalDecimal(decimal? value) =>
+        value?.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
     public override async Task<ListUsageResponse> ListUsage(
         ListUsageRequest request,

@@ -45,13 +45,37 @@
     <value>Use the OpenAI-compatible endpoint</value>
   </data>
   <data name="Home_CatalogLabel" xml:space="preserve">
-    <value>Model catalog</value>
+    <value>Less than OpenRouter</value>
   </data>
   <data name="Home_CatalogLead" xml:space="preserve">
-    <value>Browse available models, compare prices, and use public model IDs in OpenAI-compatible requests.</value>
+    <value>The same leading models through one OpenAI-compatible API. Compare prices per 1M tokens.</value>
   </data>
   <data name="Home_CatalogTitle" xml:space="preserve">
-    <value>Choose from routed AI models</value>
+    <value>Flagship models. Lower prices.</value>
+  </data>
+  <data name="Home_FlagshipBadge" xml:space="preserve">
+    <value>Flagship</value>
+  </data>
+  <data name="Home_FlagshipCardAria" xml:space="preserve">
+    <value>Open model {0}</value>
+  </data>
+  <data name="Home_PriceCache" xml:space="preserve">
+    <value>Cache</value>
+  </data>
+  <data name="Home_PriceInput" xml:space="preserve">
+    <value>Input</value>
+  </data>
+  <data name="Home_PriceOpenRouter" xml:space="preserve">
+    <value>OpenRouter</value>
+  </data>
+  <data name="Home_PriceOurs" xml:space="preserve">
+    <value>Our price</value>
+  </data>
+  <data name="Home_PriceOutput" xml:space="preserve">
+    <value>Output</value>
+  </data>
+  <data name="Home_PriceUnit" xml:space="preserve">
+    <value>USD per 1M tokens</value>
   </data>
   <data name="Home_CtaExplore" xml:space="preserve">
     <value>Explore models</value>

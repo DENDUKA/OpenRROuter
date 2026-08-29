@@ -31,4 +31,7 @@ public sealed class ModelPriceEntity
     public bool ReasoningEffortsOverridden { get; set; }
     public int Priority { get; set; }
     public bool IsFlagship { get; set; }
+    public decimal? OpenRouterInputPrice { get; set; }
+    public decimal? OpenRouterOutputPrice { get; set; }
+    public decimal? OpenRouterCachePrice { get; set; }
 }

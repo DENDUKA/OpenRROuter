@@ -97,6 +97,9 @@
 - `syntax = "proto3"`, `package openrussiarouter.<service>.v1`, `option csharp_namespace = "OpenRussiaRouter.Contracts.Grpc.<Service>.V1"`.
 - Имена сервисов: `AuthService`, `BillingService`, `RouterControlPlane`, `Collector`, `ContentService`.
 - **Деньги — строки**, не double: `balance_usd`, `daily_limit_usd`, `input_price_per_1m_usd`, … Мапятся через `decimal.Parse/ToString(CultureInfo.InvariantCulture)` в `MoneyAmount` (`BuildingBlocks/Money`). Ставить `double`/`float` под деньги нельзя — потеря точности относительно `numeric(18,6)`.
+- Ручные справочные цены OpenRouter (`openrouter_*_price_per_1m_usd`) передаются строками в
+  `PublicModel`, `UpsertModelPriceRequest` и `ModelDetail`; пустая строка означает `null`, а `"0"` —
+  заполненную нулевую цену. Поля additive и не заменяют реальные `*_price_per_1m_usd` платформы.
 - **Время**: в `auth.proto` — `int64 *_unix_time_seconds`; в billing/control-plane/content/collector — **строки ISO-8601 round-trip (`"O"`, InvariantCulture)**, `*_at_utc`. Внутри одного файла формат не смешивать.
 - **Ошибки — в теле ответа**, а не gRPC status: пара `bool <succeeded|allowed|found|is_created|…>` + `string error_code` (пустая строка = нет ошибки). Structured gRPC error details в проекте нет (PLATFORM-002).
 - **Отсутствие значения = пустая строка / 0** почти везде; `optional` используется только в `auth.proto` (`UserInfo.display_name`, `display_currency`, `UpdateUserRequest.*`), где нужно различать «не задано» и «очистить».

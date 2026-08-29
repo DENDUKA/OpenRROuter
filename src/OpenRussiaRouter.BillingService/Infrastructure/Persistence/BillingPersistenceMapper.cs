@@ -66,7 +66,10 @@ public static class BillingPersistenceMapper
             DefaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort),
             ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             Priority = model.Priority,
-            IsFlagship = model.IsFlagship
+            IsFlagship = model.IsFlagship,
+            OpenRouterInputPrice = model.OpenRouterInputPrice,
+            OpenRouterOutputPrice = model.OpenRouterOutputPrice,
+            OpenRouterCachePrice = model.OpenRouterCachePrice
         };
     }
 
@@ -98,7 +101,10 @@ public static class BillingPersistenceMapper
             Priority: entity.Priority,
             ProviderId: entity.ProviderId,
             ReasoningEffortsOverridden: entity.ReasoningEffortsOverridden,
-            IsFlagship: entity.IsFlagship);
+            IsFlagship: entity.IsFlagship,
+            OpenRouterInputPrice: entity.OpenRouterInputPrice,
+            OpenRouterOutputPrice: entity.OpenRouterOutputPrice,
+            OpenRouterCachePrice: entity.OpenRouterCachePrice);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)

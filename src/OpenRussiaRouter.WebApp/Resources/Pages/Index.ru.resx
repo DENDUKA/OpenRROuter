@@ -45,13 +45,37 @@
     <value>Используйте OpenAI-совместимый эндпоинт</value>
   </data>
   <data name="Home_CatalogLabel" xml:space="preserve">
-    <value>Каталог моделей</value>
+    <value>Дешевле OpenRouter</value>
   </data>
   <data name="Home_CatalogLead" xml:space="preserve">
-    <value>Сравните цены и используйте публичные идентификаторы моделей в OpenAI-совместимых запросах.</value>
+    <value>Те же сильные модели через единый OpenAI-совместимый API. Сравните стоимость за 1 млн токенов.</value>
   </data>
   <data name="Home_CatalogTitle" xml:space="preserve">
-    <value>Выберите маршрутизируемые AI-модели</value>
+    <value>Флагманские модели. Ниже цена.</value>
+  </data>
+  <data name="Home_FlagshipBadge" xml:space="preserve">
+    <value>Флагман</value>
+  </data>
+  <data name="Home_FlagshipCardAria" xml:space="preserve">
+    <value>Открыть модель {0}</value>
+  </data>
+  <data name="Home_PriceCache" xml:space="preserve">
+    <value>Кеш</value>
+  </data>
+  <data name="Home_PriceInput" xml:space="preserve">
+    <value>Вход</value>
+  </data>
+  <data name="Home_PriceOpenRouter" xml:space="preserve">
+    <value>OpenRouter</value>
+  </data>
+  <data name="Home_PriceOurs" xml:space="preserve">
+    <value>Наша цена</value>
+  </data>
+  <data name="Home_PriceOutput" xml:space="preserve">
+    <value>Выход</value>
+  </data>
+  <data name="Home_PriceUnit" xml:space="preserve">
+    <value>USD за 1 млн токенов</value>
   </data>
   <data name="Home_CtaExplore" xml:space="preserve">
     <value>Каталог моделей</value>

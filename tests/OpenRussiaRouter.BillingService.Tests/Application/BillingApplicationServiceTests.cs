@@ -308,6 +308,73 @@ public sealed class BillingApplicationServiceTests
     }
 
     [Fact]
+    public async Task UpsertModelAsync_FlagshipWithoutCompleteOpenRouterPrices_ThrowsAsync()
+    {
+        var service = CreateService();
+        var model = CreateModel("gpt-flagship", enabled: true) with
+        {
+            IsFlagship = true,
+            OpenRouterInputPrice = 8m,
+            OpenRouterOutputPrice = 18m
+        };
+
+        var act = () => service.UpsertModelAsync(model);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task UpsertModelAsync_FlagshipWithCompleteOpenRouterPrices_PreservesPricesAsync()
+    {
+        var service = CreateService();
+        var model = CreateModel("gpt-flagship", enabled: true) with
+        {
+            IsFlagship = true,
+            OpenRouterInputPrice = 0m,
+            OpenRouterOutputPrice = 15m,
+            OpenRouterCachePrice = 0.5m
+        };
+
+        await service.UpsertModelAsync(model);
+
+        var stored = (await service.ListAllModelsAsync()).Should().ContainSingle().Which;
+        stored.OpenRouterInputPrice.Should().Be(0m);
+        stored.OpenRouterOutputPrice.Should().Be(15m);
+        stored.OpenRouterCachePrice.Should().Be(0.5m);
+    }
+
+    [Fact]
+    public async Task UpsertModelAsync_OpenRouterPriceBelowPlatformPrice_DoesNotBlockSaveAsync()
+    {
+        var service = CreateService();
+        var model = CreateModel("gpt-flagship", enabled: true) with
+        {
+            IsFlagship = true,
+            OpenRouterInputPrice = 1m,
+            OpenRouterOutputPrice = 2m,
+            OpenRouterCachePrice = 0.1m
+        };
+
+        var act = () => service.UpsertModelAsync(model);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task UpsertModelAsync_NegativeOpenRouterPrice_ThrowsAsync()
+    {
+        var service = CreateService();
+        var model = CreateModel("gpt-standard", enabled: true) with
+        {
+            OpenRouterInputPrice = -0.000001m
+        };
+
+        var act = () => service.UpsertModelAsync(model);
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
     public async Task UpsertModel_DefaultReasoningEffortOutsideAllowed_Throws()
     {
         var service = CreateService();

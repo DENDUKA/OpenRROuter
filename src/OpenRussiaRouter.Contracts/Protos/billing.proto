@@ -188,6 +188,9 @@ message PublicModel {
   string default_reasoning_effort = 19;
   string provider_id = 20;
   bool is_flagship = 21;
+  string openrouter_input_price_per_1m_usd = 22;
+  string openrouter_output_price_per_1m_usd = 23;
+  string openrouter_cache_price_per_1m_usd = 24;
 }
 
 message ListPublicModelsResponse {
@@ -247,6 +250,9 @@ message UpsertModelPriceRequest {
   string provider_id = 23;
   bool reasoning_efforts_overridden = 24;
   bool is_flagship = 25;
+  string openrouter_input_price_per_1m_usd = 26;
+  string openrouter_output_price_per_1m_usd = 27;
+  string openrouter_cache_price_per_1m_usd = 28;
 }
 
 message UpsertModelPriceResponse {
@@ -298,6 +304,9 @@ message ModelDetail {
   string provider_id = 23;
   bool reasoning_efforts_overridden = 24;
   bool is_flagship = 25;
+  string openrouter_input_price_per_1m_usd = 26;
+  string openrouter_output_price_per_1m_usd = 27;
+  string openrouter_cache_price_per_1m_usd = 28;
 }
 
 message ListModelsResponse {

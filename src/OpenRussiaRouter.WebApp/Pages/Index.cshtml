@@ -122,18 +122,80 @@
         </div>
     </section>
 
-    <section class="home-section home-section--split" aria-labelledby="catalog-title">
-        <div>
-            <div class="section-label">@Localizer["Home_CatalogLabel"]</div>
-            <h2 id="catalog-title">@Localizer["Home_CatalogTitle"]</h2>
-            <p>
-                @Localizer["Home_CatalogLead"]
-            </p>
-        </div>
-        <div class="section-action">
-            <a href="/models" class="btn btn-secondary" data-goal="cta_models_catalog">@Localizer["Home_CtaExplore"]</a>
-        </div>
-    </section>
+    @if (Model.FlagshipModels.Count > 0)
+    {
+        <section class="home-section flagship-showcase" aria-labelledby="flagship-title">
+            <div class="flagship-heading">
+                <div>
+                    <div class="section-label flagship-section-label">@Localizer["Home_CatalogLabel"]</div>
+                    <h2 id="flagship-title">@Localizer["Home_CatalogTitle"]</h2>
+                    <p>@Localizer["Home_CatalogLead"]</p>
+                </div>
+                <a href="/models" class="btn btn-secondary" data-goal="cta_models_catalog">@Localizer["Home_CtaExplore"]</a>
+            </div>
+
+            <div class="flagship-grid">
+                @foreach (var flagship in Model.FlagshipModels)
+                {
+                    <a class="flagship-card" href="@flagship.Path"
+                       aria-label="@Localizer["Home_FlagshipCardAria", flagship.DisplayName]">
+                        <div class="flagship-card-topline" aria-hidden="true"></div>
+                        <div class="flagship-card-header">
+                            @if (!string.IsNullOrWhiteSpace(flagship.ProviderId))
+                            {
+                                <img class="flagship-provider-logo"
+                                     src="/providers/logo/@Uri.EscapeDataString(flagship.ProviderId)"
+                                     alt="" aria-hidden="true" width="38" height="38" loading="lazy" decoding="async" />
+                            }
+                            else
+                            {
+                                <span class="flagship-provider-logo flagship-provider-fallback" aria-hidden="true">
+                                    @IndexModel.GetInitials(flagship.Provider)
+                                </span>
+                            }
+                            <div class="flagship-provider-copy">
+                                <span class="flagship-provider">@flagship.Provider</span>
+                                <span class="flagship-mark">@Localizer["Home_FlagshipBadge"]</span>
+                            </div>
+                        </div>
+
+                        <div class="flagship-model-copy">
+                            <h3>@flagship.DisplayName</h3>
+                            <code>@flagship.Id</code>
+                        </div>
+
+                        <div class="flagship-price-comparison">
+                            <div class="flagship-price-legend" aria-hidden="true">
+                                <span></span>
+                                <span>@Localizer["Home_PriceOpenRouter"]</span>
+                                <span>@Localizer["Home_PriceOurs"]</span>
+                            </div>
+                            <div class="flagship-price-row">
+                                <span class="flagship-price-kind">@Localizer["Home_PriceInput"]</span>
+                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterInputPrice)</del>
+                                <strong>@IndexModel.FormatUsdPrice(flagship.InputPrice)</strong>
+                            </div>
+                            <div class="flagship-price-row">
+                                <span class="flagship-price-kind">@Localizer["Home_PriceOutput"]</span>
+                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterOutputPrice)</del>
+                                <strong>@IndexModel.FormatUsdPrice(flagship.OutputPrice)</strong>
+                            </div>
+                            <div class="flagship-price-row">
+                                <span class="flagship-price-kind">@Localizer["Home_PriceCache"]</span>
+                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterCachePrice)</del>
+                                <strong>@IndexModel.FormatUsdPrice(flagship.CachePrice)</strong>
+                            </div>
+                        </div>
+
+                        <div class="flagship-card-footer">
+                            <span>@Localizer["Home_PriceUnit"]</span>
+                            <span class="flagship-arrow" aria-hidden="true">↗</span>
+                        </div>
+                    </a>
+                }
+            </div>
+        </section>
+    }
 
     <section class="home-section proof-grid" aria-label="@Localizer["A11y_PlatformCapabilities"]">
         <div class="proof-item">
@@ -334,6 +396,205 @@
         align-items: center;
     }
     .section-action { justify-self: end; }
+    .flagship-showcase {
+        position: relative;
+        isolation: isolate;
+    }
+    .flagship-showcase::before {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        top: 10px;
+        right: -12%;
+        width: 440px;
+        height: 300px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(48, 209, 88, .08), transparent 68%);
+        pointer-events: none;
+    }
+    .flagship-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 32px;
+        align-items: end;
+        margin-bottom: 28px;
+    }
+    .flagship-heading h2 {
+        max-width: 760px;
+        margin-bottom: var(--spacing-md);
+        font-size: clamp(30px, 4vw, 46px);
+        letter-spacing: -0.035em;
+    }
+    .flagship-heading p { max-width: 680px; }
+    .flagship-section-label { color: var(--color-success); }
+    .flagship-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+        gap: 14px;
+    }
+    .flagship-card {
+        position: relative;
+        display: flex;
+        min-width: 0;
+        min-height: 390px;
+        flex-direction: column;
+        overflow: hidden;
+        padding: 22px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-lg);
+        background:
+            linear-gradient(145deg, rgba(255, 255, 255, .035), transparent 42%),
+            var(--color-canvas-soft);
+        color: inherit;
+        text-decoration: none;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+        transition: transform .2s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+    }
+    .flagship-card:hover,
+    .flagship-card:focus-visible {
+        transform: translateY(-4px);
+        border-color: rgba(48, 209, 88, .48);
+        background-color: var(--color-canvas-card);
+        color: inherit;
+        text-decoration: none;
+        box-shadow: 0 18px 44px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .05);
+    }
+    .flagship-card:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--color-canvas), 0 0 0 4px var(--color-success);
+    }
+    .flagship-card-topline {
+        position: absolute;
+        top: 0;
+        right: 20px;
+        left: 20px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--color-success), transparent);
+        opacity: .75;
+    }
+    .flagship-card-header {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+    }
+    .flagship-provider-logo {
+        width: 38px;
+        height: 38px;
+        flex: 0 0 38px;
+        padding: 6px;
+        border: 1px solid var(--color-hairline);
+        border-radius: 10px;
+        background: var(--color-canvas-card);
+        object-fit: contain;
+    }
+    .flagship-provider-fallback {
+        display: grid;
+        place-items: center;
+        color: var(--color-ink);
+        font-family: var(--font-mono);
+        font-size: 11px;
+    }
+    .flagship-provider-copy {
+        display: flex;
+        min-width: 0;
+        flex: 1;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .flagship-provider {
+        overflow: hidden;
+        color: var(--color-body);
+        font-size: 13px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .flagship-mark {
+        padding: 4px 8px;
+        border: 1px solid rgba(48, 209, 88, .25);
+        border-radius: var(--radius-pill);
+        color: var(--color-success);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: .08em;
+        text-transform: uppercase;
+    }
+    .flagship-model-copy { margin: 24px 0 22px; }
+    .flagship-model-copy h3 {
+        margin: 0 0 7px;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: -0.03em;
+        line-height: 1.12;
+    }
+    .flagship-model-copy code {
+        display: block;
+        overflow: hidden;
+        padding: 0;
+        background: transparent;
+        color: var(--color-mute);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .flagship-price-comparison {
+        margin-top: auto;
+        border-top: 1px solid var(--color-hairline);
+        border-bottom: 1px solid var(--color-hairline);
+        font-variant-numeric: tabular-nums;
+    }
+    .flagship-price-legend,
+    .flagship-price-row {
+        display: grid;
+        grid-template-columns: minmax(58px, .8fr) minmax(78px, 1fr) minmax(78px, 1fr);
+        gap: 9px;
+        align-items: baseline;
+    }
+    .flagship-price-legend {
+        padding: 12px 0 8px;
+        color: var(--color-mute);
+        font-family: var(--font-mono);
+        font-size: 9px;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+    }
+    .flagship-price-row {
+        padding: 8px 0;
+        border-top: 1px solid rgba(255, 255, 255, .045);
+    }
+    .flagship-price-kind {
+        color: var(--color-body);
+        font-size: 12px;
+    }
+    .flagship-price-row del {
+        color: var(--color-mute);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        text-decoration-color: rgba(255, 255, 255, .55);
+        text-decoration-thickness: 1px;
+    }
+    .flagship-price-row strong {
+        color: var(--color-success);
+        font-family: var(--font-mono);
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .flagship-card-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-top: 14px;
+        color: var(--color-mute);
+        font-size: 11px;
+    }
+    .flagship-arrow {
+        color: var(--color-success);
+        font-size: 16px;
+        transition: transform .2s ease;
+    }
+    .flagship-card:hover .flagship-arrow,
+    .flagship-card:focus-visible .flagship-arrow { transform: translate(2px, -2px); }
     .proof-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -414,7 +675,8 @@
     }
     @@media (max-width: 900px) {
         .home-hero,
-        .home-section--split {
+        .home-section--split,
+        .flagship-heading {
             grid-template-columns: 1fr;
         }
         .proof-grid {
@@ -422,6 +684,7 @@
         }
         .home-hero { padding: 36px 0 48px; }
         .section-action { justify-self: start; }
+        .flagship-heading { align-items: start; }
         .final-cta { align-items: flex-start; flex-direction: column; }
     }
     @@media (max-width: 640px) {
@@ -432,5 +695,12 @@
         .quickstart-panel { padding: 18px; }
         .home-section { padding: 36px 0; }
         .proof-grid { grid-template-columns: 1fr; }
+        .flagship-card { min-height: 360px; }
+    }
+    @@media (prefers-reduced-motion: reduce) {
+        .flagship-card,
+        .flagship-arrow { transition: none; }
+        .flagship-card:hover,
+        .flagship-card:focus-visible { transform: none; }
     }
 </style>

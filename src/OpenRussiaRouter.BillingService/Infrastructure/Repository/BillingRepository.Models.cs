@@ -28,7 +28,7 @@ public sealed partial class BillingRepository
                 @Currency, @Enabled,
                 @DescriptionRu, @DescriptionEn, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider, @ProviderId,
-                @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffortsOverridden, @ModelType,
+                @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @DefaultReasoningEffortsOverridden, @ModelType,
                 @Priority
             )
             on conflict (model_id) do update set

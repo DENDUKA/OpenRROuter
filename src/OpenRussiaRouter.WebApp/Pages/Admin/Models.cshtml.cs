@@ -259,7 +259,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
-            return RedirectToPage();
+            return RedirectToPage(new { action = "edit", modelId = m.Id });
         }
         catch (Exception ex)
         {

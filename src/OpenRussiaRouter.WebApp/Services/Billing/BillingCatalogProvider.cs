@@ -33,7 +33,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             Priority: m.Priority,
-            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId)).ToList();
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
+            IsFlagship: m.IsFlagship)).ToList();
     }
 
     public async Task<IReadOnlyList<ModelInfo>> ListModelsAsync(CancellationToken cancellationToken = default)
@@ -63,7 +64,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
             Priority: m.Priority,
             ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
-            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden)).ToList();
+            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden,
+            IsFlagship: m.IsFlagship)).ToList();
     }
 
     public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
@@ -95,8 +97,10 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
+            Priority: m.Priority,
             ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
-            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden);
+            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden,
+            IsFlagship: m.IsFlagship);
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -124,7 +128,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
             ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             ModelType = model.ModelType ?? "text",
-            Priority = model.Priority
+            Priority = model.Priority,
+            IsFlagship = model.IsFlagship
         };
         if (model.TagIds != null)
             request.TagIds.AddRange(model.TagIds);
@@ -166,7 +171,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
                 DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
                 ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType ?? "text",
-                Priority = model.Priority
+                Priority = model.Priority,
+                IsFlagship = model.IsFlagship
             };
             if (model.TagIds != null)
                 request.TagIds.AddRange(model.TagIds);

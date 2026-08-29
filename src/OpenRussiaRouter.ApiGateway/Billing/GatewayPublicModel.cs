@@ -5,5 +5,6 @@ public sealed record GatewayPublicModel(
     string DisplayName,
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
-    string? DefaultReasoningEffort = null);
+    string? DefaultReasoningEffort = null,
+    bool IsFlagship = false);
 

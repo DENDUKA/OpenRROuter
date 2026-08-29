@@ -260,11 +260,13 @@ public sealed class BillingRepositoryPostgresTests
             "v1",
             new ModelTokenPrice(MoneyAmount.Usd(10), MoneyAmount.Usd(20), MoneyAmount.Usd(2)),
             Enabled: true,
-            Priority: 7));
+            Priority: 7,
+            IsFlagship: true));
 
         var stored = await repository.GetModelAsync("gpt-priority");
         stored.Should().NotBeNull();
         stored!.Priority.Should().Be(7);
+        stored!.IsFlagship.Should().BeTrue();
 
         // Upsert without explicit Priority falls back to default 0 — verify column is updated on conflict.
         await repository.UpsertModelAsync(new ModelPrice(
@@ -278,6 +280,7 @@ public sealed class BillingRepositoryPostgresTests
         var refreshed = await repository.GetModelAsync("gpt-priority");
         refreshed.Should().NotBeNull();
         refreshed!.Priority.Should().Be(0);
+        refreshed!.IsFlagship.Should().BeFalse();
     }
 
     [Fact]

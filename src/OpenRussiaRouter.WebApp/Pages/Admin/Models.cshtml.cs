@@ -168,7 +168,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                         ThinkingCanDisable = thinkingCanDisable,
                         ThinkingOptions = thinkingOptions,
                         ReasoningEffortsOverridden = m.ReasoningEffortsOverridden,
-                        Priority = m.Priority
+                        Priority = m.Priority,
+                        IsFlagship = m.IsFlagship
                     };
                 }
             }
@@ -255,7 +256,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
                     ModelType: Form.ModelType,
                     Priority: Form.Priority,
                     ProviderId: providerId,
-                    ReasoningEffortsOverridden: Form.ReasoningEffortsOverridden);
+                    ReasoningEffortsOverridden: Form.ReasoningEffortsOverridden,
+                    IsFlagship: Form.IsFlagship);
 
             await _billingClient.UpsertModelAsync(m);
             TempData["SuccessMessage"] = isNew ? "Model added." : "Model updated.";
@@ -724,6 +726,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
 
         [Range(0, 100000)]
         public int Priority { get; set; }
+
+        public bool IsFlagship { get; set; }
     }
 
     public static string ModalityIcon(string modality) => ModalityIcons.GetIcon(modality, 14);

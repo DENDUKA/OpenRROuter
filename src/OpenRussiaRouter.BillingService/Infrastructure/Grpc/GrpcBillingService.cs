@@ -80,6 +80,7 @@ public sealed class GrpcBillingService(
                         ModelType = model.ModelType ?? "text",
                         Priority = model.Priority,
                         DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+                        IsFlagship = model.IsFlagship,
                     };
                     if (model.AllowedReasoningEfforts is not null)
                     {
@@ -295,7 +296,8 @@ public sealed class GrpcBillingService(
                 AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
                 DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort,
                 Priority: request.Priority,
-                ReasoningEffortsOverridden: request.ReasoningEffortsOverridden),
+                ReasoningEffortsOverridden: request.ReasoningEffortsOverridden,
+                IsFlagship: request.IsFlagship),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -347,7 +349,8 @@ public sealed class GrpcBillingService(
                     AllowedReasoningEfforts: model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToList() : null,
                     DefaultReasoningEffort: string.IsNullOrEmpty(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort,
                     Priority: model.Priority,
-                    ReasoningEffortsOverridden: model.ReasoningEffortsOverridden),
+                    ReasoningEffortsOverridden: model.ReasoningEffortsOverridden,
+                    IsFlagship: model.IsFlagship),
                     ct).ConfigureAwait(false);
                 response.UpsertedCount++;
             }
@@ -421,6 +424,7 @@ public sealed class GrpcBillingService(
                     ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                     ModelType = model.ModelType ?? "text",
                     Priority = model.Priority,
+                    IsFlagship = model.IsFlagship,
                 };
                 if (model.AllowedReasoningEfforts is not null)
                 {
@@ -475,6 +479,8 @@ public sealed class GrpcBillingService(
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
             ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             ModelType = model.ModelType ?? "text",
+            Priority = model.Priority,
+            IsFlagship = model.IsFlagship,
         };
         if (model.AllowedReasoningEfforts is not null)
             m.AllowedReasoningEfforts.AddRange(model.AllowedReasoningEfforts);

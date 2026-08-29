@@ -20,7 +20,7 @@ public sealed partial class BillingRepository
                 description_ru, description_en, context_length, modalities, input_modalities, output_modalities, description_source,
                 tag_ids, provider, provider_id,
                 supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, reasoning_efforts_overridden, model_type,
-                priority
+                priority, is_flagship
             )
             values (
                 @ModelId, @DisplayName, @RouterModelId, @PriceVersion,
@@ -29,7 +29,7 @@ public sealed partial class BillingRepository
                 @DescriptionRu, @DescriptionEn, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider, @ProviderId,
                 @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @DefaultReasoningEffortsOverridden, @ModelType,
-                @Priority
+                @Priority, @IsFlagship
             )
             on conflict (model_id) do update set
                 display_name = excluded.display_name,
@@ -49,6 +49,7 @@ public sealed partial class BillingRepository
                 reasoning_efforts_overridden = excluded.reasoning_efforts_overridden,
                 model_type = excluded.model_type,
                 priority = excluded.priority,
+                is_flagship = excluded.is_flagship,
                 description_ru = CASE
                     WHEN excluded.description_source IS NOT NULL
                     THEN excluded.description_ru
@@ -111,7 +112,8 @@ public sealed partial class BillingRepository
                 DefaultReasoningEffort = model.DefaultReasoningEffort,
                 DefaultReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType,
-                model.Priority
+                model.Priority,
+                model.IsFlagship
             },
             cancellationToken: ct)).ConfigureAwait(false);
     }

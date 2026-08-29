@@ -24,5 +24,6 @@ public sealed record ModelPrice(
     string? DefaultReasoningEffort = null,
     int Priority = 0,
     string? ProviderId = null,
-    bool ReasoningEffortsOverridden = false);
+    bool ReasoningEffortsOverridden = false,
+    bool IsFlagship = false);
 

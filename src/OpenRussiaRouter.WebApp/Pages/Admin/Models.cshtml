@@ -118,10 +118,14 @@
                         <small class="text-muted">Higher number shows the model higher on the public /models page.</small>
                         <span asp-validation-for="Form.Priority" class="validation-message"></span>
                     </div>
-                    <div class="form-group" style="align-self: center; margin-top: 1.5rem;">
+                    <div class="form-group" style="align-self: center; margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
                         <label class="form-label" style="margin-bottom: 0;">
                             <input asp-for="Form.Enabled" type="checkbox" />
                             Enabled (model is available to API clients)
+                        </label>
+                        <label class="form-label" style="margin-bottom: 0;">
+                            <input asp-for="Form.IsFlagship" type="checkbox" />
+                            Flagship (флагманская модель)
                         </label>
                     </div>
                 </div>
@@ -433,6 +437,10 @@
                                 <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
                                     @(m.Enabled ? "Enabled" : "Disabled")
                                 </span>
+                                @if (m.IsFlagship)
+                                {
+                                    <span class="badge badge-warning" title="Flagship model" style="margin-top: 2px;">Flagship</span>
+                                }
                             </td>
                             <td><code>@m.Priority</code></td>
                             <td>

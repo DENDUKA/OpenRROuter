@@ -30,4 +30,5 @@ public sealed class ModelPriceEntity
     public string? DefaultReasoningEffort { get; set; }
     public bool ReasoningEffortsOverridden { get; set; }
     public int Priority { get; set; }
+    public bool IsFlagship { get; set; }
 }

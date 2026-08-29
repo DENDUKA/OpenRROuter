@@ -187,6 +187,7 @@ message PublicModel {
   int32 priority = 18;
   string default_reasoning_effort = 19;
   string provider_id = 20;
+  bool is_flagship = 21;
 }
 
 message ListPublicModelsResponse {
@@ -245,6 +246,7 @@ message UpsertModelPriceRequest {
   int32 priority = 22;
   string provider_id = 23;
   bool reasoning_efforts_overridden = 24;
+  bool is_flagship = 25;
 }
 
 message UpsertModelPriceResponse {
@@ -295,6 +297,7 @@ message ModelDetail {
   int32  priority = 22;
   string provider_id = 23;
   bool reasoning_efforts_overridden = 24;
+  bool is_flagship = 25;
 }
 
 message ListModelsResponse {

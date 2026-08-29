@@ -26,7 +26,8 @@ public sealed class GrpcBillingProvider(
                 model.DisplayName,
                 model.SupportsReasoning,
                 model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToArray() : null,
-                string.IsNullOrWhiteSpace(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort))
+                string.IsNullOrWhiteSpace(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort,
+                model.IsFlagship))
             .ToArray();
     }
 

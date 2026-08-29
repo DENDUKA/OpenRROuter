@@ -230,7 +230,8 @@ public sealed class GrpcBillingServiceTests
             InputPricePer1MUsd = "10",
             OutputPricePer1MUsd = "20",
             CachePricePer1MUsd = "1",
-            Enabled = true
+            Enabled = true,
+            IsFlagship = true
         }, context: null!);
         var models = await service.ListPublicModels(new ListPublicModelsRequest(), context: null!);
 
@@ -241,6 +242,7 @@ public sealed class GrpcBillingServiceTests
         model.UpstreamModelId.Should().Be("router/gpt-admin");
         model.InputPricePer1MUsd.Should().Be("10");
         model.OutputPricePer1MUsd.Should().Be("20");
+        model.IsFlagship.Should().BeTrue();
     }
 
     [Fact]

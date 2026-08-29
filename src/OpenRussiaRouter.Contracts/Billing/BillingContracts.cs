@@ -20,7 +20,8 @@ public sealed record PublicModel(
     bool Enabled,
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
-    string? DefaultReasoningEffort = null);
+    string? DefaultReasoningEffort = null,
+    bool IsFlagship = false);
 
 public sealed record UsageEvent(
     string RequestId,

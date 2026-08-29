@@ -162,7 +162,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 | Таблица | Что |
 |---|---|
 | `billing.ledger_entries` | append-only леджер; unique `idempotency_key`; `is_user_payment` (023) отделяет реальные платежи от промо; check `currency='Usd'` (010) |
-| `billing.model_prices` | одна строка на `model_id` + unique-индекс на `router_model_id` (008); `description_ru`/`description_en` (022, старый `description` удалён), `tag_ids`, `provider`/`provider_id`, `model_type` (019, check `in ('text','audio')`), `priority` (016), `supports_reasoning`/`allowed_reasoning_efforts` (CSV)/`default_reasoning_effort` (014), `input_modalities`/`output_modalities` (016) |
+| `billing.model_prices` | одна строка на `model_id` + unique-индекс на `router_model_id` (008); `description_ru`/`description_en` (022, старый `description` удалён), `tag_ids`, `provider`/`provider_id`, `model_type` (019, check `in ('text','audio')`), `priority` (016), `supports_reasoning`/`allowed_reasoning_efforts` (CSV)/`default_reasoning_effort` (014), `input_modalities`/`output_modalities` (016), `reasoning_efforts_overridden` (028), `is_flagship` (029) |
 | `billing.usage_records` | строка на каждый запрос, у которого нашлась цена и токены > 0 (в т.ч. с нулевой стоимостью у бесплатных моделей), PK `request_id`; источник правды для spend-лимитов и админских отчётов |
 | `billing.activity_by_token` | то же в разрезе API-ключа для кабинета (004); пишется **всегда**, даже когда usage/ledger пропущены |
 | `billing.billing_anomalies` | `invalid_token_count`, `model_price_missing`, `payment_amount_mismatch` |

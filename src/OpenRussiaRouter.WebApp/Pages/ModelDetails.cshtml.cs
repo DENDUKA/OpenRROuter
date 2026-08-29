@@ -159,7 +159,8 @@ public class ModelDetailsModel : CatalogPageModelBase
             return catalog
                 .Where(m => string.Equals(m.ProviderId, current.ProviderId, StringComparison.OrdinalIgnoreCase)
                             && !string.Equals(m.Id, current.Id, StringComparison.Ordinal))
-                .OrderByDescending(m => m.Priority)
+                .OrderByDescending(m => m.IsFlagship)
+                .ThenByDescending(m => m.Priority)
                 .ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(m => new
                 {

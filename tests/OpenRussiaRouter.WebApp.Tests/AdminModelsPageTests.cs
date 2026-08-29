@@ -98,6 +98,45 @@ public class AdminModelsPageTests
         pageModel.ModelState.Should().ContainKey("Form.OpenRouterCachePrice");
     }
 
+    [Fact]
+    public async Task OnGetAsync_SortsModelsByFlagshipFirstThenPriority()
+    {
+        var models = new List<ModelInfo>
+        {
+            new("non-flagship-high-prio", "B", "b", "v1", 1, 2, 0, true, Priority: 100, IsFlagship: false),
+            new("flagship-low-prio", "A", "a", "v1", 1, 2, 0, true, Priority: 10, IsFlagship: true),
+            new("flagship-high-prio", "C", "c", "v1", 1, 2, 0, true, Priority: 50, IsFlagship: true),
+            new("non-flagship-low-prio", "D", "d", "v1", 1, 2, 0, true, Priority: 5, IsFlagship: false),
+        };
+
+        var billing = new FakeBillingProvider(models);
+        var httpContext = new DefaultHttpContext();
+        var modelState = new ModelStateDictionary();
+        var actionContext = new ActionContext(httpContext, new RouteData(), new PageActionDescriptor(), modelState);
+        var pageModel = new ModelsModel(
+            billing,
+            new FakeControlPlaneProvider(),
+            new FakeCollectorProvider(),
+            new FakeOpenRouterCatalogClient(),
+            NullLogger<ModelsModel>.Instance)
+        {
+            PageContext = new PageContext(actionContext)
+            {
+                ViewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), modelState)
+            },
+            TempData = new TempDataScope(httpContext).Create()
+        };
+
+        await pageModel.OnGetAsync();
+
+        pageModel.Models.Select(m => m.Id).Should().Equal(
+            "flagship-high-prio",
+            "flagship-low-prio",
+            "non-flagship-high-prio",
+            "non-flagship-low-prio"
+        );
+    }
+
     private sealed class FakeBillingProvider : BillingProvider
     {
         private readonly List<ModelInfo> _models;

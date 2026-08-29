@@ -107,7 +107,7 @@ public sealed class SeoHeadTests
     }
 
     [Theory]
-    [InlineData("/ru", "Флагманские модели. Ниже цена.", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro")]
+    [InlineData("/ru", "Флагманские модели", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro")]
     [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro")]
     public async Task Get_Home_RendersLocalizedFlagshipPriceComparisonAsync(
         string path,
@@ -128,6 +128,19 @@ public sealed class SeoHeadTests
         body.Should().Contain("<strong>$1</strong>");
         body.Should().Contain("color: var(--color-success)");
         body.Should().Contain($"href=\"{modelPath}\"");
+
+        var oursIndex = body.IndexOf($"<span>{ourPriceLabel}</span>", StringComparison.Ordinal);
+        var openRouterIndex = body.IndexOf("<span>OpenRouter</span>", StringComparison.Ordinal);
+
+        oursIndex.Should().BeGreaterThan(-1);
+        openRouterIndex.Should().BeGreaterThan(oursIndex);
+        body.Should().Contain("data-flagship-carousel");
+        body.Should().Contain("data-flagship-track");
+        body.Should().Contain("data-flagship-cycle");
+        body.Should().Contain("touch-action: auto;");
+        body.Should().Contain("[data-flagship-carousel][data-flagship-initialized=\"true\"] { touch-action: pan-y; }");
+        body.Should().NotContain("data-flagship-previous");
+        body.Should().NotContain("data-flagship-next");
     }
 
     [Fact]

@@ -48,7 +48,7 @@
     <value>Less than OpenRouter</value>
   </data>
   <data name="Home_CatalogLead" xml:space="preserve">
-    <value>The same leading models through one OpenAI-compatible API. Compare prices per 1M tokens.</value>
+    <value></value>
   </data>
   <data name="Home_CatalogTitle" xml:space="preserve">
     <value>Flagship models. Lower prices.</value>

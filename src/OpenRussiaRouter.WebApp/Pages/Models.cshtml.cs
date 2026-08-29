@@ -80,7 +80,8 @@ public class ModelsModel(
                 .ToDictionary(g => g.Key, g => g.First(), StringComparer.Ordinal);
 
             Models = billingModels
-                .OrderByDescending(model => model.Priority, Comparer<int>.Default)
+                .OrderByDescending(model => model.IsFlagship)
+                .ThenByDescending(model => model.Priority, Comparer<int>.Default)
                 .ThenBy(model => model.Id, StringComparer.Ordinal)
                 .Select(model =>
                 {

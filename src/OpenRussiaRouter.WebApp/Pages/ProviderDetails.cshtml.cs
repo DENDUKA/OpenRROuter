@@ -53,7 +53,8 @@ public class ProviderDetailsModel(
 
             Models = allModels
                 .Where(m => string.Equals(m.ProviderId, Id, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(m => m.Priority)
+                .OrderByDescending(m => m.IsFlagship)
+                .ThenByDescending(m => m.Priority)
                 .ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase)
                 .Select(m =>
                 {

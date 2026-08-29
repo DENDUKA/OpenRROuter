@@ -672,7 +672,8 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         try
         {
             Models = (await _billingClient.ListModelsAsync())
-                .OrderByDescending(model => model.Priority)
+                .OrderByDescending(model => model.IsFlagship)
+                .ThenByDescending(model => model.Priority)
                 .ThenByDescending(model => model.Enabled)
                 .ThenBy(model => model.Id, StringComparer.Ordinal)
                 .ToList();

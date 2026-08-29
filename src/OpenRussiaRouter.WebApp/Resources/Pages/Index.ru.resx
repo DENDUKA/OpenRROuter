@@ -48,10 +48,10 @@
     <value>Дешевле OpenRouter</value>
   </data>
   <data name="Home_CatalogLead" xml:space="preserve">
-    <value>Те же сильные модели через единый OpenAI-совместимый API. Сравните стоимость за 1 млн токенов.</value>
+    <value></value>
   </data>
   <data name="Home_CatalogTitle" xml:space="preserve">
-    <value>Флагманские модели. Ниже цена.</value>
+    <value>Флагманские модели</value>
   </data>
   <data name="Home_FlagshipBadge" xml:space="preserve">
     <value>Флагман</value>

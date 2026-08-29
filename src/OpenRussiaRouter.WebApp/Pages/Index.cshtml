@@ -129,70 +129,77 @@
                 <div>
                     <div class="section-label flagship-section-label">@Localizer["Home_CatalogLabel"]</div>
                     <h2 id="flagship-title">@Localizer["Home_CatalogTitle"]</h2>
-                    <p>@Localizer["Home_CatalogLead"]</p>
+                    @if (!string.IsNullOrWhiteSpace(Localizer["Home_CatalogLead"].Value))
+                    {
+                        <p>@Localizer["Home_CatalogLead"]</p>
+                    }
                 </div>
                 <a href="/models" class="btn btn-secondary" data-goal="cta_models_catalog">@Localizer["Home_CtaExplore"]</a>
             </div>
 
-            <div class="flagship-grid">
-                @foreach (var flagship in Model.FlagshipModels)
-                {
-                    <a class="flagship-card" href="@flagship.Path"
-                       aria-label="@Localizer["Home_FlagshipCardAria", flagship.DisplayName]">
-                        <div class="flagship-card-topline" aria-hidden="true"></div>
-                        <div class="flagship-card-header">
-                            @if (!string.IsNullOrWhiteSpace(flagship.ProviderId))
-                            {
-                                <img class="flagship-provider-logo"
-                                     src="/providers/logo/@Uri.EscapeDataString(flagship.ProviderId)"
-                                     alt="" aria-hidden="true" width="38" height="38" loading="lazy" decoding="async" />
-                            }
-                            else
-                            {
-                                <span class="flagship-provider-logo flagship-provider-fallback" aria-hidden="true">
-                                    @IndexModel.GetInitials(flagship.Provider)
-                                </span>
-                            }
-                            <div class="flagship-provider-copy">
-                                <span class="flagship-provider">@flagship.Provider</span>
-                                <span class="flagship-mark">@Localizer["Home_FlagshipBadge"]</span>
-                            </div>
-                        </div>
+            <div class="flagship-carousel" data-flagship-carousel>
+                <div class="flagship-track" data-flagship-track>
+                    <div class="flagship-cycle" data-flagship-cycle>
+                        @foreach (var flagship in Model.FlagshipModels)
+                        {
+                            <a class="flagship-card" href="@flagship.Path"
+                               aria-label="@Localizer["Home_FlagshipCardAria", flagship.DisplayName]">
+                                <div class="flagship-card-topline" aria-hidden="true"></div>
+                                <div class="flagship-card-header">
+                                    @if (!string.IsNullOrWhiteSpace(flagship.ProviderId))
+                                    {
+                                        <img class="flagship-provider-logo"
+                                             src="/providers/logo/@Uri.EscapeDataString(flagship.ProviderId)"
+                                             alt="" aria-hidden="true" width="38" height="38" loading="lazy" decoding="async" />
+                                    }
+                                    else
+                                    {
+                                        <span class="flagship-provider-logo flagship-provider-fallback" aria-hidden="true">
+                                            @IndexModel.GetInitials(flagship.Provider)
+                                        </span>
+                                    }
+                                    <div class="flagship-provider-copy">
+                                        <span class="flagship-provider">@flagship.Provider</span>
+                                        <span class="flagship-mark">@Localizer["Home_FlagshipBadge"]</span>
+                                    </div>
+                                </div>
 
-                        <div class="flagship-model-copy">
-                            <h3>@flagship.DisplayName</h3>
-                            <code>@flagship.Id</code>
-                        </div>
+                                <div class="flagship-model-copy">
+                                    <h3>@flagship.DisplayName</h3>
+                                    <code>@flagship.Id</code>
+                                </div>
 
-                        <div class="flagship-price-comparison">
-                            <div class="flagship-price-legend" aria-hidden="true">
-                                <span></span>
-                                <span>@Localizer["Home_PriceOpenRouter"]</span>
-                                <span>@Localizer["Home_PriceOurs"]</span>
-                            </div>
-                            <div class="flagship-price-row">
-                                <span class="flagship-price-kind">@Localizer["Home_PriceInput"]</span>
-                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterInputPrice)</del>
-                                <strong>@IndexModel.FormatUsdPrice(flagship.InputPrice)</strong>
-                            </div>
-                            <div class="flagship-price-row">
-                                <span class="flagship-price-kind">@Localizer["Home_PriceOutput"]</span>
-                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterOutputPrice)</del>
-                                <strong>@IndexModel.FormatUsdPrice(flagship.OutputPrice)</strong>
-                            </div>
-                            <div class="flagship-price-row">
-                                <span class="flagship-price-kind">@Localizer["Home_PriceCache"]</span>
-                                <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterCachePrice)</del>
-                                <strong>@IndexModel.FormatUsdPrice(flagship.CachePrice)</strong>
-                            </div>
-                        </div>
+                                <div class="flagship-price-comparison">
+                                    <div class="flagship-price-legend" aria-hidden="true">
+                                        <span></span>
+                                        <span>@Localizer["Home_PriceOurs"]</span>
+                                        <span>@Localizer["Home_PriceOpenRouter"]</span>
+                                    </div>
+                                    <div class="flagship-price-row">
+                                        <span class="flagship-price-kind">@Localizer["Home_PriceInput"]</span>
+                                        <strong>@IndexModel.FormatUsdPrice(flagship.InputPrice)</strong>
+                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterInputPrice)</del>
+                                    </div>
+                                    <div class="flagship-price-row">
+                                        <span class="flagship-price-kind">@Localizer["Home_PriceOutput"]</span>
+                                        <strong>@IndexModel.FormatUsdPrice(flagship.OutputPrice)</strong>
+                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterOutputPrice)</del>
+                                    </div>
+                                    <div class="flagship-price-row">
+                                        <span class="flagship-price-kind">@Localizer["Home_PriceCache"]</span>
+                                        <strong>@IndexModel.FormatUsdPrice(flagship.CachePrice)</strong>
+                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterCachePrice)</del>
+                                    </div>
+                                </div>
 
-                        <div class="flagship-card-footer">
-                            <span>@Localizer["Home_PriceUnit"]</span>
-                            <span class="flagship-arrow" aria-hidden="true">↗</span>
-                        </div>
-                    </a>
-                }
+                                <div class="flagship-card-footer">
+                                    <span>@Localizer["Home_PriceUnit"]</span>
+                                    <span class="flagship-arrow" aria-hidden="true">↗</span>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </div>
             </div>
         </section>
     }
@@ -269,7 +276,7 @@
         grid-template-columns: minmax(0, 1.1fr) minmax(320px, .9fr);
         gap: 40px;
         align-items: start;
-        padding: 56px 0 64px;
+        padding: 0 0 64px;
         border-bottom: 1px solid var(--color-hairline);
     }
     .provider-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
@@ -427,16 +434,38 @@
     }
     .flagship-heading p { max-width: 680px; }
     .flagship-section-label { color: var(--color-success); }
-    .flagship-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    .flagship-carousel {
+        position: relative;
+        overflow-x: auto;
+        overflow-y: hidden;
+        margin-inline: calc(50% - 50vw);
+        padding-inline: max(24px, calc((100vw - 1180px) / 2));
+        cursor: grab;
+        scrollbar-width: none;
+        overscroll-behavior-inline: contain;
+        touch-action: auto;
+        mask-image: linear-gradient(90deg, transparent, #000 42px, #000 calc(100% - 42px), transparent);
+        -webkit-mask-image: linear-gradient(90deg, transparent, #000 42px, #000 calc(100% - 42px), transparent);
+    }
+    [data-flagship-carousel][data-flagship-initialized="true"] { touch-action: pan-y; }
+    .flagship-carousel::-webkit-scrollbar { display: none; }
+    .flagship-carousel.is-dragging {
+        cursor: grabbing;
+        user-select: none;
+    }
+    .flagship-track,
+    .flagship-cycle {
+        display: flex;
         gap: 14px;
     }
+    .flagship-track { width: max-content; }
     .flagship-card {
         position: relative;
         display: flex;
+        width: clamp(280px, 28vw, 330px);
         min-width: 0;
         min-height: 390px;
+        flex: 0 0 clamp(280px, 28vw, 330px);
         flex-direction: column;
         overflow: hidden;
         padding: 22px;
@@ -682,7 +711,7 @@
         .proof-grid {
             grid-template-columns: repeat(2, 1fr);
         }
-        .home-hero { padding: 36px 0 48px; }
+        .home-hero { padding: 0 0 48px; }
         .section-action { justify-self: start; }
         .flagship-heading { align-items: start; }
         .final-cta { align-items: flex-start; flex-direction: column; }
@@ -704,3 +733,5 @@
         .flagship-card:focus-visible { transform: none; }
     }
 </style>
+
+<script src="~/js/flagship-carousel.js" asp-append-version="true" defer></script>

@@ -48,6 +48,7 @@ public sealed partial class BillingRepository(IBillingDbConnectionFactory connec
             billing.model_prices.supports_reasoning as SupportsReasoning,
             billing.model_prices.allowed_reasoning_efforts as AllowedReasoningEfforts,
             billing.model_prices.default_reasoning_effort as DefaultReasoningEffort,
+            billing.model_prices.reasoning_efforts_overridden as ReasoningEffortsOverridden,
             billing.model_prices.model_type as ModelType,
             billing.model_prices.priority as Priority
         from billing.model_prices

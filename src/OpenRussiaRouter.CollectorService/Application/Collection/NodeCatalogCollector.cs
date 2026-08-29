@@ -59,10 +59,14 @@ public sealed class NodeCatalogCollector(
                     Rank = string.Equals(connection.Provider, "combo", StringComparison.OrdinalIgnoreCase) ? 3 : 2,
                     ConnectionId = connection.Id,
                     Provider = string.IsNullOrWhiteSpace(connection.Provider) ? string.Empty : connection.Provider,
-                    SupportsReasoning = model.Caps?.Reasoning ?? false,
+                    SupportsReasoning = model.Caps?.ReasoningEfforts.Count > 0,
                     ThinkingFormat = model.Caps?.ThinkingFormat,
                     ThinkingCanDisable = model.Caps?.ThinkingCanDisable ?? true,
-                    ThinkingOptions = model.Caps?.ThinkingOptions ?? []
+                    ThinkingOptions = model.Caps?.ThinkingOptions ?? [],
+                    ReasoningEfforts = model.Caps?.ReasoningEfforts ?? [],
+                    ComboReasoningMembers = model.Caps?.ComboReasoningMembers
+                        .Select(member => new ComboReasoningMember(member.ModelId, member.ReasoningEfforts))
+                        .ToList() ?? []
                 });
             }
         }

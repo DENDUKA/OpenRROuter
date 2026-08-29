@@ -31,7 +31,13 @@ public sealed class CollectorProvider(
                     SupportsReasoning: e.SupportsReasoning,
                     ThinkingFormat: string.IsNullOrWhiteSpace(e.ThinkingFormat) ? null : e.ThinkingFormat,
                     ThinkingCanDisable: e.ThinkingCanDisable,
-                    ThinkingOptions: e.ThinkingOptions.ToList())).ToList(),
+                    ThinkingOptions: e.ThinkingOptions.ToList(),
+                    ReasoningEfforts: e.ReasoningEfforts.ToList(),
+                    ComboReasoningMembers: e.ComboReasoningMembers
+                        .Select(member => new ComboReasoningMemberInfo(
+                            member.ModelId,
+                            member.ReasoningEfforts.ToList()))
+                        .ToList())).ToList(),
                 UnreachableNodeIds: response.UnreachableNodeIds.ToList(),
                 UnreachableNodes: response.UnreachableNodes.Select(u => new UnreachableNodeDetail(
                     NodeId: u.NodeId, Request: u.Request, Response: u.Response)).ToList(),

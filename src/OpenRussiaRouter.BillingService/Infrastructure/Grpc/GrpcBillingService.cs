@@ -294,7 +294,8 @@ public sealed class GrpcBillingService(
                 SupportsReasoning: request.SupportsReasoning,
                 AllowedReasoningEfforts: request.AllowedReasoningEfforts.Count > 0 ? request.AllowedReasoningEfforts.ToList() : null,
                 DefaultReasoningEffort: string.IsNullOrEmpty(request.DefaultReasoningEffort) ? null : request.DefaultReasoningEffort,
-                Priority: request.Priority),
+                Priority: request.Priority,
+                ReasoningEffortsOverridden: request.ReasoningEffortsOverridden),
                 context?.CancellationToken ?? CancellationToken.None).ConfigureAwait(false);
 
             return new UpsertModelPriceResponse
@@ -345,7 +346,8 @@ public sealed class GrpcBillingService(
                     SupportsReasoning: model.SupportsReasoning,
                     AllowedReasoningEfforts: model.AllowedReasoningEfforts.Count > 0 ? model.AllowedReasoningEfforts.ToList() : null,
                     DefaultReasoningEffort: string.IsNullOrEmpty(model.DefaultReasoningEffort) ? null : model.DefaultReasoningEffort,
-                    Priority: model.Priority),
+                    Priority: model.Priority,
+                    ReasoningEffortsOverridden: model.ReasoningEffortsOverridden),
                     ct).ConfigureAwait(false);
                 response.UpsertedCount++;
             }
@@ -416,6 +418,7 @@ public sealed class GrpcBillingService(
                     ProviderId = model.ProviderId ?? string.Empty,
                     SupportsReasoning = model.SupportsReasoning,
                     DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+                    ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                     ModelType = model.ModelType ?? "text",
                     Priority = model.Priority,
                 };
@@ -470,6 +473,7 @@ public sealed class GrpcBillingService(
             ProviderId = model.ProviderId ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+            ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             ModelType = model.ModelType ?? "text",
         };
         if (model.AllowedReasoningEfforts is not null)

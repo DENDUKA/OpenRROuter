@@ -62,7 +62,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
             Priority: m.Priority,
-            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId)).ToList();
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
+            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden)).ToList();
     }
 
     public async Task<ModelInfo?> GetModelAsync(string modelId, CancellationToken cancellationToken = default)
@@ -94,7 +95,8 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             SupportsReasoning: m.SupportsReasoning,
             AllowedReasoningEfforts: m.AllowedReasoningEfforts.Count > 0 ? m.AllowedReasoningEfforts.ToList() : null,
             DefaultReasoningEffort: string.IsNullOrEmpty(m.DefaultReasoningEffort) ? null : m.DefaultReasoningEffort,
-            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId);
+            ProviderId: string.IsNullOrEmpty(m.ProviderId) ? null : m.ProviderId,
+            ReasoningEffortsOverridden: m.ReasoningEffortsOverridden);
     }
 
     public async Task UpsertModelAsync(ModelInfo model, CancellationToken cancellationToken = default)
@@ -120,6 +122,7 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
             ProviderId = model.ProviderId ?? string.Empty,
             SupportsReasoning = model.SupportsReasoning,
             DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+            ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             ModelType = model.ModelType ?? "text",
             Priority = model.Priority
         };
@@ -161,6 +164,7 @@ internal sealed class BillingCatalogProvider(BillingGrpc.BillingServiceClient cl
                 ProviderId = model.ProviderId ?? string.Empty,
                 SupportsReasoning = model.SupportsReasoning,
                 DefaultReasoningEffort = model.DefaultReasoningEffort ?? string.Empty,
+                ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType ?? "text",
                 Priority = model.Priority
             };

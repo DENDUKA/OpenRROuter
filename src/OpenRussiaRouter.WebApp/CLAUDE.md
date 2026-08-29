@@ -557,3 +557,12 @@ BillingService своей котировкой.
 - **E2E** — Playwright, opt-in (`tests/OpenRussiaRouter.E2ETests`). База —
   `ORR_E2E_BASE_URL` / `e2e.local.json` (дефолт `http://localhost:5004`), креды —
   `ORR_E2E_USER_EMAIL`/`ORR_E2E_USER_PASSWORD`; **без кредов тесты тихо скипаются**.
+# Reasoning catalog sync (2026-08-29)
+
+`/admin/models?action=edit` получает уровни reasoning из Collector-каталога 9Router.
+`OnPostSyncReasoningAsync` только заполняет форму и требует последующего Save. Администратор
+может сузить список, но не добавить уровень, которого нет у ноды; `ReasoningEffortsOverridden`
+отличает это подмножество от полностью синхронизированной конфигурации.
+Для combo в том же ответе доступны `ComboReasoningMembers`: после синхронизации форма показывает
+каждую fallback-модель и её уровни. Пустое итоговое пересечение означает, что reasoning combo
+не управляется: форма очищает список и default.

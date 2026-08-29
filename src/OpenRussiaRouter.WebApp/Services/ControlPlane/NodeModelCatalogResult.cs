@@ -16,7 +16,13 @@ public sealed record NodeModelCatalogEntry(
     bool SupportsReasoning,
     string? ThinkingFormat,
     bool ThinkingCanDisable,
-    IReadOnlyList<string> ThinkingOptions);
+    IReadOnlyList<string> ThinkingOptions,
+    IReadOnlyList<string> ReasoningEfforts,
+    IReadOnlyList<ComboReasoningMemberInfo> ComboReasoningMembers);
+
+public sealed record ComboReasoningMemberInfo(
+    string ModelId,
+    IReadOnlyList<string> ReasoningEfforts);
 
 public sealed record UnreachableNodeDetail(
     string NodeId,

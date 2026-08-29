@@ -41,6 +41,13 @@ message UpstreamModelEntry {
   string thinking_format = 8;
   bool thinking_can_disable = 9;
   repeated string thinking_options = 10;
+  repeated string reasoning_efforts = 11;
+  repeated ComboReasoningMember combo_reasoning_members = 12;
+}
+
+message ComboReasoningMember {
+  string model_id = 1;
+  repeated string reasoning_efforts = 2;
 }
 
 message UnreachableNodeInfo {

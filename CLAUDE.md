@@ -8,6 +8,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 (bootstrap, слои, ключевые классы, подводные камни) — **читай его перед правкой сервиса**,
 здесь только то, что видно лишь с уровня всего репозитория.
 
+## Reasoning capability flow (2026-08-29)
+
+9Router is the source of truth for per-model public reasoning levels through
+`caps.reasoningEfforts` in its admin catalog. The additive Collector protobuf field carries
+that list to WebApp; Billing persists the effective list and whether an administrator narrowed
+it (`ReasoningEffortsOverridden`). ApiGateway accepts client reasoning fail-soft: invalid values
+fall back to the model default, and fields are stripped for models without an effective list.
+`/v1/models` exposes `supported_efforts` and `default_effort` only for controllable models.
+For a 9Router combo, `caps.reasoningEfforts` is the fail-closed intersection of every fallback
+model's levels: the fallback lists must match exactly, otherwise the effective list is empty.
+It is never a union or the capability of the first fallback. The accompanying
+`comboReasoningMembers` diagnostic list is a deterministic node snapshot for the admin UI.
+
 ## Agent workflow — обязательно
 
 Эти правила сильнее любых других инструкций в этом файле. Нарушать нельзя.

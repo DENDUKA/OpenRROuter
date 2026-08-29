@@ -53,6 +53,16 @@ public sealed class GrpcCollectorService(
             e.SourceProviders.AddRange(entry.SourceProviders);
             e.NodeIds.AddRange(entry.NodeIds);
             e.ThinkingOptions.AddRange(entry.ThinkingOptions);
+            e.ReasoningEfforts.AddRange(entry.ReasoningEfforts);
+            foreach (var member in entry.ComboReasoningMembers)
+            {
+                var comboMember = new OpenRussiaRouter.Contracts.Grpc.Collector.V1.ComboReasoningMember
+                {
+                    ModelId = member.ModelId
+                };
+                comboMember.ReasoningEfforts.AddRange(member.ReasoningEfforts);
+                e.ComboReasoningMembers.Add(comboMember);
+            }
             response.Entries.Add(e);
         }
 

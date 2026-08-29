@@ -35,6 +35,14 @@ public sealed record NodeCapsInfo
     public string? ThinkingFormat { get; init; }
     public bool ThinkingCanDisable { get; init; }
     public IReadOnlyList<string> ThinkingOptions { get; init; } = [];
+    public IReadOnlyList<string> ReasoningEfforts { get; init; } = [];
+    public IReadOnlyList<NodeComboReasoningMemberInfo> ComboReasoningMembers { get; init; } = [];
+}
+
+public sealed record NodeComboReasoningMemberInfo
+{
+    public string ModelId { get; init; } = string.Empty;
+    public IReadOnlyList<string> ReasoningEfforts { get; init; } = [];
 }
 
 public sealed record NodeModelsResponse

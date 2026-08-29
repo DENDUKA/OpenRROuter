@@ -64,6 +64,7 @@ public static class BillingPersistenceMapper
             SupportsReasoning = model.SupportsReasoning,
             AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
             DefaultReasoningEffort = ReasoningEffort.NormalizeNullable(model.DefaultReasoningEffort),
+            ReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
             Priority = model.Priority
         };
     }
@@ -94,7 +95,8 @@ public static class BillingPersistenceMapper
             AllowedReasoningEfforts: ReasoningEffort.SplitCsv(entity.AllowedReasoningEfforts),
             DefaultReasoningEffort: ReasoningEffort.NormalizeNullable(entity.DefaultReasoningEffort),
             Priority: entity.Priority,
-            ProviderId: entity.ProviderId);
+            ProviderId: entity.ProviderId,
+            ReasoningEffortsOverridden: entity.ReasoningEffortsOverridden);
     }
 
     public static UsageRecordEntity ToEntity(UsageRecord record)

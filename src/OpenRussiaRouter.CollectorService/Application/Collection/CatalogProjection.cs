@@ -40,7 +40,9 @@ public static class CatalogProjection
     public static IReadOnlyList<CatalogEntry> Catalog(CollectorSnapshot snapshot)
     {
         var accumulators = new Dictionary<string, CatalogAccumulator>(StringComparer.Ordinal);
-        foreach (var result in snapshot.Nodes.Where(n => !n.Unreachable))
+        foreach (var result in snapshot.Nodes
+                     .Where(n => !n.Unreachable)
+                     .OrderBy(n => n.NodeId, StringComparer.Ordinal))
         {
             foreach (var observation in result.Observations)
             {
@@ -63,16 +65,19 @@ public static class CatalogProjection
 
                 acc.NodeIds.Add(result.NodeId);
 
-                if (observation.SupportsReasoning)
+                // 9Router publishes the complete effective capability.  In particular, a
+                // combo's list is already the intersection of all its fallbacks.  Keep one
+                // deterministic node snapshot instead of merging capabilities across nodes.
+                if (!acc.HasReasoningDefinition || observation.Rank > acc.ReasoningDefinitionRank)
                 {
-                    acc.SupportsReasoning = true;
-                    if (acc.ThinkingFormat is null && observation.ThinkingFormat is not null)
-                        acc.ThinkingFormat = observation.ThinkingFormat;
-                    if (!observation.ThinkingCanDisable)
-                        acc.ThinkingCanDisable = false;
-                    foreach (var opt in observation.ThinkingOptions)
-                        if (!acc.ThinkingOptions.Contains(opt))
-                            acc.ThinkingOptions.Add(opt);
+                    acc.HasReasoningDefinition = true;
+                    acc.ReasoningDefinitionRank = observation.Rank;
+                    acc.SupportsReasoning = observation.SupportsReasoning && observation.ReasoningEfforts.Count > 0;
+                    acc.ThinkingFormat = observation.ThinkingFormat;
+                    acc.ThinkingCanDisable = observation.ThinkingCanDisable;
+                    acc.ThinkingOptions = observation.ThinkingOptions.ToList();
+                    acc.ReasoningEfforts = observation.ReasoningEfforts.ToList();
+                    acc.ComboReasoningMembers = observation.ComboReasoningMembers.ToList();
                 }
             }
         }
@@ -89,7 +94,9 @@ public static class CatalogProjection
                 acc.SupportsReasoning,
                 acc.ThinkingFormat,
                 acc.ThinkingCanDisable,
-                acc.ThinkingOptions.OrderBy(o => o, StringComparer.Ordinal).ToList()))
+                acc.ThinkingOptions,
+                acc.ReasoningEfforts,
+                acc.ComboReasoningMembers))
             .ToList();
     }
 
@@ -117,9 +124,13 @@ public static class CatalogProjection
         public HashSet<string> SourceProviders { get; } = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> NodeIds { get; } = new(StringComparer.OrdinalIgnoreCase);
         public bool SupportsReasoning { get; set; }
+        public bool HasReasoningDefinition { get; set; }
+        public int ReasoningDefinitionRank { get; set; }
         public string? ThinkingFormat { get; set; }
         public bool ThinkingCanDisable { get; set; } = true;
         public List<string> ThinkingOptions { get; set; } = [];
+        public List<string> ReasoningEfforts { get; set; } = [];
+        public List<ComboReasoningMember> ComboReasoningMembers { get; set; } = [];
     }
 }
 
@@ -133,4 +144,6 @@ public sealed record CatalogEntry(
     bool SupportsReasoning,
     string? ThinkingFormat,
     bool ThinkingCanDisable,
-    IReadOnlyList<string> ThinkingOptions);
+    IReadOnlyList<string> ThinkingOptions,
+    IReadOnlyList<string> ReasoningEfforts,
+    IReadOnlyList<ComboReasoningMember> ComboReasoningMembers);

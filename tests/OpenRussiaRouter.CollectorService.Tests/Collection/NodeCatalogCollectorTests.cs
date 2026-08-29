@@ -126,6 +126,56 @@ public class NodeCatalogCollectorTests
     }
 
     [Fact]
+    public async Task CollectAsync_UsesRichComboCatalog_AndPreservesItsReasoningMembers()
+    {
+        var client = new Mock<INodeAdminClient>();
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProvidersWithModelsResponse
+            {
+                Connections =
+                [
+                    new NodeProviderWithModels
+                    {
+                        Id = "__combos__", Provider = "combo", IsActive = true,
+                        Models =
+                        [
+                            new NodeProviderModelInfo
+                            {
+                                Id = "public-combo", PublicId = "public-combo", Enabled = true,
+                                Caps = new NodeCapsInfo
+                                {
+                                    Reasoning = true,
+                                    ReasoningEfforts = ["low", "medium"],
+                                    ComboReasoningMembers =
+                                    [
+                                        new NodeComboReasoningMemberInfo { ModelId = "first/model", ReasoningEfforts = ["low", "medium"] },
+                                        new NodeComboReasoningMemberInfo { ModelId = "second/model", ReasoningEfforts = ["low", "medium"] }
+                                    ]
+                                }
+                            }
+                        ]
+                    }
+                ]
+            });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse
+            {
+                Combos = [new NodeComboInfo { Name = "public-combo", Models = ["first/model", "second/model"] }]
+            });
+
+        var result = await Build(client.Object).CollectAsync(Node(), CancellationToken.None);
+
+        result.Observations.Should().ContainSingle();
+        var combo = result.Observations[0];
+        combo.ReasoningEfforts.Should().Equal("low", "medium");
+        combo.ComboReasoningMembers.Should().BeEquivalentTo(
+            [
+                new ComboReasoningMember("first/model", ["low", "medium"]),
+                new ComboReasoningMember("second/model", ["low", "medium"])
+            ]);
+    }
+
+    [Fact]
     public async Task CollectAsync_KeepsProviderCatalog_WhenComboEndpointFails()
     {
         var client = new Mock<INodeAdminClient>();

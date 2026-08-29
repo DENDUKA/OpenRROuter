@@ -249,3 +249,9 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 - `Infrastructure/Persistence/BillingRepositoryPostgresTests` + `PostgresTestDatabase` — Testcontainers
   (`postgres:16-alpine`), без Docker `StartAsync` возвращает `null` и тесты скипаются.
   Строку подключения можно переопределить `ORR_BILLING_POSTGRES_TEST_CONNECTION`.
+# Reasoning synchronization (2026-08-29)
+
+`billing.model_prices.reasoning_efforts_overridden` хранит, ограничил ли администратор список
+уровней reasoning. `false` разрешает полной синхронизации с 9Router заменить список; `true`
+сохраняет только пересечение с текущими возможностями ноды. Новые поля добавляются только
+additive-миграциями и additive protobuf-полями.

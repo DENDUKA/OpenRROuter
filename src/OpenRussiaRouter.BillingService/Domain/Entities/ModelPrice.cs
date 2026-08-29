@@ -23,5 +23,6 @@ public sealed record ModelPrice(
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
     string? DefaultReasoningEffort = null,
     int Priority = 0,
-    string? ProviderId = null);
+    string? ProviderId = null,
+    bool ReasoningEffortsOverridden = false);
 

@@ -252,3 +252,9 @@ Polly внутри вызова и outbox снаружи.
   retry-цикл своим кодом. Правку общей семантики (лимиты попыток, release-статусы) нужно вносить во все три.
 - YARP используется не как reverse-proxy-конвейер, а точечно — `IHttpForwarder` поверх синтетического
   `HttpContext`. Роутов/кластеров YARP в конфиге нет и не должно появиться.
+# Reasoning capabilities (2026-08-29)
+
+`ReasoningRequestPatcher` — fail-soft граница перед 9Router: оставляет только плоский
+`reasoning_effort`. Неверный/конфликтующий ввод получает default модели, а для модели без
+непустого списка разрешённых уровней reasoning-поля удаляются. Не возвращай отсюда `400`
+для reasoning; outcome (`Applied`, `Defaulted`, `Stripped`) записывается в structured log.

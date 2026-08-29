@@ -225,7 +225,7 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
-    public async Task NonStreaming_UnsupportedReasoning_Returns400WithoutCallingRouter()
+    public async Task NonStreaming_UnsupportedReasoning_IsStrippedAndForwarded()
     {
         var billing = new StubBillingProvider
         {
@@ -243,13 +243,14 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await AssertErrorCode(response, ErrorCodes.UnsupportedReasoning);
-        router.LastRequestJson.Should().BeNull();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.TryGetProperty("reasoning_effort", out _).Should().BeFalse();
     }
 
     [Fact]
-    public async Task NonStreaming_UnsupportedReasoningEffort_Returns400()
+    public async Task NonStreaming_UnsupportedReasoningEffort_FallsBackToFirstAllowed()
     {
         var billing = new StubBillingProvider
         {
@@ -268,9 +269,10 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
 
         var response = await PostChatAsync(client, """{"model":"gpt-4","reasoning_effort":"high"}""", bearer: "sk-ok_key");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await AssertErrorCode(response, ErrorCodes.UnsupportedReasoningEffort);
-        router.LastRequestJson.Should().BeNull();
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.LastRequestJson.Should().NotBeNull();
+        using var document = JsonDocument.Parse(router.LastRequestJson!);
+        document.RootElement.GetProperty("reasoning_effort").GetString().Should().Be("low");
     }
 
     [Fact]

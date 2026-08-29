@@ -67,6 +67,33 @@ public class CatalogProjectionTests
     }
 
     [Fact]
+    public void Catalog_ComboWithEmptyIntersection_RemainsNotReasoningCapable()
+    {
+        var combo = new ModelObservation
+        {
+            UpstreamId = "public-combo",
+            PublicId = "public-combo",
+            Rank = 3,
+            SupportsReasoning = false,
+            ReasoningEfforts = [],
+            ComboReasoningMembers =
+            [
+                new ComboReasoningMember("first/model", ["low", "medium"]),
+                new ComboReasoningMember("second/model", [])
+            ]
+        };
+        var snapshot = new CollectorSnapshot(
+            [new NodeCatalogResult("n1", false, [combo], null, null)], DateTimeOffset.UnixEpoch);
+
+        var entry = CatalogProjection.Catalog(snapshot).Should().ContainSingle().Subject;
+
+        entry.SupportsReasoning.Should().BeFalse();
+        entry.ReasoningEfforts.Should().BeEmpty();
+        entry.ComboReasoningMembers.Should().ContainSingle(member =>
+            member.ModelId == "second/model" && member.ReasoningEfforts.Count == 0);
+    }
+
+    [Fact]
     public void NodeModels_ReturnsNullForUnknownNode()
     {
         var snapshot = new CollectorSnapshot([], DateTimeOffset.UnixEpoch);

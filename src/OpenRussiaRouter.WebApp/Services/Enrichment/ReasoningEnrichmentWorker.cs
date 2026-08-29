@@ -133,35 +133,51 @@ public sealed class ReasoningEnrichmentWorker : BackgroundService
             {
                 continue;
             }
-            if (!nodeEntry.SupportsReasoning)
-            {
-                continue;
-            }
-
-            var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(nodeEntry.ThinkingOptions);
+            var mappedEfforts = nodeEntry.ReasoningEfforts;
             if (mappedEfforts.Count == 0)
             {
+                if (!nodeEntry.SupportsReasoning && !model.ReasoningEffortsOverridden && model.SupportsReasoning)
+                {
+                    await billing.UpsertModelAsync(model with
+                    {
+                        SupportsReasoning = false,
+                        AllowedReasoningEfforts = null,
+                        DefaultReasoningEffort = null,
+                        ReasoningEffortsOverridden = false
+                    }, ct);
+                    updated++;
+                }
                 continue;
             }
 
             ModelInfo? patched = null;
-            if (!model.SupportsReasoning)
+            if (!model.ReasoningEffortsOverridden)
             {
                 patched = model with
                 {
                     SupportsReasoning = true,
                     AllowedReasoningEfforts = mappedEfforts,
-                    DefaultReasoningEffort = model.DefaultReasoningEffort
-                        ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                    DefaultReasoningEffort = mappedEfforts.Contains(model.DefaultReasoningEffort ?? string.Empty, StringComparer.Ordinal)
+                        ? model.DefaultReasoningEffort
+                        : NodeReasoningMapper.PickDefaultEffort(mappedEfforts),
+                    ReasoningEffortsOverridden = false
                 };
             }
-            else if (model.AllowedReasoningEfforts is null || model.AllowedReasoningEfforts.Count == 0)
+            else if (model.AllowedReasoningEfforts is not null)
             {
+                var retained = model.AllowedReasoningEfforts
+                    .Where(mappedEfforts.Contains)
+                    .ToList();
                 patched = model with
                 {
-                    AllowedReasoningEfforts = mappedEfforts,
-                    DefaultReasoningEffort = model.DefaultReasoningEffort
-                        ?? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
+                    SupportsReasoning = retained.Count > 0,
+                    AllowedReasoningEfforts = retained.Count > 0 ? retained : null,
+                    DefaultReasoningEffort = retained.Count > 0
+                        ? (retained.Contains(model.DefaultReasoningEffort ?? string.Empty, StringComparer.Ordinal)
+                            ? model.DefaultReasoningEffort
+                            : NodeReasoningMapper.PickDefaultEffort(retained))
+                        : null,
+                    ReasoningEffortsOverridden = retained.Count > 0
                 };
             }
 

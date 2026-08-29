@@ -49,6 +49,31 @@ public class GrpcCollectorServiceTests
     }
 
     [Fact]
+    public async Task ListNodeModelCatalog_ProjectsComboReasoningMembers()
+    {
+        var snapshot = new CollectorSnapshot(
+            [new NodeCatalogResult("n1", false,
+            [
+                new ModelObservation
+                {
+                    UpstreamId = "combo", PublicId = "combo", Rank = 3,
+                    SupportsReasoning = true, ReasoningEfforts = ["low"],
+                    ComboReasoningMembers = [new OpenRussiaRouter.CollectorService.Application.Collection.ComboReasoningMember("first/model", ["low"])]
+                }
+            ], null, null)], DateTimeOffset.UnixEpoch);
+        var service = Build(snapshot);
+
+        var response = await service.ListNodeModelCatalog(new ListNodeModelCatalogRequest(), context: null!);
+
+        var entry = response.Entries.Should().ContainSingle().Subject;
+        entry.ReasoningEfforts.Should().Equal("low");
+        entry.ComboReasoningMembers.Should().ContainSingle(member =>
+            member.ModelId == "first/model" &&
+            member.ReasoningEfforts.Count == 1 &&
+            member.ReasoningEfforts[0] == "low");
+    }
+
+    [Fact]
     public async Task GetNodeModels_UnknownNode_ReturnsError()
     {
         var service = Build(CollectorSnapshot.Empty);

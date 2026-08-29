@@ -21,4 +21,10 @@ public sealed class ModelObservation
     public string? ThinkingFormat { get; init; }
     public bool ThinkingCanDisable { get; init; } = true;
     public IReadOnlyList<string> ThinkingOptions { get; init; } = [];
+    public IReadOnlyList<string> ReasoningEfforts { get; init; } = [];
+    public IReadOnlyList<ComboReasoningMember> ComboReasoningMembers { get; init; } = [];
 }
+
+public sealed record ComboReasoningMember(
+    string ModelId,
+    IReadOnlyList<string> ReasoningEfforts);

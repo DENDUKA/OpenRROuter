@@ -19,7 +19,7 @@ public sealed partial class BillingRepository
                 currency, enabled,
                 description_ru, description_en, context_length, modalities, input_modalities, output_modalities, description_source,
                 tag_ids, provider, provider_id,
-                supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, model_type,
+                supports_reasoning, allowed_reasoning_efforts, default_reasoning_effort, reasoning_efforts_overridden, model_type,
                 priority
             )
             values (
@@ -28,7 +28,7 @@ public sealed partial class BillingRepository
                 @Currency, @Enabled,
                 @DescriptionRu, @DescriptionEn, @ContextLength, @Modalities, @InputModalities, @OutputModalities, @DescriptionSource,
                 @TagIds, @Provider, @ProviderId,
-                @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffort, @ModelType,
+                @SupportsReasoning, @AllowedReasoningEfforts, @DefaultReasoningEffortsOverridden, @ModelType,
                 @Priority
             )
             on conflict (model_id) do update set
@@ -46,6 +46,7 @@ public sealed partial class BillingRepository
                 supports_reasoning = excluded.supports_reasoning,
                 allowed_reasoning_efforts = excluded.allowed_reasoning_efforts,
                 default_reasoning_effort = excluded.default_reasoning_effort,
+                reasoning_efforts_overridden = excluded.reasoning_efforts_overridden,
                 model_type = excluded.model_type,
                 priority = excluded.priority,
                 description_ru = CASE
@@ -108,6 +109,7 @@ public sealed partial class BillingRepository
                 model.SupportsReasoning,
                 AllowedReasoningEfforts = ReasoningEffort.JoinCsv(model.AllowedReasoningEfforts),
                 DefaultReasoningEffort = model.DefaultReasoningEffort,
+                DefaultReasoningEffortsOverridden = model.ReasoningEffortsOverridden,
                 ModelType = model.ModelType,
                 model.Priority
             },

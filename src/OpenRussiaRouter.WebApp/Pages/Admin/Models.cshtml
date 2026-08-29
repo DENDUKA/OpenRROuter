@@ -188,6 +188,51 @@
                 </div>
 
                 <h5 class="adm-form-group-title">Reasoning (Thinking)</h5>
+                @if (!Model.IsAdd)
+                {
+                    <div class="adm-form-row">
+                        <div class="form-group" style="grid-column: span 3">
+                            <button type="submit" asp-page-handler="SyncReasoning" class="btn btn-secondary"
+                                    title="Load the exact reasoning levels from the current 9Router catalog into this form. Changes are saved only after clicking Save.">
+                                Sync reasoning from 9Router
+                            </button>
+                            <small class="text-muted" style="margin-left:0.5rem">Loads values into the form; Save persists them.</small>
+                        </div>
+                    </div>
+                }
+                @if (Model.ComboReasoningMembers.Count > 0)
+                {
+                    <div class="adm-form-row">
+                        <div class="form-group" style="grid-column: span 3">
+                            <label class="form-label">Combo reasoning from 9Router</label>
+                            <div class="text-muted" style="margin-bottom:0.5rem">
+                                Effective levels:
+                                @if (Model.AvailableReasoningEfforts.Count > 0)
+                                {
+                                    @string.Join(", ", Model.AvailableReasoningEfforts)
+                                }
+                                else
+                                {
+                                    <span>reasoning is not managed for this combo</span>
+                                }
+                            </div>
+                            <table class="table" style="margin-bottom:0">
+                                <thead>
+                                    <tr><th>Internal model</th><th>Reasoning levels</th></tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var member in Model.ComboReasoningMembers)
+                                    {
+                                        <tr>
+                                            <td><code>@member.ModelId</code></td>
+                                            <td>@(member.ReasoningEfforts.Count > 0 ? string.Join(", ", member.ReasoningEfforts) : "reasoning is not managed")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
                 <div class="adm-form-row">
                     <div class="form-group" style="grid-column: span 3">
                         <label class="form-label" style="margin-bottom: 0;">

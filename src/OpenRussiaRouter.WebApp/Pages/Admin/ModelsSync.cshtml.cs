@@ -127,11 +127,10 @@ public class ModelsSyncModel(
                 continue;
             }
 
-            // Reasoning capabilities flow from 9Router node catalog. Translate the node's
-            // thinkingOptions (e.g. ["auto","none","low","medium","high"] or ["auto","on","off"])
-            // into ORR canonical efforts so the upsert doesn't reject them.
-            var mappedEfforts = NodeReasoningMapper.MapFromNodeOptions(entry.ThinkingOptions);
-            var supportsReasoning = entry.SupportsReasoning && mappedEfforts.Count > 0;
+            // The exact per-model list is supplied by 9Router. thinkingOptions is an
+            // implementation/UI detail and must not be used as a public capability list.
+            var mappedEfforts = entry.ReasoningEfforts;
+            var supportsReasoning = mappedEfforts.Count > 0;
 
             var model = new ModelInfo(
                 modelId,
@@ -147,7 +146,8 @@ public class ModelsSyncModel(
                 AllowedReasoningEfforts: supportsReasoning ? mappedEfforts : null,
                 DefaultReasoningEffort: supportsReasoning
                     ? NodeReasoningMapper.PickDefaultEffort(mappedEfforts)
-                    : null);
+                    : null,
+                ReasoningEffortsOverridden: false);
 
             try
             {

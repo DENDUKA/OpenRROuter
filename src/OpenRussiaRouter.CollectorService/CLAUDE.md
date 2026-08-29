@@ -223,3 +223,11 @@ combo-алиас) схлопываются по `(NodeId, ConnectionId, ModelId)
   без Docker/БД): проекции, стор, `NodeCatalogCollector` (404-fallback, combos, unreachable),
   `NodePollingWorker` (кеш списка нод, stale-reuse), `NodeQuotaCollector` (статусы), gRPC-фасад,
   OpenRouter-клиент.
+# Reasoning catalog contract (2026-08-29)
+
+`ListNodeModelCatalog` переносит точный список `caps.reasoningEfforts` из 9Router как
+`UpstreamModelEntry.reasoning_efforts`. Не выводи его заново из `thinkingOptions`: последние
+нужны для обратной совместимости и UI-диагностики, а не являются списком публичных effort.
+Для combo additive-поле `combo_reasoning_members` передаёт fallback-модели и их уровни; итоговый
+`reasoning_efforts` уже является пересечением, вычисленным 9Router. Проекция выбирает
+детерминированный снимок одной доступной node, а не объединяет уровни между nodes.

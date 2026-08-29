@@ -244,6 +244,7 @@ message UpsertModelPriceRequest {
   string model_type = 21;
   int32 priority = 22;
   string provider_id = 23;
+  bool reasoning_efforts_overridden = 24;
 }
 
 message UpsertModelPriceResponse {
@@ -293,6 +294,7 @@ message ModelDetail {
   string model_type = 21;
   int32  priority = 22;
   string provider_id = 23;
+  bool reasoning_efforts_overridden = 24;
 }
 
 message ListModelsResponse {

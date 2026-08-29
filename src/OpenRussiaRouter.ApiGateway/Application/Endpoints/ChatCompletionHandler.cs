@@ -63,10 +63,8 @@ public sealed class ChatCompletionHandler(
                         auth.AllowedReasoningEfforts ?? [],
                         auth.DefaultReasoningEffort);
 
-                    if (!reasoningPatch.IsSuccess)
-                        throw new RoutingValidationException(
-                            reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
-                            reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed);
+                    logger.LogDebug("Reasoning normalization: {Action}. Model: {Model}",
+                        reasoningPatch.Action, body.Metadata.Model);
 
                     GeminiSchemaPatcher.SanitizeIfGeminiModel(
                         body.Node,
@@ -154,23 +152,8 @@ public sealed class ChatCompletionHandler(
                             auth.SupportsReasoning,
                             auth.AllowedReasoningEfforts ?? [],
                             auth.DefaultReasoningEffort);
-                        if (!reasoningPatch.IsSuccess)
-                        {
-                            // Release must succeed even if client disconnected — don't cancel.
-                            await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                            if (lastFailedSession != null)
-                            {
-                                await lastFailedSession.DisposeAsync();
-                                lastFailedSession = null;
-                            }
-                            await GatewayErrors.WriteAsync(
-                                context,
-                                "invalid_request_error",
-                                reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
-                                reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
-                                requestId);
-                            return;
-                        }
+                        logger.LogDebug("Reasoning normalization: {Action}. Model: {Model}, Node: {NodeId}",
+                            reasoningPatch.Action, body.Metadata.Model, auth.Lease.NodeId);
 
                         GeminiSchemaPatcher.SanitizeIfGeminiModel(
                             body.Node,
@@ -191,22 +174,8 @@ public sealed class ChatCompletionHandler(
                             auth.SupportsReasoning,
                             auth.AllowedReasoningEfforts ?? [],
                             auth.DefaultReasoningEffort);
-                        if (!reasoningPatch.IsSuccess)
-                        {
-                            await controlPlaneProvider.ReleaseRouterNodeAsync(auth.Lease.LeaseId, "failed", CancellationToken.None);
-                            if (lastFailedSession != null)
-                            {
-                                await lastFailedSession.DisposeAsync();
-                                lastFailedSession = null;
-                            }
-                            await GatewayErrors.WriteAsync(
-                                context,
-                                "invalid_request_error",
-                                reasoningPatch.ErrorCode ?? ErrorCodes.ValidationFailed,
-                                reasoningPatch.ErrorMessage ?? "Invalid reasoning parameters",
-                                requestId);
-                            return;
-                        }
+                        logger.LogDebug("Reasoning normalization: {Action}. Model: {Model}, Node: {NodeId}",
+                            reasoningPatch.Action, body.Metadata.Model, auth.Lease.NodeId);
 
                         patchedJson = SseRequestPatcher.InjectStreamOptions(
                             GeminiSchemaPatcher.SanitizeIfGeminiModel(

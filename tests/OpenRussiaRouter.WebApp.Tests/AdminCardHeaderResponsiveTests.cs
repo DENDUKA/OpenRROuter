@@ -37,7 +37,7 @@ public sealed class AdminCardHeaderResponsiveTests(WebAppFactory factory) : ICla
         var css = await response.Content.ReadAsStringAsync();
         css.Should().Contain(".adm-card-header--split {");
         css.Should().Contain(".adm-card-header--split > .adm-btn-row { margin-top: 0; }");
-        css.Should().Contain(".adm-btn-row { display: flex; gap: var(--spacing-md); margin-top: var(--spacing-lg); }");
+        css.Should().Contain(".adm-btn-row { display: flex; flex-wrap: wrap; gap: var(--spacing-md); margin-top: var(--spacing-lg); }");
     }
 
     [Fact]
@@ -51,6 +51,6 @@ public sealed class AdminCardHeaderResponsiveTests(WebAppFactory factory) : ICla
         var css = await response.Content.ReadAsStringAsync();
         css.Should().Contain(".adm-card-header--split{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--spacing-md);}");
         css.Should().Contain(".adm-card-header--split>.adm-btn-row{margin-top:0;}");
-        css.Should().Contain(".adm-btn-row{display:flex;gap:var(--spacing-md);margin-top:var(--spacing-lg);}");
+        css.Should().Contain(".adm-btn-row{display:flex;flex-wrap:wrap;gap:var(--spacing-md);margin-top:var(--spacing-lg);}");
     }
 }

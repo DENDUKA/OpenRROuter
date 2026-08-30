@@ -38,6 +38,8 @@ public sealed class AdminFilterResponsiveTests(WebAppFactory factory) : IClassFi
         body.Should().Contain("openPanels.forEach(function(panel)");
         body.Should().Contain("toggle.setAttribute('aria-expanded', 'false')");
         body.Should().Contain("toggle.focus()");
+        body.Should().Contain("repositionPanel(panel)");
+        body.Should().Contain("preventScroll: true");
     }
 
     [Fact]
@@ -83,5 +85,20 @@ public sealed class AdminFilterResponsiveTests(WebAppFactory factory) : IClassFi
         css.Should().Contain(".btn-outline-secondary");
         css.Should().Contain(".btn-info");
         css.Should().Contain(".form-control-sm");
+        css.Should().Contain("max-width: calc(100vw - 16px);");
+        css.Should().Contain("max-height: min(260px, 45vh);");
+    }
+
+    [Fact]
+    public async Task AppMinCss_ContainsRequiredDropdownViewportBoundRules()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.GetAsync("/app.min.css");
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var css = await response.Content.ReadAsStringAsync();
+        css.Should().Contain("max-width:calc(100vw - 16px)");
+        css.Should().Contain("max-height:min(260px,45vh)");
     }
 }

@@ -220,6 +220,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function repositionPanel(panel) {
+        if (!panel) return;
+        panel.style.left = '0px';
+        panel.style.right = 'auto';
+        var rect = panel.getBoundingClientRect();
+        var margin = 8;
+        var viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+        if (rect.right > viewportWidth - margin) {
+            var diff = rect.right - (viewportWidth - margin);
+            panel.style.left = -diff + 'px';
+            rect = panel.getBoundingClientRect();
+            if (rect.left < margin) {
+                panel.style.left = (-rect.left + margin) + 'px';
+            }
+        }
+    }
+
     document.addEventListener('click', function(e) {
         var toggle = e.target.closest && e.target.closest('.ms-toggle');
         if (toggle) {
@@ -230,8 +247,16 @@ document.addEventListener('DOMContentLoaded', function() {
             panel.classList.toggle('open', willOpen);
             toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
             if (willOpen) {
+                repositionPanel(panel);
                 var search = panel.querySelector('.ms-search');
-                if (search) { search.value = ''; search.focus(); }
+                if (search) {
+                    search.value = '';
+                    try {
+                        search.focus({ preventScroll: true });
+                    } catch (err) {
+                        search.focus();
+                    }
+                }
                 panel.querySelectorAll('.ms-option').forEach(function(o) { o.style.display = ''; });
             }
             return;

@@ -29,17 +29,19 @@
             <span class="badge @Admin.NodeDetailsModel.GetNodeStatusBadge(details.Node.Status)" data-testid="node-status">@details.Node.Status</span>
         </div>
         <div class="adm-card-body">
-            <table class="table">
-                <tbody>
-                    <tr><th>Node ID</th><td><code>@details.Node.NodeId</code></td></tr>
-                    <tr><th>Endpoint</th><td><code>@details.Node.EndpointUrl</code></td></tr>
-                    <tr><th>Control token</th><td><code>@details.Node.ControlToken</code></td></tr>
-                    <tr><th>Capacity weight</th><td>@details.Node.CapacityWeight</td></tr>
-                    <tr><th>In-flight requests</th><td>@details.Node.InFlightRequests</td></tr>
-                    <tr><th>Last checked</th><td>@(details.Node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td></tr>
-                    <tr><th>Last health error</th><td>@(string.IsNullOrWhiteSpace(details.Node.LastHealthErrorCode) ? "None" : details.Node.LastHealthErrorCode)</td></tr>
-                </tbody>
-            </table>
+            <div class="table-scroll">
+                <table class="table">
+                    <tbody>
+                        <tr><th>Node ID</th><td><code>@details.Node.NodeId</code></td></tr>
+                        <tr><th>Endpoint</th><td><code>@details.Node.EndpointUrl</code></td></tr>
+                        <tr><th>Control token</th><td><code>@details.Node.ControlToken</code></td></tr>
+                        <tr><th>Capacity weight</th><td>@details.Node.CapacityWeight</td></tr>
+                        <tr><th>In-flight requests</th><td>@details.Node.InFlightRequests</td></tr>
+                        <tr><th>Last checked</th><td>@(details.Node.LastCheckedAt?.ToLocalTime().ToString("g") ?? "Never")</td></tr>
+                        <tr><th>Last health error</th><td>@(string.IsNullOrWhiteSpace(details.Node.LastHealthErrorCode) ? "None" : details.Node.LastHealthErrorCode)</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -101,47 +103,49 @@
             }
             else
             {
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Provider</th>
-                            <th>Connection</th>
-                            <th>Auth</th>
-                            <th>Status</th>
-                            <th>Test</th>
-                            <th>Usage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var provider in details.Providers)
-                        {
-                            <tr data-testid="provider-row" data-connection-id="@provider.ConnectionId">
-                                <td><code>@provider.Provider</code></td>
-                                <td>
-                                    <div>@provider.Name</div>
-                                    <small class="text-muted">@provider.ConnectionId</small>
-                                </td>
-                                <td>@provider.AuthType</td>
-                                <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(provider.IsActive)">@(provider.IsActive ? "active" : "inactive")</span></td>
-                                <td>@(provider.TestStatus ?? "-")</td>
-                                <td>
-                                    @if (provider.Error != null)
-                                    {
-                                        <span class="text-danger">@provider.Error</span>
-                                    }
-                                    else if (provider.UsageJson != null)
-                                    {
-                                        <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Admin.NodeDetailsModel.FormatJson(provider.UsageJson)</pre>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">No usage</span>
-                                    }
-                                </td>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Provider</th>
+                                <th>Connection</th>
+                                <th>Auth</th>
+                                <th>Status</th>
+                                <th>Test</th>
+                                <th>Usage</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var provider in details.Providers)
+                            {
+                                <tr data-testid="provider-row" data-connection-id="@provider.ConnectionId">
+                                    <td><code>@provider.Provider</code></td>
+                                    <td>
+                                        <div>@provider.Name</div>
+                                        <small class="text-muted">@provider.ConnectionId</small>
+                                    </td>
+                                    <td>@provider.AuthType</td>
+                                    <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(provider.IsActive)">@(provider.IsActive ? "active" : "inactive")</span></td>
+                                    <td>@(provider.TestStatus ?? "-")</td>
+                                    <td>
+                                        @if (provider.Error != null)
+                                        {
+                                            <span class="text-danger">@provider.Error</span>
+                                        }
+                                        else if (provider.UsageJson != null)
+                                        {
+                                            <pre style="white-space:pre-wrap;word-break:break-word;margin:0;font-size:0.85em">@Admin.NodeDetailsModel.FormatJson(provider.UsageJson)</pre>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No usage</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </div>
     </div>
@@ -171,29 +175,31 @@
             }
             else
             {
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>Preview</th>
-                            <th>Machine</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var key in details.Keys)
-                        {
-                            <tr data-testid="integration-key-row" data-key-id="@key.Id">
-                                <td>@key.Name</td>
-                                <td><code>@key.KeyPreview</code></td>
-                                <td><code>@key.MachineId</code></td>
-                                <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(key.IsActive)">@(key.IsActive ? "active" : "inactive")</span></td>
-                                <td>@key.CreatedAt</td>
+                <div class="table-scroll">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Preview</th>
+                                <th>Machine</th>
+                                <th>Status</th>
+                                <th>Created</th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var key in details.Keys)
+                            {
+                                <tr data-testid="integration-key-row" data-key-id="@key.Id">
+                                    <td>@key.Name</td>
+                                    <td><code>@key.KeyPreview</code></td>
+                                    <td><code>@key.MachineId</code></td>
+                                    <td><span class="badge @Admin.NodeDetailsModel.GetStatusBadge(key.IsActive)">@(key.IsActive ? "active" : "inactive")</span></td>
+                                    <td>@key.CreatedAt</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             }
         </div>
     </div>

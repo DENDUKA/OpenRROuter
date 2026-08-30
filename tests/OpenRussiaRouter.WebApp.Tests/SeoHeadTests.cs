@@ -162,6 +162,8 @@ public sealed class SeoHeadTests
         body.Should().Contain("data-flagship-cycle");
         body.Should().Contain("touch-action: auto;");
         body.Should().Contain("[data-flagship-carousel][data-flagship-initialized=\"true\"] { touch-action: pan-y; }");
+        body.Should().Contain(".flagship-showcase");
+        body.Should().Contain("overflow-x: clip;");
         body.Should().NotContain("data-flagship-previous");
         body.Should().NotContain("data-flagship-next");
     }

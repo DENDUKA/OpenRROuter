@@ -11,6 +11,8 @@ public sealed class TableScrollResponsiveTests(WebAppFactory factory) : IClassFi
     [InlineData("Pages/Admin/Nodes.cshtml")]
     [InlineData("Pages/Admin/Models.cshtml")]
     [InlineData("Pages/Admin/Requests.cshtml")]
+    [InlineData("Pages/Admin/Providers.cshtml")]
+    [InlineData("Pages/Admin/NodeDetails.cshtml")]
     [InlineData("Pages/Workspace/Credits.cshtml")]
     public void RazorPages_WrapTablesInTableScroll(string relativePath)
     {

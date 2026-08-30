@@ -21,3 +21,9 @@
 .VPSwitchAppearance {
   display: none !important;
 }
+
+/* Устраняем горизонтальный скролл при viewport <= 320px с классическим вертикальным скроллбаром */
+body {
+  min-width: 0;
+}
+

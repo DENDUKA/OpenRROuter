@@ -399,122 +399,125 @@
         }
         else
         {
-            <table class="table">
-                <thead><tr>
-                    <th>Model ID</th><th>Display Name</th><th>Type</th><th>Router Model</th>
-                    <th>Pricing</th><th>Tags</th><th>Status</th><th>Priority</th><th>Source</th><th>Actions</th>
-                </tr></thead>
-                <tbody>
-                    @foreach (var m in Model.Models)
-                    {
-                        <tr>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <code>@m.Id</code>
-                                    <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="Copy Model ID" aria-label="Copy Model ID" style="padding: 4px; border: none; background: transparent; cursor: pointer;">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                                    </button>
-                                </div>
-                            </td>
-                            <td>@m.DisplayName</td>
-                            <td>
-                                @if (m.ModelType == "audio")
-                                {
-                                    <span class="badge badge-info" title="Audio model - billed by input characters">audio</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-secondary">text</span>
-                                }
-                            </td>
-                            <td><code>@m.UpstreamModelId</code></td>
-                            <td>
-                                @if (m.ModelType == "audio")
-                                {
-                                    <span>Audio chars / 1M = @m.OutputPrice.ToString("N2") $</span>
-                                }
-                                else
-                                {
-                                    <span>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</span>
-                                }
-                            </td>
-                            <td>
-                                @if (m.TagIds != null && m.TagIds.Count > 0)
-                                {
-                                    <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">
-                                        @foreach(var tid in m.TagIds)
-                                        {
-                                            Model.TagsById.TryGetValue(tid, out var t);
-                                            <span class="badge" style="background-color: @(t?.Color ?? "#6c757d"); color: @ColorContrast.TextColor(t?.Color ?? "#6c757d");">@(t?.DisplayName ?? tid)</span>
-                                        }
+            <div class="table-scroll">
+                <table class="table adm-models-table">
+                    <thead><tr>
+                        <th>Model ID</th><th>Display Name</th><th>Type</th><th>Router Model</th>
+                        <th>Pricing</th><th>Tags</th><th>Status</th><th>Priority</th><th>Source</th><th>Actions</th>
+                    </tr></thead>
+                    <tbody>
+                        @foreach (var m in Model.Models)
+                        {
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 6px;">
+                                        <code>@m.Id</code>
+                                        <button type="button" class="btn btn-icon copy-btn" data-model-id="@m.Id" onclick="copyModelId(event)" title="Copy Model ID" aria-label="Copy Model ID" style="padding: 4px; border: none; background: transparent; cursor: pointer;">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                        </button>
                                     </div>
-                                }
-                                else
-                                {
-                                    <span class="text-muted" style="font-size:12px">&mdash;</span>
-                                }
-                            </td>
-                            <td>
-                                <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
-                                    @(m.Enabled ? "Enabled" : "Disabled")
-                                </span>
-                                @if (m.IsFlagship)
-                                {
-                                    <span class="badge badge-warning" title="Flagship model" style="margin-top: 2px;">Flagship</span>
-                                }
-                            </td>
-                            <td><code>@m.Priority</code></td>
-                            <td>
-                                @if (m.DescriptionSource == "openrouter")
-                                {
-                                    <span class="badge badge-info" title="Enriched from OpenRouter">OR</span>
-                                }
-                                else if (m.DescriptionSource == "manual")
-                                {
-                                    <span class="badge badge-secondary" title="Manually entered">manual</span>
-                                }
-                                else
-                                {
-                                    <span class="text-muted" style="font-size:12px">&mdash;</span>
-                                }
-                            </td>
-                            <td class="adm-actions-cell">
-                                <a class="btn-icon" title="Edit" aria-label="Edit"
-                                   href="?action=edit&modelId=@Uri.EscapeDataString(m.Id)">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                                    </svg>
-                                </a>
-                                <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
-                                    <input type="hidden" name="modelId" value="@m.Id" />
-                                    <button type="submit" class="btn-icon" title="@(m.Enabled ? "Disable" : "Enable")"
-                                            aria-label="@(m.Enabled ? "Disable" : "Enable")">
-                                        @if (m.Enabled)
-                                        {
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <circle cx="12" cy="12" r="10"/>
-                                                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-                                            </svg>
-                                        }
-                                        else
-                                        {
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                <polyline points="20 6 9 17 4 12"/>
-                                            </svg>
-                                        }
-                                    </button>
-                                </form>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                                </td>
+                                <td>@m.DisplayName</td>
+                                <td>
+                                    @if (m.ModelType == "audio")
+                                    {
+                                        <span class="badge badge-info" title="Audio model - billed by input characters">audio</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge badge-secondary">text</span>
+                                    }
+                                </td>
+                                <td><code>@m.UpstreamModelId</code></td>
+                                <td>
+                                    @if (m.ModelType == "audio")
+                                    {
+                                        <span>Audio chars / 1M = @m.OutputPrice.ToString("N2") $</span>
+                                    }
+                                    else
+                                    {
+                                        <span>@m.InputPrice.ToString("N2") / @m.OutputPrice.ToString("N2") / @m.CachePrice.ToString("N2") $</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (m.TagIds != null && m.TagIds.Count > 0)
+                                    {
+                                        <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">
+                                            @foreach(var tid in m.TagIds)
+                                            {
+                                                Model.TagsById.TryGetValue(tid, out var t);
+                                                <span class="badge" style="background-color: @(t?.Color ?? "#6c757d"); color: @ColorContrast.TextColor(t?.Color ?? "#6c757d");">@(t?.DisplayName ?? tid)</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" style="font-size:12px">&mdash;</span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge @(m.Enabled ? "badge-success" : "badge-secondary")">
+                                        @(m.Enabled ? "Enabled" : "Disabled")
+                                    </span>
+                                    @if (m.IsFlagship)
+                                    {
+                                        <span class="badge badge-warning" title="Flagship model" style="margin-top: 2px;">Flagship</span>
+                                    }
+                                </td>
+                                <td><code>@m.Priority</code></td>
+                                <td>
+                                    @if (m.DescriptionSource == "openrouter")
+                                    {
+                                        <span class="badge badge-info" title="Enriched from OpenRouter">OR</span>
+                                    }
+                                    else if (m.DescriptionSource == "manual")
+                                    {
+                                        <span class="badge badge-secondary" title="Manually entered">manual</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted" style="font-size:12px">&mdash;</span>
+                                    }
+                                </td>
+                                <td class="adm-actions-cell">
+                                    <a class="btn-icon" title="Edit" aria-label="Edit"
+                                       href="?action=edit&modelId=@Uri.EscapeDataString(m.Id)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                        </svg>
+                                    </a>
+                                    <form method="post" asp-page-handler="ToggleEnabled" style="display:inline">
+                                        <input type="hidden" name="modelId" value="@m.Id" />
+                                        <button type="submit" class="btn-icon" title="@(m.Enabled ? "Disable" : "Enable")"
+                                                aria-label="@(m.Enabled ? "Disable" : "Enable")">
+                                            @if (m.Enabled)
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <circle cx="12" cy="12" r="10"/>
+                                                    <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+                                                </svg>
+                                            }
+                                            else
+                                            {
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                    <polyline points="20 6 9 17 4 12"/>
+                                                </svg>
+                                            }
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>
 
 <style>
+    .adm-models-table { min-width: 900px; }
     .copy-btn:hover { color: var(--color-primary); }
     .adm-enrich-row { display: flex; gap: 1rem; align-items: flex-end; }
     .modality-checks { display: flex; flex-wrap: wrap; gap: 0.5rem; }

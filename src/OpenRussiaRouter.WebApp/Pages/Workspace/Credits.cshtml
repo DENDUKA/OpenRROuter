@@ -138,25 +138,27 @@
         }
         else
         {
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>@Localizer["Credits_Th_Date"]</th>
-                        <th>@Localizer["Credits_Th_Amount"]</th>
-                        <th>@Localizer["Credits_Th_Reason"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var topUp in Model.TopUps)
-                    {
+            <div class="table-scroll">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
-                            <td>@Model.FormatAmount(topUp.Amount)</td>
-                            <td>@topUp.Reason</td>
+                            <th>@Localizer["Credits_Th_Date"]</th>
+                            <th>@Localizer["Credits_Th_Amount"]</th>
+                            <th>@Localizer["Credits_Th_Reason"]</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var topUp in Model.TopUps)
+                        {
+                            <tr>
+                                <td>@topUp.CreatedAtUtc.ToLocalTime().ToString("g")</td>
+                                <td>@Model.FormatAmount(topUp.Amount)</td>
+                                <td>@topUp.Reason</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
     </div>
 </div>

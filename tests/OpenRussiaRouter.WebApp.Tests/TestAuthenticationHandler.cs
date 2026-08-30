@@ -16,7 +16,7 @@ internal sealed class TestAuthenticationHandler(
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         var identity = new ClaimsIdentity(
-            [new Claim(ClaimTypes.NameIdentifier, "user-1")],
+            [new Claim(ClaimTypes.NameIdentifier, "user-1"), new Claim(ClaimTypes.Role, "Admin")],
             SchemeName);
         return Task.FromResult(AuthenticateResult.Success(
             new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName)));

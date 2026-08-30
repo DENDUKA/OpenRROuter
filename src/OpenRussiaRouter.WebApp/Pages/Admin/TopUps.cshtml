@@ -20,17 +20,17 @@
     <div class="adm-card-body">
 
         <form method="get" class="d-flex gap-2 align-items-end flex-wrap mb-3" id="filterForm" style="font-weight:normal">
-            <div class="form-group">
+            <div class="form-group" style="max-width:100%">
                 <label class="form-label" style="font-size:.8rem">User</label>
-                <input type="text" name="userQuery" value="@Model.UserQuery" placeholder="email or name" class="form-control" style="min-width:220px" />
+                <input type="text" name="userQuery" value="@Model.UserQuery" placeholder="email or name" class="form-control" style="min-width:220px;max-width:100%" />
             </div>
-            <div class="form-group">
+            <div class="form-group" style="max-width:100%">
                 <label class="form-label" style="font-size:.8rem">Min Amount ($)</label>
-                <input type="number" name="minAmount" value="@Model.MinAmount" step="0.01" class="form-control" style="width:120px" />
+                <input type="number" name="minAmount" value="@Model.MinAmount" step="0.01" class="form-control" style="width:120px;max-width:100%" />
             </div>
-            <div class="form-group">
+            <div class="form-group" style="max-width:100%">
                 <label class="form-label" style="font-size:.8rem">Max Amount ($)</label>
-                <input type="number" name="maxAmount" value="@Model.MaxAmount" step="0.01" class="form-control" style="width:120px" />
+                <input type="number" name="maxAmount" value="@Model.MaxAmount" step="0.01" class="form-control" style="width:120px;max-width:100%" />
             </div>
             <button type="submit" class="btn btn-sm btn-primary">Apply</button>
             @if (!string.IsNullOrWhiteSpace(Model.UserQuery) || Model.MinAmount.HasValue || Model.MaxAmount.HasValue)
@@ -45,27 +45,29 @@
         }
         else
         {
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>User</th>
-                        <th>Amount</th>
-                        <th>Reason</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in Model.Records)
-                    {
+            <div class="table-scroll">
+                <table class="table table-sm">
+                    <thead>
                         <tr>
-                            <td style="white-space:nowrap"><small title="@r.CreatedAtUtc.ToString("O")">@r.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
-                            <td>@Model.GetUserDisplayName(r.UserId)</td>
-                            <td style="white-space:nowrap">@r.Amount.ToString("N2") $</td>
-                            <td>@r.Reason</td>
+                            <th>Time</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Records)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap"><small title="@r.CreatedAtUtc.ToString("O")">@r.CreatedAtUtc.ToLocalTime().ToString("g")</small></td>
+                                <td>@Model.GetUserDisplayName(r.UserId)</td>
+                                <td style="white-space:nowrap">@r.Amount.ToString("N2") $</td>
+                                <td>@r.Reason</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
             @if (Model.TotalPages > 1)
             {

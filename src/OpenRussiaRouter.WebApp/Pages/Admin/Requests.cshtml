@@ -89,8 +89,8 @@
                     </div>
                 </div>
             }
-            <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px" title="From (UTC)" aria-label="From (UTC)" />
-            <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px" title="To (UTC)" aria-label="To (UTC)" />
+            <input type="datetime-local" name="from" value="@Model.FromUtc" class="form-control form-control-sm" style="width:190px;max-width:100%" title="From (UTC)" aria-label="From (UTC)" />
+            <input type="datetime-local" name="to" value="@Model.ToUtc" class="form-control form-control-sm" style="width:190px;max-width:100%" title="To (UTC)" aria-label="To (UTC)" />
             <button type="submit" class="btn btn-sm btn-primary">Apply</button>
             <button type="button" class="btn btn-sm btn-info" id="calculateBtn">Calculate</button>
             @if (Model.HasActiveFilters())
@@ -114,78 +114,80 @@
         }
         else
         {
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>API Key</th>
-                        <th>Model</th>
-                        <th>Node</th>
-                        <th>Provider</th>
-                        <th>Account</th>
-                        <th>Tokens in/out/cache</th>
-                        <th>Cost</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var r in Model.Records)
-                    {
-                        var (badgeClass, badgeLabel) = Model.GetStatusBadge(r.Status);
+            <div class="table-scroll">
+                <table class="table table-sm">
+                    <thead>
                         <tr>
-                            <td style="white-space:nowrap">
-                                <small title="@r.CreatedAt.ToString("O")">@r.CreatedAt.ToLocalTime().ToString("g")</small>
-                            </td>
-                            <td>
-                                <a href="#" class="filter-clickable" data-filter-type="apiKey" data-filter-value="@r.ApiKeyPrefix" title="Click to filter by this API key">
-                                    <small>@r.ApiKeyPrefix…</small>
-                                </a>
-                            </td>
-                            <td>
-                                <a href="#" class="filter-clickable" data-filter-type="model" data-filter-value="@r.ModelId" title="Click to filter by this model">
-                                    <small>@r.ModelId</small>
-                                </a>
-                            </td>
-                            <td>
-                                <a href="#" class="filter-clickable" data-filter-type="node" data-filter-value="@r.RouterNodeId" title="Click to filter by this node">
-                                    <small title="@r.RouterNodeId">@Model.GetNodeName(r.RouterNodeId)</small>
-                                </a>
-                            </td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(r.ProviderName))
-                                {
-                                    <a href="#" class="filter-clickable" data-filter-type="provider" data-filter-value="@r.ProviderName" title="Click to filter by this provider">
-                                        <small>@r.ProviderName</small>
-                                    </a>
-                                }
-                                else
-                                {
-                                    <small>—</small>
-                                }
-                            </td>
-                            <td>
-                                @if (!string.IsNullOrEmpty(r.ProviderAccount))
-                                {
-                                    <a href="#" class="filter-clickable" data-filter-type="account" data-filter-value="@r.ProviderAccount" title="Click to filter by this account">
-                                        <small>@r.ProviderAccount</small>
-                                    </a>
-                                }
-                                else
-                                {
-                                    <small>—</small>
-                                }
-                            </td>
-                            <td style="white-space:nowrap">
-                                <small>@r.InputTokens / @r.OutputTokens / @r.CacheTokens</small>
-                            </td>
-                            <td style="white-space:nowrap">
-                                <small>@r.CostUsd.ToString("F4") $</small>
-                            </td>
-                            <td><span class="badge @badgeClass">@badgeLabel</span></td>
+                            <th>Time</th>
+                            <th>API Key</th>
+                            <th>Model</th>
+                            <th>Node</th>
+                            <th>Provider</th>
+                            <th>Account</th>
+                            <th>Tokens in/out/cache</th>
+                            <th>Cost</th>
+                            <th>Status</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var r in Model.Records)
+                        {
+                            var (badgeClass, badgeLabel) = Model.GetStatusBadge(r.Status);
+                            <tr>
+                                <td style="white-space:nowrap">
+                                    <small title="@r.CreatedAt.ToString("O")">@r.CreatedAt.ToLocalTime().ToString("g")</small>
+                                </td>
+                                <td>
+                                    <a href="#" class="filter-clickable" data-filter-type="apiKey" data-filter-value="@r.ApiKeyPrefix" title="Click to filter by this API key">
+                                        <small>@r.ApiKeyPrefix…</small>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="#" class="filter-clickable" data-filter-type="model" data-filter-value="@r.ModelId" title="Click to filter by this model">
+                                        <small>@r.ModelId</small>
+                                    </a>
+                                </td>
+                                <td>
+                                    <a href="#" class="filter-clickable" data-filter-type="node" data-filter-value="@r.RouterNodeId" title="Click to filter by this node">
+                                        <small title="@r.RouterNodeId">@Model.GetNodeName(r.RouterNodeId)</small>
+                                    </a>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(r.ProviderName))
+                                    {
+                                        <a href="#" class="filter-clickable" data-filter-type="provider" data-filter-value="@r.ProviderName" title="Click to filter by this provider">
+                                            <small>@r.ProviderName</small>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <small>—</small>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(r.ProviderAccount))
+                                    {
+                                        <a href="#" class="filter-clickable" data-filter-type="account" data-filter-value="@r.ProviderAccount" title="Click to filter by this account">
+                                            <small>@r.ProviderAccount</small>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <small>—</small>
+                                    }
+                                </td>
+                                <td>
+                                    <small>@r.InputTokens / @r.OutputTokens / @r.CacheTokens</small>
+                                </td>
+                                <td style="white-space:nowrap">
+                                    <small>@r.CostUsd.ToString("F4") $</small>
+                                </td>
+                                <td><span class="badge @badgeClass">@badgeLabel</span></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
 
             @if (Model.HasMore && Model.NextCursor != null)
             {
@@ -208,8 +210,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // ── Multi-select dropdowns: toggle / close / search ───────────────────────
     function closeAllPanels(except) {
-        document.querySelectorAll('.ms-panel.open').forEach(function(p) {
-            if (p !== except) p.classList.remove('open');
+        document.querySelectorAll('.filter-multiselect').forEach(function(container) {
+            var panel = container.querySelector('.ms-panel');
+            var toggle = container.querySelector('.ms-toggle');
+            if (panel && panel !== except) {
+                panel.classList.remove('open');
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
         });
     }
 
@@ -231,6 +238,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         if (!e.target.closest || !e.target.closest('.filter-multiselect')) {
             closeAllPanels(null);
+        }
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var openPanels = document.querySelectorAll('.filter-multiselect .ms-panel.open');
+            if (openPanels.length > 0) {
+                e.preventDefault();
+                openPanels.forEach(function(panel) {
+                    panel.classList.remove('open');
+                    var container = panel.closest('.filter-multiselect');
+                    if (container) {
+                        var toggle = container.querySelector('.ms-toggle');
+                        if (toggle) {
+                            toggle.setAttribute('aria-expanded', 'false');
+                            toggle.focus();
+                        }
+                    }
+                });
+            }
         }
     });
 

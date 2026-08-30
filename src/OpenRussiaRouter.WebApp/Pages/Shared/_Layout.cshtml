@@ -382,22 +382,27 @@
         function toggleUserMenu() {
             var menu = document.getElementById('user-dropdown');
             var btn = document.getElementById('user-menu-trigger');
+            var container = document.getElementById('user-menu');
             var isHidden = menu.hasAttribute('hidden');
             if (isHidden) {
                 menu.removeAttribute('hidden');
                 btn.setAttribute('aria-expanded', 'true');
+                if (container) container.classList.add('user-menu--open');
             } else {
                 menu.setAttribute('hidden', '');
                 btn.setAttribute('aria-expanded', 'false');
+                if (container) container.classList.remove('user-menu--open');
             }
         }
 
         document.addEventListener('click', function(e) {
             var menu = document.getElementById('user-dropdown');
             var btn = document.getElementById('user-menu-trigger');
+            var container = document.getElementById('user-menu');
             if (menu && !menu.hasAttribute('hidden') && !btn.contains(e.target) && !menu.contains(e.target)) {
                 menu.setAttribute('hidden', '');
                 btn.setAttribute('aria-expanded', 'false');
+                if (container) container.classList.remove('user-menu--open');
             }
         });
 
@@ -405,9 +410,11 @@
             if (e.key === 'Escape') {
                 var menu = document.getElementById('user-dropdown');
                 var btn = document.getElementById('user-menu-trigger');
+                var container = document.getElementById('user-menu');
                 if (menu && !menu.hasAttribute('hidden')) {
                     menu.setAttribute('hidden', '');
                     btn.setAttribute('aria-expanded', 'false');
+                    if (container) container.classList.remove('user-menu--open');
                     btn.focus();
                 }
             }

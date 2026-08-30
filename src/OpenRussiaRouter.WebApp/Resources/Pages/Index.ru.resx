@@ -38,11 +38,17 @@
   <data name="Home_ApiLabel" xml:space="preserve">
     <value>API-запрос</value>
   </data>
+  <data name="Home_ApiTabOpenAI" xml:space="preserve">
+    <value>OpenAI-совместимый</value>
+  </data>
+  <data name="Home_ApiTabAnthropic" xml:space="preserve">
+    <value>Anthropic / Claude Code</value>
+  </data>
   <data name="Home_ApiLead" xml:space="preserve">
-    <value>Совместимо с OpenAI: передайте bearer-токен, выберите модель и вызовите chat completions.</value>
+    <value>Поддерживаются два протокола: OpenAI Chat Completions и Anthropic Messages (для Claude Code). Передайте API-ключ и выбранную модель.</value>
   </data>
   <data name="Home_ApiTitle" xml:space="preserve">
-    <value>Используйте OpenAI-совместимый эндпоинт</value>
+    <value>Подключение через OpenAI или Anthropic API</value>
   </data>
   <data name="Home_CatalogLabel" xml:space="preserve">
     <value>Дешевле OpenRouter</value>

@@ -265,8 +265,18 @@
             </p>
             <a href="/docs" class="text-link">@Localizer["Home_ApiGuide"]</a>
         </div>
-        <div class="code-panel" aria-label="@Localizer["A11y_ExampleCurlRequest"]">
-<pre><code>curl /v1/chat/completions \
+        <div class="code-panel-container">
+            <div class="code-tabs" role="tablist">
+                <button type="button" class="code-tab is-active" id="tab-openai" role="tab" aria-selected="true" aria-controls="panel-openai" onclick="switchApiTab('openai')">
+                    @Localizer["Home_ApiTabOpenAI"]
+                </button>
+                <button type="button" class="code-tab" id="tab-anthropic" role="tab" aria-selected="false" aria-controls="panel-anthropic" onclick="switchApiTab('anthropic')">
+                    @Localizer["Home_ApiTabAnthropic"]
+                </button>
+            </div>
+            <div class="code-panel" id="panel-openai" role="tabpanel" aria-labelledby="tab-openai" aria-label="@Localizer["A11y_ExampleCurlRequest"]">
+<pre><code># Base URL: https://api.rawrter.com/v1
+curl https://api.rawrter.com/v1/chat/completions \
   -H "Authorization: Bearer $ORR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -275,6 +285,18 @@
       { "role": "user", "content": "Hello" }
     ]
   }'</code></pre>
+            </div>
+            <div class="code-panel is-hidden" id="panel-anthropic" role="tabpanel" aria-labelledby="tab-anthropic" aria-label="Anthropic Claude Code Request">
+<pre><code># Base URL: https://api.rawrter.com
+# Claude Code config (~/.claude.json):
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.rawrter.com",
+    "ANTHROPIC_AUTH_TOKEN": "sk-or-...",
+    "ANTHROPIC_MODEL": "ORR/..."
+  }
+}</code></pre>
+            </div>
         </div>
     </section>
 
@@ -776,12 +798,45 @@
         color: var(--color-ink);
         font-size: 14px;
     }
+    .code-panel-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+    .code-tabs {
+        display: flex;
+        gap: 6px;
+    }
+    .code-tab {
+        background: transparent;
+        border: 1px solid var(--color-hairline);
+        color: var(--color-muted);
+        padding: 6px 12px;
+        border-radius: var(--radius-md);
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all .15s ease;
+    }
+    .code-tab:hover {
+        color: var(--color-ink);
+        background: var(--color-canvas-soft);
+    }
+    .code-tab.is-active {
+        background: var(--color-canvas-soft);
+        color: var(--color-ink);
+        border-color: var(--color-muted);
+    }
     .code-panel {
         min-width: 0;
         border: 1px solid var(--color-hairline);
         border-radius: var(--radius-lg);
         background: var(--color-canvas-soft);
         overflow: hidden;
+    }
+    .code-panel.is-hidden {
+        display: none;
     }
     .code-panel pre {
         margin: 0;
@@ -851,5 +906,25 @@
         .flagship-card:focus-visible { transform: none; }
     }
 </style>
+
+<script>
+    function switchApiTab(tab) {
+        var isOpenAi = tab === 'openai';
+        var tabOpenAi = document.getElementById('tab-openai');
+        var tabAnthropic = document.getElementById('tab-anthropic');
+        var panelOpenAi = document.getElementById('panel-openai');
+        var panelAnthropic = document.getElementById('panel-anthropic');
+
+        if (tabOpenAi && tabAnthropic && panelOpenAi && panelAnthropic) {
+            tabOpenAi.classList.toggle('is-active', isOpenAi);
+            tabOpenAi.setAttribute('aria-selected', isOpenAi ? 'true' : 'false');
+            tabAnthropic.classList.toggle('is-active', !isOpenAi);
+            tabAnthropic.setAttribute('aria-selected', !isOpenAi ? 'true' : 'false');
+
+            panelOpenAi.classList.toggle('is-hidden', !isOpenAi);
+            panelAnthropic.classList.toggle('is-hidden', isOpenAi);
+        }
+    }
+</script>
 
 <script src="~/js/flagship-carousel.js" asp-append-version="true" defer></script>

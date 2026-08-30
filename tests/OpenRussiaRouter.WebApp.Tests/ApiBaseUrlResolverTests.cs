@@ -54,7 +54,12 @@ public sealed class ApiBaseUrlResolverTests
         var body = WebUtility.HtmlDecode(await response.Content.ReadAsStringAsync());
 
         body.Should().Contain("property=\"og:url\" content=\"https://example.com/ru\"");
-        body.Should().NotContain("api.rawrter.com");
+        body.Should().Contain("rel=\"canonical\" href=\"https://example.com/ru\"");
+        // Ensure head metadata does not leak api subdomain
+        var headEnd = body.IndexOf("</head>", StringComparison.OrdinalIgnoreCase);
+        headEnd.Should().BeGreaterThan(0);
+        var headHtml = body[..headEnd];
+        headHtml.Should().NotContain("api.rawrter.com");
     }
 
     private static WebApplicationFactory<Program> CreateFactory(

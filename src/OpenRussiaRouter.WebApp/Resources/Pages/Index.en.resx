@@ -38,11 +38,17 @@
   <data name="Home_ApiLabel" xml:space="preserve">
     <value>API request</value>
   </data>
+  <data name="Home_ApiTabOpenAI" xml:space="preserve">
+    <value>OpenAI Compatible</value>
+  </data>
+  <data name="Home_ApiTabAnthropic" xml:space="preserve">
+    <value>Anthropic / Claude Code</value>
+  </data>
   <data name="Home_ApiLead" xml:space="preserve">
-    <value>Keep your existing client shape: send a bearer token, select a model, and call chat completions.</value>
+    <value>Two protocols supported: OpenAI Chat Completions and Anthropic Messages (for Claude Code). Provide your API key and chosen model.</value>
   </data>
   <data name="Home_ApiTitle" xml:space="preserve">
-    <value>Use the OpenAI-compatible endpoint</value>
+    <value>Connect via OpenAI or Anthropic API</value>
   </data>
   <data name="Home_CatalogLabel" xml:space="preserve">
     <value>Less than OpenRouter</value>

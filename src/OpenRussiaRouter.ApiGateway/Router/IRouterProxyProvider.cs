@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 
 namespace OpenRussiaRouter.ApiGateway.Router;
@@ -30,6 +31,24 @@ public interface IRouterProxyProvider
         string requestJson,
         string requestId,
         string userApiKey,
+        CancellationToken cancellationToken);
+
+    Task<RouterProxyResponse> SendMessagesAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        IHeaderDictionary? clientHeaders,
+        string? queryString,
+        CancellationToken cancellationToken);
+
+    Task<Anthropic.AnthropicStreamSession> BeginStreamMessagesAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        IHeaderDictionary? clientHeaders,
+        string? queryString,
         CancellationToken cancellationToken);
 }
 

@@ -228,13 +228,14 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 ### Эндпоинты gateway и что из них биллится
 
-`MapGatewayEndpoints` (`Application/Extensions/ApiGatewayExtensions.cs`) вешает четыре
+`MapGatewayEndpoints` (`Application/Extensions/ApiGatewayExtensions.cs`) вешает пять
 проксирующих POST-а (все под rate-limit-политикой `gateway-chat`) и четыре GET-а:
 
 | Эндпоинт | Handler | Usage / биллинг |
 |---|---|---|
 | `POST /v1/chat/completions` | `ChatCompletionHandler.HandleAsync` | outbox (токены из тела) |
 | `POST /v1/chat/completions/stream` | `ChatCompletionHandler.HandleStreamAsync` | outbox (токены из финального SSE-чанка) |
+| `POST /v1/messages` | `MessagesHandler.HandleAsync` (Claude Code / Anthropic Messages) | outbox (токены из ответа / Anthropic SSE stream, с поддержкой кэша и `_orr_raw`) |
 | `POST /v1/audio/speech` | `TextToSpeechHandler` | outbox; **`output_tokens` = число Unicode-символов `input`** |
 | `POST /v1/images/generations` | `ImageGenerationHandler` | **никакого usage не пишется — запросы не биллятся** |
 | `GET /v1/models`, `/health`, `/ready` | `ModelsHandler` / инлайн | — |
@@ -242,8 +243,8 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 Все ответы API получают `X-Robots-Tag: noindex, nofollow`; это не меняет тела, коды или streaming-контракт.
 
-Все четыре POST-а идут через один `GatewayPipeline.AuthorizeAndAcquireLeaseAsync`
-и один и тот же retry/failover-цикл по нодам (`MaxRouterAttempts = 5` в image/tts-хендлерах).
+Все проксирующие POST-ы идут через `GatewayPipeline`
+и один и тот же retry/failover-цикл по нодам (`MaxRouterAttempts = 5` в image/tts/messages-хендлерах).
 
 ### Общие для всех сервисов паттерны
 

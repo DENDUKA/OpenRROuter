@@ -74,22 +74,43 @@ public sealed class GatewayPipeline(
         string requestId,
         CancellationToken cancellationToken)
     {
+        var isAnthropic = context.Request.Path.StartsWithSegments("/v1/messages", StringComparison.OrdinalIgnoreCase);
+
         if (string.IsNullOrWhiteSpace(model))
         {
-            await GatewayErrors.WriteAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
+            else
+                await GatewayErrors.WriteAsync(context, "invalid_request_error", ErrorCodes.ValidationFailed, "model is required", requestId);
             return null;
         }
 
-        if (!BearerTokenReader.TryRead(context.Request, out var apiKey))
+        var keyStatus = ApiKeyReader.TryRead(context.Request, out var apiKey);
+        if (keyStatus == ApiKeyReadStatus.Conflict)
         {
-            await GatewayErrors.WriteAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token required", requestId);
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Conflicting API keys in Authorization and x-api-key headers", requestId);
+            else
+                await GatewayErrors.WriteAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Conflicting API keys in Authorization and x-api-key headers", requestId);
+            return null;
+        }
+
+        if (keyStatus != ApiKeyReadStatus.Success)
+        {
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token or x-api-key required", requestId);
+            else
+                await GatewayErrors.WriteAsync(context, "authentication_error", ErrorCodes.AuthenticationRequired, "Bearer token or x-api-key required", requestId);
             return null;
         }
 
         var authResult = await authProvider.AuthenticateAsync(apiKey, cancellationToken);
         if (!authResult.Succeeded)
         {
-            await GatewayErrors.WriteAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
+            else
+                await GatewayErrors.WriteAsync(context, "authentication_error", authResult.ErrorCode ?? ErrorCodes.AuthenticationRequired, "Invalid API key", requestId);
             return null;
         }
 
@@ -105,7 +126,10 @@ public sealed class GatewayPipeline(
                 ErrorCodes.InternalError => ("internal_error", "An internal error occurred while checking balance."),
                 _ => ("invalid_request_error", "Balance check failed.")
             };
-            await GatewayErrors.WriteAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
+            else
+                await GatewayErrors.WriteAsync(context, errorType, balanceResult.ErrorCode ?? ErrorCodes.ValidationFailed, errorMessage, requestId);
             return null;
         }
 
@@ -141,7 +165,11 @@ public sealed class GatewayPipeline(
             cancellationToken);
         if (lease is null)
         {
-            await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            var isAnthropic = context.Request.Path.StartsWithSegments("/v1/messages", StringComparison.OrdinalIgnoreCase);
+            if (isAnthropic)
+                await GatewayErrors.WriteAnthropicAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            else
+                await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
             return null;
         }
 

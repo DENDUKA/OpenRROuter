@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
@@ -145,5 +146,15 @@ public sealed class TextToSpeechIntegrationTests : IClassFixture<WebApplicationF
             GatewayRouterLease lease, string requestJson, string requestId,
             string userApiKey, CancellationToken ct)
             => Task.FromResult(Response);
+
+        public Task<RouterProxyResponse> SendMessagesAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, IHeaderDictionary? clientHeaders, string? queryString, CancellationToken ct)
+            => throw new NotSupportedException();
+
+        public Task<OpenRussiaRouter.ApiGateway.Anthropic.AnthropicStreamSession> BeginStreamMessagesAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, IHeaderDictionary? clientHeaders, string? queryString, CancellationToken ct)
+            => throw new NotSupportedException();
     }
 }

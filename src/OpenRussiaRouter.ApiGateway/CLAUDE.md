@@ -26,7 +26,7 @@
 |---|---|
 | `AddGatewayGrpcClients` | gRPC-клиенты Auth/Billing/ControlPlane + scoped `GrpcApiKeyProvider` / `GrpcBillingProvider` / `GrpcControlPlaneProvider` |
 | `AddGatewayRouter` | YARP (`AddReverseProxy`) + `YarpRouterProxyProvider` |
-| `AddGatewayHandlers` | `GatewayRetryOptions`, `IGatewayPipeline`, четыре хендлера |
+| `AddGatewayHandlers` | `GatewayRetryOptions`, `IGatewayPipeline`, пять хендлеров |
 | `AddGatewayUsageOutbox` | `GatewayDbConnectionFactory`, `PostgresUsageOutboxRepository`, `UsageOutboxOptions`, hosted `UsageOutboxDispatcher` |
 | `AddGatewayRateLimiting` | политика `gateway-chat` ([GatewayRateLimiting.cs](Application/Extensions/GatewayRateLimiting.cs)) |
 
@@ -40,6 +40,7 @@
 |---|---|---|---|
 | `POST /v1/chat/completions` | `ChatCompletionHandler.HandleAsync` (при `"stream":true` в теле сам уходит в streaming-путь) | `gateway-chat` | outbox, токены из тела/финального SSE-чанка |
 | `POST /v1/chat/completions/stream` | `ChatCompletionHandler.HandleStreamAsync` | `gateway-chat` | outbox, токены из финального SSE-чанка |
+| `POST /v1/messages` | [MessagesHandler](Application/Endpoints/MessagesHandler.cs) (Anthropic Messages API / Claude Code) | `gateway-chat` | outbox, токены из ответа / Anthropic SSE stream |
 | `POST /v1/images/generations` | [ImageGenerationHandler](Application/Endpoints/ImageGenerationHandler.cs) | `gateway-chat` | **usage не пишется — картинки не биллятся** |
 | `POST /v1/audio/speech` | [TextToSpeechHandler](Application/Endpoints/TextToSpeechHandler.cs) | `gateway-chat` | outbox, `output_tokens` = кол-во Unicode code points (`EnumerateRunes().Count()`) |
 | `GET /v1/models` | [ModelsHandler](Application/Endpoints/ModelsHandler.cs) | — | — |

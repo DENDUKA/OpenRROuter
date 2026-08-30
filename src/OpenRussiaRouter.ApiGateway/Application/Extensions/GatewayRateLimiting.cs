@@ -85,7 +85,7 @@ public static class GatewayRateLimiting
                 // даже если тело ответа уже поехало и переписать его нельзя.
                 LimitMetrics.RecordRejection(
                     LimitMetrics.LimitTypes.RateLimit,
-                    BearerTokenReader.TryRead(http.Request, out _)
+                    ApiKeyReader.TryRead(http.Request, out _) == ApiKeyReadStatus.Success
                         ? LimitMetrics.Subjects.ApiKey
                         : LimitMetrics.Subjects.Ip);
 
@@ -114,7 +114,7 @@ public static class GatewayRateLimiting
 
     private static string ResolvePartitionKey(HttpContext httpContext)
     {
-        if (BearerTokenReader.TryRead(httpContext.Request, out var apiKey))
+        if (ApiKeyReader.TryRead(httpContext.Request, out var apiKey) == ApiKeyReadStatus.Success)
         {
             // Хешируем ключ: не держим секрет как ключ словаря партиций и ограничиваем длину.
             return "key:" + HashApiKey(apiKey);

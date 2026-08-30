@@ -13,6 +13,7 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
     : IRouterProxyProvider
 {
     private const string ChatCompletionsPath = "/v1/chat/completions";
+    private const string MessagesPath = "/v1/messages";
     private const string ImageGenerationsPath = "/v1/images/generations";
     private const string AudioSpeechPath = "/v1/audio/speech";
 
@@ -212,6 +213,108 @@ public sealed class YarpRouterProxyProvider(IHttpForwarder forwarder)
             await responseBody.DisposeAsync();
             throw;
         }
+    }
+
+    public async Task<RouterProxyResponse> SendMessagesAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        IHeaderDictionary? clientHeaders,
+        string? queryString,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var context = new DefaultHttpContext();
+        context.Request.Method = HttpMethods.Post;
+        context.Request.Scheme = lease.EndpointUrl.Scheme;
+        context.Request.Host = HostString.FromUriComponent(lease.EndpointUrl);
+        context.Request.Path = MessagesPath;
+        if (!string.IsNullOrEmpty(queryString))
+        {
+            context.Request.QueryString = new QueryString(queryString);
+        }
+
+        context.Request.Headers["Authorization"] = "Bearer " + userApiKey;
+        context.Request.Headers[CorrelationIds.HeaderName] = requestId;
+
+        // Forward anthropic-* headers, anthropic-version, anthropic-beta, etc.
+        if (clientHeaders != null)
+        {
+            foreach (var header in clientHeaders)
+            {
+                if (header.Key.StartsWith("anthropic-", StringComparison.OrdinalIgnoreCase) ||
+                    header.Key.Equals("x-api-key", StringComparison.OrdinalIgnoreCase))
+                {
+                    context.Request.Headers[header.Key] = header.Value;
+                }
+            }
+        }
+
+        context.Request.ContentType = "application/json";
+        context.Request.Body = new MemoryStream(Encoding.UTF8.GetBytes(requestJson));
+        context.Request.ContentLength = context.Request.Body.Length;
+        context.RequestAborted = cancellationToken;
+
+        await using var responseBody = new MemoryStream();
+        context.Response.Body = responseBody;
+
+        var destinationPrefix = BuildDestinationPrefix(lease.EndpointUrl);
+        var error = await forwarder.SendAsync(context, destinationPrefix, ForwardingHttpClient, RequestConfig).ConfigureAwait(false);
+        if (error != ForwarderError.None)
+        {
+            var errorFeature = context.GetForwarderErrorFeature();
+            ThrowYarpError(errorFeature);
+        }
+
+        responseBody.Position = 0;
+        using var reader = new StreamReader(responseBody, Encoding.UTF8);
+        var body = await reader.ReadToEndAsync(cancellationToken).ConfigureAwait(false);
+        var contentType = context.Response.ContentType ?? "application/json";
+
+        var providerName = context.Response.Headers.TryGetValue("x-9r-provider", out var pv) ? pv.ToString() : null;
+        var providerAccount = context.Response.Headers.TryGetValue("x-9r-account", out var av) ? av.ToString() : null;
+
+        return new RouterProxyResponse(context.Response.StatusCode, contentType, body, providerName, providerAccount);
+    }
+
+    public async Task<Anthropic.AnthropicStreamSession> BeginStreamMessagesAsync(
+        GatewayRouterLease lease,
+        string requestJson,
+        string requestId,
+        string userApiKey,
+        IHeaderDictionary? clientHeaders,
+        string? queryString,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(lease);
+
+        var pathAndQuery = string.IsNullOrEmpty(queryString) ? MessagesPath : MessagesPath + queryString;
+        var requestUri = new Uri(lease.EndpointUrl, pathAndQuery);
+        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri);
+        request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + userApiKey);
+        request.Headers.TryAddWithoutValidation(CorrelationIds.HeaderName, requestId);
+
+        if (clientHeaders != null)
+        {
+            foreach (var header in clientHeaders)
+            {
+                if (header.Key.StartsWith("anthropic-", StringComparison.OrdinalIgnoreCase) ||
+                    header.Key.Equals("x-api-key", StringComparison.OrdinalIgnoreCase))
+                {
+                    request.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
+                }
+            }
+        }
+
+        request.Content = new StringContent(requestJson, Encoding.UTF8, "application/json");
+
+        var response = await StreamingHttpClient
+            .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+            .ConfigureAwait(false);
+
+        return new Anthropic.AnthropicStreamSession(response);
     }
 
     private static string BuildDestinationPrefix(Uri baseEndpoint)

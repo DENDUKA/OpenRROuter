@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentAssertions;
 using Grpc.Core;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,37 @@ namespace OpenRussiaRouter.WebApp.Tests;
 
 public sealed class IndexPageTests
 {
+    [Theory]
+    [InlineData("1", "2", "0", "3", "5", "0", 67)]
+    [InlineData("7.5", "4", "0", "10", "10", "0", 60)]
+    [InlineData("10", "10", "0.5", "10", "10", "1", 50)]
+    [InlineData("5", "10", "1", "10", "20", "2", 50)]
+    [InlineData("7.55", "10", "0", "10", "10", "0", 25)]
+    [InlineData("7.56", "10", "0", "10", "10", "0", 24)]
+    [InlineData("9.96", "10", "0", "10", "10", "0", null)]
+    [InlineData("10", "10", "1", "10", "10", "1", null)]
+    [InlineData("11", "11", "2", "10", "10", "1", null)]
+    [InlineData("0", "0", "0", "0", "0", "0", null)]
+    [InlineData("1", "2", "3", "0", "0", "0", null)]
+    [InlineData("0", "10", "0", "2", "10", "0", 100)]
+    [InlineData("-1", "4", "0", "10", "10", "-1", 60)]
+    public void FlagshipCard_CalculatesRoundedMaximumDiscount(
+        string input, string output, string cache,
+        string referenceInput, string referenceOutput, string referenceCache,
+        int? expectedDiscount)
+    {
+        var card = new IndexModel.FlagshipModelCard(
+            "test-model", "Test model", "Provider", "provider", "/models/provider/test-model",
+            decimal.Parse(input, CultureInfo.InvariantCulture),
+            decimal.Parse(output, CultureInfo.InvariantCulture),
+            decimal.Parse(cache, CultureInfo.InvariantCulture),
+            decimal.Parse(referenceInput, CultureInfo.InvariantCulture),
+            decimal.Parse(referenceOutput, CultureInfo.InvariantCulture),
+            decimal.Parse(referenceCache, CultureInfo.InvariantCulture));
+
+        card.MaxDiscountPercent.Should().Be(expectedDiscount);
+    }
+
     [Fact]
     public async Task OnGetAsync_SelectsCompleteFlagshipsAndSortsByPriorityThenIdAsync()
     {

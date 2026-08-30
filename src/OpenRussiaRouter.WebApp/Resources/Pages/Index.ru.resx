@@ -53,8 +53,11 @@
   <data name="Home_CatalogTitle" xml:space="preserve">
     <value>Флагманские модели</value>
   </data>
-  <data name="Home_FlagshipBadge" xml:space="preserve">
-    <value>Флагман</value>
+  <data name="Home_DiscountUpTo" xml:space="preserve">
+    <value>до</value>
+  </data>
+  <data name="Home_DiscountTooltip" xml:space="preserve">
+    <value>Максимальная скидка среди входа, выхода и кеша: (цена OpenRouter − наша цена) / цена OpenRouter × 100%, с округлением до целого. Используются цены OpenRouter, указанные администратором; нулевые цены OpenRouter не учитываются.</value>
   </data>
   <data name="Home_FlagshipCardAria" xml:space="preserve">
     <value>Открыть модель {0}</value>

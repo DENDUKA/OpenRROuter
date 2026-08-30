@@ -147,5 +147,25 @@ public class IndexModel : PageModelBase
         decimal CachePrice,
         decimal OpenRouterInputPrice,
         decimal OpenRouterOutputPrice,
-        decimal OpenRouterCachePrice);
+        decimal OpenRouterCachePrice)
+    {
+        public int? MaxDiscountPercent
+        {
+            get
+            {
+                var maximum = Math.Max(
+                    CalculateDiscountPercent(InputPrice, OpenRouterInputPrice),
+                    Math.Max(
+                        CalculateDiscountPercent(OutputPrice, OpenRouterOutputPrice),
+                        CalculateDiscountPercent(CachePrice, OpenRouterCachePrice)));
+                var rounded = (int)Math.Round(maximum, MidpointRounding.AwayFromZero);
+                return rounded > 0 ? rounded : null;
+            }
+        }
+
+        private static decimal CalculateDiscountPercent(decimal price, decimal referencePrice) =>
+            referencePrice > 0 && price >= 0 && price < referencePrice
+                ? (referencePrice - price) / referencePrice * 100m
+                : 0m;
+    }
 }

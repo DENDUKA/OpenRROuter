@@ -160,12 +160,20 @@
                                     }
                                     <div class="flagship-provider-copy">
                                         <span class="flagship-provider">@flagship.Provider</span>
-                                        <span class="flagship-mark">@Localizer["Home_FlagshipBadge"]</span>
                                     </div>
                                 </div>
 
                                 <div class="flagship-model-copy">
-                                    <h3>@flagship.DisplayName</h3>
+                                    <div class="flagship-model-heading">
+                                        <h3>@flagship.DisplayName</h3>
+                                        @if (flagship.MaxDiscountPercent is { } discount)
+                                        {
+                                            <span class="flagship-discount" title="@Localizer["Home_DiscountTooltip"]">
+                                                <span class="flagship-discount-label">@Localizer["Home_DiscountUpTo"]</span>
+                                                <strong>−@discount%</strong>
+                                            </span>
+                                        }
+                                    </div>
                                     <code>@flagship.Id</code>
                                 </div>
 
@@ -538,23 +546,42 @@
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .flagship-mark {
-        padding: 4px 8px;
-        border: 1px solid rgba(48, 209, 88, .25);
-        border-radius: var(--radius-pill);
-        color: var(--color-success);
-        font-family: var(--font-mono);
-        font-size: 9px;
-        letter-spacing: .08em;
-        text-transform: uppercase;
-    }
     .flagship-model-copy { margin: 24px 0 22px; }
+    .flagship-model-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 9px;
+    }
     .flagship-model-copy h3 {
-        margin: 0 0 7px;
+        min-width: 0;
+        margin: 0;
         font-size: 24px;
         font-weight: 500;
         letter-spacing: -0.03em;
         line-height: 1.12;
+        overflow-wrap: anywhere;
+    }
+    .flagship-discount {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 3px;
+        color: var(--color-success);
+        white-space: nowrap;
+    }
+    .flagship-discount-label {
+        font-size: 10px;
+        font-weight: 500;
+        line-height: 1;
+    }
+    .flagship-discount strong {
+        font-size: 34px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -.06em;
+        line-height: 1;
     }
     .flagship-model-copy code {
         display: block;
@@ -597,10 +624,10 @@
         font-size: 12px;
     }
     .flagship-price-row del {
-        color: var(--color-mute);
+        color: var(--color-danger);
         font-family: var(--font-mono);
         font-size: 12px;
-        text-decoration-color: rgba(255, 255, 255, .55);
+        text-decoration-color: currentColor;
         text-decoration-thickness: 1px;
     }
     .flagship-price-row strong {

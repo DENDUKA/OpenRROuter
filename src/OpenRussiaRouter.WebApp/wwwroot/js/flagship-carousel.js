@@ -23,6 +23,9 @@
         }
 
         viewport.dataset.flagshipInitialized = "true";
+        originals.forEach(function (original, index) {
+            original.dataset.flagshipOriginalIndex = String(index);
+        });
 
         var cycleWidth = 0;
         var frameId = 0;
@@ -34,6 +37,7 @@
         var activePointerId = null;
         var startX = 0;
         var startScrollLeft = 0;
+        var scrollRemainder = 0;
         var inertiaVelocityPxPerMs = 0;
         var lastPointerX = 0;
         var lastPointerTime = 0;
@@ -63,8 +67,31 @@
             return cycle && track.contains(cycle) ? cycle : null;
         }
 
+        function originalForClone(node) {
+            if (!(node instanceof Element)) {
+                return null;
+            }
+
+            var card = node.closest(".flagship-card");
+            if (!card || !track.contains(card) || !card.closest("[data-flagship-clone]")) {
+                return null;
+            }
+
+            return originals[Number(card.dataset.flagshipOriginalIndex)] || null;
+        }
+
+        function redirectClonePointerFocus(event) {
+            var original = originalForClone(event.target);
+            if (original) {
+                // tabindex=-1 still permits pointer focus. Cancel that default, not native link activation.
+                event.preventDefault();
+                original.focus({ preventScroll: true });
+            }
+        }
+
         function cancelInertia() {
             inertiaVelocityPxPerMs = 0;
+            scrollRemainder = 0;
         }
 
         function clampInertiaVelocity(velocity) {
@@ -115,6 +142,7 @@
         }
 
         function rebuild() {
+            scrollRemainder = 0;
             var preservedOffset = cycleWidth > 0
                 ? positiveModulo(viewport.scrollLeft - cycleWidth, cycleWidth)
                 : 0;
@@ -147,6 +175,17 @@
             }
         }
 
+        function moveBy(delta) {
+            if (cycleWidth <= 0) {
+                return;
+            }
+
+            var target = viewport.scrollLeft + scrollRemainder + delta;
+            viewport.scrollLeft = target;
+            scrollRemainder = target - viewport.scrollLeft;
+            normalize();
+        }
+
         function tick(timestamp) {
             if (previousTime === 0) {
                 previousTime = timestamp;
@@ -156,16 +195,14 @@
             previousTime = timestamp;
             if (!hoveredCycle && !pointerActive && !document.hidden && !reducedMotion.matches) {
                 if (Math.abs(inertiaVelocityPxPerMs) >= minimumInertiaVelocityPxPerMs) {
-                    viewport.scrollLeft += inertiaVelocityPxPerMs * elapsed;
+                    moveBy(inertiaVelocityPxPerMs * elapsed);
                     inertiaVelocityPxPerMs *= Math.pow(inertiaDecayPerFrame, elapsed / (1000 / 60));
-                    normalize();
                     if (Math.abs(inertiaVelocityPxPerMs) < minimumInertiaVelocityPxPerMs) {
                         cancelInertia();
                         resumeAutoplayAt = timestamp + resumeDelayMs;
                     }
                 } else if (timestamp >= resumeAutoplayAt) {
-                    viewport.scrollLeft += speedPxPerSecond * elapsed / 1000;
-                    normalize();
+                    moveBy(speedPxPerSecond * elapsed / 1000);
                 }
             }
 
@@ -223,6 +260,15 @@
 
             hoveredCycle = false;
             resumeAutoplayAt = performance.now() + resumeDelayMs;
+        });
+        viewport.addEventListener("pointerdown", redirectClonePointerFocus, true);
+        viewport.addEventListener("mousedown", redirectClonePointerFocus, true);
+        viewport.addEventListener("focusin", function (event) {
+            // Also guard programmatic focus and browser focus restoration onto either kind of clone.
+            var original = originalForClone(event.target);
+            if (original) {
+                original.focus({ preventScroll: true });
+            }
         });
         viewport.addEventListener("pointerdown", function (event) {
             if (pointerActive || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) {

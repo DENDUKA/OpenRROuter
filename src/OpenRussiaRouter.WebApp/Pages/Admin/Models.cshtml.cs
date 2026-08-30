@@ -616,7 +616,7 @@ public class ModelsModel(BillingProvider billingProvider, ControlPlaneProvider c
         if (!string.IsNullOrWhiteSpace(current) && efforts.Contains(current, StringComparer.Ordinal))
             return current;
 
-        string[] preference = ["medium", "high", "low", "minimal", "xhigh", "max", "ultra", "none"];
+        string[] preference = ["medium", "high", "low", "minimal", "xhigh", "max", "ultra", "thinking", "none"];
         return preference.FirstOrDefault(efforts.Contains);
     }
 

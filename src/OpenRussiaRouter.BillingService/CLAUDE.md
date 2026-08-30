@@ -88,7 +88,7 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-се�
   «не первым»; затем `UpdatePaymentBonusAsync`.
 - **Каталог**: `UpsertModelAsync` требует `ModelId`/`DisplayName`/`RouterModelId`/`PriceVersion`,
   `Price.EnsureValid()`, нормализует reasoning-efforts через `ReasoningEffort`
-  (канон: `none|minimal|low|medium|high|xhigh`; при `SupportsReasoning=false` списки должны быть
+  (канон: `none|minimal|low|medium|high|xhigh|max|ultra|thinking`; при `SupportsReasoning=false` списки должны быть
   пустыми; `DefaultReasoningEffort` обязан входить в `AllowedReasoningEfforts`), резолвит
   `ProviderId` в существующего `ModelProvider` (иначе `ArgumentException`) и подставляет его
   `DisplayName` в `Provider`.

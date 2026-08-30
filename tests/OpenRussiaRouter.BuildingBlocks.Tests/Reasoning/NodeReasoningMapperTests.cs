@@ -71,11 +71,11 @@ public sealed class NodeReasoningMapperTests
     [Fact]
     public void MapFromNodeOptions_StripsUnknownTokens()
     {
-        var input = new[] { "turbo", "minimal", "xhigh", "" };
+        var input = new[] { "turbo", "minimal", "xhigh", "max", "ultra", "thinking", "" };
 
         var result = NodeReasoningMapper.MapFromNodeOptions(input);
 
-        result.Should().Equal(["minimal", "xhigh"]);
+        result.Should().Equal(["minimal", "xhigh", "max", "ultra", "thinking"]);
     }
 
     [Fact]

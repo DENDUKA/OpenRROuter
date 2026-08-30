@@ -13,7 +13,8 @@
 - Preserve all existing uncommitted changes in `Index.cshtml`, resources, page models, and tests.
 - Do not change Billing contracts, flagship selection, sorting, or canonical model URL construction.
 - Carousel speed is approximately 20 px/s and movement is continuous from right to left.
-- Pause immediately while the pointer hovers over the carousel and while the user drags or touches it.
+- Pause immediately while the pointer hovers over a visible `.flagship-cycle` and while the user drags or touches it; hovering only empty viewport padding does not pause.
+- Preserve manual momentum with exponential decay, then wait 800 ms before autoplay resumes.
 - Manual interaction uses mouse drag, trackpad horizontal scroll, and touch swipe; add no arrows, dots, or custom keyboard commands.
 - A click without dragging opens the model link; a drag suppresses the accidental click that follows it.
 - Original model links remain semantic. Visual clones use `aria-hidden="true"` and their links use `tabindex="-1"`.
@@ -451,3 +452,172 @@ rtk git commit -m "docs: describe flagship carousel behavior"
 ```
 
 Before committing, verify that no `.superpowers/brainstorm` mockups or unrelated user files are staged.
+
+### Task 4: Scope hover to cycles and add inertial drag
+
+**Files:**
+- Modify: `src/OpenRussiaRouter.WebApp/wwwroot/js/flagship-carousel.js`
+- Modify: `tests/OpenRussiaRouter.WebApp.Tests/FlagshipCarouselScriptTests.cs`
+- Modify: `tests/OpenRussiaRouter.E2ETests/FlagshipCarouselTests.cs`
+
+**Interfaces:**
+- Consumes: existing `initialize(viewport)`, `normalize()`, pointer drag state, and all visible `[data-flagship-cycle]` elements.
+- Produces: cycle-scoped hover state, `inertiaVelocityPxPerMs`, `resumeAutoplayAt`, and a single RAF loop that chooses between inertia and autoplay.
+
+- [ ] **Step 1: Strengthen deterministic and E2E contracts before changing behavior**
+
+Extend `FlagshipCarouselScript_ReturnsBehaviorContractAsync` with:
+
+```csharp
+Assert.Contains("var inertiaVelocityPxPerMs = 0;", script, StringComparison.Ordinal);
+Assert.Contains("var resumeDelayMs = 800;", script, StringComparison.Ordinal);
+Assert.Contains("var inertiaDecayPerFrame = 0.92;", script, StringComparison.Ordinal);
+Assert.Contains("data-flagship-cycle", script, StringComparison.Ordinal);
+Assert.Contains("wheel", script, StringComparison.Ordinal);
+```
+
+In `Carousel_AutoplaysPausesAndSuppressesClickAfterDragAsync`, hover the original cycle rather than
+the viewport, verify that empty viewport padding does not pause, and after drag sample at least two
+`scrollLeft` values 100 ms apart to prove continued inertial movement before asserting the URL did
+not change.
+
+- [ ] **Step 2: Run the deterministic WebApp test and verify it fails**
+
+```powershell
+rtk dotnet test tests/OpenRussiaRouter.WebApp.Tests --no-restore -nr:false -m:1 --filter "FullyQualifiedName~FlagshipCarouselScriptTests"
+```
+
+Expected: FAIL because the inertia constants and cycle-scoped hover implementation are absent.
+
+- [ ] **Step 3: Replace viewport hover state with delegated cycle hover state**
+
+In `flagship-carousel.js`, keep one `hoveredCycle` boolean and update it from track-level
+`pointerover`/`pointerout` delegation so rebuilt clone cycles need no listener rebinding:
+
+```javascript
+function isCycleNode(node) {
+    return node instanceof Element && node.closest("[data-flagship-cycle]");
+}
+
+track.addEventListener("pointerover", function (event) {
+    if (event.pointerType !== "mouse" || !isCycleNode(event.target)) return;
+    hoveredCycle = true;
+    inertiaVelocityPxPerMs = 0;
+});
+track.addEventListener("pointerout", function (event) {
+    if (event.pointerType !== "mouse" || !isCycleNode(event.target)) return;
+    if (isCycleNode(event.relatedTarget)) return;
+    hoveredCycle = false;
+    resumeAutoplayAt = performance.now() + resumeDelayMs;
+});
+```
+
+When implementing, compare the source and destination cycle elements, not just their truthiness,
+so moving between two descendants of the same cycle does not generate a false leave.
+
+- [ ] **Step 4: Measure drag velocity and decay it in the existing RAF loop**
+
+Add exact motion state:
+
+```javascript
+var resumeDelayMs = 800;
+var inertiaDecayPerFrame = 0.92;
+var minimumInertiaVelocityPxPerMs = 0.01;
+var inertiaVelocityPxPerMs = 0;
+var lastPointerX = 0;
+var lastPointerTime = 0;
+var resumeAutoplayAt = 0;
+```
+
+On `pointerdown`, cancel old inertia and initialize `lastPointerX/lastPointerTime`. On each dragged
+`pointermove`, calculate the scroll-direction velocity from the latest sample and smooth it:
+
+```javascript
+var now = performance.now();
+var sampleMs = Math.max(now - lastPointerTime, 1);
+var sampleVelocity = -(event.clientX - lastPointerX) / sampleMs;
+inertiaVelocityPxPerMs = inertiaVelocityPxPerMs * 0.35 + sampleVelocity * 0.65;
+lastPointerX = event.clientX;
+lastPointerTime = now;
+```
+
+On pointer finish, retain velocity only after a real drag and set `resumeAutoplayAt` to infinity
+until inertia finishes. In `tick(timestamp)`, before autoplay:
+
+```javascript
+if (!hoveredCycle && !pointerActive && Math.abs(inertiaVelocityPxPerMs) >= minimumInertiaVelocityPxPerMs) {
+    viewport.scrollLeft += inertiaVelocityPxPerMs * elapsed;
+    inertiaVelocityPxPerMs *= Math.pow(inertiaDecayPerFrame, elapsed / (1000 / 60));
+    normalize();
+    if (Math.abs(inertiaVelocityPxPerMs) < minimumInertiaVelocityPxPerMs) {
+        inertiaVelocityPxPerMs = 0;
+        resumeAutoplayAt = timestamp + resumeDelayMs;
+    }
+} else if (!hoveredCycle && !pointerActive && timestamp >= resumeAutoplayAt) {
+    viewport.scrollLeft += speedPxPerSecond * elapsed / 1000;
+    normalize();
+}
+```
+
+Cancel velocity immediately on cycle hover, a new pointerdown, visibility loss, pagehide, and a
+reduced-motion media-query change. Do not run programmatic inertia when reduced motion is enabled.
+
+- [ ] **Step 5: Keep native trackpad momentum isolated from autoplay**
+
+Add a passive wheel handler that cancels programmatic inertia and pushes autoplay back by 800 ms:
+
+```javascript
+viewport.addEventListener("wheel", function () {
+    inertiaVelocityPxPerMs = 0;
+    resumeAutoplayAt = performance.now() + resumeDelayMs;
+}, { passive: true });
+```
+
+Do not call `preventDefault`; the browser remains responsible for wheel/trackpad scrolling and its
+native momentum.
+
+- [ ] **Step 6: Verify refined motion**
+
+```powershell
+rtk node --check src/OpenRussiaRouter.WebApp/wwwroot/js/flagship-carousel.js
+rtk dotnet test tests/OpenRussiaRouter.WebApp.Tests --no-restore -nr:false -m:1
+rtk dotnet test tests/OpenRussiaRouter.E2ETests --no-restore -nr:false -m:1 --filter "FullyQualifiedName~FlagshipCarouselTests"
+```
+
+Expected: JS syntax succeeds; WebApp tests pass with zero warnings; configured E2E proves cycle
+hover pause, empty-padding autoplay, post-drag inertia, click suppression, and reduced motion.
+
+- [ ] **Step 7: Commit the refined interaction slice**
+
+```powershell
+rtk git add src/OpenRussiaRouter.WebApp/wwwroot/js/flagship-carousel.js tests/OpenRussiaRouter.WebApp.Tests/FlagshipCarouselScriptTests.cs tests/OpenRussiaRouter.E2ETests/FlagshipCarouselTests.cs
+rtk git commit -m "feat: add momentum to flagship carousel"
+```
+
+Inspect `rtk git diff --cached` before committing because the shared worktree contains unrelated
+user changes. If the feature is being delivered uncommitted, skip this step and report that choice.
+
+### Task 5: Update the refined interaction invariant and run final validation
+
+**Files:**
+- Modify: `src/OpenRussiaRouter.WebApp/CLAUDE.md`
+
+**Interfaces:**
+- Consumes: cycle-scoped hover and inertial drag behavior from Task 4.
+- Produces: maintained documentation of the final motion contract.
+
+- [ ] **Step 1: Replace the old viewport-hover description**
+
+Document that hover pauses only over a visible `.flagship-cycle`, drag velocity decays
+exponentially, autoplay resumes 800 ms after inertia ends, wheel/trackpad momentum stays native,
+and reduced motion disables both autoplay and programmatic inertia.
+
+- [ ] **Step 2: Run final checks**
+
+```powershell
+rtk git diff --check
+rtk dotnet test tests/OpenRussiaRouter.WebApp.Tests --no-restore -nr:false -m:1
+rtk dotnet build OpenRussiaRouter.sln --no-restore -nr:false -m:1
+```
+
+Expected: no whitespace errors; WebApp suite passes; 19 projects build with 0 errors and 0 warnings.

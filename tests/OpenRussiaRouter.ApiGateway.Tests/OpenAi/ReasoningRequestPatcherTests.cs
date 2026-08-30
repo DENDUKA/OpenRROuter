@@ -18,6 +18,7 @@ public sealed class ReasoningRequestPatcherTests
 
     [Theory]
     [InlineData("""{"reasoning_effort":"xhigh"}""")]
+    [InlineData("""{"reasoning_effort":"max"}""")]
     [InlineData("""{"reasoning":{"max_tokens":1000,"effort":"high"}}""")]
     [InlineData("""{"reasoning_effort":"low","reasoning":{"effort":"high"}}""")]
     [InlineData("""{"reasoning":{}}""")]

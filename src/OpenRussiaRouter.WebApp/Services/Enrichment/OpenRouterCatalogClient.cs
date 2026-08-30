@@ -18,7 +18,7 @@ public sealed class OpenRouterCatalogClient(
     // "gemini-3.1-pro-low"). OpenRouter slugs don't carry these, so we strip them — but only as a
     // fallback after exact strategies, because real slugs can also end this way (mistral-medium, o4-mini-high).
     // We also support the "-review" suffix that is common in 9Router.
-    private static readonly string[] _effortQualifiers = ["minimal", "low", "medium", "high", "xhigh", "max"];
+    private static readonly string[] _effortQualifiers = ["minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"];
 
     private static readonly string[] _9routerSuffixes = ["-review", "-spark", "-search", "-thought"];
 

@@ -4,6 +4,11 @@
     var speedPxPerSecond = 20;
     var dragThresholdPx = 6;
     var maximumSupplementalCards = 100;
+    var resumeDelayMs = 800;
+    var inertiaDecayPerFrame = 0.92;
+    var minimumInertiaVelocityPxPerMs = 0.01;
+    var maximumInertiaVelocityPxPerMs = 2;
+    var maximumVelocitySampleAgeMs = 80;
 
     function initialize(viewport) {
         if (!viewport || viewport.dataset.flagshipInitialized === "true") {
@@ -22,13 +27,17 @@
         var cycleWidth = 0;
         var frameId = 0;
         var previousTime = 0;
-        var hovered = false;
+        var hoveredCycle = false;
         var pointerActive = false;
         var dragged = false;
         var suppressNextClick = false;
         var activePointerId = null;
         var startX = 0;
         var startScrollLeft = 0;
+        var inertiaVelocityPxPerMs = 0;
+        var lastPointerX = 0;
+        var lastPointerTime = 0;
+        var resumeAutoplayAt = 0;
         var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
         function positiveModulo(value, divisor) {
@@ -43,6 +52,36 @@
             }
             element.querySelectorAll("a, button, input, select, textarea, [tabindex]")
                 .forEach(function (focusable) { focusable.tabIndex = -1; });
+        }
+
+        function cycleFromNode(node) {
+            if (!(node instanceof Element)) {
+                return null;
+            }
+
+            var cycle = node.closest("[data-flagship-cycle]");
+            return cycle && track.contains(cycle) ? cycle : null;
+        }
+
+        function cancelInertia() {
+            inertiaVelocityPxPerMs = 0;
+        }
+
+        function clampInertiaVelocity(velocity) {
+            return Math.max(
+                -maximumInertiaVelocityPxPerMs,
+                Math.min(maximumInertiaVelocityPxPerMs, velocity));
+        }
+
+        function synchronizeCycleHover() {
+            var wasHoveredCycle = hoveredCycle;
+            hoveredCycle = track.querySelector("[data-flagship-cycle]:hover") !== null;
+            if (hoveredCycle) {
+                cancelInertia();
+                resumeAutoplayAt = Number.POSITIVE_INFINITY;
+            } else if (wasHoveredCycle || !Number.isFinite(resumeAutoplayAt)) {
+                resumeAutoplayAt = performance.now() + resumeDelayMs;
+            }
         }
 
         function removeClones() {
@@ -94,6 +133,8 @@
             if (cycleWidth > 0) {
                 viewport.scrollLeft = cycleWidth + positiveModulo(preservedOffset, cycleWidth);
             }
+
+            synchronizeCycleHover();
         }
 
         function normalize() {
@@ -113,9 +154,19 @@
 
             var elapsed = Math.min(timestamp - previousTime, 50);
             previousTime = timestamp;
-            if (!hovered && !pointerActive && !document.hidden) {
-                viewport.scrollLeft += speedPxPerSecond * elapsed / 1000;
-                normalize();
+            if (!hoveredCycle && !pointerActive && !document.hidden && !reducedMotion.matches) {
+                if (Math.abs(inertiaVelocityPxPerMs) >= minimumInertiaVelocityPxPerMs) {
+                    viewport.scrollLeft += inertiaVelocityPxPerMs * elapsed;
+                    inertiaVelocityPxPerMs *= Math.pow(inertiaDecayPerFrame, elapsed / (1000 / 60));
+                    normalize();
+                    if (Math.abs(inertiaVelocityPxPerMs) < minimumInertiaVelocityPxPerMs) {
+                        cancelInertia();
+                        resumeAutoplayAt = timestamp + resumeDelayMs;
+                    }
+                } else if (timestamp >= resumeAutoplayAt) {
+                    viewport.scrollLeft += speedPxPerSecond * elapsed / 1000;
+                    normalize();
+                }
             }
 
             frameId = window.requestAnimationFrame(tick);
@@ -140,15 +191,38 @@
             previousTime = 0;
         }
 
-        viewport.addEventListener("pointerenter", function (event) {
-            if (event.pointerType === "mouse") {
-                hovered = true;
+        track.addEventListener("pointerover", function (event) {
+            if (event.pointerType !== "mouse") {
+                return;
             }
+
+            var destinationCycle = cycleFromNode(event.target);
+            var sourceCycle = cycleFromNode(event.relatedTarget);
+            if (!destinationCycle || destinationCycle === sourceCycle) {
+                return;
+            }
+
+            hoveredCycle = true;
+            cancelInertia();
+            resumeAutoplayAt = Number.POSITIVE_INFINITY;
         });
-        viewport.addEventListener("pointerleave", function (event) {
-            if (event.pointerType === "mouse") {
-                hovered = false;
+        track.addEventListener("pointerout", function (event) {
+            if (event.pointerType !== "mouse") {
+                return;
             }
+
+            var sourceCycle = cycleFromNode(event.target);
+            var destinationCycle = cycleFromNode(event.relatedTarget);
+            if (!sourceCycle || sourceCycle === destinationCycle) {
+                return;
+            }
+            if (destinationCycle) {
+                hoveredCycle = true;
+                return;
+            }
+
+            hoveredCycle = false;
+            resumeAutoplayAt = performance.now() + resumeDelayMs;
         });
         viewport.addEventListener("pointerdown", function (event) {
             if (pointerActive || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) {
@@ -161,6 +235,10 @@
             suppressNextClick = false;
             startX = event.clientX;
             startScrollLeft = viewport.scrollLeft;
+            lastPointerX = event.clientX;
+            lastPointerTime = performance.now();
+            cancelInertia();
+            resumeAutoplayAt = Number.POSITIVE_INFINITY;
         });
         viewport.addEventListener("pointermove", function (event) {
             if (!pointerActive || event.pointerId !== activePointerId) {
@@ -182,27 +260,52 @@
             event.preventDefault();
             viewport.scrollLeft = startScrollLeft - delta;
             normalize();
+
+            var now = performance.now();
+            var sampleMs = Math.max(now - lastPointerTime, 1);
+            var sampleVelocity = clampInertiaVelocity(-(event.clientX - lastPointerX) / sampleMs);
+            inertiaVelocityPxPerMs = clampInertiaVelocity(
+                inertiaVelocityPxPerMs * 0.35 + sampleVelocity * 0.65);
+            lastPointerX = event.clientX;
+            lastPointerTime = now;
         });
 
-        function finishPointer(event) {
+        function finishPointer(event, cancelled) {
             if (!pointerActive || event.pointerId !== activePointerId) {
                 return;
             }
 
+            var completedDrag = dragged && !cancelled;
             pointerActive = false;
             activePointerId = null;
-            suppressNextClick = dragged;
+            suppressNextClick = completedDrag;
             dragged = false;
             viewport.classList.remove("is-dragging");
             if (viewport.hasPointerCapture(event.pointerId)) {
                 viewport.releasePointerCapture(event.pointerId);
             }
+
+            var pointerReleasedAt = performance.now();
+            if (hoveredCycle) {
+                cancelInertia();
+                resumeAutoplayAt = Number.POSITIVE_INFINITY;
+            } else if (reducedMotion.matches || !completedDrag) {
+                cancelInertia();
+                resumeAutoplayAt = pointerReleasedAt + resumeDelayMs;
+            } else if (pointerReleasedAt - lastPointerTime > maximumVelocitySampleAgeMs) {
+                cancelInertia();
+                resumeAutoplayAt = pointerReleasedAt + resumeDelayMs;
+            } else if (Math.abs(inertiaVelocityPxPerMs) < minimumInertiaVelocityPxPerMs) {
+                cancelInertia();
+                resumeAutoplayAt = pointerReleasedAt + resumeDelayMs;
+            } else {
+                resumeAutoplayAt = Number.POSITIVE_INFINITY;
+            }
         }
 
-        window.addEventListener("pointerup", finishPointer);
+        window.addEventListener("pointerup", function (event) { finishPointer(event, false); });
         window.addEventListener("pointercancel", function (event) {
-            dragged = false;
-            finishPointer(event);
+            finishPointer(event, true);
             suppressNextClick = false;
         });
         viewport.addEventListener("click", function (event) {
@@ -216,6 +319,10 @@
         }, true);
         viewport.addEventListener("dragstart", function (event) { event.preventDefault(); });
         viewport.addEventListener("scroll", normalize, { passive: true });
+        viewport.addEventListener("wheel", function () {
+            cancelInertia();
+            resumeAutoplayAt = performance.now() + resumeDelayMs;
+        }, { passive: true });
 
         var resizeObserver = typeof ResizeObserver === "undefined"
             ? null
@@ -228,8 +335,10 @@
 
         reducedMotion.addEventListener("change", function () {
             if (reducedMotion.matches) {
+                cancelInertia();
                 stopAnimation();
             } else {
+                resumeAutoplayAt = performance.now() + resumeDelayMs;
                 startAnimation();
             }
         });
@@ -241,6 +350,8 @@
             activePointerId = null;
             dragged = false;
             suppressNextClick = false;
+            cancelInertia();
+            resumeAutoplayAt = Number.POSITIVE_INFINITY;
             viewport.classList.remove("is-dragging");
         }
 
@@ -249,16 +360,17 @@
                 resetInteraction();
                 stopAnimation();
             } else {
+                synchronizeCycleHover();
                 startAnimation();
             }
         });
         window.addEventListener("pagehide", function () {
             resetInteraction();
-            hovered = false;
+            hoveredCycle = false;
             stopAnimation();
         });
         window.addEventListener("pageshow", function () {
-            hovered = viewport.matches(":hover");
+            synchronizeCycleHover();
             startAnimation();
         });
 

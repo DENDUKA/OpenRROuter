@@ -397,7 +397,7 @@ public sealed class BillingApplicationServiceTests
         var act = async () => await service.UpsertModelAsync(CreateModel("gpt-reasoning", enabled: true) with
         {
             SupportsReasoning = true,
-            AllowedReasoningEfforts = ["ultra"]
+            AllowedReasoningEfforts = ["super-ultra-unsupported"]
         });
 
         await act.Should().ThrowAsync<ArgumentException>();
@@ -512,8 +512,8 @@ public sealed class BillingApplicationServiceTests
         var model = CreateModel("gpt-reasoning", enabled: true) with
         {
             SupportsReasoning = true,
-            AllowedReasoningEfforts = ["low", "medium", "high"],
-            DefaultReasoningEffort = "medium"
+            AllowedReasoningEfforts = ["low", "medium", "high", "max"],
+            DefaultReasoningEffort = "max"
         };
 
         await repository.UpsertModelAsync(model);
@@ -521,8 +521,8 @@ public sealed class BillingApplicationServiceTests
         var saved = await repository.GetModelAsync("router/gpt-reasoning");
         saved.Should().NotBeNull();
         saved!.SupportsReasoning.Should().BeTrue();
-        saved.AllowedReasoningEfforts.Should().Equal("low", "medium", "high");
-        saved.DefaultReasoningEffort.Should().Be("medium");
+        saved.AllowedReasoningEfforts.Should().Equal("low", "medium", "high", "max");
+        saved.DefaultReasoningEffort.Should().Be("max");
     }
 
     private static BillingApplicationService CreateService()

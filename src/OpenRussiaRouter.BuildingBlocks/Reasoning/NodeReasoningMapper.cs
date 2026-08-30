@@ -3,7 +3,7 @@ namespace OpenRussiaRouter.BuildingBlocks.Reasoning;
 /// <summary>
 /// Maps 9Router node-side reasoning options (<c>caps.thinkingOptions</c> from
 /// <c>/api/integrations/providers/with-models</c>) into ORR's canonical reasoning
-/// effort vocabulary (<c>none,minimal,low,medium,high,xhigh</c>).
+/// effort vocabulary (<c>none,minimal,low,medium,high,xhigh,max,ultra,thinking</c>).
 /// </summary>
 /// <remarks>
 /// 9Router emits two option vocabularies depending on the model's
@@ -21,7 +21,7 @@ namespace OpenRussiaRouter.BuildingBlocks.Reasoning;
 public static class NodeReasoningMapper
 {
     /// <summary>Canonical ORR efforts in display order (low → high).</summary>
-    public static readonly string[] OrderedCanonical = ["none", "minimal", "low", "medium", "high", "xhigh"];
+    public static readonly string[] OrderedCanonical = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"];
 
     private static readonly HashSet<string> CanonicalSet = new(OrderedCanonical, StringComparer.Ordinal);
 

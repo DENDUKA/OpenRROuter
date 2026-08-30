@@ -185,7 +185,7 @@ ApiGateway зовёт это через свою обёртку `RouterUsageExtr
   (`x-correlation-id`), плюс `New()` (`Guid` в формате `"N"`). Не хардкодить строку, брать отсюда.
   Чтение из запроса — в `ApiGateway/Http/CorrelationIdReader.cs`, не здесь.
 - `NodeReasoningMapper` ([файл](Reasoning/NodeReasoningMapper.cs)) — переводит `caps.thinkingOptions`
-  ноды 9Router в канон ORR `OrderedCanonical` = `none,minimal,low,medium,high,xhigh`:
+  ноды 9Router в канон ORR `OrderedCanonical` = `none,minimal,low,medium,high,xhigh,max,ultra,thinking`:
   `on`→`high`, `off`→`none`, `auto` **выбрасывается** (канонического аналога нет), результат
   дедуплицирован и упорядочен low→high. `PickDefaultEffort` предпочитает `medium` > `high` > `low`
   > первый доступный. Потребители — админка WebApp (`Admin/Models`, `Admin/ModelsSync`) и

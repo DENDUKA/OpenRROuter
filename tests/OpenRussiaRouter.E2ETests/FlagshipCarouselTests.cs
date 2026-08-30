@@ -32,15 +32,25 @@ public sealed class FlagshipCarouselTests : IClassFixture<PlaywrightFixture>
         var moving = await GetScrollLeftAsync(carousel);
         Assert.True(moving > before);
 
-        await carousel.HoverAsync();
+        await carousel.EvaluateAsync("element => element.style.paddingTop = '32px'");
+        var carouselBox = await carousel.BoundingBoxAsync();
+        Assert.NotNull(carouselBox);
+        await page.Mouse.MoveAsync(carouselBox!.X + 4, carouselBox.Y + 4);
+        var paddingAt = await GetScrollLeftAsync(carousel);
+        await page.WaitForTimeoutAsync(300);
+        var movedOverPadding = await GetScrollLeftAsync(carousel);
+        Assert.True(movedOverPadding > paddingAt);
+
+        var originalCycle = carousel.Locator("[data-flagship-cycle]:not([data-flagship-clone])");
+        await originalCycle.HoverAsync();
         var pausedAt = await GetScrollLeftAsync(carousel);
         await page.WaitForTimeoutAsync(300);
         var stillPaused = await GetScrollLeftAsync(carousel);
         Assert.InRange(Math.Abs(stillPaused - pausedAt), 0, 0.5);
 
-        await page.Mouse.MoveAsync(0, 0);
+        await page.Mouse.MoveAsync(carouselBox.X + 4, carouselBox.Y + 4);
         var resumedAt = await GetScrollLeftAsync(carousel);
-        await page.WaitForTimeoutAsync(300);
+        await page.WaitForTimeoutAsync(1_000);
         var resumed = await GetScrollLeftAsync(carousel);
         Assert.True(resumed > resumedAt);
 
@@ -62,6 +72,19 @@ public sealed class FlagshipCarouselTests : IClassFixture<PlaywrightFixture>
         await page.Mouse.UpAsync();
         await page.WaitForTimeoutAsync(100);
         Assert.Equal(initialUrl, page.Url);
+
+        var paddingY = carouselBox.Y + 4;
+        await page.Mouse.MoveAsync(carouselBox.X + carouselBox.Width * 0.65f, paddingY);
+        await page.Mouse.DownAsync();
+        await page.Mouse.MoveAsync(carouselBox.X + carouselBox.Width * 0.35f, paddingY);
+        await page.Mouse.UpAsync();
+        var inertiaAtRelease = await GetScrollLeftAsync(carousel);
+        await page.WaitForTimeoutAsync(100);
+        var inertiaAfterFirstSample = await GetScrollLeftAsync(carousel);
+        await page.WaitForTimeoutAsync(100);
+        var inertiaAfterSecondSample = await GetScrollLeftAsync(carousel);
+        Assert.True(Math.Abs(inertiaAfterFirstSample - inertiaAtRelease) > 0.5);
+        Assert.True(Math.Abs(inertiaAfterSecondSample - inertiaAfterFirstSample) > 0.5);
     }
 
     [Fact]

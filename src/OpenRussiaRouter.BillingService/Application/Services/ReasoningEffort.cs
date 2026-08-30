@@ -9,10 +9,13 @@ public static class ReasoningEffort
         "low",
         "medium",
         "high",
-        "xhigh"
+        "xhigh",
+        "max",
+        "ultra",
+        "thinking"
     };
 
-    public static IReadOnlyList<string> Canonical { get; } = ["none", "minimal", "low", "medium", "high", "xhigh"];
+    public static IReadOnlyList<string> Canonical { get; } = ["none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra", "thinking"];
 
     public static string Normalize(string value) => value.Trim().ToLowerInvariant();
 

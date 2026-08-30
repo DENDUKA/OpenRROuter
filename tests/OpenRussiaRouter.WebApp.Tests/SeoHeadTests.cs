@@ -107,13 +107,15 @@ public sealed class SeoHeadTests
     }
 
     [Theory]
-    [InlineData("/ru", "Флагманские модели", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro")]
-    [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro")]
+    [InlineData("/ru", "Флагманские модели", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro", "Тип операции", "Цена (USD / 1 млн токенов)")]
+    [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro", "Operation", "Price (USD / 1M tokens)")]
     public async Task Get_Home_RendersLocalizedFlagshipPriceComparisonAsync(
         string path,
         string title,
         string ourPriceLabel,
-        string modelPath)
+        string modelPath,
+        string operationLabel,
+        string priceLabel)
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
@@ -124,8 +126,8 @@ public sealed class SeoHeadTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         body.Should().Contain(title);
         body.Should().Contain(ourPriceLabel);
-        body.Should().Contain("<del>$3</del>");
-        body.Should().Contain("<strong>$1</strong>");
+        body.Should().Contain("<del title=\"OpenRouter\">$3</del>");
+        body.Should().Contain($"<strong title=\"{ourPriceLabel}\">$1</strong>");
         body.Should().Contain("color: var(--color-success)");
         body.Should().Contain($"href=\"{modelPath}\"");
 
@@ -134,16 +136,27 @@ public sealed class SeoHeadTests
         card.Should().NotContain("flagship-discount-label");
         Regex.Matches(card, "<strong>−67%</strong>").Count.Should().Be(1);
         card.Should().NotContain("flagship-mark").And.NotContain("Флагман").And.NotContain("Flagship");
+        card.Should().Contain("<table class=\"flagship-price-comparison\">");
+        card.Should().Contain($"<th scope=\"col\">{operationLabel}</th>");
+        card.Should().Contain($"<th scope=\"col\">{priceLabel}</th>");
+        Regex.Matches(card, "<th scope=\"row\"").Count.Should().Be(3);
+        card.Should().NotContain("flagship-arrow").And.NotContain("↗");
+        var pairs = Regex.Matches(card, "<div class=\"flagship-price-pair\">[\\s\\S]*?</div>");
+        pairs.Count.Should().Be(3);
+        foreach (Match pair in pairs)
+        {
+            pair.Value.Should().Contain($"<strong title=\"{ourPriceLabel}\">");
+            pair.Value.Should().Contain("<del title=\"OpenRouter\">");
+            pair.Value.IndexOf("<strong", StringComparison.Ordinal).Should()
+                .BeLessThan(pair.Value.IndexOf("<del", StringComparison.Ordinal));
+        }
         Regex.Match(body, @"\.flagship-price-row del\s*\{[^}]*\}").Value
-            .Should().Contain("color: var(--color-danger)").And.Contain("text-decoration-color: currentColor");
+            .Should().Contain("color: var(--color-strikethrough)")
+            .And.Contain("text-decoration-color: var(--color-old-price-accent)");
         Regex.Match(body, @"\.flagship-discount\s*\{[^}]*\}").Value
             .Should().Contain("color: var(--color-success)");
 
-        var oursIndex = body.IndexOf($"<span>{ourPriceLabel}</span>", StringComparison.Ordinal);
-        var openRouterIndex = body.IndexOf("<span>OpenRouter</span>", StringComparison.Ordinal);
-
-        oursIndex.Should().BeGreaterThan(-1);
-        openRouterIndex.Should().BeGreaterThan(oursIndex);
+        card.Should().NotContain("<span>OpenRouter</span>");
         body.Should().Contain("data-flagship-carousel");
         body.Should().Contain("data-flagship-track");
         body.Should().Contain("data-flagship-cycle");

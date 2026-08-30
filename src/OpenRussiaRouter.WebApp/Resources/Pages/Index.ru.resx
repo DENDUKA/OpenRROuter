@@ -62,6 +62,12 @@
   <data name="Home_PriceCache" xml:space="preserve">
     <value>Кеш</value>
   </data>
+  <data name="Home_PriceOperation" xml:space="preserve">
+    <value>Тип операции</value>
+  </data>
+  <data name="Home_PriceColumn" xml:space="preserve">
+    <value>Цена (USD / 1 млн токенов)</value>
+  </data>
   <data name="Home_PriceInput" xml:space="preserve">
     <value>Вход</value>
   </data>

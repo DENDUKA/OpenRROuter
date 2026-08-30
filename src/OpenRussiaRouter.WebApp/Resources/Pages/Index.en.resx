@@ -62,6 +62,12 @@
   <data name="Home_PriceCache" xml:space="preserve">
     <value>Cache</value>
   </data>
+  <data name="Home_PriceOperation" xml:space="preserve">
+    <value>Operation</value>
+  </data>
+  <data name="Home_PriceColumn" xml:space="preserve">
+    <value>Price (USD / 1M tokens)</value>
+  </data>
   <data name="Home_PriceInput" xml:space="preserve">
     <value>Input</value>
   </data>

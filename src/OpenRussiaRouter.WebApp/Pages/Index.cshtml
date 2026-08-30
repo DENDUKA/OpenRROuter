@@ -150,7 +150,7 @@
                                     {
                                         <img class="flagship-provider-logo"
                                              src="/providers/logo/@Uri.EscapeDataString(flagship.ProviderId)"
-                                             alt="" aria-hidden="true" width="38" height="38" loading="lazy" decoding="async" />
+                                             alt="" aria-hidden="true" width="42" height="42" loading="lazy" decoding="async" />
                                     }
                                     else
                                     {
@@ -176,32 +176,46 @@
                                     <code>@flagship.Id</code>
                                 </div>
 
-                                <div class="flagship-price-comparison">
-                                    <div class="flagship-price-legend" aria-hidden="true">
-                                        <span></span>
-                                        <span>@Localizer["Home_PriceOurs"]</span>
-                                        <span>@Localizer["Home_PriceOpenRouter"]</span>
-                                    </div>
-                                    <div class="flagship-price-row">
-                                        <span class="flagship-price-kind">@Localizer["Home_PriceInput"]</span>
-                                        <strong>@IndexModel.FormatUsdPrice(flagship.InputPrice)</strong>
-                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterInputPrice)</del>
-                                    </div>
-                                    <div class="flagship-price-row">
-                                        <span class="flagship-price-kind">@Localizer["Home_PriceOutput"]</span>
-                                        <strong>@IndexModel.FormatUsdPrice(flagship.OutputPrice)</strong>
-                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterOutputPrice)</del>
-                                    </div>
-                                    <div class="flagship-price-row">
-                                        <span class="flagship-price-kind">@Localizer["Home_PriceCache"]</span>
-                                        <strong>@IndexModel.FormatUsdPrice(flagship.CachePrice)</strong>
-                                        <del>@IndexModel.FormatUsdPrice(flagship.OpenRouterCachePrice)</del>
-                                    </div>
-                                </div>
+                                <table class="flagship-price-comparison">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">@Localizer["Home_PriceOperation"]</th>
+                                            <th scope="col">@Localizer["Home_PriceColumn"]</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr class="flagship-price-row">
+                                            <th scope="row" class="flagship-price-kind">@Localizer["Home_PriceInput"]</th>
+                                            <td>
+                                                <div class="flagship-price-pair">
+                                                    <strong title="@Localizer["Home_PriceOurs"]">@IndexModel.FormatUsdPrice(flagship.InputPrice)</strong>
+                                                    <del title="@Localizer["Home_PriceOpenRouter"]">@IndexModel.FormatUsdPrice(flagship.OpenRouterInputPrice)</del>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="flagship-price-row">
+                                            <th scope="row" class="flagship-price-kind">@Localizer["Home_PriceOutput"]</th>
+                                            <td>
+                                                <div class="flagship-price-pair">
+                                                    <strong title="@Localizer["Home_PriceOurs"]">@IndexModel.FormatUsdPrice(flagship.OutputPrice)</strong>
+                                                    <del title="@Localizer["Home_PriceOpenRouter"]">@IndexModel.FormatUsdPrice(flagship.OpenRouterOutputPrice)</del>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr class="flagship-price-row">
+                                            <th scope="row" class="flagship-price-kind">@Localizer["Home_PriceCache"]</th>
+                                            <td>
+                                                <div class="flagship-price-pair">
+                                                    <strong title="@Localizer["Home_PriceOurs"]">@IndexModel.FormatUsdPrice(flagship.CachePrice)</strong>
+                                                    <del title="@Localizer["Home_PriceOpenRouter"]">@IndexModel.FormatUsdPrice(flagship.OpenRouterCachePrice)</del>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
 
                                 <div class="flagship-card-footer">
                                     <span>@Localizer["Home_PriceUnit"]</span>
-                                    <span class="flagship-arrow" aria-hidden="true">↗</span>
                                 </div>
                             </a>
                         }
@@ -411,11 +425,18 @@
     }
     .section-action { justify-self: end; }
     .flagship-showcase {
-        --color-success: #80d6a3;
-        --color-danger: #ee9696;
+        --color-accent-green: #34d399;
+        --color-accent-green-bg: rgba(52, 211, 153, .08);
+        --color-success: var(--color-accent-green);
+        --color-strikethrough: #9ca3af;
+        --color-old-price-accent: #f87171;
+        --color-text-primary: #f3f4f6;
+        --color-text-muted: #8b949e;
+        --color-border-subtle: rgba(255, 255, 255, .06);
         --color-body: #c3c6cf;
-        --color-mute: #a6abb6;
-        --flagship-card-width: clamp(320px, 30vw, 360px);
+        --color-mute: var(--color-text-muted);
+        --radius-lg: 20px;
+        --flagship-card-width: clamp(280px, 28vw, 330px);
         position: relative;
         isolation: isolate;
     }
@@ -428,7 +449,7 @@
         width: 440px;
         height: 300px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(48, 209, 88, .08), transparent 68%);
+        background: radial-gradient(circle, var(--color-accent-green-bg), transparent 68%);
         pointer-events: none;
     }
     .flagship-heading {
@@ -464,6 +485,8 @@
         overflow-y: hidden;
         margin-inline: calc(50% - 50vw);
         padding-inline: max(24px, calc((100vw - 1180px) / 2));
+        padding-block: 8px 32px;
+        margin-bottom: -24px;
         cursor: grab;
         scrollbar-width: none;
         overscroll-behavior-inline: contain;
@@ -488,29 +511,32 @@
         display: flex;
         width: var(--flagship-card-width);
         min-width: 0;
-        min-height: 390px;
+        min-height: 400px;
         flex: 0 0 var(--flagship-card-width);
         flex-direction: column;
+        justify-content: space-between;
+        gap: 20px;
         overflow: hidden;
         padding: 24px;
-        border: 1px solid var(--color-hairline);
-        border-radius: var(--radius-lg);
+        border: 1px solid rgba(255, 255, 255, .08);
+        border-radius: var(--radius-lg, 20px);
         background:
-            linear-gradient(145deg, rgba(255, 255, 255, .035), transparent 42%),
-            var(--color-canvas-soft);
-        color: inherit;
+            linear-gradient(165deg, rgba(255, 255, 255, .04) 0%, rgba(255, 255, 255, .01) 40%, transparent 100%),
+            var(--color-canvas-soft, #111315);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        color: var(--color-text-primary, #f3f4f6);
         text-decoration: none;
-        box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
-        transition: transform .2s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+        box-shadow: 0 16px 36px -8px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .08);
+        transition: transform .25s cubic-bezier(.16, 1, .3, 1), border-color .25s ease, box-shadow .25s ease;
     }
     .flagship-card:hover,
     .flagship-card:focus-visible {
-        transform: translateY(-4px);
-        border-color: rgba(48, 209, 88, .48);
-        background-color: var(--color-canvas-card);
-        color: inherit;
+        transform: translateY(-3px);
+        border-color: rgba(52, 211, 153, .25);
+        color: var(--color-text-primary, #f3f4f6);
         text-decoration: none;
-        box-shadow: 0 18px 44px rgba(0, 0, 0, .2), inset 0 1px 0 rgba(255, 255, 255, .05);
+        box-shadow: 0 24px 48px -12px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(255, 255, 255, .12);
     }
     .flagship-card:focus-visible {
         outline: none;
@@ -528,16 +554,16 @@
     .flagship-card-header {
         display: flex;
         align-items: center;
-        gap: 11px;
+        gap: 12px;
     }
     .flagship-provider-logo {
-        width: 38px;
-        height: 38px;
-        flex: 0 0 38px;
-        padding: 6px;
-        border: 1px solid var(--color-hairline);
-        border-radius: 10px;
-        background: var(--color-canvas-card);
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, .08);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, .025);
         object-fit: contain;
     }
     .flagship-provider-fallback {
@@ -558,13 +584,13 @@
     .flagship-provider {
         overflow: hidden;
         color: var(--color-body);
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 500;
         line-height: 1.5;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
-    .flagship-model-copy { margin: 24px 0 22px; }
+    .flagship-model-copy { margin: 4px 0 8px; }
     .flagship-model-heading {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
@@ -575,7 +601,7 @@
     .flagship-model-copy h3 {
         min-width: 0;
         margin: 0;
-        font-size: 22px;
+        font-size: 24px;
         font-weight: 600;
         letter-spacing: -0.02em;
         line-height: 1.3;
@@ -588,7 +614,7 @@
         white-space: nowrap;
     }
     .flagship-discount strong {
-        font-size: 34px;
+        font-size: 30px;
         font-weight: 600;
         font-variant-numeric: tabular-nums;
         letter-spacing: -.04em;
@@ -596,10 +622,13 @@
     }
     .flagship-model-copy code {
         display: block;
+        width: fit-content;
+        max-width: 100%;
         overflow: hidden;
-        padding: 0;
-        background: transparent;
-        color: var(--color-mute);
+        padding: 3px 7px;
+        border-radius: 6px;
+        background: rgba(255, 255, 255, .06);
+        color: var(--color-strikethrough);
         font-family: var(--font-mono);
         font-size: 13px;
         line-height: 1.5;
@@ -607,69 +636,76 @@
         white-space: nowrap;
     }
     .flagship-price-comparison {
+        width: 100%;
         margin-top: auto;
-        border-top: 1px solid var(--color-hairline);
-        border-bottom: 1px solid var(--color-hairline);
+        border-collapse: collapse;
+        table-layout: fixed;
+        border-top: 1px solid var(--color-border-subtle);
+        border-bottom: 1px solid var(--color-border-subtle);
         font-variant-numeric: tabular-nums;
-    }
-    .flagship-price-legend,
-    .flagship-price-row {
-        display: grid;
-        grid-template-columns: minmax(0, .6fr) minmax(0, 1.25fr) minmax(0, 1fr);
-        gap: 12px;
-        align-items: baseline;
         line-height: 1.5;
     }
-    .flagship-price-legend {
-        padding: 14px 0 10px;
-        color: var(--color-body);
+    .flagship-price-comparison th:first-child { width: 31%; }
+    .flagship-price-comparison thead th {
+        padding: 12px 0;
+        color: var(--color-text-muted);
         font-family: var(--font-body);
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 500;
+        line-height: 1.45;
+        text-align: left;
+        text-transform: uppercase;
+        vertical-align: middle;
+        overflow-wrap: anywhere;
     }
-    .flagship-price-row {
-        padding: 11px 0;
-        border-top: 1px solid rgba(255, 255, 255, .07);
+    .flagship-price-comparison thead th:first-child { padding-right: 10px; }
+    .flagship-price-comparison thead th:last-child { padding-left: 14px; }
+    .flagship-price-row { border-top: 1px solid var(--color-border-subtle); }
+    .flagship-price-row th,
+    .flagship-price-row td {
+        padding: 13px 0;
+        vertical-align: middle;
     }
-    .flagship-price-row > * {
+    .flagship-price-row td {
+        padding-left: 14px;
+        border-left: 1px solid var(--color-border-subtle);
+    }
+    .flagship-price-pair {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 8px;
+    }
+    .flagship-price-pair > * {
         min-width: 0;
+        max-width: 100%;
         overflow-wrap: anywhere;
     }
     .flagship-price-kind {
         color: var(--color-body);
-        font-size: 14px;
+        font-size: 16px;
+        font-weight: 400;
+        text-align: left;
     }
     .flagship-price-row del {
-        color: var(--color-danger);
+        color: var(--color-strikethrough);
         font-family: var(--font-body);
         font-size: 18px;
-        font-weight: 500;
-        text-decoration-color: currentColor;
+        font-weight: 400;
+        text-decoration-color: var(--color-old-price-accent);
         text-decoration-thickness: 1px;
     }
     .flagship-price-row strong {
         color: var(--color-success);
         font-family: var(--font-body);
-        font-size: 20px;
+        font-size: 22px;
         font-weight: 600;
     }
     .flagship-card-footer {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 12px;
-        padding-top: 16px;
-        color: var(--color-mute);
-        font-size: 13px;
+        color: var(--color-body);
+        font-size: 14px;
         line-height: 1.5;
     }
-    .flagship-arrow {
-        color: var(--color-success);
-        font-size: 16px;
-        transition: transform .2s ease;
-    }
-    .flagship-card:hover .flagship-arrow,
-    .flagship-card:focus-visible .flagship-arrow { transform: translate(2px, -2px); }
     .proof-grid {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -770,19 +806,16 @@
         .quickstart-panel { padding: 18px; }
         .home-section { padding: 36px 0; }
         .proof-grid { grid-template-columns: 1fr; }
-        .flagship-showcase { --flagship-card-width: min(336px, calc(100vw - 32px)); }
+        .flagship-showcase { --flagship-card-width: min(330px, calc(100vw - 32px)); }
         .flagship-carousel {
             padding-inline: 16px;
             mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
             -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
         }
-        .flagship-card { min-height: 390px; padding: 20px; }
-        .flagship-price-legend,
-        .flagship-price-row { gap: 8px; }
+        .flagship-card { padding: 20px; }
     }
     @@media (prefers-reduced-motion: reduce) {
-        .flagship-card,
-        .flagship-arrow { transition: none; }
+        .flagship-card { transition: none; }
         .flagship-card:hover,
         .flagship-card:focus-visible { transform: none; }
     }

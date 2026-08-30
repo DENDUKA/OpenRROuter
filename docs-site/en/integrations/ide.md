@@ -72,9 +72,39 @@ export OPENAI_API_KEY="sk-or-your-key"
 aider --model openai/claude-3-5-sonnet
 ```
 
-### OpenCode / Claude Code
+### Claude Code
 
-When using CLI agents, export the required environment variables:
+Claude Code connects directly via the standard Anthropic LLM Gateway protocol:
+
+```bash
+# Linux / macOS / WSL
+export ANTHROPIC_BASE_URL="https://api.rawrter.com"
+export ANTHROPIC_AUTH_TOKEN="sk-or-your-key"
+export ANTHROPIC_MODEL="ORR/Claude-3-7-Sonnet" # or any other model from the catalog
+```
+
+In PowerShell (Windows):
+```powershell
+$env:ANTHROPIC_BASE_URL = "https://api.rawrter.com"
+$env:ANTHROPIC_AUTH_TOKEN = "sk-or-your-key"
+$env:ANTHROPIC_MODEL = "ORR/Claude-3-7-Sonnet"
+```
+
+Or in Claude Code configuration file (`~/.claude.json` / `%USERPROFILE%\.claude.json` or `.claude/settings.json`):
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://api.rawrter.com",
+    "ANTHROPIC_AUTH_TOKEN": "sk-or-your-key",
+    "ANTHROPIC_MODEL": "ORR/Claude-3-7-Sonnet"
+  }
+}
+```
+
+> **Note:** `ANTHROPIC_BASE_URL` must be configured **without the `/v1` suffix** (the client appends `/v1/messages` automatically).
+
+### OpenCode
 
 ```bash
 export OPENAI_BASE_URL="https://api.rawrter.com/v1"

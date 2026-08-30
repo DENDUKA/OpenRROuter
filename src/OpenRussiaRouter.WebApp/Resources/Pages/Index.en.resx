@@ -53,9 +53,6 @@
   <data name="Home_CatalogTitle" xml:space="preserve">
     <value>Flagship models. Lower prices.</value>
   </data>
-  <data name="Home_DiscountUpTo" xml:space="preserve">
-    <value>up to</value>
-  </data>
   <data name="Home_DiscountTooltip" xml:space="preserve">
     <value>The largest discount across input, output and cache: (OpenRouter price − our price) / OpenRouter price × 100%, rounded to a whole number. Uses administrator-entered OpenRouter prices; zero OpenRouter prices are excluded.</value>
   </data>

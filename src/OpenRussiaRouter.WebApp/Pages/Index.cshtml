@@ -169,7 +169,6 @@
                                         @if (flagship.MaxDiscountPercent is { } discount)
                                         {
                                             <span class="flagship-discount" title="@Localizer["Home_DiscountTooltip"]">
-                                                <span class="flagship-discount-label">@Localizer["Home_DiscountUpTo"]</span>
                                                 <strong>−@discount%</strong>
                                             </span>
                                         }
@@ -565,16 +564,9 @@
     }
     .flagship-discount {
         display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 3px;
+        align-items: center;
         color: var(--color-success);
         white-space: nowrap;
-    }
-    .flagship-discount-label {
-        font-size: 10px;
-        font-weight: 500;
-        line-height: 1;
     }
     .flagship-discount strong {
         font-size: 34px;

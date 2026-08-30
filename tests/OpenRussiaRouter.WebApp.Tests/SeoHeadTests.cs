@@ -107,14 +107,13 @@ public sealed class SeoHeadTests
     }
 
     [Theory]
-    [InlineData("/ru", "Флагманские модели", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro", "до")]
-    [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro", "up to")]
+    [InlineData("/ru", "Флагманские модели", "Наша цена", "/ru/models/xiaomi/mimo-v2.5-pro")]
+    [InlineData("/en", "Flagship models. Lower prices.", "Our price", "/en/models/xiaomi/mimo-v2.5-pro")]
     public async Task Get_Home_RendersLocalizedFlagshipPriceComparisonAsync(
         string path,
         string title,
         string ourPriceLabel,
-        string modelPath,
-        string discountQualifier)
+        string modelPath)
     {
         using var factory = CreateFactory();
         using var client = factory.CreateClient();
@@ -132,7 +131,7 @@ public sealed class SeoHeadTests
 
         var card = Regex.Match(body, "<a class=\"flagship-card\"[\\s\\S]*?</a>").Value;
         card.Should().Contain("class=\"flagship-model-heading\"");
-        card.Should().Contain($"<span class=\"flagship-discount-label\">{discountQualifier}</span>");
+        card.Should().NotContain("flagship-discount-label");
         Regex.Matches(card, "<strong>−67%</strong>").Count.Should().Be(1);
         card.Should().NotContain("flagship-mark").And.NotContain("Флагман").And.NotContain("Flagship");
         Regex.Match(body, @"\.flagship-price-row del\s*\{[^}]*\}").Value

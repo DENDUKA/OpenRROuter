@@ -182,6 +182,9 @@
   <data name="MetaDescription" xml:space="preserve">
     <value>Rawrter — единый OpenAI-совместимый API для работы с AI-моделями: каталог моделей, цены за токены, пополнение баланса и один API-ключ.</value>
   </data>
+  <data name="Home_SbpBadge" xml:space="preserve">
+    <value>Оплата рублями по СБП</value>
+  </data>
   <data name="Title" xml:space="preserve">
     <value>OpenAI-совместимый API для AI-моделей без VPN</value>
   </data>

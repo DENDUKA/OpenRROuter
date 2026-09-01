@@ -12,6 +12,9 @@
             <div class="eyebrow">@Localizer["Catalog_Eyebrow"]</div>
             <h1 id="models-title">@Localizer["Catalog_Title"]</h1>
             <p class="models-lead">@Localizer["Catalog_Lead"]</p>
+            <div class="promo-badges">
+                <span class="promo-badge">@Localizer["Catalog_SbpBadge"]</span>
+            </div>
         </div>
     </section>
 
@@ -198,6 +201,8 @@
     .models-page { width: 100%; }
     .models-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--spacing-xl); padding-bottom: var(--spacing-2xl); border-bottom: 1px solid var(--color-hairline); }
     .models-lead { color: var(--color-body); max-width: 620px; font-size: 18px; line-height: 28px; }
+    .promo-badges { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); margin-top: var(--spacing-md); }
+    .promo-badge { display: inline-flex; align-items: center; padding: 4px 10px; border: 1px solid rgba(34, 197, 94, .32); border-radius: var(--radius-pill); background: rgba(34, 197, 94, .08); color: var(--color-success); font-size: 13px; line-height: 1.2; }
     .models-shell { padding: var(--spacing-xl) 0 var(--spacing-3xl); }
     .filter-group { display: flex; flex-wrap: wrap; gap: var(--spacing-sm); flex: 1 1 auto; }
     .filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-md); margin-bottom: var(--spacing-xl); }

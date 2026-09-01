@@ -182,6 +182,9 @@
   <data name="MetaDescription" xml:space="preserve">
     <value>Rawrter — a single OpenAI-compatible API for AI models: a model catalog, per-token pricing, balance top-up and one API key.</value>
   </data>
+  <data name="Home_SbpBadge" xml:space="preserve">
+    <value>RUB payment via SBP</value>
+  </data>
   <data name="Title" xml:space="preserve">
     <value>OpenAI-compatible API for AI models</value>
   </data>

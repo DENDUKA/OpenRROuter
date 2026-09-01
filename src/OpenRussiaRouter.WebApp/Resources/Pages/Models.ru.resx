@@ -128,6 +128,9 @@
   <data name="Catalog_Category_Coding" xml:space="preserve">
     <value>Код</value>
   </data>
+  <data name="Catalog_SbpBadge" xml:space="preserve">
+    <value>Оплата рублями по СБП</value>
+  </data>
   <data name="MetaDescription" xml:space="preserve">
     <value>Каталог AI-моделей Rawrter: цены входных и выходных токенов, контекст и возможности. Все модели доступны через единый OpenAI-совместимый API.</value>
   </data>

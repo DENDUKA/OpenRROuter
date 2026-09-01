@@ -34,6 +34,19 @@ public static class AnalyticsGoals
     /// <summary>Top-up paid. Carries the charged amount as goal value.</summary>
     public const string TopUpCompleted = "topup_completed";
 
+    // ── Micro goals: catalog page views ─────────────────────────────────────────
+    // Firing on every successful render of the catalog listing / detail pages lets the
+    // cabinets measure organic traffic to the catalog separately from the landing page.
+
+    /// <summary>Public model catalog (/models) rendered successfully.</summary>
+    public const string ModelsView = "models_view";
+
+    /// <summary>Provider detail page (/providers/{id}) rendered successfully.</summary>
+    public const string ProviderPageView = "provider_page_view";
+
+    /// <summary>Documentation page (/docs/*) rendered successfully.</summary>
+    public const string DocsView = "docs_view";
+
     // ── Micro goals: landing and catalog CTA ────────────────────────────────────
     // The three signup CTAs sit on one page, so they need distinct names — otherwise there is
     // no way to tell which block actually earns registrations.
@@ -75,6 +88,9 @@ public static class AnalyticsGoals
         EmailVerified,
         ApiKeyCreated,
         TopUpCompleted,
+        ModelsView,
+        ProviderPageView,
+        DocsView,
         CtaSignupHero,
         CtaSignupQuickstart,
         CtaSignupFinal,

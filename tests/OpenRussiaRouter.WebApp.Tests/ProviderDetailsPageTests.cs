@@ -1,7 +1,9 @@
 using FluentAssertions;
 using Grpc.Core;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.WebApp.Pages;
 using OpenRussiaRouter.WebApp.Services.Auth;
@@ -62,7 +64,11 @@ public sealed class ProviderDetailsPageTests
         {
             Id = id
         };
-        model.PageContext = new PageContext { HttpContext = new DefaultHttpContext() };
+        model.PageContext = new PageContext
+        {
+            HttpContext = new DefaultHttpContext(),
+            ViewData = new ViewDataDictionary(new EmptyModelMetadataProvider(), new ModelStateDictionary())
+        };
         return model;
     }
 

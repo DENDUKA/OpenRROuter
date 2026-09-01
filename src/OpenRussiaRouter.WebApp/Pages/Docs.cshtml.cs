@@ -1,5 +1,6 @@
 using OpenRussiaRouter.WebApp.Pages.Shared;
 using OpenRussiaRouter.WebApp.Services;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
@@ -17,5 +18,6 @@ public class DocsModel(ApiBaseUrlResolver baseUrlResolver) : PageModelBase
     public async Task OnGetAsync()
     {
         ApiBaseUrl = await baseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
+        TrackGoal(AnalyticsGoals.DocsView);
     }
 }

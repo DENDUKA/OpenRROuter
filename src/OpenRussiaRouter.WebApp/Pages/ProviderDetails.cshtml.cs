@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Currency;
@@ -80,6 +81,13 @@ public class ProviderDetailsModel(
         {
             logger.LogError(ex, "Failed to load provider details. ProviderId={ProviderId}", Id);
             ErrorMessage = localizer["Providers_LoadFailed"];
+        }
+
+        // Fire the provider page-view goal only when the provider exists and the page
+        // rendered successfully — a 404 or an error is not a real visit.
+        if (Provider is not null && ErrorMessage is null)
+        {
+            TrackGoal(AnalyticsGoals.ProviderPageView);
         }
     }
 

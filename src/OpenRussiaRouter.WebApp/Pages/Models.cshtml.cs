@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Localization;
+using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -94,6 +95,13 @@ public class ModelsModel(
         {
             logger.LogError(ex, "Failed to load public model catalog.");
             ErrorMessage = localizer["Models_LoadFailed"];
+        }
+
+        // Fire the catalog page-view goal only when the page actually rendered models —
+        // a broken catalog is not a real visit worth counting.
+        if (ErrorMessage is null)
+        {
+            TrackGoal(AnalyticsGoals.ModelsView);
         }
     }
 

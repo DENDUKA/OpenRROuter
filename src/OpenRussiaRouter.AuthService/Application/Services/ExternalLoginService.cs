@@ -25,6 +25,7 @@ public sealed class ExternalLoginService(
         var externalLogin = await repository.GetExternalLoginAsync(provider, providerSub, ct);
         UserAccount user;
         string? newlyCreatedUserId = null;
+        string? activatedUserId = null;
 
         if (externalLogin is not null)
         {
@@ -44,6 +45,7 @@ public sealed class ExternalLoginService(
                 {
                     await repository.ActivateUserAndDeleteVerificationAsync(byEmail.Id, ct).ConfigureAwait(false);
                     byEmail.Activate();
+                    activatedUserId = byEmail.Id;
                 }
                 var link = new ExternalLogin(
                     Guid.NewGuid().ToString("N"),
@@ -81,6 +83,12 @@ public sealed class ExternalLoginService(
             EmitAnalytics(
                 AnalyticsEvents.UserVerified,
                 () => productAnalytics!.UserVerified(newlyCreatedUserId, provider));
+        }
+        else if (activatedUserId is not null)
+        {
+            EmitAnalytics(
+                AnalyticsEvents.UserVerified,
+                () => productAnalytics!.UserVerified(activatedUserId, provider));
         }
 
         // Same condition as the analytics emission above: only the branch that actually created

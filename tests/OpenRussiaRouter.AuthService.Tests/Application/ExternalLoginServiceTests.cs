@@ -145,6 +145,38 @@ public sealed class ExternalLoginServiceTests
         link!.UserId.Should().Be("user-pending");
     }
 
+    [Fact]
+    public async Task LoginOrRegister_PendingUserActivated_EmitsUserVerifiedAnalytics()
+    {
+        var pendingUser = UserAccount.CreateForEmailSignup(
+            "user-pending-2", "pending2@example.com", UserRole.User,
+            "pbkdf2-sha256.210000.abc.def", DateTimeOffset.UtcNow);
+        await _repo.AddUserWithEmailVerificationAsync(pendingUser, new EmailVerification(
+            pendingUser.Id, "hash", DateTimeOffset.UtcNow.AddMinutes(15),
+            DateTimeOffset.UtcNow, 0));
+
+        var analytics = new FakeProductAnalytics();
+        var sut = new ExternalLoginService(_repo, _secretGenerator, analytics);
+
+        await sut.LoginOrRegisterAsync("yandex", "yandex-sub-pending", "pending2@example.com", DateTimeOffset.UtcNow);
+
+        await Task.Delay(50);
+
+        analytics.VerifiedUsers.Should().ContainSingle(v => v.UserId == "user-pending-2" && v.SignupMethod == "yandex");
+    }
+
+    private sealed class FakeProductAnalytics : BuildingBlocks.Analytics.IProductAnalytics
+    {
+        public List<(string UserId, string SignupMethod)> VerifiedUsers { get; } = [];
+
+        public void UserVerified(string userId, string signupMethod)
+            => VerifiedUsers.Add((userId, signupMethod));
+
+        public void ApiKeyCreated(string userId) { }
+        public void ApiRequestCompleted(string userId, BuildingBlocks.Analytics.ApiRequestAnalytics data) { }
+        public void PaymentCompleted(string userId, BuildingBlocks.Analytics.PaymentAnalytics data) { }
+    }
+
     private static Invite MakeDummyInvite() => new(
         "invite-dummy", "dummy@example.com", UserRole.User,
         "dummy-token-hash",

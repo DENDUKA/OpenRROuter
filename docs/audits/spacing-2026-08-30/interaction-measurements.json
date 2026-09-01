@@ -1,0 +1,5593 @@
+[
+  {
+    "id": "ru/docs/search-open",
+    "rows": [
+      {
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 900,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 900,
+            "sw": 320,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 294,
+            "w": 296,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 320,
+        "h": 900,
+        "sw": 320,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 900,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 900,
+            "sw": 375,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 350,
+            "w": 351.20001220703125,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 375,
+        "h": 900,
+        "sw": 375,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 708,
+            "w": 708,
+            "x": 30,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 682,
+            "w": 684,
+            "x": 42,
+            "y": 76
+          }
+        ],
+        "cw": 768,
+        "h": 900,
+        "sw": 768,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": -190.9956512451172,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 62,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 74,
+            "y": 76
+          }
+        ],
+        "cw": 1024,
+        "h": 900,
+        "sw": 1024,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 768,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": -12.440119743347168,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 233.1999969482422,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 245.1999969482422,
+            "y": 76
+          }
+        ],
+        "cw": 1366,
+        "h": 768,
+        "sw": 1366,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 270,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 282,
+            "y": 76
+          }
+        ],
+        "cw": 1440,
+        "h": 900,
+        "sw": 1440,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 864,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 80px",
+            "sh": 962,
+            "sw": 305,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 318,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 330,
+            "y": 76
+          }
+        ],
+        "cw": 1536,
+        "h": 864,
+        "sw": 1536,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 1080,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 272px",
+            "sh": 1080,
+            "sw": 512,
+            "w": 512,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 510,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 522,
+            "y": 76
+          }
+        ],
+        "cw": 1920,
+        "h": 1080,
+        "sw": 1920,
+        "w": 1920
+      },
+      {
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 944,
+            "sw": 241,
+            "w": 256,
+            "x": -196.34280395507812,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 568,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 568,
+            "sw": 320,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 294,
+            "w": 296,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 320,
+        "h": 568,
+        "sw": 320,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 568,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 568,
+            "sw": 375,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 350,
+            "w": 351.20001220703125,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 375,
+        "h": 568,
+        "sw": 375,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 708,
+            "w": 708,
+            "x": 30,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 682,
+            "w": 684,
+            "x": 42,
+            "y": 76
+          }
+        ],
+        "cw": 768,
+        "h": 568,
+        "sw": 768,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": -151.99070739746094,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 62,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 74,
+            "y": 76
+          }
+        ],
+        "cw": 1024,
+        "h": 568,
+        "sw": 1024,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": -20.662212371826172,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 233.1999969482422,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 245.1999969482422,
+            "y": 76
+          }
+        ],
+        "cw": 1366,
+        "h": 568,
+        "sw": 1366,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 962,
+            "sw": 257,
+            "w": 272,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 270,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 282,
+            "y": 76
+          }
+        ],
+        "cw": 1440,
+        "h": 568,
+        "sw": 1440,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 80px",
+            "sh": 962,
+            "sw": 305,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 318,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 330,
+            "y": 76
+          }
+        ],
+        "cw": 1536,
+        "h": 568,
+        "sw": 1536,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 272px",
+            "sh": 962,
+            "sw": 497,
+            "w": 512,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 510,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 522,
+            "y": 76
+          }
+        ],
+        "cw": 1920,
+        "h": 568,
+        "sw": 1920,
+        "w": 1920
+      }
+    ]
+  },
+  {
+    "id": "en/docs/search-open",
+    "rows": [
+      {
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 900,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 900,
+            "sw": 320,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 294,
+            "w": 296,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 320,
+        "h": 900,
+        "sw": 320,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 900,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 900,
+            "sw": 375,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 350,
+            "w": 351.20001220703125,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 375,
+        "h": 900,
+        "sw": 375,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 708,
+            "w": 708,
+            "x": 30,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 682,
+            "w": 684,
+            "x": 42,
+            "y": 76
+          }
+        ],
+        "cw": 768,
+        "h": 900,
+        "sw": 768,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": -150.4326629638672,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 62,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 74,
+            "y": 76
+          }
+        ],
+        "cw": 1024,
+        "h": 900,
+        "sw": 1024,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 768,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": -12.45041275024414,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 233.1999969482422,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 245.1999969482422,
+            "y": 76
+          }
+        ],
+        "cw": 1366,
+        "h": 768,
+        "sw": 1366,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 270,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 282,
+            "y": 76
+          }
+        ],
+        "cw": 1440,
+        "h": 900,
+        "sw": 1440,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 864,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 80px",
+            "sh": 938,
+            "sw": 305,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 318,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 330,
+            "y": 76
+          }
+        ],
+        "cw": 1536,
+        "h": 864,
+        "sw": 1536,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 1080,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 272px",
+            "sh": 1080,
+            "sw": 512,
+            "w": 512,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 510,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 522,
+            "y": 76
+          }
+        ],
+        "cw": 1920,
+        "h": 1080,
+        "sw": 1920,
+        "w": 1920
+      },
+      {
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 896,
+            "sw": 241,
+            "w": 256,
+            "x": -226.52134704589844,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 568,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 568,
+            "sw": 320,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 294,
+            "w": 296,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 320,
+        "h": 568,
+        "sw": 320,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 568,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 568,
+            "sw": 375,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 8px",
+            "sh": 36,
+            "sw": 350,
+            "w": 351.20001220703125,
+            "x": 12,
+            "y": 12
+          }
+        ],
+        "cw": 375,
+        "h": 568,
+        "sw": 375,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 708,
+            "w": 708,
+            "x": 30,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 682,
+            "w": 684,
+            "x": 42,
+            "y": 76
+          }
+        ],
+        "cw": 768,
+        "h": 568,
+        "sw": 768,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": -150.61387634277344,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 62,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 74,
+            "y": 76
+          }
+        ],
+        "cw": 1024,
+        "h": 568,
+        "sw": 1024,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": -20.350996017456055,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 233.1999969482422,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 245.1999969482422,
+            "y": 76
+          }
+        ],
+        "cw": 1366,
+        "h": 568,
+        "sw": 1366,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px",
+            "sh": 938,
+            "sw": 257,
+            "w": 272,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 270,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 282,
+            "y": 76
+          }
+        ],
+        "cw": 1440,
+        "h": 568,
+        "sw": 1440,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 80px",
+            "sh": 938,
+            "sw": 305,
+            "w": 320,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 318,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 330,
+            "y": 76
+          }
+        ],
+        "cw": 1536,
+        "h": 568,
+        "sw": 1536,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar",
+            "g": "normal",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "64px 32px 96px 272px",
+            "sh": 938,
+            "sw": 497,
+            "w": 512,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "cls": "shell",
+            "g": "16px",
+            "h": 115.20000457763672,
+            "overflow": "visible",
+            "p": "12px",
+            "sh": 115,
+            "sw": 900,
+            "w": 900,
+            "x": 510,
+            "y": 64
+          },
+          {
+            "cls": "search-bar",
+            "g": "normal",
+            "h": 37.60000228881836,
+            "overflow": "visible",
+            "p": "0px 12px",
+            "sh": 36,
+            "sw": 874,
+            "w": 876,
+            "x": 522,
+            "y": 76
+          }
+        ],
+        "cw": 1920,
+        "h": 568,
+        "sw": 1920,
+        "w": 1920
+      }
+    ]
+  },
+  {
+    "id": "ru/user-menu-open",
+    "rows": [
+      {
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 92.8000030517578,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 305,
+        "h": 900,
+        "sw": 308,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 148,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 360,
+        "h": 900,
+        "sw": 360,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 536.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 753,
+        "h": 900,
+        "sw": 753,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 784.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1009,
+        "h": 900,
+        "sw": 1009,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1127.2000732421875,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1351,
+        "h": 768,
+        "sw": 1351,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1200.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1425,
+        "h": 900,
+        "sw": 1425,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1296.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1521,
+        "h": 864,
+        "sw": 1521,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1680.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1905,
+        "h": 1080,
+        "sw": 1905,
+        "w": 1920
+      },
+      {
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 92.8000030517578,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 305,
+        "h": 568,
+        "sw": 308,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 148,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 360,
+        "h": 568,
+        "sw": 360,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 536.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 753,
+        "h": 568,
+        "sw": 753,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 784.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1009,
+        "h": 568,
+        "sw": 1009,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1127.2000732421875,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1351,
+        "h": 568,
+        "sw": 1351,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1200.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1425,
+        "h": 568,
+        "sw": 1425,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1296.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1521,
+        "h": 568,
+        "sw": 1521,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1680.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1905,
+        "h": 568,
+        "sw": 1905,
+        "w": 1920
+      }
+    ]
+  },
+  {
+    "id": "ru/requests-filter-open",
+    "rows": [
+      {
+        "name": "Model",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 311.6500015258789,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.6500015258789,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 269.6000003814697,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 29.600000381469727,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 311.5,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.5,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 578.2000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 269.6000003814697,
+        "scrollHeight": 109,
+        "w": 320,
+        "width": 240,
+        "x": 29.600000381469727,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 366.9749984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 126.9749984741211,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 578.2000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 353.75,
+        "scrollHeight": 109,
+        "w": 375,
+        "width": 240,
+        "x": 113.75,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 455.77500915527344,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 215.77500915527344,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 548.0750122070312,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 308.07501220703125,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 474.2000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 629.0249938964844,
+        "scrollHeight": 109,
+        "w": 768,
+        "width": 240,
+        "x": 389.0249938964844,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 369.400016784668,
+        "cw": 1009,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1024,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 369.400016784668,
+        "cw": 1351,
+        "h": 768,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1366,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 369.400016784668,
+        "cw": 1425,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1440,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 369.400016784668,
+        "cw": 1521,
+        "h": 864,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1536,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 369.400016784668,
+        "cw": 1905,
+        "h": 1080,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1920,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 311.6500015258789,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.6500015258789,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 269.6000003814697,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 29.600000381469727,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 311.5,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.5,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 269.6000003814697,
+        "scrollHeight": 109,
+        "w": 320,
+        "width": 240,
+        "x": 29.600000381469727,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 366.9749984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 126.9749984741211,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 353.75,
+        "scrollHeight": 109,
+        "w": 375,
+        "width": 240,
+        "x": 113.75,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 455.77500915527344,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 215.77500915527344,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 548.0750122070312,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 308.07501220703125,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 629.0249938964844,
+        "scrollHeight": 109,
+        "w": 768,
+        "width": 240,
+        "x": 389.0249938964844,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1009,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1024,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1351,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1366,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1425,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1440,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1521,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1536,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1905,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1920,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      }
+    ]
+  },
+  {
+    "id": "en/requests-filter-open",
+    "rows": [
+      {
+        "name": "Model",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 311.6500015258789,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.6500015258789,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 311.5,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.5,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "bottom": 578.2000045776367,
+        "cw": 305,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 109,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 366.9749984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 126.9749984741211,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 550.7000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "bottom": 578.2000045776367,
+        "cw": 360,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 353.75,
+        "scrollHeight": 109,
+        "w": 375,
+        "width": 240,
+        "x": 113.75,
+        "y": 467.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 455.77500915527344,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 215.77500915527344,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 446.7000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 548.0750122070312,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 308.07501220703125,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "bottom": 474.2000045776367,
+        "cw": 753,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 629.0249938964844,
+        "scrollHeight": 109,
+        "w": 768,
+        "width": 240,
+        "x": 389.0249938964844,
+        "y": 363.6000061035156
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "bottom": 369.400016784668,
+        "cw": 1009,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1024,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 768,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "bottom": 369.400016784668,
+        "cw": 1351,
+        "h": 768,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1366,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 900,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "bottom": 369.400016784668,
+        "cw": 1425,
+        "h": 900,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1440,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 864,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "bottom": 369.400016784668,
+        "cw": 1521,
+        "h": 864,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1536,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 1080,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "bottom": 369.400016784668,
+        "cw": 1905,
+        "h": 1080,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1920,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 311.6500015258789,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.6500015258789,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 311.5,
+        "scrollHeight": 82,
+        "w": 320,
+        "width": 240,
+        "x": 71.5,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 305,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 109,
+        "w": 320,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 366.9749984741211,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 126.9749984741211,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 375,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 360,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 353.75,
+        "scrollHeight": 109,
+        "w": 375,
+        "width": 240,
+        "x": 113.75,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 272.79999923706055,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 32.79999923706055,
+        "y": 302
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 358.8499984741211,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 118.8499984741211,
+        "y": 302
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 455.77500915527344,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 215.77500915527344,
+        "y": 302
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 385.0999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 548.0750122070312,
+        "scrollHeight": 82,
+        "w": 768,
+        "width": 240,
+        "x": 308.07501220703125,
+        "y": 302
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "bottom": 412.5999984741211,
+        "cw": 753,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 629.0249938964844,
+        "scrollHeight": 109,
+        "w": 768,
+        "width": 240,
+        "x": 389.0249938964844,
+        "y": 302
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1009,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1024,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1009,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1024,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1351,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1366,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1351,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1366,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1425,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1440,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1425,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1440,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1521,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1536,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1521,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1536,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Model",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 528.8000183105469,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 288.8000183105469,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Provider",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 614.8500061035156,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 374.8500061035156,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "API Key",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 711.7749938964844,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 471.7749938964844,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Node",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 341.90001678466797,
+        "cw": 1905,
+        "h": 568,
+        "height": 83.0999984741211,
+        "right": 804.0750122070312,
+        "scrollHeight": 82,
+        "w": 1920,
+        "width": 240,
+        "x": 564.0750122070312,
+        "y": 258.8000183105469
+      },
+      {
+        "name": "Account",
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "bottom": 369.400016784668,
+        "cw": 1905,
+        "h": 568,
+        "height": 110.5999984741211,
+        "right": 885.0250244140625,
+        "scrollHeight": 109,
+        "w": 1920,
+        "width": 240,
+        "x": 645.0250244140625,
+        "y": 258.8000183105469
+      }
+    ]
+  },
+  {
+    "id": "en/user-menu-open",
+    "rows": [
+      {
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 92.8000030517578,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 305,
+        "h": 900,
+        "sw": 305,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 148,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 360,
+        "h": 900,
+        "sw": 360,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 536.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 753,
+        "h": 900,
+        "sw": 753,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 784.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1009,
+        "h": 900,
+        "sw": 1009,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 768
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1127.2000732421875,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1351,
+        "h": 768,
+        "sw": 1351,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1200.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1425,
+        "h": 900,
+        "sw": 1425,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 864
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1296.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1521,
+        "h": 864,
+        "sw": 1521,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 1080
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1680.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1905,
+        "h": 1080,
+        "sw": 1905,
+        "w": 1920
+      },
+      {
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 92.8000030517578,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 305,
+        "h": 568,
+        "sw": 305,
+        "w": 320
+      },
+      {
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 148,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 360,
+        "h": 568,
+        "sw": 360,
+        "w": 375
+      },
+      {
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 536.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 753,
+        "h": 568,
+        "sw": 753,
+        "w": 768
+      },
+      {
+        "requested": {
+          "width": 1024,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 784.7999877929688,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1009,
+        "h": 568,
+        "sw": 1009,
+        "w": 1024
+      },
+      {
+        "requested": {
+          "width": 1366,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1127.2000732421875,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1351,
+        "h": 568,
+        "sw": 1351,
+        "w": 1366
+      },
+      {
+        "requested": {
+          "width": 1440,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1200.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1425,
+        "h": 568,
+        "sw": 1425,
+        "w": 1440
+      },
+      {
+        "requested": {
+          "width": 1536,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1296.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1521,
+        "h": 568,
+        "sw": 1521,
+        "w": 1536
+      },
+      {
+        "requested": {
+          "width": 1920,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "user-dropdown",
+            "g": "normal",
+            "h": 354.8000183105469,
+            "overflow": "auto",
+            "p": "6px",
+            "sh": 353,
+            "sw": 198,
+            "w": 200,
+            "x": 1680.800048828125,
+            "y": 45.60000228881836
+          }
+        ],
+        "cw": 1905,
+        "h": 568,
+        "sw": 1905,
+        "w": 1920
+      }
+    ]
+  },
+  {
+    "id": "ru/docs/menus-open",
+    "rows": [
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 944,
+            "w": 256,
+            "x": -9.715054512023926,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 320
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen",
+            "h": 836,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 836,
+            "w": 320,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 900,
+        "w": 320
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 920,
+            "w": 311.20001220703125,
+            "x": -25.63139915466309,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 375
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen",
+            "h": 836,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 836,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 900,
+        "w": 375
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 900,
+            "w": 320,
+            "x": -4.02472448348999,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 768
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "menu",
+            "h": 141.40000915527344,
+            "overflow": "visible",
+            "p": "0px",
+            "sh": 141,
+            "w": 201.6000061035156,
+            "x": 531.2000122070312,
+            "y": 52
+          }
+        ],
+        "h": 900,
+        "w": 768
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 944,
+            "w": 256,
+            "x": -0.8363018035888672,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 320
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen fade-enter-active fade-enter-to",
+            "h": 504,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 504,
+            "w": 320,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 568,
+        "w": 320
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 920,
+            "w": 311.20001220703125,
+            "x": -19.824338912963867,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 375
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen fade-enter-active fade-enter-to",
+            "h": 504,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 504,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 568,
+        "w": 375
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 896,
+            "w": 320,
+            "x": -15.815691947937012,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 768
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "menu",
+            "h": 141.40000915527344,
+            "overflow": "visible",
+            "p": "0px",
+            "sh": 141,
+            "w": 201.6000061035156,
+            "x": 531.2000122070312,
+            "y": 52
+          }
+        ],
+        "h": 568,
+        "w": 768
+      }
+    ]
+  },
+  {
+    "id": "en/docs/menus-open",
+    "rows": [
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 900,
+            "w": 256,
+            "x": -7.480288028717041,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 320
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 320,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen fade-enter-active fade-enter-to",
+            "h": 836,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 836,
+            "w": 320,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 900,
+        "w": 320
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 900,
+            "w": 311.20001220703125,
+            "x": -3.913203477859497,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 375
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 375,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen fade-enter-active fade-enter-to",
+            "h": 836,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 836,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 900,
+        "w": 375
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 900,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 900,
+            "w": 320,
+            "x": -7.126468658447266,
+            "y": 0
+          }
+        ],
+        "h": 900,
+        "w": 768
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 768,
+          "height": 900
+        },
+        "boxes": [
+          {
+            "cls": "menu",
+            "h": 141.40000915527344,
+            "overflow": "visible",
+            "p": "0px",
+            "sh": 141,
+            "w": 201.6000061035156,
+            "x": 531.2000122070312,
+            "y": 52
+          }
+        ],
+        "h": 900,
+        "w": 768
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 896,
+            "w": 256,
+            "x": -5.689122200012207,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 320
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 320,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen fade-enter-active fade-enter-to",
+            "h": 504,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 504,
+            "w": 320,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 568,
+        "w": 320
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 896,
+            "w": 311.20001220703125,
+            "x": -9.0830078125,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 375
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 375,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPNavScreen",
+            "h": 504,
+            "overflow": "auto",
+            "p": "0px 32px",
+            "sh": 504,
+            "w": 375.2000122070313,
+            "x": 0,
+            "y": 64
+          }
+        ],
+        "h": 568,
+        "w": 375
+      },
+      {
+        "kind": "sidebar",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "VPSidebar open",
+            "h": 568,
+            "overflow": "hidden auto",
+            "p": "32px 32px 96px",
+            "sh": 896,
+            "w": 320,
+            "x": -2.956193685531616,
+            "y": 0
+          }
+        ],
+        "h": 568,
+        "w": 768
+      },
+      {
+        "kind": "navigation",
+        "requested": {
+          "width": 768,
+          "height": 568
+        },
+        "boxes": [
+          {
+            "cls": "menu",
+            "h": 141.40000915527344,
+            "overflow": "visible",
+            "p": "0px",
+            "sh": 141,
+            "w": 201.6000061035156,
+            "x": 531.2000122070312,
+            "y": 52
+          }
+        ],
+        "h": 568,
+        "w": 768
+      }
+    ]
+  },
+  {
+    "id": "docs/code-tabs",
+    "rows": [
+      {
+        "lang": "ru",
+        "tabName": "Node.js",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 533,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "Node.js"
+        ],
+        "w": 375
+      },
+      {
+        "lang": "ru",
+        "tabName": "cURL",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 433,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "cURL"
+        ],
+        "w": 375
+      },
+      {
+        "lang": "ru",
+        "tabName": "Python",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 541,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "Python"
+        ],
+        "w": 375
+      },
+      {
+        "lang": "en",
+        "tabName": "Node.js",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 548,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "Node.js"
+        ],
+        "w": 375
+      },
+      {
+        "lang": "en",
+        "tabName": "cURL",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 433,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "cURL"
+        ],
+        "w": 375
+      },
+      {
+        "lang": "en",
+        "tabName": "Python",
+        "groups": [
+          {
+            "cls": "vp-code-group vp-adaptive-theme",
+            "overflow": "visible",
+            "sw": 336,
+            "w": 312
+          },
+          {
+            "cls": "shiki shiki-themes github-light github-dark vp-code",
+            "overflow": "auto",
+            "sw": 556,
+            "w": 360
+          }
+        ],
+        "h": 568,
+        "selected": [
+          "Python"
+        ],
+        "w": 375
+      }
+    ]
+  }
+]

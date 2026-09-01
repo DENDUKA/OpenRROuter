@@ -112,10 +112,10 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
 
     // ── Platform Settings ────────────────────────────────────────────────────
 
-    public Task<string?> GetPlatformSettingAsync(string key, CancellationToken cancellationToken = default)
+    public virtual Task<string?> GetPlatformSettingAsync(string key, CancellationToken cancellationToken = default)
         => _payments.GetPlatformSettingAsync(key, cancellationToken);
 
-    public Task SetPlatformSettingAsync(string key, string value, CancellationToken cancellationToken = default)
+    public virtual Task SetPlatformSettingAsync(string key, string value, CancellationToken cancellationToken = default)
         => _payments.SetPlatformSettingAsync(key, value, cancellationToken);
 
     // ── Payments ─────────────────────────────────────────────────────────────
@@ -156,16 +156,16 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
 
     // ── Promotions ───────────────────────────────────────────────────────────
 
-    public Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken cancellationToken = default)
+    public virtual Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken cancellationToken = default)
         => _payments.HasUserHadPaidTopUpAsync(userId, cancellationToken);
 
-    public Task<(bool StartBalanceEnabled, decimal StartBalanceAmountUsd, bool FirstTopUpEnabled, decimal FirstTopUpPercent)> GetPromotionSettingsAsync(CancellationToken cancellationToken = default)
+    public virtual Task<(bool StartBalanceEnabled, decimal StartBalanceAmountUsd, bool FirstTopUpEnabled, decimal FirstTopUpPercent)> GetPromotionSettingsAsync(CancellationToken cancellationToken = default)
         => _payments.GetPromotionSettingsAsync(cancellationToken);
 
-    public Task GrantStartBalanceAsync(string userId, decimal amountUsd, CancellationToken cancellationToken = default)
+    public virtual Task GrantStartBalanceAsync(string userId, decimal amountUsd, CancellationToken cancellationToken = default)
         => _payments.GrantStartBalanceAsync(userId, amountUsd, cancellationToken);
 
-    public Task<OpenRussiaRouter.Contracts.Billing.GrantFirstTopUpBonusResult> GrantFirstTopUpBonusAsync(string paymentId, CancellationToken cancellationToken = default)
+    public virtual Task<OpenRussiaRouter.Contracts.Billing.GrantFirstTopUpBonusResult> GrantFirstTopUpBonusAsync(string paymentId, CancellationToken cancellationToken = default)
         => _payments.GrantFirstTopUpBonusAsync(paymentId, cancellationToken);
 
     // ── Anomalies / Admin Requests ───────────────────────────────────────────

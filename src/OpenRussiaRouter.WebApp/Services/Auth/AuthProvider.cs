@@ -76,7 +76,7 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
         }
     }
 
-    public async Task<LoginResponse?> LoginOrRegisterWithGoogleAsync(string googleSub, string email, CancellationToken cancellationToken = default)
+    public virtual async Task<LoginResponse?> LoginOrRegisterWithGoogleAsync(string googleSub, string email, CancellationToken cancellationToken = default)
     {
         var response = await client.LoginOrRegisterWithGoogleAsync(
             new LoginWithGoogleRequest { GoogleSub = googleSub, Email = email },
@@ -86,7 +86,7 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new LoginResponse(response.SessionToken, response.UserId, response.Role, email, response.IsNewUser);
     }
 
-    public async Task<LoginResponse?> LoginOrRegisterWithExternalProviderAsync(string provider, string providerSub, string email, CancellationToken cancellationToken = default)
+    public virtual async Task<LoginResponse?> LoginOrRegisterWithExternalProviderAsync(string provider, string providerSub, string email, CancellationToken cancellationToken = default)
     {
         var response = await client.LoginOrRegisterWithExternalProviderAsync(
             new LoginWithExternalProviderRequest { Provider = provider, ProviderSub = providerSub, Email = email },

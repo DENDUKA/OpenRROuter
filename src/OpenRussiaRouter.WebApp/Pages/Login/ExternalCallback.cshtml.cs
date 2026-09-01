@@ -4,13 +4,18 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
+using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Localization;
 
 namespace OpenRussiaRouter.WebApp.Pages.Login;
 
-public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
+public sealed class ExternalCallbackModel(
+    AuthProvider AuthProvider,
+    BillingProvider? BillingProvider = null,
+    ILogger<ExternalCallbackModel>? Logger = null) : PageModel
 {
     public async Task<IActionResult> OnGetAsync()
     {
@@ -61,6 +66,30 @@ public sealed class ExternalCallbackModel(AuthProvider AuthProvider) : PageModel
 
         if (loginResult.IsNewUser)
         {
+            // Grant start balance if promotion is enabled (best-effort)
+            if (BillingProvider is not null)
+            {
+                try
+                {
+                    var enabledRaw = await BillingProvider.GetPlatformSettingAsync(
+                        PlatformSettingKeys.PromotionsStartBalanceEnabled, HttpContext.RequestAborted);
+                    if (bool.TryParse(enabledRaw, out var enabled) && enabled)
+                    {
+                        var amountUsdRaw = await BillingProvider.GetPlatformSettingAsync(
+                            PlatformSettingKeys.PromotionsStartBalanceAmountUsd, HttpContext.RequestAborted);
+                        if (decimal.TryParse(amountUsdRaw, System.Globalization.NumberStyles.Number,
+                            System.Globalization.CultureInfo.InvariantCulture, out var amountUsd) && amountUsd > 0)
+                        {
+                            await BillingProvider.GrantStartBalanceAsync(loginResult.UserId, amountUsd, HttpContext.RequestAborted);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Failed to grant start balance after external login registration. UserId={UserId}", loginResult.UserId);
+                }
+            }
+
             // This branch has no verification step — the provider already vouched for the
             // mailbox — so both funnel steps close here. Without it every OAuth registration was
             // invisible: the counters only ever saw signups that went through /verify-email.

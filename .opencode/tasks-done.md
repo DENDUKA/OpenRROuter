@@ -292,6 +292,16 @@
 - Сохранить текущую типографическую иерархию на ноутбуках и 1920 px.
 - При реализации добавить регрессионную проверку и выполнить обязательную сборку. В рамках текущего аудита код не исправлялся.
 
+## W1-005 — Офлайн-конверсии: серверная отправка topup_completed и first_api_request
+- status: done
+- category: backend
+- priority: high
+- created: 2026-09-01T00:00:00Z
+- started: 2026-09-02T10:00:00Z
+- completed: 2026-09-02T11:20:00Z
+- desc: Серверная отправка в Метрику 111582266 двух событий с ClientID пользователя: topup_completed и first_api_request. Связка user_id -> client_id пишется WebApp в analytics.yandex_metrika_identities с 1ч кэшем и fail-open. Outbox billing.yandex_metrika_offline_conversion_outbox наполняется атомарно с подтверждением оплаты и первой записью usage. Фоновый worker арендует события, разрешает ClientID, формирует CSV и загружает в Management API с OAuth-токеном и дедупликацией. Проверено E2E-тестами и боевой валидацией на сервере 201.51.6.246.
+
+
 
 
 

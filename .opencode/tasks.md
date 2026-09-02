@@ -176,15 +176,6 @@
 
 > Разовые задачи по репозиторию (префикс `T-`), нумерация с 001.
 
-## T-001 — Включить авторизацию через Google
-- status: todo
-- category: auth
-- priority: medium
-- created: 2026-08-15T00:00:00Z
-- started:
-- completed:
-- desc: Вход через Google на проде не работает: кнопка на /login отрендерена под `@if (Model.GoogleEnabled)` (Pages/Login.cshtml:40), флаг выключен, потому что провайдер не сконфигурирован. Серверная часть уже есть — AuthService умеет внешний логин Google (`ExternalLoginService`, rpc `LoginOrRegisterWithGoogle` в GrpcAuthService), в WebApp есть handler `OnPostGoogle` и `/login/externalcallback`, а цель аналитики `cta_oauth_google` заведена в Метрике и сейчас вечно нулевая. Нужно: завести OAuth-клиент в Google Cloud Console (redirect URI на https://rawrter.com/login/externalcallback), прокинуть значения в ключи `Google:ClientId` и `Google:ClientSecret` (ровно на них смотрит `GoogleEnabled`, Pages/Login.cshtml.cs:36-37 — по той же схеме, что уже работающий `Yandex:*`); прод-значения через `deploy/compose/compose.prod.yml` как `Google__ClientId`/`Google__ClientSecret`, секреты в git не коммитить. Убедиться, что `GoogleEnabled` становится true и кнопка появляется на /login. Проверить оба сценария: новый аккаунт (должен закрыть `signup` + `email_verified` одним рендером — приезжает через `LoginResponse.is_new_user`) и линковку к существующему по email (регистрацией не считается). Критерий: кнопка видна на проде, вход и регистрация проходят, в Метрике появляются достижения `cta_oauth_google`.
-
 > T-009–T-018: снимок live-аудита 2026-08-30; исходные строки на базе c7791e12. Параллельный незакоммиченный редизайн карточек Index.cshtml не выполнялся аудитором. Перед реализацией повторно проверить текущую версию; подробности в отчёте.
 
 

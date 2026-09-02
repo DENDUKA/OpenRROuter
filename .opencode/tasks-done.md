@@ -301,6 +301,16 @@
 - completed: 2026-09-02T11:20:00Z
 - desc: Серверная отправка в Метрику 111582266 двух событий с ClientID пользователя: topup_completed и first_api_request. Связка user_id -> client_id пишется WebApp в analytics.yandex_metrika_identities с 1ч кэшем и fail-open. Outbox billing.yandex_metrika_offline_conversion_outbox наполняется атомарно с подтверждением оплаты и первой записью usage. Фоновый worker арендует события, разрешает ClientID, формирует CSV и загружает в Management API с OAuth-токеном и дедупликацией. Проверено E2E-тестами и боевой валидацией на сервере 201.51.6.246.
 
+## T-001 — Включить авторизацию через Google
+- status: done
+- category: auth
+- priority: medium
+- created: 2026-08-15T00:00:00Z
+- started: 2026-08-15T10:00:00Z
+- completed: 2026-09-02T11:30:00Z
+- desc: Авторизация через Google настроена и работает на проде. В Google Cloud Console создан OAuth-клиент, в /opt/orr/.env прописаны GOOGLE_CLIENT_ID и GOOGLE_CLIENT_SECRET, compose.prod.yml передает параметры в WebApp. Кнопка «Войти через Google» активна на страницах /login и /signup, цель cta_oauth_google отправляется в аналитику.
+
+
 
 
 

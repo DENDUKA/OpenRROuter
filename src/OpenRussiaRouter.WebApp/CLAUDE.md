@@ -318,6 +318,12 @@ onclick ссылкой не считает**. Пока имена моделей
 
 ## Веб-аналитика (Yandex Metrika / GA4) в layout
 
+После `UseAuthentication` работает `YandexMetrikaIdentityMiddleware`: только для
+аутентифицированного пользователя с `orr_consent=1` он валидирует числовой `_ym_uid` и сохраняет
+его через `IYandexMetrikaIdentityStore`; ошибки analytics-БД не ломают запрос. Запись кэшируется
+на час, ClientID не логируется. `Analytics:YandexTopUpCompletedClientEnabled` управляет только
+браузерным `ym(..., 'topup_completed')`: событие GA4 при выключенном флаге сохраняется.
+
 Внешние счётчики живут в `_Layout.cshtml` и включаются по секции `Analytics`
 ([`AnalyticsOptions`](Services/Analytics/AnalyticsOptions.cs), env `Analytics__*`):
 

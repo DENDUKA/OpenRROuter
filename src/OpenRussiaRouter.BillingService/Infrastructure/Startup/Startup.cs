@@ -8,6 +8,8 @@ using OpenRussiaRouter.BuildingBlocks.Grpc;
 using OpenRussiaRouter.BuildingBlocks.Logging;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Infrastructure.Workers;
+using OpenRussiaRouter.BillingService.Infrastructure.YandexMetrika;
+using Microsoft.Extensions.Options;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Startup;
 
@@ -54,6 +56,19 @@ public static class Startup
         services.AddBillingInfrastructure(connectionString);
         services.AddBillingApplicationServices();
         services.AddProductAnalytics(configuration);
+        services.AddOptions<YandexMetrikaOfflineConversionOptions>()
+            .Bind(configuration.GetSection(YandexMetrikaOfflineConversionOptions.SectionName))
+            .ValidateOnStart();
+        services.AddSingleton<IValidateOptions<YandexMetrikaOfflineConversionOptions>,
+            YandexMetrikaOfflineConversionOptionsValidator>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddHttpClient<IYandexMetrikaClient, YandexMetrikaClient>((serviceProvider, client) =>
+        {
+            var metrikaOptions = serviceProvider
+                .GetRequiredService<IOptions<YandexMetrikaOfflineConversionOptions>>().Value;
+            client.BaseAddress = new Uri(metrikaOptions.BaseUrl.TrimEnd('/') + "/");
+            client.Timeout = metrikaOptions.HttpTimeout;
+        });
         services.Configure<ExchangeRateOptions>(configuration.GetSection("ExchangeRates"));
         services.Configure<PaymentOptions>(configuration.GetSection("Payments"));
         services.Configure<ServiceAuthOptions>(configuration.GetSection("ServiceAuth"));
@@ -62,6 +77,7 @@ public static class Startup
         services.AddSingleton<FxQuoteService>();
         services.AddHostedService<FxRateRefresher>();
         services.AddHostedService<PaymentEventRecoveryWorker>();
+        services.AddHostedService<YandexMetrikaOfflineConversionWorker>();
 
         return services;
     }

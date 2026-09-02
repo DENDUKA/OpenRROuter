@@ -327,6 +327,13 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 
 ## Лимиты, метрики, продуктовая аналитика
 
+- **Офлайн-конверсии Яндекс Метрики** используют разделённое хранение: WebApp после согласия
+  сохраняет связь `user_id → _ym_uid` в `analytics.yandex_metrika_identities`, а BillingService
+  атомарно пишет `topup_completed` и первый оплачиваемый `first_api_request` в
+  `billing.yandex_metrika_offline_conversion_outbox`. Воркер BillingService подставляет ClientID,
+  отправляет CSV в Management API и сверяет статус загрузки; отсутствие ClientID не теряет событие.
+  Удаление продуктовой аналитики пользователя обязано удалить и эту связь.
+
 - **`LimitMetrics`** (`BuildingBlocks/Metrics/`) — единый счётчик отказов по лимитам,
   в Prometheus как `orr_limit_rejections_total`. Метки узкие (`limit_type` × `subject`,
   ~5 серий). **В лейблы нельзя класть api key id / user id / ip** — неограниченная

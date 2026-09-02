@@ -491,7 +491,8 @@
                 as IEnumerable<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsGoal>,
             googleTagId,
             yandexCounterId,
-            analyticsUserId);
+            analyticsUserId,
+            AnalyticsOptions.Value.YandexTopUpCompletedClientEnabled);
     }
     @if (analyticsGoalsJson is not null)
     {
@@ -511,7 +512,8 @@
                     if (cfg.ga && typeof gtag === 'function') {
                         gtag('event', name, value == null ? {} : { value: value, currency: currency || 'RUB' });
                     }
-                    if (cfg.ym && typeof window.ym === 'function') {
+                    if (cfg.ym && typeof window.ym === 'function'
+                        && (name !== 'topup_completed' || cfg.ymTopUp !== false)) {
                         window.ym(Number(cfg.ym), 'reachGoal', name,
                             value == null ? undefined : { order_price: value, currency: currency || 'RUB' });
                     }

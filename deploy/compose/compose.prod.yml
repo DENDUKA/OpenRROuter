@@ -103,6 +103,11 @@ services:
       ProductAnalytics__ConnectionString: "Host=postgres;Port=5432;Database=orr_analytics;Username=postgres;Password=${POSTGRES_PASSWORD};Pooling=true;MinPoolSize=2;MaxPoolSize=20"
       ProductAnalytics__IdentitySalt: "${PRODUCT_ANALYTICS_IDENTITY_SALT}"
       ProductAnalytics__Environment: "production"
+      # Server-side Yandex Metrica offline conversions. Keep disabled for the first deploy,
+      # configure an OAuth token with metrika:offline_data, then enable after migrations land.
+      YandexMetrika__OfflineConversions__Enabled: "${YANDEX_METRIKA_OFFLINE_ENABLED:-false}"
+      YandexMetrika__OfflineConversions__CounterId: "111582266"
+      YandexMetrika__OfflineConversions__OAuthToken: "${YANDEX_METRIKA_OAUTH_TOKEN:-}"
     mem_limit: 512m
     cpus: 0.75
 
@@ -295,6 +300,7 @@ services:
       # corresponding snippet and keep CSP strict.
       Analytics__GoogleTagId: "G-38042Y9GW4"
       Analytics__YandexCounterId: "111582266"
+      Analytics__YandexTopUpCompletedClientEnabled: "${YANDEX_METRIKA_CLIENT_TOPUP_ENABLED:-true}"
       # Yandex OAuth: login + signup via Yandex account. Enables the "Sign in with Yandex"
       # button on /login and /signup. Empty values hide the button (OAuth disabled).
       Yandex__ClientId: "${YANDEX_CLIENT_ID:-}"

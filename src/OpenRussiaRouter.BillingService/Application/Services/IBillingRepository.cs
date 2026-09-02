@@ -1,4 +1,5 @@
 using OpenRussiaRouter.BillingService.Domain.Entities;
+using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
@@ -129,6 +130,29 @@ public interface IBillingRepository
     Task<IReadOnlyCollection<PaymentEvent>> ListUnprocessedEventsAsync(int limit, CancellationToken ct = default);
     Task<IReadOnlyCollection<Payment>> AcquireStalePaymentsAsync(string workerId, TimeSpan lease, DateTimeOffset olderThanUtc, int limit, CancellationToken ct = default);
     Task<int> AcquireUnprocessedEventsAsync(int limit, DateTimeOffset nowUtc, bool autoReverseChargeback = false, CancellationToken ct = default);
+
+    Task<IReadOnlyCollection<YandexMetrikaOfflineConversion>> AcquireYandexMetrikaOfflineConversionsAsync(
+        string workerId,
+        TimeSpan lease,
+        DateTimeOffset nowUtc,
+        int limit,
+        CancellationToken ct = default);
+
+    Task<string?> SetYandexMetrikaClientIdAsync(
+        string id,
+        string clientId,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default);
+
+    Task UpdateYandexMetrikaOfflineConversionAsync(
+        string id,
+        YandexMetrikaOfflineConversionStatus status,
+        DateTimeOffset nextAttemptAtUtc,
+        long? uploadId,
+        string? uploadStatus,
+        string? lastError,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default);
 
     Task<IReadOnlyCollection<ModelProvider>> ListModelProvidersAsync(bool includeLogo = true, CancellationToken ct = default);
     Task<ModelProvider?> GetModelProviderAsync(string id, CancellationToken ct = default);

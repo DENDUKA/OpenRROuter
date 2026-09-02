@@ -188,6 +188,27 @@ GA4 → Admin → Property → **Search Console links** → добавить GSC
 
 ## 8. Проверка
 
+### 8.1 Серверные offline conversions (`topup_completed`, `first_api_request`)
+
+Rollout выполняется в два этапа, чтобы не потерять и не задвоить пополнения:
+
+1. Создать OAuth-токен Яндекса с правом загрузки офлайн-данных, записать его только в prod `.env`
+   как `YANDEX_METRIKA_OAUTH_TOKEN`; сначала оставить `YANDEX_METRIKA_OFFLINE_ENABLED=false`.
+2. После деплоя и применения миграций включить worker (`YANDEX_METRIKA_OFFLINE_ENABLED=true`), но
+   временно оставить `YANDEX_METRIKA_CLIENT_TOPUP_ENABLED=true`.
+3. Новым согласившимся пользователем открыть кабинет, выполнить первый платный API-запрос и
+   убедиться, что загрузка `first_api_request` получила статус `PROCESSED`.
+4. Установить `YANDEX_METRIKA_CLIENT_TOPUP_ENABLED=false` и выполнить одно реальное тестовое
+   пополнение. GA4 продолжает получать `topup_completed`, а Метрика получает его только из outbox.
+5. В Метрике оставить точную цель `topup_completed` (ID `597470019`) и точную цель
+   `first_api_request`; удалить дублирующие цели лишь после smoke-теста. В отчёте проверить один
+   ClientID, одно достижение, сумму провайдера и `RUB`. Обработка Яндексом может занять до трёх часов.
+
+Диагностика начинается с `billing.yandex_metrika_offline_conversion_outbox`: `Pending` без
+`resolved_client_id` означает, что браузер ещё не сохранил `_ym_uid`; `Reconciling` — неизвестен
+результат предыдущего запроса; `LINKAGE_FAILURE`, mismatch числа строк и постоянные 4xx завершаются
+как `Failed`. `401/403` указывают на CounterId/OAuthToken и повторяются с редким интервалом.
+
 - Метрика: «Проверить код», Realtime; GA4: DebugView/Realtime.
 - Тест-конверсия на проде: регистрация → верификация → создание ключа → тест-пополнение
   на минимальную сумму; в отчёте «Конверсии» у `topup_completed` должна появиться ненулевая

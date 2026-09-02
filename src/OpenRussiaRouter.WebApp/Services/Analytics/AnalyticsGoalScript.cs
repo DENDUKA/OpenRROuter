@@ -35,7 +35,8 @@ public static class AnalyticsGoalScript
         IEnumerable<AnalyticsGoal>? goals,
         string? googleTagId,
         string? yandexCounterId,
-        string? userPseudonym)
+        string? userPseudonym,
+        bool yandexTopUpCompletedClientEnabled = true)
     {
         var hasGoogle = !string.IsNullOrWhiteSpace(googleTagId);
         var hasYandex = !string.IsNullOrWhiteSpace(yandexCounterId);
@@ -54,6 +55,7 @@ public static class AnalyticsGoalScript
                 hasYandex ? yandexCounterId : null,
                 hasGoogle ? googleTagId : null,
                 string.IsNullOrWhiteSpace(userPseudonym) ? null : userPseudonym,
+                yandexTopUpCompletedClientEnabled,
                 items),
             SerializerOptions);
     }
@@ -62,6 +64,7 @@ public static class AnalyticsGoalScript
         [property: JsonPropertyName("ym")] string? YandexCounterId,
         [property: JsonPropertyName("ga")] string? GoogleTagId,
         [property: JsonPropertyName("uid")] string? UserPseudonym,
+        [property: JsonPropertyName("ymTopUp")] bool YandexTopUpCompletedClientEnabled,
         [property: JsonPropertyName("goals")] IReadOnlyList<AnalyticsGoalDto> Goals);
 
     private sealed record AnalyticsGoalDto(

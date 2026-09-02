@@ -112,13 +112,33 @@ public sealed class BillingRepositoryPostgresTests
             PaymentStatus.Created, null, null, null, now, now, null, null, null);
         await repository.CreatePaymentAsync(payment);
 
-        var outcome = await repository.ConfirmPaymentAtomicAsync(new PaymentEventInput(
-            "mock", null, "payment-1", "paid", 1000, "RUB", null, "provider-event-1", "{}", true), now);
+        var paymentEvent = new PaymentEventInput(
+            "mock", null, "payment-1", "paid", 1000, "RUB", null, "provider-event-1", "{}", true);
+        var outcome = await repository.ConfirmPaymentAtomicAsync(paymentEvent, now);
+        await repository.ConfirmPaymentAtomicAsync(paymentEvent, now.AddSeconds(1));
 
         outcome.Confirmed.Should().BeTrue();
         (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(10);
         (await repository.ListTopUpsAsync("user-1", 10)).Items.Should().ContainSingle(e => e.Type == LedgerEntryType.ExternalTopUp);
         (await repository.ListUnprocessedEventsAsync(10)).Should().BeEmpty();
+
+        var conversions = await repository.AcquireYandexMetrikaOfflineConversionsAsync(
+            "test-worker",
+            TimeSpan.FromMinutes(1),
+            now.AddSeconds(1),
+            10);
+        var conversion = conversions.Should().ContainSingle().Which;
+        conversion.DedupKey.Should().Be("topup_completed:payment-1");
+        conversion.Target.Should().Be("topup_completed");
+        conversion.Price.Should().Be(1000);
+        conversion.Currency.Should().Be("RUB");
+
+        var leasedAgain = await repository.AcquireYandexMetrikaOfflineConversionsAsync(
+            "second-worker",
+            TimeSpan.FromMinutes(1),
+            now.AddSeconds(2),
+            10);
+        leasedAgain.Should().BeEmpty();
     }
 
     [Fact]
@@ -448,6 +468,7 @@ public sealed class BillingRepositoryPostgresTests
             MoneyAmount.Usd(-0.001m), "usage:tx-req-1", "charge", now);
 
         await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry);
+        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry);
 
         var savedUsage = await repository.GetUsageAsync("tx-req-1");
         savedUsage.Should().NotBeNull();
@@ -458,6 +479,17 @@ public sealed class BillingRepositoryPostgresTests
 
         var balance = await repository.GetBalanceAsync("user-1");
         balance.Amount.Should().Be(0.999m);
+
+        var conversions = await repository.AcquireYandexMetrikaOfflineConversionsAsync(
+            "test-worker",
+            TimeSpan.FromMinutes(1),
+            now.AddSeconds(1),
+            10);
+        var conversion = conversions.Should().ContainSingle().Which;
+        conversion.DedupKey.Should().Be("first_api_request:user-1");
+        conversion.Target.Should().Be("first_api_request");
+        conversion.Price.Should().BeNull();
+        conversion.Currency.Should().BeNull();
     }
 
     [Fact]

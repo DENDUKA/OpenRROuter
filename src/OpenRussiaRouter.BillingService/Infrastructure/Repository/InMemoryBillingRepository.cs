@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using OpenRussiaRouter.BillingService.Application.Services;
+using OpenRussiaRouter.BillingService.Domain;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
@@ -19,6 +20,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     private readonly ConcurrentDictionary<string, string> _platformSettings = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Payment> _payments = new(StringComparer.Ordinal);
     private readonly Dictionary<string, PaymentEvent> _paymentEvents = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, YandexMetrikaOfflineConversion> _yandexMetrikaConversions = new(StringComparer.Ordinal);
     private readonly object _paymentSync = new();
 
     public Task<LedgerEntry> AddLedgerEntryAsync(LedgerEntry entry, CancellationToken ct = default)
@@ -259,7 +261,20 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
 
         if (usage is not null)
         {
-            _usageByRequestId.TryAdd(usage.RequestId, usage);
+            lock (_paymentSync)
+            {
+                var inserted = _usageByRequestId.TryAdd(usage.RequestId, usage);
+                if (inserted && _usageByRequestId.Values.Count(item => item.UserId == usage.UserId) == 1)
+                {
+                    EnqueueYandexMetrikaOfflineConversionUnsafe(
+                        $"first_api_request:{usage.UserId}",
+                        usage.UserId,
+                        YandexMetrikaOfflineConversionTargets.FirstApiRequest,
+                        usage.CreatedAtUtc,
+                        price: null,
+                        currency: null);
+                }
+            }
         }
 
         if (ledgerEntry is not null)
@@ -712,6 +727,13 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             IsUserPayment: true));
         // T-028: Keep denormalized balance in sync.
         _userBalances.AddOrUpdate(payment.UserId, ledger.Amount.Amount, (_, old) => old + ledger.Amount.Amount);
+        EnqueueYandexMetrikaOfflineConversionUnsafe(
+            $"topup_completed:{payment.Id}",
+            payment.UserId,
+            YandexMetrikaOfflineConversionTargets.TopUpCompleted,
+            nowUtc,
+            payment.ProviderAmount,
+            payment.ProviderCurrency);
         MarkEventProcessedUnsafe(paymentEvent, nowUtc);
         return new ConfirmOutcome(true, payment, ledger.Id, BalanceUnsafe(payment.UserId), null);
     }
@@ -860,6 +882,135 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
 
     private decimal BalanceUnsafe(string userId) =>
         _userBalances.GetValueOrDefault(userId);
+
+    public Task<IReadOnlyCollection<YandexMetrikaOfflineConversion>> AcquireYandexMetrikaOfflineConversionsAsync(
+        string workerId,
+        TimeSpan lease,
+        DateTimeOffset nowUtc,
+        int limit,
+        CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var due = _yandexMetrikaConversions.Values
+                .Where(item =>
+                    item.Status is YandexMetrikaOfflineConversionStatus.Pending
+                        or YandexMetrikaOfflineConversionStatus.Reconciling
+                        or YandexMetrikaOfflineConversionStatus.Uploaded
+                    && item.NextAttemptAtUtc <= nowUtc
+                    && (item.LeaseOwner is null || item.LeaseUntilUtc < nowUtc))
+                .OrderBy(item => item.NextAttemptAtUtc)
+                .ThenBy(item => item.OccurredAtUtc)
+                .Take(limit)
+                .Select(item => item with
+                {
+                    LeaseOwner = workerId,
+                    LeaseUntilUtc = nowUtc.Add(lease),
+                    UpdatedAtUtc = nowUtc
+                })
+                .ToArray();
+
+            foreach (var item in due)
+            {
+                _yandexMetrikaConversions[item.DedupKey] = item;
+            }
+
+            return Task.FromResult<IReadOnlyCollection<YandexMetrikaOfflineConversion>>(due);
+        }
+    }
+
+    public Task<string?> SetYandexMetrikaClientIdAsync(
+        string id,
+        string clientId,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var pair = _yandexMetrikaConversions.FirstOrDefault(item => item.Value.Id == id);
+            if (pair.Value is null)
+            {
+                return Task.FromResult<string?>(null);
+            }
+
+            var resolved = pair.Value.ResolvedClientId ?? clientId;
+            _yandexMetrikaConversions[pair.Key] = pair.Value with
+            {
+                ResolvedClientId = resolved,
+                UpdatedAtUtc = nowUtc
+            };
+            return Task.FromResult<string?>(resolved);
+        }
+    }
+
+    public Task UpdateYandexMetrikaOfflineConversionAsync(
+        string id,
+        YandexMetrikaOfflineConversionStatus status,
+        DateTimeOffset nextAttemptAtUtc,
+        long? uploadId,
+        string? uploadStatus,
+        string? lastError,
+        DateTimeOffset nowUtc,
+        CancellationToken ct = default)
+    {
+        lock (_paymentSync)
+        {
+            var pair = _yandexMetrikaConversions.FirstOrDefault(item => item.Value.Id == id);
+            if (pair.Value is not null)
+            {
+                _yandexMetrikaConversions[pair.Key] = pair.Value with
+                {
+                    Status = status,
+                    NextAttemptAtUtc = nextAttemptAtUtc,
+                    UploadId = uploadId ?? pair.Value.UploadId,
+                    UploadStatus = uploadStatus ?? pair.Value.UploadStatus,
+                    LastError = lastError is { Length: > 512 } ? lastError[..512] : lastError,
+                    Attempts = pair.Value.Attempts + 1,
+                    LeaseOwner = null,
+                    LeaseUntilUtc = null,
+                    UpdatedAtUtc = nowUtc
+                };
+            }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    private void EnqueueYandexMetrikaOfflineConversionUnsafe(
+        string dedupKey,
+        string userId,
+        string target,
+        DateTimeOffset occurredAtUtc,
+        decimal? price,
+        string? currency)
+    {
+        if (_yandexMetrikaConversions.ContainsKey(dedupKey))
+        {
+            return;
+        }
+
+        var id = Guid.NewGuid().ToString("N");
+        _yandexMetrikaConversions[dedupKey] = new YandexMetrikaOfflineConversion(
+            id,
+            dedupKey,
+            userId,
+            target,
+            occurredAtUtc,
+            price,
+            currency,
+            null,
+            YandexMetrikaOfflineConversionStatus.Pending,
+            null,
+            null,
+            0,
+            occurredAtUtc,
+            null,
+            null,
+            $"orr:{id}",
+            null,
+            occurredAtUtc,
+            occurredAtUtc);
+    }
 
     private readonly Dictionary<string, ModelProvider> _modelProviders = new(StringComparer.Ordinal);
 

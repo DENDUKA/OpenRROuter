@@ -177,6 +177,14 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 
 ## Конфигурация
 
+`YandexMetrika:OfflineConversions` включает серверные цели Метрики. Оплата создаёт
+`topup_completed:{paymentId}` в транзакции перехода `Created → Paid`, а первый успешно записанный
+платный usage — `first_api_request:{userId}` в транзакции usage. Воркер арендует строки outbox через
+`FOR UPDATE SKIP LOCKED`, один раз фиксирует найденный ClientID, загружает по одной CSV-строке и
+сверяет upload по уникальному comment. Неизвестный результат отправки переводится в
+`Reconciling`, а не повторяется вслепую; без ClientID событие ждёт до окна `ExpirationWindow`.
+Для включения обязательны Postgres product analytics, CounterId и OAuthToken.
+
 | Ключ | Смысл |
 |---|---|
 | `ConnectionStrings:BillingDb` | пусто → in-memory репозиторий (dev/тесты) |

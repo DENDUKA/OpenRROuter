@@ -4,6 +4,7 @@ using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 using OpenRussiaRouter.BuildingBlocks.Errors;
 using OpenRussiaRouter.BillingService.Domain.Enums;
+using OpenRussiaRouter.BillingService.Domain;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
@@ -215,6 +216,16 @@ public sealed partial class BillingRepository
         {
             ledgerId = await InsertLedgerAsync(connection, transaction, payment, "payment", LedgerEntryType.ExternalTopUp,
                 payment.CreditedUsdAmount, nowUtc, isUserPayment: true, ct).ConfigureAwait(false);
+            await EnqueueYandexMetrikaOfflineConversionAsync(
+                connection,
+                transaction,
+                $"topup_completed:{payment.Id}",
+                payment.UserId,
+                YandexMetrikaOfflineConversionTargets.TopUpCompleted,
+                nowUtc,
+                payment.ProviderAmount,
+                payment.ProviderCurrency,
+                ct).ConfigureAwait(false);
         }
         else if (payment.Status == PaymentStatus.Paid)
         {

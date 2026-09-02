@@ -69,6 +69,7 @@ builder.Services.AddControllers();
 // роняет вызов InvalidOperationException'ом (так падал каталог на /models). Кеш ограничен
 // только временем жизни записей.
 builder.Services.AddMemoryCache();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.Configure<RequestLocalizationOptions>(o =>
 {
     var cultures = SupportedCultures.All;
@@ -613,6 +614,7 @@ app.UseRouting();
 app.UseRequestLocalization();
 
 app.UseAuthentication();
+app.UseMiddleware<YandexMetrikaIdentityMiddleware>();
 app.UseAuthorization();
 
 // Rate limiter MUST be wired up before the webhook endpoint is mapped, so the policy is

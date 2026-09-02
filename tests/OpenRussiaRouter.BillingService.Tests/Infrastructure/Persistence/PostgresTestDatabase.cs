@@ -72,7 +72,7 @@ public sealed class PostgresTestDatabase : IAsyncDisposable
     public void Truncate()
     {
         using var connection = new NpgsqlConnection(ConnectionString);
-        connection.Execute("truncate billing.payment_events, billing.payments, billing.billing_anomalies, billing.usage_records, billing.model_prices, billing.ledger_entries restart identity cascade;");
+        connection.Execute("truncate billing.yandex_metrika_offline_conversion_outbox, billing.payment_events, billing.payments, billing.billing_anomalies, billing.usage_records, billing.model_prices, billing.ledger_entries restart identity cascade;");
     }
 
     private static string FindRepositoryRoot()

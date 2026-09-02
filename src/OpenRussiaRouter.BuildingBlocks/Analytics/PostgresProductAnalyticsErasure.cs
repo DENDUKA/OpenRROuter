@@ -30,16 +30,30 @@ public sealed class PostgresProductAnalyticsErasure : IProductAnalyticsErasure
 
         var distinctId = _pseudonymizer.ComputeDistinctId(userId);
 
-        const string sql = "delete from analytics.events where distinct_id = @distinctId";
+        const string sql = """
+            with deleted_events as (
+                delete from analytics.events
+                where distinct_id = @distinctId
+                returning 1
+            ), deleted_identity as (
+                delete from analytics.yandex_metrika_identities
+                where user_id = @userId
+                returning 1
+            )
+            select
+                (select count(*) from deleted_events) +
+                (select count(*) from deleted_identity);
+            """;
 
         await using var connection = await _dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var command = new NpgsqlCommand(sql, connection);
         command.Parameters.AddWithValue("distinctId", distinctId);
+        command.Parameters.AddWithValue("userId", userId);
 
-        var deleted = await command.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
+        var deleted = Convert.ToInt32(await command.ExecuteScalarAsync(ct).ConfigureAwait(false));
 
         _logger.LogInformation(
-            "Erased {DeletedCount} analytics events for pseudonymized user",
+            "Erased {DeletedCount} analytics rows for pseudonymized user",
             deleted);
 
         return deleted;

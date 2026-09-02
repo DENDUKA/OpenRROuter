@@ -14,4 +14,6 @@ public sealed class AnalyticsOptions
 
     /// <summary>Yandex Metrika counter id (digits). Empty disables the Metrika snippet.</summary>
     public string? YandexCounterId { get; set; }
+
+    public bool YandexTopUpCompletedClientEnabled { get; set; } = true;
 }

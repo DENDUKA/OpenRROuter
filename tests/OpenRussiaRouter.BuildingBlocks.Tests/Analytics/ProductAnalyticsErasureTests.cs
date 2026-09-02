@@ -45,6 +45,7 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
         var queue = services.GetRequiredService<ProductAnalyticsEventQueue>();
         var worker = services.GetRequiredService<ProductAnalyticsFlushWorker>();
         var erasure = services.GetRequiredService<IProductAnalyticsErasure>();
+        var identities = services.GetRequiredService<IYandexMetrikaIdentityStore>();
 
         await worker.StartAsync(CancellationToken.None);
 
@@ -53,6 +54,8 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
         sink.ApiRequestCompleted("user-1", new ApiRequestAnalytics("gpt-4", 200, 100, 200, 150, "usage-1"));
         sink.UserVerified("user-2", "email");
         sink.ApiKeyCreated("user-2");
+        await identities.UpsertAsync("user-1", "123456789", DateTimeOffset.UtcNow);
+        await identities.UpsertAsync("user-2", "987654321", DateTimeOffset.UtcNow);
 
         queue.Writer.Complete();
         await worker.ExecuteTask!;
@@ -60,7 +63,9 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
 
         var deleted = await erasure.PurgeUserAsync("user-1");
 
-        deleted.Should().Be(3);
+        deleted.Should().Be(4);
+        (await identities.GetClientIdAsync("user-1")).Should().BeNull();
+        (await identities.GetClientIdAsync("user-2")).Should().Be("987654321");
 
         using var connection = new NpgsqlConnection(_database.ConnectionString);
         var remaining = (await connection.QueryAsync<string>(
@@ -69,6 +74,27 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
 
         remaining.Should().HaveCount(2);
         remaining.Should().AllSatisfy(id => id.Should().NotBe(GetDistinctId("user-1")));
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task IdentityStore_UpsertAsync_KeepsNewestObservation()
+    {
+        if (_database is null)
+        {
+            return;
+        }
+
+        _database.ApplyMigration();
+        var identities = BuildServices(_database.ConnectionString)
+            .GetRequiredService<IYandexMetrikaIdentityStore>();
+        var observedAt = new DateTimeOffset(2026, 9, 2, 10, 0, 0, TimeSpan.Zero);
+
+        await identities.UpsertAsync("user-1", "222", observedAt);
+        await identities.UpsertAsync("user-1", "111", observedAt.AddMinutes(-1));
+        await identities.UpsertAsync("user-1", "333", observedAt.AddMinutes(1));
+
+        (await identities.GetClientIdAsync("user-1")).Should().Be("333");
     }
 
     [Fact]
@@ -138,8 +164,10 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
 
         var services = serviceCollection.BuildServiceProvider();
         var erasure = services.GetRequiredService<IProductAnalyticsErasure>();
+        var identities = services.GetRequiredService<IYandexMetrikaIdentityStore>();
 
         erasure.Should().BeOfType<NoOpProductAnalyticsErasure>();
+        identities.Should().BeOfType<NoOpYandexMetrikaIdentityStore>();
     }
 
     [Fact]
@@ -244,13 +272,15 @@ public sealed class ProductAnalyticsErasureTests : IAsyncLifetime
         public void ApplyMigration()
         {
             using var connection = new NpgsqlConnection(ConnectionString);
-            var migrationPath = Path.Combine(
-                FindRepositoryRoot(),
-                "db",
-                "migrations",
-                "analytics",
-                "001_product_analytics_events.sql");
-            connection.Execute(File.ReadAllText(migrationPath));
+            var migrationsPath = Path.Combine(FindRepositoryRoot(), "db", "migrations", "analytics");
+            foreach (var fileName in new[]
+                     {
+                         "001_product_analytics_events.sql",
+                         "005_yandex_metrika_identities.sql"
+                     })
+            {
+                connection.Execute(File.ReadAllText(Path.Combine(migrationsPath, fileName)));
+            }
         }
 
         public async ValueTask DisposeAsync()

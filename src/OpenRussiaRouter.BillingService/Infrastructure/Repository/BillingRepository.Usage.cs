@@ -2,6 +2,7 @@ using Dapper;
 using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
+using OpenRussiaRouter.BillingService.Domain;
 using OpenRussiaRouter.BuildingBlocks.Money;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
@@ -155,7 +156,7 @@ public sealed partial class BillingRepository
 
         if (usage is not null)
         {
-            await connection.ExecuteAsync(new CommandDefinition(
+            var insertedUsageId = await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
                 """
                 insert into billing.usage_records
                     (request_id, user_id, api_key_id, model_id, price_version, router_node_id,
@@ -165,7 +166,8 @@ public sealed partial class BillingRepository
                     (@RequestId, @UserId, @ApiKeyId, @ModelId, @PriceVersion, @RouterNodeId,
                      @InputTokens, @OutputTokens, @CacheTokens, @CostAmount, @CostCurrency, @Status, @CreatedAtUtc,
                      @ProviderName, @ProviderAccount)
-                on conflict (request_id) do nothing;
+                on conflict (request_id) do nothing
+                returning request_id;
                 """,
                 new
                 {
@@ -187,6 +189,35 @@ public sealed partial class BillingRepository
                 },
                 transaction,
                 cancellationToken: ct)).ConfigureAwait(false);
+
+            if (insertedUsageId is not null)
+            {
+                var isFirstUsage = await connection.ExecuteScalarAsync<bool>(new CommandDefinition(
+                    """
+                    select not exists (
+                        select 1
+                        from billing.usage_records
+                        where user_id = @UserId and request_id <> @RequestId
+                    );
+                    """,
+                    new { usage.UserId, usage.RequestId },
+                    transaction,
+                    cancellationToken: ct)).ConfigureAwait(false);
+
+                if (isFirstUsage)
+                {
+                    await EnqueueYandexMetrikaOfflineConversionAsync(
+                        connection,
+                        transaction,
+                        $"first_api_request:{usage.UserId}",
+                        usage.UserId,
+                        YandexMetrikaOfflineConversionTargets.FirstApiRequest,
+                        usage.CreatedAtUtc,
+                        price: null,
+                        currency: null,
+                        ct).ConfigureAwait(false);
+                }
+            }
         }
 
         if (ledgerEntry is not null)

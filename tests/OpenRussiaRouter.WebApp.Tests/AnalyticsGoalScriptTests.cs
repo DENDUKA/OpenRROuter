@@ -117,6 +117,21 @@ public class AnalyticsGoalScriptTests
         AnalyticsGoalScript.BuildPayloadJson(null, null, "1", "  ")
             .Should().NotContain("\"uid\"");
     }
+
+    [Fact]
+    public void BuildPayloadJson_ClientTopUpDisabled_CarriesYandexOnlySwitch()
+    {
+        var json = AnalyticsGoalScript.BuildPayloadJson(
+            [AnalyticsGoal.Valued(AnalyticsGoals.TopUpCompleted, 100m, "RUB")],
+            googleTagId: "G-TEST",
+            yandexCounterId: "1",
+            userPseudonym: null,
+            yandexTopUpCompletedClientEnabled: false);
+
+        json.Should().Contain("\"ymTopUp\":false");
+        json.Should().Contain("\"ga\":\"G-TEST\"");
+        json.Should().Contain("\"n\":\"topup_completed\"");
+    }
 }
 
 public class AnalyticsGoalsTests

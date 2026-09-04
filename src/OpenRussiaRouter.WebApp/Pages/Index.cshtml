@@ -24,25 +24,20 @@
             <p class="home-lead">
                 @Localizer["Home_Lead"]
             </p>
-            @if (Model.StartBalanceEnabled || Model.FirstTopUpEnabled)
-            {
-                <div class="promo-badges">
-                    @if (Model.StartBalanceEnabled)
-                    {
-                        <span class="promo-badge">Стартовый баланс $@Model.StartBalanceAmountUsd</span>
-                    }
-                    @if (Model.FirstTopUpEnabled)
-                    {
-                        <span class="promo-badge">+@Model.FirstTopUpPercent% к первому пополнению</span>
-                    }
-                </div>
-            }
+            <div class="promo-badges">
+                @if (Model.StartBalanceEnabled)
+                {
+                    <span class="promo-badge">Стартовый баланс $@Model.StartBalanceAmountUsd</span>
+                }
+                <span class="promo-badge">@Localizer["Home_SbpBadge"]</span>
+                @if (Model.FirstTopUpEnabled)
+                {
+                    <span class="promo-badge">+@Model.FirstTopUpPercent% к первому пополнению</span>
+                }
+            </div>
             <div class="cta-row" aria-label="@Localizer["A11y_PrimaryActions"]">
                 <a href="/signup" class="btn btn-primary" data-goal="cta_signup_hero">@Localizer["Home_CtaSignup"]</a>
                 <a href="/models" class="btn btn-secondary" data-goal="cta_models_hero">@Localizer["Home_CtaExplore"]</a>
-            </div>
-            <div class="promo-badges" style="margin-top: var(--spacing-md)">
-                <span class="promo-badge">@Localizer["Home_SbpBadge"]</span>
             </div>
         </div>
 

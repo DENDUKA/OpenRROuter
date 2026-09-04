@@ -141,7 +141,19 @@
     <value>Быстрый старт</value>
   </data>
   <data name="Home_QuickstartTitle" xml:space="preserve">
-    <value>Начните за 4 шага</value>
+    <value>Начните за 5 шагов</value>
+  </data>
+  <data name="Home_StepApi_Desc" xml:space="preserve">
+    <value>Используйте базовый адрес для OpenAI-совместимых запросов.</value>
+  </data>
+  <data name="Home_StepApi_Title" xml:space="preserve">
+    <value>Подключитесь к API</value>
+  </data>
+  <data name="Btn_Copied" xml:space="preserve">
+    <value>Скопировано</value>
+  </data>
+  <data name="Btn_Copy" xml:space="preserve">
+    <value>Скопировать</value>
   </data>
   <data name="Home_StepBuy_Desc" xml:space="preserve">
     <value>Внесите USD-баланс один раз и используйте его на любых моделях.</value>

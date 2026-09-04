@@ -19,9 +19,9 @@ namespace OpenRussiaRouter.WebApp.Tests;
 public sealed class ModelDetailsPageTests
 {
     [Theory]
-    [InlineData("/ru/models/antropic/claude-opus-4-8", "claude-opus-4-8")]
+    [InlineData("/ru/models/anthropic/claude-opus-4-8", "claude-opus-4-8")]
     [InlineData("/ru/models/google/Gemini-3.1-Pro", "ORR/Gemini-3.1-Pro")]
-    [InlineData("/en/models/antropic/claude-opus-4-8", "claude-opus-4-8")]
+    [InlineData("/en/models/anthropic/claude-opus-4-8", "claude-opus-4-8")]
     [InlineData("/en/models/google/Gemini-3.1-Pro", "ORR/Gemini-3.1-Pro")]
     public async Task Get_CanonicalUrl_RendersModel(string url, string expectedPublicId)
     {
@@ -37,13 +37,13 @@ public sealed class ModelDetailsPageTests
 
     [Theory]
     // Bare legacy URLs redirect to /ru canonical
-    [InlineData("/models/antropic/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
+    [InlineData("/models/anthropic/claude-opus-4-8", "/ru/models/anthropic/claude-opus-4-8")]
     // Ссылка старого каталога: отображаемое имя провайдера в сегменте.
-    [InlineData("/ru/models/Antropic/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
+    [InlineData("/ru/models/Antropic/claude-opus-4-8", "/ru/models/anthropic/claude-opus-4-8")]
     // Ссылка старого sitemap: префикс id вместо провайдера.
     [InlineData("/ru/models/ORR/Gemini-3.1-Pro", "/ru/models/google/Gemini-3.1-Pro")]
     // Чужой провайдер в сегменте: слаг определяет модель однозначно.
-    [InlineData("/ru/models/openai/claude-opus-4-8", "/ru/models/antropic/claude-opus-4-8")]
+    [InlineData("/ru/models/openai/claude-opus-4-8", "/ru/models/anthropic/claude-opus-4-8")]
     // Запрос по UpstreamModelId (с другим регистром или провайдером из upstream) -> 301 на канонический URL
     [InlineData("/en/models/DeepSeek/deepseek-v4-flash", "/en/models/deepseek/deepseek-v4-flash")]
     public async Task Get_LegacyUrl_RedirectsToCanonical(string url, string expectedLocation)
@@ -63,7 +63,7 @@ public sealed class ModelDetailsPageTests
         using var factory = CreateFactory();
         using var client = CreateClient(factory);
 
-        using var response = await client.GetAsync("/ru/models/antropic/no-such-model");
+        using var response = await client.GetAsync("/ru/models/anthropic/no-such-model");
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
@@ -101,7 +101,7 @@ public sealed class ModelDetailsPageTests
     {
         private static readonly (string Id, string DisplayName, string Provider, string ProviderId, string UpstreamId)[] Catalog =
         [
-            ("claude-opus-4-8", "Claude Opus 4.8", "Antropic", "antropic", "claude-opus-4-8"),
+            ("claude-opus-4-8", "Claude Opus 4.8", "Anthropic", "anthropic", "claude-opus-4-8"),
             ("ORR/Gemini-3.1-Pro", "Gemini 3.1 Pro", "Google", "google", "google/gemini-3.1-pro"),
             ("deepseek-v4-flash", "DeepSeek V4 Flash", "DeepSeek", "deepseek", "deepseek/deepseek-v4-flash"),
         ];
@@ -167,7 +167,7 @@ public sealed class ModelDetailsPageTests
             CancellationToken cancellationToken = default)
         {
             var response = new BillingProto.ListProvidersResponse();
-            response.Providers.Add(new BillingProto.ModelProvider { Id = "antropic", DisplayName = "Antropic" });
+            response.Providers.Add(new BillingProto.ModelProvider { Id = "anthropic", DisplayName = "Anthropic" });
             response.Providers.Add(new BillingProto.ModelProvider { Id = "google", DisplayName = "Google" });
             response.Providers.Add(new BillingProto.ModelProvider { Id = "deepseek", DisplayName = "DeepSeek" });
             return UnaryCall(response);

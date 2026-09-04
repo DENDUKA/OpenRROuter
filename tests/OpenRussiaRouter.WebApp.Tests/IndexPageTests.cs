@@ -6,8 +6,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.WebApp.Pages;
+using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using BillingGrpc = OpenRussiaRouter.Contracts.Grpc.Billing.V1.BillingService;
@@ -66,6 +69,7 @@ public sealed class IndexPageTests
             .Should().Equal("flagship-a", "flagship-z", "flagship-low");
         page.FlagshipModels[0].OpenRouterCachePrice.Should().Be(0.25m);
         page.FlagshipModels[0].Path.Should().Be("/models/test-provider/flagship-a");
+        page.V1BaseUrl.Should().Be("https://test.local/v1");
     }
 
     [Fact]
@@ -82,15 +86,28 @@ public sealed class IndexPageTests
     private static IndexModel CreatePage(FakeBillingClient client)
     {
         var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("test.local");
+
         var actionContext = new ActionContext(
             httpContext,
             new RouteData(),
             new PageActionDescriptor(),
             new ModelStateDictionary());
 
+        var billingProvider = new BillingProvider(client);
+        var configuration = new ConfigurationBuilder().Build();
+        var memoryCache = new MemoryCache(new MemoryCacheOptions());
+        var resolver = new ApiBaseUrlResolver(
+            configuration,
+            billingProvider,
+            memoryCache,
+            NullLogger<ApiBaseUrlResolver>.Instance);
+
         return new IndexModel(
-            new BillingProvider(client),
+            billingProvider,
             new AuthProvider(client: default!),
+            resolver,
             NullLogger<IndexModel>.Instance)
         {
             PageContext = new PageContext(actionContext)

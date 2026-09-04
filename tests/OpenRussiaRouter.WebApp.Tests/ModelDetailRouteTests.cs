@@ -26,13 +26,13 @@ public sealed class ModelDetailRouteTests
         // Без provider id префикс единственного слэша ещё даёт рабочий сегмент.
         ModelDetailRoute.ProviderSegmentOf("xiaomi/mimo-v2.5-pro", null, null).Should().Be("xiaomi");
         // Ни id, ни префикса — остаётся отображаемое имя.
-        ModelDetailRoute.ProviderSegmentOf("claude-opus-4-8", null, "Antropic").Should().Be("Antropic");
+        ModelDetailRoute.ProviderSegmentOf("claude-opus-4-8", null, "Anthropic").Should().Be("Anthropic");
         // Совсем нечего подставить — модель не адресуема.
         ModelDetailRoute.ProviderSegmentOf("claude-opus-4-8", null, null).Should().BeNull();
     }
 
     [Theory]
-    [InlineData("claude-opus-4-8", "antropic", "Antropic", "/models/antropic/claude-opus-4-8")]
+    [InlineData("claude-opus-4-8", "anthropic", "Anthropic", "/models/anthropic/claude-opus-4-8")]
     [InlineData("ORR/Gemini-3.1-Pro", "google", "Google", "/models/google/Gemini-3.1-Pro")]
     [InlineData("GPT-5.5", "openai", "OpenAI", "/models/openai/GPT-5.5")]
     public void TryBuildPath_BuildsProviderIdPlusSlug(
@@ -42,7 +42,7 @@ public sealed class ModelDetailRouteTests
     [Fact]
     public void TryBuildPath_ReturnsNull_WhenModelIsNotAddressable()
     {
-        ModelDetailRoute.TryBuildPath("", "antropic", "Antropic").Should().BeNull();
+        ModelDetailRoute.TryBuildPath("", "anthropic", "Anthropic").Should().BeNull();
         ModelDetailRoute.TryBuildPath("claude-opus-4-8", null, null).Should().BeNull();
     }
 

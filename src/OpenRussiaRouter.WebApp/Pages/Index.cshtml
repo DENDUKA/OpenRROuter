@@ -121,6 +121,22 @@
                         </div>
                     </a>
                 </li>
+                <li>
+                    <div class="quickstart-item">
+                        <span class="step-number">05</span>
+                        <div class="quickstart-item-content">
+                            <h3><a href="/docs" class="quickstart-step-title-link">@Localizer["Home_StepApi_Title"]</a></h3>
+                            <p>@Localizer["Home_StepApi_Desc"]</p>
+                            <div class="quickstart-api-field">
+                                <code class="quickstart-api-value" id="quickstart-api-url">@Model.V1BaseUrl</code>
+                                <button type="button" class="quickstart-copy-btn" data-copy="@Model.V1BaseUrl" data-goal="copy_base_url" data-copied="@Localizer["Btn_Copied"]" onclick="copyQuickstartApi(event)" aria-label="@Localizer["Btn_Copy"]">
+                                    <svg class="quickstart-copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                    <span class="quickstart-copy-text">@Localizer["Btn_Copy"]</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </li>
             </ol>
         </div>
     </section>
@@ -413,8 +429,74 @@ curl https://api.rawrter.com/v1/chat/completions \
         border-radius: var(--radius-sm);
         transition: background-color .15s ease, color .15s ease;
     }
-    .quickstart-list li:first-child .quickstart-link { padding-top: 0; }
-    .quickstart-list li:last-child .quickstart-link { padding-bottom: 0; }
+    .quickstart-item {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: var(--spacing-md);
+        padding: 16px 0;
+        color: inherit;
+    }
+    .quickstart-item-content {
+        min-width: 0;
+    }
+    .quickstart-step-title-link {
+        color: inherit;
+        text-decoration: none;
+    }
+    .quickstart-step-title-link:hover {
+        color: var(--color-ink);
+        text-decoration: underline;
+    }
+    .quickstart-api-field {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+        padding: 6px 10px;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        background: var(--color-canvas-card);
+        min-width: 0;
+    }
+    .quickstart-api-value {
+        flex: 1 1 auto;
+        padding: 0;
+        background: transparent;
+        color: var(--color-ink);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .quickstart-copy-btn {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid var(--color-hairline);
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--color-body);
+        cursor: pointer;
+        font: inherit;
+        font-size: 11px;
+        padding: 3px 8px;
+        line-height: 1.4;
+        transition: color .15s ease, border-color .15s ease;
+    }
+    .quickstart-copy-btn:hover {
+        color: var(--color-ink);
+        border-color: var(--color-border);
+    }
+    .quickstart-copy-btn.copied {
+        color: #10b981;
+        border-color: rgba(16, 185, 129, .4);
+    }
+    .quickstart-list li:first-child .quickstart-link,
+    .quickstart-list li:first-child .quickstart-item { padding-top: 0; }
+    .quickstart-list li:last-child .quickstart-link,
+    .quickstart-list li:last-child .quickstart-item { padding-bottom: 0; }
     .quickstart-link:hover {
         color: var(--color-ink);
         text-decoration: none;
@@ -927,6 +1009,22 @@ curl https://api.rawrter.com/v1/chat/completions \
             panelOpenAi.classList.toggle('is-hidden', !isOpenAi);
             panelAnthropic.classList.toggle('is-hidden', isOpenAi);
         }
+    }
+
+    function copyQuickstartApi(event) {
+        var btn = event.currentTarget;
+        var text = btn.getAttribute('data-copy');
+        if (!text) return;
+        var copyTextSpan = btn.querySelector('.quickstart-copy-text');
+        var originalText = copyTextSpan ? copyTextSpan.textContent : btn.textContent;
+        orrCopyText(text).then(function () {
+            btn.classList.add('copied');
+            if (copyTextSpan) copyTextSpan.textContent = btn.getAttribute('data-copied') || 'Copied';
+            setTimeout(function () {
+                btn.classList.remove('copied');
+                if (copyTextSpan) copyTextSpan.textContent = originalText;
+            }, 1500);
+        }).catch(function (err) { console.error('Copy failed:', err); });
     }
 </script>
 

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Catalog;
@@ -13,10 +14,13 @@ public class IndexModel : PageModelBase
 {
     private readonly BillingProvider _billingProvider;
     private readonly AuthProvider _authProvider;
+    private readonly ApiBaseUrlResolver _baseUrlResolver;
     private readonly ILogger<IndexModel> _logger;
 
     public bool HasBalance { get; set; }
     public bool HasApiKey { get; set; }
+    public string ApiBaseUrl { get; private set; } = "";
+    public string V1BaseUrl => $"{ApiBaseUrl}/v1";
     public IReadOnlyList<ProviderInfo> Providers { get; private set; } = [];
     public IReadOnlyList<FlagshipModelCard> FlagshipModels { get; private set; } = [];
 
@@ -27,10 +31,15 @@ public class IndexModel : PageModelBase
     public bool HasPaidTopUp { get; set; }
     public bool FirstTopUpBonusAvailable { get; set; }
 
-    public IndexModel(BillingProvider billingProvider, AuthProvider authProvider, ILogger<IndexModel> logger)
+    public IndexModel(
+        BillingProvider billingProvider,
+        AuthProvider authProvider,
+        ApiBaseUrlResolver baseUrlResolver,
+        ILogger<IndexModel> logger)
     {
         _billingProvider = billingProvider;
         _authProvider = authProvider;
+        _baseUrlResolver = baseUrlResolver;
         _logger = logger;
     }
 
@@ -42,6 +51,7 @@ public class IndexModel : PageModelBase
         var providersTask = _billingProvider.ListModelProvidersAsync(ct);
         var promoTask = _billingProvider.GetPromotionSettingsAsync(ct);
         var modelsTask = _billingProvider.ListPublicModelsAsync(ct);
+        var baseUrlTask = _baseUrlResolver.ResolveAsync(Request, ct);
 
         // Await each with its own error handling
         try { Providers = await providersTask; }
@@ -63,6 +73,9 @@ public class IndexModel : PageModelBase
         {
             _logger.LogWarning(ex, "Failed to load flagship models for landing page");
         }
+
+        try { ApiBaseUrl = await baseUrlTask; }
+        catch (Exception ex) { _logger.LogWarning(ex, "Failed to resolve API base URL for landing page"); }
 
         var user = CurrentUser;
         if (user != null)

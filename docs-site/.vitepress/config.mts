@@ -55,6 +55,7 @@ export default defineConfig({
   // сюда не доезжает, поэтому счётчик подключается здесь; без него весь раздел /docs
   // невидим в GA4, хотя это самая «намеренческая» часть трафика.
   head: [
+    ['link', { rel: 'icon', type: 'image/png', href: '/docs/favicon.png' }],
     // Consent Mode обязан встать ДО gtag.js: после загрузки тега default уже не применить.
     // Согласие лежит в cookie orr_consent (Path=/, HttpOnly=false — читается тем же
     // origin'ом), её выставляет баннер WebApp. Своего баннера у документации нет и заводить

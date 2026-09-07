@@ -10,6 +10,7 @@ using OpenRussiaRouter.WebApp.Pages.Login;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Tests;
 
@@ -75,6 +76,72 @@ public sealed class ExternalCallbackTests
         ((RedirectToPageResult)result).PageName.Should().Be("/Workspace/ApiKeys");
 
         billingProvider.GrantedStartBalances.Should().ContainSingle(g => g.UserId == "user-new-1" && g.AmountUsd == 1.00m);
+    }
+
+    [Fact]
+    public async Task OnGetAsync_NewUser_NotifiesSupportBotOfRegistration()
+    {
+        var services = new ServiceCollection();
+        services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = "Cookies";
+            options.DefaultSignInScheme = "Cookies";
+            options.DefaultAuthenticateScheme = "Cookies";
+        }).AddCookie("Cookies");
+
+        var httpContext = new DefaultHttpContext
+        {
+            RequestServices = services.BuildServiceProvider()
+        };
+
+        var externalIdentity = new ClaimsIdentity([
+            new Claim(ClaimTypes.NameIdentifier, "google-sub-456"),
+            new Claim(ClaimTypes.Email, "botnotify@example.com")
+        ], "External");
+        var externalPrincipal = new ClaimsPrincipal(externalIdentity);
+        var authProps = new AuthenticationProperties();
+        authProps.Items["provider"] = "google";
+
+        var authResult = AuthenticateResult.Success(new AuthenticationTicket(externalPrincipal, authProps, "External"));
+
+        var authServiceMock = new FakeAuthenticationService(authResult);
+        services = new ServiceCollection();
+        services.AddSingleton<IAuthenticationService>(authServiceMock);
+        services.AddAuthentication(options =>
+        {
+            options.DefaultScheme = "Cookies";
+            options.DefaultSignInScheme = "Cookies";
+            options.DefaultAuthenticateScheme = "Cookies";
+        }).AddCookie("Cookies");
+        httpContext.RequestServices = services.BuildServiceProvider();
+
+        var authProvider = new FakeAuthProvider(new OpenRussiaRouter.WebApp.Services.Auth.LoginResponse(
+            "orr_session_456",
+            "user-new-2",
+            "User",
+            "botnotify@example.com",
+            IsNewUser: true));
+
+        var botNotifier = new RecordingBotNotifier();
+        var model = new ExternalCallbackModel(authProvider, null, NullLogger<ExternalCallbackModel>.Instance, botNotifier)
+        {
+            PageContext = new PageContext
+            {
+                HttpContext = httpContext
+            },
+            TempData = new TempDataScope(httpContext).Create()
+        };
+
+        await model.OnGetAsync();
+
+        botNotifier.RegisteredEmails.Should().ContainSingle("botnotify@example.com");
+    }
+
+    private sealed class RecordingBotNotifier : ISupportBotNotifier
+    {
+        public List<string> RegisteredEmails { get; } = [];
+        public void NotifySupportTicket(string email, string subject, string message) { }
+        public void NotifyUserRegistered(string email) => RegisteredEmails.Add(email);
     }
 
     [Fact]

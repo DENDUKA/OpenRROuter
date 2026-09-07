@@ -26,7 +26,7 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
         return new RegistrationResult(response.UserId, response.Email, response.VerificationCode);
     }
 
-    public async Task<LoginResponse> VerifyEmailAsync(string email, string code, CancellationToken cancellationToken = default)
+    public virtual async Task<LoginResponse> VerifyEmailAsync(string email, string code, CancellationToken cancellationToken = default)
     {
         var response = await client.VerifyEmailAsync(new VerifyEmailRequest { Email = email, Code = code }, cancellationToken: cancellationToken);
         if (!response.Succeeded)

@@ -20,6 +20,12 @@ public sealed class SupportBotSettings
     /// </summary>
     public string? Endpoint { get; set; }
 
+    /// <summary>
+    /// Optional override for the registration event endpoint, e.g. http://support-bot:8080/v1/events/registration.
+    /// If omitted, derived from <see cref="Endpoint"/> by replacing /support with /registration.
+    /// </summary>
+    public string? RegistrationEndpoint { get; set; }
+
     /// <summary>Shared bearer secret for the bot's HTTP API. Env/secret only, like Alerting keys.</summary>
     public string? AuthToken { get; set; }
 

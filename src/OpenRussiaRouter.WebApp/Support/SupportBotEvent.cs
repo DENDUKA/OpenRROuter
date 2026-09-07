@@ -1,19 +1,32 @@
 namespace OpenRussiaRouter.WebApp.Support;
 
 /// <summary>
-/// A validated /support submission handed to the Telegram-bot channel. The <see cref="Id"/>
-/// is generated once per submission and reused across every delivery attempt, so the bot's
-/// in-memory deduplication sees a repeat rather than a new ticket. Payload mirrors the
-/// agreed HTTP contract (BOT-001): id, type, occurredAt, payload{email, subject, message} —
-/// deliberately no user id, role or user agent (those stay in the email path only).
+/// An event handed to the Telegram-bot channel. The <see cref="Id"/> is generated once
+/// per occurrence and reused across every delivery attempt, so the bot's in-memory
+/// deduplication sees a repeat rather than a new ticket/notification.
 /// </summary>
 public sealed record SupportBotEvent(
     string Id,
     DateTimeOffset OccurredAt,
     string Email,
-    string Subject,
-    string Message)
+    string? Subject,
+    string? Message,
+    string EventType = SupportBotEvent.SupportTicketType)
 {
-    /// <summary>The only event type accepted by the bot in BOT-001.</summary>
-    public const string Type = "support_ticket";
+    public const string SupportTicketType = "support_ticket";
+    public const string UserRegisteredType = "user_registered";
+
+    /// <summary>Backward-compatible alias for <see cref="SupportTicketType"/>.</summary>
+    public const string Type = SupportTicketType;
+
+    public SupportBotEvent(string id, DateTimeOffset occurredAt, string email, string subject, string message)
+        : this(id, occurredAt, email, subject, message, SupportTicketType)
+    {
+    }
+
+    public static SupportBotEvent SupportTicket(string id, DateTimeOffset occurredAt, string email, string subject, string message)
+        => new(id, occurredAt, email, subject, message, SupportTicketType);
+
+    public static SupportBotEvent UserRegistered(string id, DateTimeOffset occurredAt, string email)
+        => new(id, occurredAt, email, null, null, UserRegisteredType);
 }

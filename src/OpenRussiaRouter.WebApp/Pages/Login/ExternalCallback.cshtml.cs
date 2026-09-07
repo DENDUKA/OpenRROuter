@@ -9,13 +9,15 @@ using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Localization;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Pages.Login;
 
 public sealed class ExternalCallbackModel(
     AuthProvider AuthProvider,
     BillingProvider? BillingProvider = null,
-    ILogger<ExternalCallbackModel>? Logger = null) : PageModel
+    ILogger<ExternalCallbackModel>? Logger = null,
+    ISupportBotNotifier? BotNotifier = null) : PageModel
 {
     public async Task<IActionResult> OnGetAsync()
     {
@@ -66,6 +68,8 @@ public sealed class ExternalCallbackModel(
 
         if (loginResult.IsNewUser)
         {
+            BotNotifier?.NotifyUserRegistered(loginResult.Email);
+
             // Grant start balance if promotion is enabled (best-effort)
             if (BillingProvider is not null)
             {

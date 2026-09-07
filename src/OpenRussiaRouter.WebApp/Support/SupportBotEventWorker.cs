@@ -110,20 +110,42 @@ public sealed class SupportBotEventWorker : BackgroundService
             supportEvent.Id, maxAttempts);
     }
 
+    private string ResolveEndpoint(SupportBotEvent supportEvent)
+    {
+        if (supportEvent.EventType == SupportBotEvent.UserRegisteredType)
+        {
+            if (!string.IsNullOrWhiteSpace(_settings.RegistrationEndpoint))
+                return _settings.RegistrationEndpoint;
+
+            if (!string.IsNullOrWhiteSpace(_settings.Endpoint) &&
+                _settings.Endpoint.EndsWith("/support", StringComparison.OrdinalIgnoreCase))
+            {
+                return _settings.Endpoint[..^8] + "/registration";
+            }
+        }
+
+        return _settings.Endpoint ?? "";
+    }
+
     private async Task<SendOutcome> SendOnceAsync(SupportBotEvent supportEvent, CancellationToken ct)
     {
         using var client = _httpClientFactory.CreateClient(HttpClientName);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, _settings.Endpoint)
+        var endpoint = ResolveEndpoint(supportEvent);
+        object payloadDto = supportEvent.EventType == SupportBotEvent.UserRegisteredType
+            ? new UserRegisteredPayloadDto(supportEvent.Email)
+            : new SupportBotPayloadDto(supportEvent.Email, supportEvent.Subject ?? "", supportEvent.Message ?? "");
+
+        var eventDto = new SupportBotEventDto(
+            supportEvent.Id,
+            supportEvent.EventType,
+            supportEvent.OccurredAt,
+            payloadDto);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
             Content = new StringContent(
-                JsonSerializer.Serialize(
-                    new SupportBotEventDto(
-                        supportEvent.Id,
-                        SupportBotEvent.Type,
-                        supportEvent.OccurredAt,
-                        new SupportBotPayloadDto(supportEvent.Email, supportEvent.Subject, supportEvent.Message)),
-                    JsonOptions),
+                JsonSerializer.Serialize(eventDto, JsonOptions),
                 Encoding.UTF8,
                 "application/json")
         };
@@ -155,7 +177,9 @@ public sealed class SupportBotEventWorker : BackgroundService
         Rejected
     }
 
-    private sealed record SupportBotEventDto(string Id, string Type, DateTimeOffset OccurredAt, SupportBotPayloadDto Payload);
+    private sealed record SupportBotEventDto(string Id, string Type, DateTimeOffset OccurredAt, object Payload);
 
     private sealed record SupportBotPayloadDto(string Email, string Subject, string Message);
+
+    private sealed record UserRegisteredPayloadDto(string Email);
 }

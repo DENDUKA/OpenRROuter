@@ -91,6 +91,34 @@ public class SupportBotEventWorkerTests
     }
 
     [Fact]
+    public async Task Registration_event_posts_to_registration_endpoint_with_minimal_payload()
+    {
+        var (queue, worker, _, handler, _) = CreateWorker(Settings());
+        queue.TryEnqueue(SupportBotEvent.UserRegistered("cccccccccccccccccccccccccccccccc", DateTimeOffset.UtcNow, "newuser@example.com"));
+
+        await RunWorkerAsync(async () =>
+        {
+            await worker.StartAsync(CancellationToken.None);
+            await WaitForRequestsAsync(handler, 1);
+            await worker.StopAsync(CancellationToken.None);
+        });
+
+        var request = handler.Captured.Single();
+        request.Method.Should().Be("POST");
+        request.Uri.Should().Be("http://support-bot:8080/v1/events/registration");
+        request.Authorization.Should().Be($"Bearer {Token}");
+
+        using var doc = JsonDocument.Parse(request.Body!);
+        var root = doc.RootElement;
+        root.GetProperty("id").GetString().Should().Be("cccccccccccccccccccccccccccccccc");
+        root.GetProperty("type").GetString().Should().Be("user_registered");
+        var payload = root.GetProperty("payload");
+        payload.GetProperty("email").GetString().Should().Be("newuser@example.com");
+        payload.TryGetProperty("subject", out _).Should().BeFalse();
+        payload.TryGetProperty("message", out _).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task Duplicate_200_is_terminal_success_no_retry()
     {
         var (queue, worker, _, handler, _) = CreateWorker(Settings());

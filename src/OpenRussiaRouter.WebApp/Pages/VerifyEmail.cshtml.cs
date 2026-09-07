@@ -9,6 +9,7 @@ using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
@@ -19,6 +20,7 @@ public class VerifyEmailModel : PageModelBase
     private readonly IEmailDispatchQueue _emailQueue;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<VerifyEmailModel> _logger;
+    private readonly ISupportBotNotifier? _botNotifier;
 
     [BindProperty(SupportsGet = true)]
     public string Email { get; set; } = "";
@@ -31,13 +33,20 @@ public class VerifyEmailModel : PageModelBase
     public string? ErrorMessage { get; set; }
     public string? StatusMessage { get; set; }
 
-    public VerifyEmailModel(AuthProvider authProvider, BillingProvider billingProvider, IEmailDispatchQueue emailQueue, IStringLocalizer<SharedResource> localizer, ILogger<VerifyEmailModel> logger)
+    public VerifyEmailModel(
+        AuthProvider authProvider,
+        BillingProvider billingProvider,
+        IEmailDispatchQueue emailQueue,
+        IStringLocalizer<SharedResource> localizer,
+        ILogger<VerifyEmailModel> logger,
+        ISupportBotNotifier? botNotifier = null)
     {
         _authClient = authProvider;
         _billingProvider = billingProvider;
         _emailQueue = emailQueue;
         _localizer = localizer;
         _logger = logger;
+        _botNotifier = botNotifier;
     }
 
     public IActionResult OnGet()
@@ -62,6 +71,8 @@ public class VerifyEmailModel : PageModelBase
         try
         {
             var response = await _authClient.VerifyEmailAsync(Email, Code);
+
+            _botNotifier?.NotifyUserRegistered(response.Email);
 
             var claims = new[]
             {

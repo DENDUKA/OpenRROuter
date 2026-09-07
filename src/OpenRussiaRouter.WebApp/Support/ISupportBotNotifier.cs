@@ -8,4 +8,10 @@ public interface ISupportBotNotifier
     /// the email path or the response time.
     /// </summary>
     void NotifySupportTicket(string email, string subject, string message);
+
+    /// <summary>
+    /// Queues a user-registered event for the Telegram bot. Contractually never throws and
+    /// never performs I/O — the bot channel must not affect registration, login or promo grants.
+    /// </summary>
+    void NotifyUserRegistered(string email);
 }

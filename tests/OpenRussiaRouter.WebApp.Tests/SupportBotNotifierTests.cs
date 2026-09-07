@@ -110,6 +110,34 @@ public class SupportBotNotifierTests
         throwingQueue.Calls.Should().Be(1);
     }
 
+    [Fact]
+    public void NotifyUserRegistered_valid_configuration_queues_registration_event()
+    {
+        var (queue, notifier) = Create(EnabledSettings());
+        var before = DateTimeOffset.UtcNow;
+
+        notifier.NotifyUserRegistered("newuser@example.com");
+
+        queue.Reader.TryRead(out var evt).Should().BeTrue();
+        evt!.Id.Should().MatchRegex("^[0-9a-f]{32}$");
+        evt.OccurredAt.Should().BeOnOrAfter(before - TimeSpan.FromSeconds(1));
+        evt.Email.Should().Be("newuser@example.com");
+        evt.EventType.Should().Be(SupportBotEvent.UserRegisteredType);
+        evt.Subject.Should().BeNull();
+        evt.Message.Should().BeNull();
+        queue.Reader.TryRead(out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void NotifyUserRegistered_disabled_channel_is_a_silent_no_op()
+    {
+        var (queue, notifier) = Create(new SupportBotSettings { Enabled = false, Endpoint = "http://bot", AuthToken = "t" });
+
+        notifier.NotifyUserRegistered("newuser@example.com");
+
+        queue.Reader.TryRead(out _).Should().BeFalse();
+    }
+
     private sealed class ThrowingQueue : ISupportBotEventQueue
     {
         public int Calls { get; private set; }

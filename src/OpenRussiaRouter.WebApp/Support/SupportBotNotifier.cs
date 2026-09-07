@@ -52,4 +52,30 @@ public sealed class SupportBotNotifier : ISupportBotNotifier
             _logger.LogError(ex, "Failed to queue a support ticket notification.");
         }
     }
+
+    public void NotifyUserRegistered(string email)
+    {
+        try
+        {
+            if (!_settings.Enabled)
+                return;
+
+            if (string.IsNullOrWhiteSpace(_settings.Endpoint) || string.IsNullOrWhiteSpace(_settings.AuthToken))
+            {
+                _logger.LogError(
+                    "Support bot channel is enabled but Endpoint/AuthToken is not configured; registration notification dropped.");
+                return;
+            }
+
+            var regEvent = SupportBotEvent.UserRegistered(
+                Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, email);
+
+            if (!_queue.TryEnqueue(regEvent))
+                _logger.LogWarning("Support bot event queue is full; registration notification dropped (best-effort channel).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue a user registration notification.");
+        }
+    }
 }

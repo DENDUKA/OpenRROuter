@@ -91,7 +91,7 @@ ASP.NET Core **Razor Pages** (не Blazor) — публичный сайт, ка
 | `Services/State` | `UserSession`, `ClaimsExtensions` (`GetUserId`, `GetSessionToken`); рядом `Services/ApiBaseUrlResolver.cs`, `Services/SiteBaseUrlResolver.cs`, `Services/ColorContrast.cs` |
 | `Email/` | Очередь + воркер + два транспорта (SMTP/Brevo API), шаблоны, рассылки |
 | `Resources/` | `.ru.resx`/`.en.resx`: `SharedResource` + per-page ресурсы, путь зеркалит путь страницы (`Resources/Pages/Workspace/Credits.*.resx`) |
-| `Support/` | `SupportSettings` (секция `Support`) для формы `/support` |
+| `Support/` | `SupportSettings` (секция `Support`) + канал Telegram-бота (BOT-001): `SupportBotSettings`, `SupportBotEvent`/`SupportBotEventQueue`, `SupportBotNotifier`, `SupportBotEventWorker` |
 | `wwwroot/` | `app.css`, локальный `bootstrap/`, `favicon.png`, `icons/`, `js/tool-editor.js`, `robots.txt`, `og-image.png` (OG-баннер 1200×630). Своего фронтенд-билда нет, CDN не используется |
 
 ## Карта маршрутов
@@ -492,6 +492,17 @@ BillingService своей котировкой.
   рассылка из `/admin/broadcast`, форма `/support` (Reply-To = отправитель, тикеты нигде не хранятся)
   и алерты Grafana.
 
+## Канал Telegram-бота поддержки (BOT-001)
+
+Принятое обращение `/support` (после валидации полей и honeypot, до email-пути) дополнительно уходит в отдельный TypeScript-сервис бота (`../rawrter_tg_bot_support`) по закрытому HTTP API. Путь: `SupportModel.OnPostAsync` → `ISupportBotNotifier.NotifySupportTicket` → ограниченная in-memory очередь (`SupportBotEventQueue`, 500, переполнение — drop с warning) → `SupportBotEventWorker` → `POST <Support:Bot:Endpoint>` с `Authorization: Bearer <Support:Bot:AuthToken>` и телом `{id, type:"support_ticket", occurredAt, payload:{email, subject, message}}`.
+
+- **Каналы независимы и best-effort.** Нотификатор никогда не бросает и не делает I/O: бот не может сломать форму, ответ или email-путь; пустой `Support:Inbox` не глушит Telegram-канал (событие ставится до проверки inbox). Повторная отправка email из-за ошибки бота невозможна. Очередь в памяти: при рестарте недоставленные события теряются — принятый режим BOT-001, устойчивость — BOT-002 в бэклоге бота.
+- **Стабильный `id`** генерируется один раз на обращение (`Guid N`), переиспользуется во всех попытках — бот дедуплицирует повторы, а не создаёт второе уведомление. В событие не входят userId/роль/User-Agent — это прерогатива email-тела.
+- **Контракт ответов:** `202` — принято в очередь (не доставка!), `200` — дубль — оба терминальный успех; `503` (очередь бота полна/выключено/мисконфиг) — повтор в пределах `MaxAttempts` (дефолт 4) с паузой `RetryDelaySeconds` (дефолт 60с); таймаут/сетевая ошибка — тоже повторяемы; прочие коды (`400 invalid_event`, `401`, `413`) — перманентный отказ без повторов. Исчерпание попыток — drop с log error. Ключи JSON — camelCase, `occurredAt` — ISO 8601 UTC (лимит бота 40 симв.)
+- **Секреты и логи.** `Support:Bot:AuthToken` — только env/secret (в `appsettings.json` отсутствует, как `Alerting`). Логи канала несут только id события, код статуса и счётчик попыток: без адресов, текстов обращений и токена.
+- **Выключено по умолчанию** (`Support:Bot:Enabled=false`): нотификатор — no-op, воркер простаивает на пустой очереди. Регистрация — `AddSupportBotInfrastructure` (Program.cs), безусловная.
+- Payload зеркалит лимиты бота (`email` ≤ 254, `subject` ≤ 200, `message` ≤ 5000) — они совпадают с констрейнтами формы; рассинхронизировать их без проверки контракта бота нельзя.
+
 ## Алерт-вебхук Grafana ([AlertWebhookEndpoint.cs](Api/AlertWebhookEndpoint.cs))
 
 `POST /internal/alerts/grafana` — почему так, а не SMTP-contact point, см. корневой CLAUDE.md.
@@ -536,6 +547,7 @@ BillingService своей котировкой.
 | `Google:*`, `Yandex:*` | внешний логин; провайдер не регистрируется, пока не заданы оба значения |
 | `Email:*` | транспорт, SMTP-хост/порт/SSL, отправитель, `BatchDelayMs`; секреты (`BrevoApiKey`, SMTP-логин/пароль) — только env/secret |
 | `Support:{Inbox,TelegramUrl}` | получатель формы `/support` и альтернативный канал |
+| `Support:Bot:{Enabled,Endpoint,AuthToken,RequestTimeoutSeconds,MaxAttempts,RetryDelaySeconds}` | канал Telegram-бота BOT-001; `Enabled=false` по умолчанию, `AuthToken` — только env/secret (в `appsettings.json` отсутствует) |
 | `ProductAnalytics:*` | синк `orr_analytics` (`Enabled`, `ConnectionString`, `IdentitySalt`, `Environment`, размеры очереди) |
 | `Analytics:{GoogleTagId,YandexCounterId}` | теги веб-аналитики в layout; пусто → сниппет не рендерится, CSP остаётся строгим |
 | `ExchangeRates:*` | display-only курсы ЦБ РФ + фолбэки |

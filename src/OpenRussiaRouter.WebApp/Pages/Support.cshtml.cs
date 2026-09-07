@@ -14,23 +14,28 @@ namespace OpenRussiaRouter.WebApp.Pages;
 /// Public "Contact support" form. Available to everyone — anonymous visitors and signed-in
 /// users alike. On submit it relays a plain-text email to the staff inbox through the existing
 /// async email queue (Reply-To = the submitter), so staff answer straight from their mailbox.
-/// No persistence: this is the email-relay support channel, not an in-app ticket store.
+/// It also queues a support-ticket event for the Telegram bot (BOT-001) — a separate
+/// best-effort channel that is independent of the email path and never affects the response.
+/// No persistence: this is the relay support channel, not an in-app ticket store.
 /// </summary>
 [AllowAnonymous]
 public class SupportModel : PageModelBase
 {
     private readonly IEmailDispatchQueue _emailQueue;
+    private readonly ISupportBotNotifier _botNotifier;
     private readonly SupportSettings _settings;
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<SupportModel> _logger;
 
     public SupportModel(
         IEmailDispatchQueue emailQueue,
+        ISupportBotNotifier botNotifier,
         IOptions<SupportSettings> settings,
         IStringLocalizer<SharedResource> localizer,
         ILogger<SupportModel> logger)
     {
         _emailQueue = emailQueue;
+        _botNotifier = botNotifier;
         _settings = settings.Value;
         _localizer = localizer;
         _logger = logger;
@@ -66,6 +71,12 @@ public class SupportModel : PageModelBase
 
         if (!ModelState.IsValid)
             return Page();
+
+        // Telegram channel (BOT-001): notify the support bot about the accepted submission.
+        // Placed after validation/honeypot and before the email path: the event means
+        // "valid ticket received", so an unconfigured staff inbox must not silence the
+        // Telegram channel. Contractually never throws and never performs I/O.
+        _botNotifier.NotifySupportTicket(Input.Email, Input.Subject, Input.Message);
 
         var inbox = _settings.Inbox;
         if (string.IsNullOrWhiteSpace(inbox))

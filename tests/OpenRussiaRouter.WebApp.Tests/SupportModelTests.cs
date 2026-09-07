@@ -86,7 +86,8 @@ public class SupportModelTests
     }
 
     private static SupportModel CreateModel(
-        EmailDispatchQueue queue, string? inbox, string? signedInEmail = null)
+        EmailDispatchQueue queue, string? inbox, string? signedInEmail = null,
+        ISupportBotNotifier? botNotifier = null)
     {
         var user = signedInEmail is null
             ? new ClaimsPrincipal(new ClaimsIdentity())
@@ -100,6 +101,7 @@ public class SupportModelTests
 
         return new SupportModel(
             queue,
+            botNotifier ?? new NoopSupportBotNotifier(),
             Options.Create(new SupportSettings { Inbox = inbox }),
             NullStringLocalizer<SharedResource>.Instance,
             NullLogger<SupportModel>.Instance)
@@ -116,6 +118,97 @@ public class SupportModelTests
     private static IReadOnlyList<string> GoalsOn(SupportModel model) =>
         (model.ViewData[AnalyticsGoal.ViewDataKey] as IEnumerable<AnalyticsGoal>)?
             .Select(g => g.Name).ToList() ?? [];
+
+    private sealed class NoopSupportBotNotifier : ISupportBotNotifier
+    {
+        public void NotifySupportTicket(string email, string subject, string message) { }
+    }
+
+    private sealed class RecordingSupportBotNotifier : ISupportBotNotifier
+    {
+        public List<(string Email, string Subject, string Message)> Tickets { get; } = [];
+
+        public void NotifySupportTicket(string email, string subject, string message)
+            => Tickets.Add((email, subject, message));
+    }
+
+    [Fact]
+    public async Task OnPostAsync_valid_submission_notifies_the_bot_channel()
+    {
+        var queue = new EmailDispatchQueue();
+        var bot = new RecordingSupportBotNotifier();
+        var model = CreateModel(queue, inbox: "support@orr.com", botNotifier: bot);
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "user@example.com",
+            Subject = "Help please",
+            Message = "Something is broken.",
+        };
+
+        await model.OnPostAsync();
+
+        bot.Tickets.Should().Contain(("user@example.com", "Help please", "Something is broken."));
+    }
+
+    [Fact]
+    public async Task OnPostAsync_honeypot_filled_does_not_notify_the_bot()
+    {
+        var queue = new EmailDispatchQueue();
+        var bot = new RecordingSupportBotNotifier();
+        var model = CreateModel(queue, inbox: "support@orr.com", botNotifier: bot);
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "bot@spam.com",
+            Subject = "Buy now",
+            Message = "spam",
+            Website = "http://spam.example",
+        };
+
+        await model.OnPostAsync();
+
+        bot.Tickets.Should().BeEmpty("a dropped submission is not a support ticket");
+    }
+
+    [Fact]
+    public async Task OnPostAsync_invalid_form_does_not_notify_the_bot()
+    {
+        var queue = new EmailDispatchQueue();
+        var bot = new RecordingSupportBotNotifier();
+        var model = CreateModel(queue, inbox: "support@orr.com", botNotifier: bot);
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "not-an-email",
+            Subject = "Hi",
+            Message = "Question.",
+        };
+        model.ModelState.AddModelError("Input.Email", "invalid email");
+
+        await model.OnPostAsync();
+
+        bot.Tickets.Should().BeEmpty("an invalid submission never becomes a bot event");
+    }
+
+    [Fact]
+    public async Task OnPostAsync_without_configured_inbox_still_notifies_the_bot()
+    {
+        // BOT-001: the Telegram channel is independent — an empty Support:Inbox must not
+        // silence it (and the email channel's misbehavior stays its own concern).
+        var queue = new EmailDispatchQueue();
+        var bot = new RecordingSupportBotNotifier();
+        var model = CreateModel(queue, inbox: null, botNotifier: bot);
+        model.Input = new SupportModel.InputModel
+        {
+            Email = "user@example.com",
+            Subject = "Hi",
+            Message = "Question.",
+        };
+
+        await model.OnPostAsync();
+
+        model.Sent.Should().BeTrue();
+        queue.Reader.TryRead(out _).Should().BeFalse();
+        bot.Tickets.Should().Contain(("user@example.com", "Hi", "Question."));
+    }
 
     [Fact]
     public async Task OnPostAsync_valid_submission_reports_the_support_goal()

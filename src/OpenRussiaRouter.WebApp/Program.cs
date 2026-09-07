@@ -26,6 +26,7 @@ using OpenRussiaRouter.WebApp.Services.Payments.YandexPay;
 using OpenRussiaRouter.WebApp.Services.Currency;
 using OpenRussiaRouter.WebApp.Services.Seo;
 using OpenRussiaRouter.WebApp.Email;
+using OpenRussiaRouter.WebApp.Support;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.DataProtection;
@@ -391,6 +392,10 @@ builder.Services.AddEmailInfrastructure(builder.Configuration);
 // Telegram link is surfaced as an alternative channel.
 builder.Services.Configure<OpenRussiaRouter.WebApp.Support.SupportSettings>(
     builder.Configuration.GetSection(OpenRussiaRouter.WebApp.Support.SupportSettings.SectionName));
+
+// BOT-001: background relay of accepted /support submissions to the Telegram bot over its
+// closed HTTP API. Disabled by default (Support:Bot:Enabled=false); the secret lives in env only.
+builder.Services.AddSupportBotInfrastructure(builder.Configuration);
 
 builder.Services.AddSingleton<OpenRussiaRouter.WebApp.Services.Legal.LegalDocumentService>();
 

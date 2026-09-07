@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
+using OpenRussiaRouter.BillingService.Infrastructure.Telegram;
 using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.BuildingBlocks.Common;
 using OpenRussiaRouter.BuildingBlocks.Errors;
@@ -21,7 +22,8 @@ public sealed partial class BillingApplicationService(
     ILogger<BillingApplicationService> logger,
     FxQuoteService? fxQuoteService = null,
     IOptions<PaymentOptions>? paymentOptions = null,
-    IProductAnalytics? productAnalytics = null)
+    IProductAnalytics? productAnalytics = null,
+    ITelegramBotNotifier? telegramBotNotifier = null)
 {
     public IBillingRepository Repository => repository;
 
@@ -325,7 +327,11 @@ public sealed partial class BillingApplicationService(
             nowUtc,
             false);
 
-        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry, ct).ConfigureAwait(false);
+        var isFirstUsage = await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry, ct).ConfigureAwait(false);
+        if (isFirstUsage)
+        {
+            telegramBotNotifier?.NotifyFirstApiRequest(usageEvent.UserId, usageEvent.ModelId);
+        }
 
         var usageResult = new RecordUsageResult(true, usage.RequestId, usage.Cost, null);
         EmitApiRequestCompleted(usageEvent);
@@ -870,6 +876,12 @@ public sealed partial class BillingApplicationService(
     public async Task<bool> HasUserHadPaidTopUpAsync(string userId, CancellationToken ct = default)
     {
         return await repository.HasUserHadPaidTopUpAsync(userId, ct: ct).ConfigureAwait(false);
+    }
+
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, CancellationToken ct = default)
+    {
+        return await repository.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
     }
 
     private static int MapStatusToStatusCode(string? status)

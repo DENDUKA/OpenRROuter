@@ -37,6 +37,7 @@ public class VerifyEmailTests
         public List<string> RegisteredEmails { get; } = [];
         public void NotifySupportTicket(string email, string subject, string message) { }
         public void NotifyUserRegistered(string email) => RegisteredEmails.Add(email);
+        public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }
 
     private sealed class FakeAuthenticationService : IAuthenticationService

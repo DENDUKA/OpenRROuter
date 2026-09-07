@@ -410,4 +410,21 @@ public sealed partial class BillingRepository
         payment.CreatedAtUtc, payment.UpdatedAtUtc, payment.ExpiresAtUtc, payment.ConfirmedAtUtc, payment.CanceledAtUtc,
         payment.PayUrl, payment.BonusPercent, payment.BonusUsd
     };
+
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, CancellationToken ct = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        const string sql = """
+            select
+                count(*) as topups_count,
+                coalesce(sum(provider_amount), 0) as total_rub,
+                coalesce(sum(credited_usd_amount), 0) as total_usd
+            from billing.payments
+            where status = 'Paid' and confirmed_at_utc >= @SinceUtc;
+            """;
+        var row = await connection.QuerySingleAsync<(int TopupsCount, decimal TotalRub, decimal TotalUsd)>(
+            new CommandDefinition(sql, new { SinceUtc = sinceUtc }, cancellationToken: ct)).ConfigureAwait(false);
+        return row;
+    }
 }

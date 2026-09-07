@@ -114,10 +114,11 @@ public sealed partial class BillingRepository
             cancellationToken: ct)).ConfigureAwait(false));
     }
 
-    public async Task RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
+    public async Task<bool> RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(activity);
 
+        var firstUsageDetected = false;
         using var connection = connectionFactory.CreateConnection();
         var npgsqlConn = (Npgsql.NpgsqlConnection)connection;
         await npgsqlConn.OpenAsync(ct).ConfigureAwait(false);
@@ -206,6 +207,7 @@ public sealed partial class BillingRepository
 
                 if (isFirstUsage)
                 {
+                    firstUsageDetected = true;
                     await EnqueueYandexMetrikaOfflineConversionAsync(
                         connection,
                         transaction,
@@ -277,6 +279,7 @@ public sealed partial class BillingRepository
         }
 
         await transaction.CommitAsync(ct).ConfigureAwait(false);
+        return firstUsageDetected;
     }
 
     public async Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(

@@ -138,6 +138,25 @@ public class SupportBotNotifierTests
         queue.Reader.TryRead(out _).Should().BeFalse();
     }
 
+    [Fact]
+    public void NotifyTopUpCompleted_valid_configuration_queues_topup_event()
+    {
+        var (queue, notifier) = Create(EnabledSettings());
+        var before = DateTimeOffset.UtcNow;
+
+        notifier.NotifyTopUpCompleted("payer@example.com", 1500m, 16.25m, "Rollypay (СБП)", "pay-123");
+
+        queue.Reader.TryRead(out var evt).Should().BeTrue();
+        evt!.Id.Should().Be("topup-pay-123");
+        evt.OccurredAt.Should().BeOnOrAfter(before - TimeSpan.FromSeconds(1));
+        evt.Email.Should().Be("payer@example.com");
+        evt.EventType.Should().Be(SupportBotEvent.TopUpCompletedType);
+        evt.AmountRub.Should().Be(1500m);
+        evt.CreditedUsd.Should().Be(16.25m);
+        evt.Provider.Should().Be("Rollypay (СБП)");
+        queue.Reader.TryRead(out _).Should().BeFalse();
+    }
+
     private sealed class ThrowingQueue : ISupportBotEventQueue
     {
         public int Calls { get; private set; }

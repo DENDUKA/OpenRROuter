@@ -525,6 +525,48 @@ public sealed class BillingApplicationServiceTests
         saved.DefaultReasoningEffort.Should().Be("max");
     }
 
+    [Fact]
+    public async Task RecordUsageAsync_FirstUsage_NotifiesTelegramBot()
+    {
+        var repo = new InMemoryBillingRepository();
+        var fakeNotifier = new RecordingTelegramBotNotifier();
+        var service = new BillingApplicationService(
+            repo,
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance,
+            telegramBotNotifier: fakeNotifier);
+
+        await service.UpsertModelAsync(CreateModel("gpt-test", enabled: true));
+
+        var evt = CreateUsageEvent("req-1", new TokenUsage(100, 50, 10));
+        await service.RecordUsageAsync(evt, DateTimeOffset.UtcNow);
+
+        fakeNotifier.Calls.Should().ContainSingle(c => c.UserId == "user-1" && c.ModelId == "router/gpt-test");
+    }
+
+    [Fact]
+    public async Task GetDailyStatsAsync_ReturnsCountsAndSums()
+    {
+        var repo = new InMemoryBillingRepository();
+        var service = new BillingApplicationService(
+            repo,
+            new UsageCostCalculator(),
+            Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
+            NullLogger<BillingApplicationService>.Instance);
+
+        var (count, rub, usd) = await service.GetDailyStatsAsync(DateTimeOffset.UtcNow.AddHours(-24));
+        count.Should().Be(0);
+        rub.Should().Be(0m);
+        usd.Should().Be(0m);
+    }
+
+    private sealed class RecordingTelegramBotNotifier : OpenRussiaRouter.BillingService.Infrastructure.Telegram.ITelegramBotNotifier
+    {
+        public List<(string UserId, string ModelId)> Calls { get; } = [];
+        public void NotifyFirstApiRequest(string userId, string modelId) => Calls.Add((userId, modelId));
+    }
+
     private static BillingApplicationService CreateService()
     {
         return new BillingApplicationService(

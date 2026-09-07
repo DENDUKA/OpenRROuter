@@ -46,6 +46,7 @@ service BillingService {
   rpc HasUserHadPaidTopUp (HasUserHadPaidTopUpRequest) returns (HasUserHadPaidTopUpResponse);
   rpc GetPromotionSettings (GetPromotionSettingsRequest) returns (GetPromotionSettingsResponse);
   rpc GrantFirstTopUpBonus (GrantFirstTopUpBonusRequest) returns (GrantFirstTopUpBonusResponse);
+  rpc GetDailyStats (GetDailyStatsRequest) returns (GetDailyStatsResponse);
 }
 
 message GetPlatformSettingRequest {
@@ -774,3 +775,14 @@ message GrantFirstTopUpBonusResponse {
   string ledger_entry_id = 2;
   string error_code = 3;
 }
+
+message GetDailyStatsRequest {
+  string since_utc = 1;
+}
+
+message GetDailyStatsResponse {
+  int32 topups_count = 1;
+  string total_rub = 2;
+  string total_usd = 3;
+}
+

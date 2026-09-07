@@ -60,7 +60,7 @@ public interface IBillingRepository
 
     Task<(IReadOnlyCollection<UsageRecord> Items, bool HasMore)> ListUsageAsync(int limit, DateTimeOffset? afterCreatedAtUtc = null, string? afterRequestId = null, string? userId = null, CancellationToken ct = default);
 
-    Task RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default);
+    Task<bool> RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default);
 
     Task<ActivityByTokenRecord> AddActivityByTokenAsync(ActivityByTokenRecord record, CancellationToken ct = default);
 
@@ -159,4 +159,6 @@ public interface IBillingRepository
     Task UpsertModelProviderAsync(ModelProvider provider, CancellationToken ct = default);
     Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);
     Task DeleteModelProviderAsync(string id, CancellationToken ct = default);
+
+    Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
 }

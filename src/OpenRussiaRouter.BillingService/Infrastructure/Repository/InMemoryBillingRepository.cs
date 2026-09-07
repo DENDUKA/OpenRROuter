@@ -253,10 +253,11 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         return Task.FromResult(_activityByRequestId.GetOrAdd(record.RequestId, record));
     }
 
-    public Task RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
+    public Task<bool> RecordUsageWithTransactionAsync(ActivityByTokenRecord activity, UsageRecord? usage, LedgerEntry? ledgerEntry, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(activity);
 
+        var isFirstUsage = false;
         _activityByRequestId.TryAdd(activity.RequestId, activity);
 
         if (usage is not null)
@@ -266,6 +267,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
                 var inserted = _usageByRequestId.TryAdd(usage.RequestId, usage);
                 if (inserted && _usageByRequestId.Values.Count(item => item.UserId == usage.UserId) == 1)
                 {
+                    isFirstUsage = true;
                     EnqueueYandexMetrikaOfflineConversionUnsafe(
                         $"first_api_request:{usage.UserId}",
                         usage.UserId,
@@ -292,7 +294,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             }
         }
 
-        return Task.CompletedTask;
+        return Task.FromResult(isFirstUsage);
     }
 
     public Task<(IReadOnlyCollection<ActivityByTokenRecord> Items, bool HasMore, int TotalCount)> ListActivityByTokenAsync(
@@ -1068,5 +1070,16 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             weeklyRemaining,
             dailyLimit.HasValue && dailySpent >= dailyLimit.Value.Amount,
             weeklyLimit.HasValue && weeklySpent >= weeklyLimit.Value.Amount);
+    }
+
+    public Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default)
+    {
+        var paid = _payments.Values
+            .Where(p => p.Status == PaymentStatus.Paid && p.ConfirmedAtUtc >= sinceUtc)
+            .ToList();
+        return Task.FromResult((
+            paid.Count,
+            paid.Sum(p => p.ProviderAmount),
+            paid.Sum(p => p.CreditedUsd.Amount)));
     }
 }

@@ -14,4 +14,10 @@ public interface ISupportBotNotifier
     /// never performs I/O — the bot channel must not affect registration, login or promo grants.
     /// </summary>
     void NotifyUserRegistered(string email);
+
+    /// <summary>
+    /// Queues a topup-completed event for the Telegram bot. Contractually never throws and
+    /// never performs I/O — the bot channel must not affect payment confirmation or balance credit.
+    /// </summary>
+    void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null);
 }

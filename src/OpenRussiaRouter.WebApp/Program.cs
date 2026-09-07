@@ -646,6 +646,9 @@ YandexPayWebhookEndpoint.Map(app);
 // Token-gated; disabled (503) unless Alerting:WebhookToken + Alerting:EmailTo are set.
 AlertWebhookEndpoint.Map(app);
 
+// Support Telegram bot: morning business digest (registrations, payments, active users).
+BotDailySummaryEndpoint.Map(app);
+
 // Dynamic XML sitemap for search engines: static indexable pages + enabled models,
 // active providers, published tools. Absolute base URL comes from SiteBaseUrlResolver
 // (canonical site origin, never the admin-configured API base).

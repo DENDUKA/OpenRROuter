@@ -1,5 +1,7 @@
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Services.Payments;
 
@@ -27,14 +29,20 @@ namespace OpenRussiaRouter.WebApp.Services.Payments;
 public sealed class PaymentWebhookProcessor
 {
     private readonly BillingProvider _billing;
+    private readonly AuthProvider? _auth;
+    private readonly ISupportBotNotifier? _botNotifier;
     private readonly ILogger<PaymentWebhookProcessor> _logger;
 
     public PaymentWebhookProcessor(
         BillingProvider billing,
-        ILogger<PaymentWebhookProcessor> logger)
+        ILogger<PaymentWebhookProcessor> logger,
+        AuthProvider? auth = null,
+        ISupportBotNotifier? botNotifier = null)
     {
         _billing = billing;
         _logger = logger;
+        _auth = auth;
+        _botNotifier = botNotifier;
     }
 
     /// <summary>Outcome of processing a single webhook event.</summary>
@@ -171,6 +179,41 @@ public sealed class PaymentWebhookProcessor
             catch (Exception ex)
             {
                 _logger.LogWarning(ex, "Failed to grant first top-up bonus for payment {PaymentId}", evt.OrderId);
+            }
+
+            // Notify support bot about confirmed top-up (best-effort)
+            try
+            {
+                var payment = await _billing.GetPaymentAsync(evt.OrderId, ct);
+                if (payment is not null)
+                {
+                    string email = "";
+                    if (!string.IsNullOrEmpty(payment.UserId) && _auth is not null)
+                    {
+                        var user = await _auth.GetUserAsync(payment.UserId, ct);
+                        email = user?.Email ?? "";
+                    }
+
+                    if (!string.IsNullOrEmpty(email))
+                    {
+                        var providerDisplay = providerName.Equals("rollypay", StringComparison.OrdinalIgnoreCase)
+                            ? "Rollypay (СБП)"
+                            : providerName.Equals("yandexpay", StringComparison.OrdinalIgnoreCase)
+                                ? "Yandex Pay"
+                                : providerName;
+
+                        _botNotifier?.NotifyTopUpCompleted(
+                            email,
+                            payment.ProviderAmount,
+                            payment.CreditedUsdAmount,
+                            providerDisplay,
+                            evt.OrderId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to notify support bot for payment {PaymentId}", evt.OrderId);
             }
         }
 

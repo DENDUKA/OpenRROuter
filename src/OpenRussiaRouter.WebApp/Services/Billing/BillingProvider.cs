@@ -189,4 +189,8 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         CancellationToken cancellationToken = default)
         => _usage.GetAdminRequestsSummaryAsync(modelFilters, providerFilters, apiKeyFilters,
             nodeFilters, accountFilters, fromUtc, toUtc, cancellationToken);
+
+    public virtual Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
+        => _payments.GetDailyStatsAsync(sinceUtc, cancellationToken);
 }

@@ -108,6 +108,11 @@ services:
       YandexMetrika__OfflineConversions__Enabled: "${YANDEX_METRIKA_OFFLINE_ENABLED:-false}"
       YandexMetrika__OfflineConversions__CounterId: "111582266"
       YandexMetrika__OfflineConversions__OAuthToken: "${YANDEX_METRIKA_OAUTH_TOKEN:-}"
+      # First API request notification to rawrter-tg-bot
+      GrpcServices__Auth: "http://auth-service:8080"
+      TelegramBot__Enabled: "true"
+      TelegramBot__Endpoint: "http://rawrter-tg-bot:8080/v1/events/first-api-request"
+      TelegramBot__AuthToken: "${SUPPORT_BOT_TOKEN:-}"
     mem_limit: 512m
     cpus: 0.75
 

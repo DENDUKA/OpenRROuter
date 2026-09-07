@@ -78,4 +78,31 @@ public sealed class SupportBotNotifier : ISupportBotNotifier
             _logger.LogError(ex, "Failed to queue a user registration notification.");
         }
     }
+
+    public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null)
+    {
+        try
+        {
+            if (!_settings.Enabled)
+                return;
+
+            if (string.IsNullOrWhiteSpace(_settings.Endpoint) || string.IsNullOrWhiteSpace(_settings.AuthToken))
+            {
+                _logger.LogError(
+                    "Support bot channel is enabled but Endpoint/AuthToken is not configured; topup notification dropped.");
+                return;
+            }
+
+            var eventId = !string.IsNullOrWhiteSpace(paymentId) ? $"topup-{paymentId}" : Guid.NewGuid().ToString("N");
+            var topupEvent = SupportBotEvent.TopUpCompleted(
+                eventId, DateTimeOffset.UtcNow, email, amountRub, creditedUsd, provider);
+
+            if (!_queue.TryEnqueue(topupEvent))
+                _logger.LogWarning("Support bot event queue is full; topup notification dropped (best-effort channel).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue a topup notification.");
+        }
+    }
 }

@@ -123,6 +123,7 @@ public class SupportModelTests
     {
         public void NotifySupportTicket(string email, string subject, string message) { }
         public void NotifyUserRegistered(string email) { }
+        public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }
 
     private sealed class RecordingSupportBotNotifier : ISupportBotNotifier
@@ -133,6 +134,7 @@ public class SupportModelTests
             => Tickets.Add((email, subject, message));
 
         public void NotifyUserRegistered(string email) { }
+        public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }
 
     [Fact]

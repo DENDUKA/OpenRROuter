@@ -268,3 +268,14 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 уровней reasoning. `false` разрешает полной синхронизации с 9Router заменить список; `true`
 сохраняет только пересечение с текущими возможностями ноды. Новые поля добавляются только
 additive-миграциями и additive protobuf-полями.
+
+## Уведомления Telegram-бота (BOT-003)
+
+При первом списании токенов пользователя (`isFirstUsage` в `RecordUsageWithTransactionAsync`)
+`BillingApplicationService` через `ITelegramBotNotifier` (`TelegramBotNotifier`) отправляет
+событие `first_api_request` в сервис бота (`POST /v1/events/first-api-request`). Email пользователя
+резолвится через gRPC `AuthService.GetUser`. Вызов строго fail-soft (фоновый `Task.Run`),
+ошибки бота или сети не влияют на биллинг.
+Также добавлен RPC `GetDailyStats` для предоставления суточной статистики успешных пополнений
+(количество, сумма в RUB и USD) для утренней сводки.
+additive-миграциями и additive protobuf-полями.

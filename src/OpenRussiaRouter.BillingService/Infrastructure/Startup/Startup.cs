@@ -73,6 +73,16 @@ public static class Startup
         services.Configure<PaymentOptions>(configuration.GetSection("Payments"));
         services.Configure<ServiceAuthOptions>(configuration.GetSection("ServiceAuth"));
         services.Configure<ServiceAuthServerOptions>(o => o.ProtectedMethods = ProtectedBillingMethods);
+        services.Configure<OpenRussiaRouter.BillingService.Infrastructure.Telegram.TelegramBotOptions>(
+            configuration.GetSection(OpenRussiaRouter.BillingService.Infrastructure.Telegram.TelegramBotOptions.SectionName));
+        services.AddHttpClient("TelegramBot");
+        var authUrl = configuration["GrpcServices:Auth"];
+        if (!string.IsNullOrWhiteSpace(authUrl))
+        {
+            services.AddGrpcClient<Contracts.Grpc.Auth.V1.AuthService.AuthServiceClient>(o => o.Address = new Uri(authUrl));
+        }
+        services.AddSingleton<OpenRussiaRouter.BillingService.Infrastructure.Telegram.ITelegramBotNotifier,
+            OpenRussiaRouter.BillingService.Infrastructure.Telegram.TelegramBotNotifier>();
         services.AddHttpClient("BillingFx");
         services.AddSingleton<FxQuoteService>();
         services.AddHostedService<FxRateRefresher>();

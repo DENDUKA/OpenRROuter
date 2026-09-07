@@ -389,6 +389,22 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
             throw new BillingException(response.ErrorCode);
     }
 
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
+    {
+        var response = await client.GetDailyStatsAsync(
+            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetDailyStatsRequest
+            {
+                SinceUtc = sinceUtc.ToString("O", CultureInfo.InvariantCulture)
+            },
+            cancellationToken: cancellationToken);
+
+        return (
+            response.TopupsCount,
+            ParseDecimal(response.TotalRub),
+            ParseDecimal(response.TotalUsd));
+    }
+
     private static decimal ParseDecimal(string value) =>
         string.IsNullOrWhiteSpace(value) ? 0m : decimal.Parse(value, CultureInfo.InvariantCulture);
 

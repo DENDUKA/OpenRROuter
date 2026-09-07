@@ -123,6 +123,14 @@ public sealed class SupportBotEventWorker : BackgroundService
                 return _settings.Endpoint[..^8] + "/registration";
             }
         }
+        else if (supportEvent.EventType == SupportBotEvent.TopUpCompletedType)
+        {
+            if (!string.IsNullOrWhiteSpace(_settings.Endpoint) &&
+                _settings.Endpoint.EndsWith("/support", StringComparison.OrdinalIgnoreCase))
+            {
+                return _settings.Endpoint[..^8] + "/topup";
+            }
+        }
 
         return _settings.Endpoint ?? "";
     }
@@ -132,9 +140,16 @@ public sealed class SupportBotEventWorker : BackgroundService
         using var client = _httpClientFactory.CreateClient(HttpClientName);
 
         var endpoint = ResolveEndpoint(supportEvent);
-        object payloadDto = supportEvent.EventType == SupportBotEvent.UserRegisteredType
-            ? new UserRegisteredPayloadDto(supportEvent.Email)
-            : new SupportBotPayloadDto(supportEvent.Email, supportEvent.Subject ?? "", supportEvent.Message ?? "");
+        object payloadDto = supportEvent.EventType switch
+        {
+            SupportBotEvent.UserRegisteredType => new UserRegisteredPayloadDto(supportEvent.Email),
+            SupportBotEvent.TopUpCompletedType => new TopUpCompletedPayloadDto(
+                supportEvent.Email,
+                supportEvent.AmountRub ?? 0m,
+                supportEvent.CreditedUsd ?? 0m,
+                supportEvent.Provider ?? "СБП"),
+            _ => new SupportBotPayloadDto(supportEvent.Email, supportEvent.Subject ?? "", supportEvent.Message ?? "")
+        };
 
         var eventDto = new SupportBotEventDto(
             supportEvent.Id,
@@ -182,4 +197,6 @@ public sealed class SupportBotEventWorker : BackgroundService
     private sealed record SupportBotPayloadDto(string Email, string Subject, string Message);
 
     private sealed record UserRegisteredPayloadDto(string Email);
+
+    private sealed record TopUpCompletedPayloadDto(string Email, decimal AmountRub, decimal CreditedUsd, string Provider);
 }

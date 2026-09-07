@@ -1216,4 +1216,22 @@ public sealed class GrpcBillingService(
             ErrorCode = result.ErrorCode ?? string.Empty
         };
     }
+
+    public override async Task<GetDailyStatsResponse> GetDailyStats(
+        GetDailyStatsRequest request,
+        ServerCallContext context)
+    {
+        var ct = context?.CancellationToken ?? CancellationToken.None;
+        var sinceUtc = DateTimeOffset.TryParse(request.SinceUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+            ? dt
+            : DateTimeOffset.UtcNow.AddHours(-24);
+
+        var (count, rub, usd) = await billing.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
+        return new GetDailyStatsResponse
+        {
+            TopupsCount = count,
+            TotalRub = rub.ToString("F2", CultureInfo.InvariantCulture),
+            TotalUsd = usd.ToString("F2", CultureInfo.InvariantCulture)
+        };
+    }
 }

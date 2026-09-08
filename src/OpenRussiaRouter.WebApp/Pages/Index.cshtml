@@ -294,7 +294,7 @@ curl https://api.rawrter.com/v1/chat/completions \
   -H "Authorization: Bearer $ORR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "ORR/...",
+    "model": "gpt-5.6-sol",
     "messages": [
       { "role": "user", "content": "Hello" }
     ]
@@ -307,7 +307,7 @@ curl https://api.rawrter.com/v1/chat/completions \
   "env": {
     "ANTHROPIC_BASE_URL": "https://api.rawrter.com",
     "ANTHROPIC_AUTH_TOKEN": "sk-or-...",
-    "ANTHROPIC_MODEL": "ORR/..."
+    "ANTHROPIC_MODEL": "claude-sonnet-5"
   }
 }</code></pre>
             </div>

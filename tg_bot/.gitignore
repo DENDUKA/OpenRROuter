@@ -1,0 +1,14 @@
+.DS_Store
+private/
+secrets/
+.pi/secrets/
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.log
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo

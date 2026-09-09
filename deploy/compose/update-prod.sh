@@ -5,6 +5,7 @@
 #
 # Re-syncing the compose + Caddyfile from git every run is what keeps the box from
 # hand-diverging. Caddy is recreated too (picks up Caddyfile changes); its image is not built.
+# Then update the existing separate Telegram bot project from app/tg_bot.
 # For infra changes (new compose service, etc.) prefer deploy-prod.sh.
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -75,6 +76,9 @@ if [ "$ok" != "1" ]; then
   docker compose ps --format 'table {{.Service}}\t{{.Status}}'
   exit 1
 fi
+
+echo "==> [prod] update Telegram bot (separate project + image rollback)"
+bash "$SRC/update-tg-bot.sh"
 
 docker image prune -f >/dev/null
 echo "==> [prod] OK at ${after:0:9}"

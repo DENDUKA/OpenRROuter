@@ -1,5 +1,16 @@
 # Tasks
 
+## T-020 — Перенести production Telegram-бота в tg_bot и общий процесс обновления
+- status: blocked
+- category: deployment
+- priority: high
+- created: 2026-09-09
+- blocked_reason: Локальная реализация проверена; нужны разрешённый push, одноразовая установка обновлённого update-prod.sh на сервере и внешняя проверка. Сервер в этой задаче только читался.
+- desc: Актуальная версия из работающего контейнера перенесена в tg_bot; исходные src сохранены, сборка 10 JS-файлов совпала по SHA-256. Восстановлены старые тесты, добавлены проверки новых маршрутов и сводки. Добавлены CI publish и отдельный Compose updater с health-gate и rollback образа.
+- validation: 80 Vitest tests, typecheck/build, 41 релевантный WebApp test, dotnet solution build (0 warnings/errors), Docker build, изолированный runtime health, Compose validation, 4 mock deployment scenarios. npm production audit — 0, dev audit — 2 moderate (Vitest).
+- result: implementation complete / external verification pending. Инструкция и ограничения — tg_bot/README.md. BOT-002–004 не закрыты переносом.
+
+
 > **Активный бэклог.** Здесь лежат только незавершённые задачи: `todo`, `in_progress`, `blocked`.
 > Статус управляется командами `/add-task` (добавить) и `/start-task` (взять в работу
 > в отдельном агенте). Файл коммитится в git — это общее состояние бэклога, а не локальный черновик.

@@ -425,6 +425,23 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
    при создании пушатся на активные ноды, при отзыве деактивируются. Маппинг
    `(api_key_id, node_id, router_key_id)` — в `control.integration_key_sync`.
 
+## Telegram-бот (`tg_bot/`)
+
+По решению владельца production-исходники отдельного бота включены в этот репозиторий.
+TypeScript/Node.js 24/Fastify, отдельный Compose-проект `rawrter-tg-bot`, не .NET-библиотека.
+Перед правками читать `tg_bot/AGENTS.md` и `tg_bot/README.md`; обязательны npm typecheck/test/build.
+Бот принимает Support/registration/topup/first-api-request и получает суточную сводку через
+закрытый HTTP API WebApp. Команд Telegram/топиков пока нет. Отдельную БД не создавать;
+будущий доступ к существующей БД — только чтение, текущая очередь остаётся in-memory.
+
+Workflow `tg-bot.yml` проверяет/публикует образ, но не деплоит. Обновлённый `update-prod.sh`
+после health-gate основных сервисов вызывает `update-tg-bot.sh`, который собирает бот из
+`app/tg_bot`, сохраняет прежний Compose project и env-file `/opt/rawrter-tg-bot/.env`.
+При неудаче бота откатывается только его image; основной сервис остаётся обновлённым.
+Старую копию `/opt/orr/update-prod.sh` нужно один раз установить вручную после разрешения
+владельца (инструкция в README бота); Git pull не заменяет эту копию автоматически.
+Legacy `deploy-prod.yml`/`update-orr.sh` не обновляет бот. Внешняя проверка миграции ожидается.
+
 ## Деплой — граница ответственности
 
 - **GitHub Actions** (`.github/workflows/build-deploy.yml`, прод — `deploy-prod.yml`):

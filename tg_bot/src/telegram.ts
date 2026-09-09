@@ -41,6 +41,7 @@ export function isConnectError(err: unknown): boolean {
   const checkSingle = (e: unknown): boolean => {
     if (!e || typeof e !== 'object') return false;
     const rec = e as Record<string, unknown>;
+    if (rec.name === 'ConnectTimeoutError') return true;
     if (rec.syscall === 'connect' || rec.syscall === 'getaddrinfo') return true;
     if (typeof rec.code === 'string') {
       const connectCodes = [
@@ -51,6 +52,8 @@ export function isConnectError(err: unknown): boolean {
         'ENETDOWN',
         'ENOTFOUND',
         'ETIMEDOUT',
+        'UND_ERR_CONNECT_TIMEOUT',
+        'UND_ERR_SOCKET',
       ];
       if (connectCodes.includes(rec.code)) return true;
     }

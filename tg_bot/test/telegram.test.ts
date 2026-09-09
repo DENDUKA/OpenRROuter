@@ -136,6 +136,7 @@ describe('createTelegramTransport', () => {
     expect(isConnectError({ syscall: 'connect' })).toBe(true);
     expect(isConnectError({ code: 'ECONNREFUSED' })).toBe(true);
     expect(isConnectError({ cause: { code: 'ENETUNREACH' } })).toBe(true);
+    expect(isConnectError({ cause: { name: 'ConnectTimeoutError', code: 'UND_ERR_CONNECT_TIMEOUT' } })).toBe(true);
     expect(isConnectError({ cause: { errors: [{ code: 'ETIMEDOUT', syscall: 'connect' }] } })).toBe(true);
   });
 });

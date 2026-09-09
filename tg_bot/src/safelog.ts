@@ -29,6 +29,11 @@ export function createSafeLogger(minLevel: LogLevel = 'info'): SafeLogger {
 /** Готовит текст ошибки к логированию: вырезает секрет и ограничивает длину. */
 export function sanitizeError(err: unknown, secret: string): string {
   let text = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  if (err && typeof err === 'object' && 'cause' in err && (err as { cause?: unknown }).cause) {
+    const cause = (err as { cause?: unknown }).cause;
+    const causeText = cause instanceof Error ? `${cause.name}: ${cause.message}` : String(cause);
+    text += ` (cause: ${causeText})`;
+  }
   if (secret.length > 0) text = text.split(secret).join('***');
   if (text.length > 400) text = text.slice(0, 400) + '…';
   return text;

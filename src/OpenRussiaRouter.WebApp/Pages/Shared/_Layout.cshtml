@@ -1,5 +1,6 @@
 @using OpenRussiaRouter.WebApp.Services.State
 @inject OpenRussiaRouter.WebApp.Services.Billing.BillingProvider BillingProvider
+@inject OpenRussiaRouter.WebApp.Services.Currency.CurrencyFormatter CurrencyFormatter
 @inject OpenRussiaRouter.WebApp.Services.SiteBaseUrlResolver SiteUrlResolver
 @inject Microsoft.Extensions.Options.IOptions<OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsOptions> AnalyticsOptions
 @inject OpenRussiaRouter.WebApp.Services.Analytics.AnalyticsUserIdProvider AnalyticsUserIds
@@ -29,22 +30,24 @@
 
     var displayName = user?.DisplayName ?? "User";
     var avatarLetter = displayName.Length > 0 ? displayName[0].ToString().ToUpper() : "U";
+
+    // Active display currency for the topbar switcher (mirrors the saved profile choice via cookie).
+    var activeCcy = Context.Request.Cookies.TryGetValue("orr_ccy", out var ccy)
+        && ccy is "RUB" or "USD" or "EUR" ? ccy : "RUB";
+    var displayCurrency = OpenRussiaRouter.WebApp.Services.Currency.DisplayCurrencyExtensions.Parse(activeCcy);
+
     string? balanceText = null;
     if (user is not null && !string.IsNullOrWhiteSpace(user.UserId))
     {
         try
         {
             var balance = await BillingProvider.GetBalanceAsync(user.UserId, Context.RequestAborted);
-            balanceText = balance.Amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture);
+            balanceText = CurrencyFormatter.Format(balance.Amount, displayCurrency);
         }
         catch (Exception)
         {
         }
     }
-
-    // Active display currency for the topbar switcher (mirrors the saved profile choice via cookie).
-    var activeCcy = Context.Request.Cookies.TryGetValue("orr_ccy", out var ccy)
-        && ccy is "RUB" or "USD" or "EUR" ? ccy : "RUB";
     string CcyBtnClass(string code) => code == activeCcy ? "ccy-btn active" : "ccy-btn";
 
     // Active UI culture for the language switcher.
@@ -263,7 +266,7 @@
             {
                 @if (balanceText is not null)
                 {
-                    <span class="user-balance" aria-label="@Localizer["A11y_Balance"]">$@balanceText</span>
+                    <span class="user-balance" aria-label="@Localizer["A11y_Balance"]">@balanceText</span>
                 }
                 <div class="user-menu" id="user-menu">
                     <button class="user-menu-trigger" id="user-menu-trigger"

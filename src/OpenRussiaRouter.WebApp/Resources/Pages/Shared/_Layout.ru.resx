@@ -42,7 +42,7 @@
     <value>Меню пользователя</value>
   </data>
   <data name="A11y_Balance" xml:space="preserve">
-    <value>Текущий баланс в долларах США</value>
+    <value>Текущий баланс</value>
   </data>
   <data name="Footer_Offer" xml:space="preserve">
     <value>Публичная оферта</value>

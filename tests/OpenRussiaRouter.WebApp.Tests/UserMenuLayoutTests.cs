@@ -30,6 +30,7 @@ public sealed class UserMenuLayoutTests(WebAppFactory factory) : IClassFixture<W
             }));
 
         using var client = authedFactory.CreateClient();
+        client.DefaultRequestHeaders.Add("Cookie", "orr_ccy=USD");
 
         using var response = await client.GetAsync("/workspace/settings");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -45,6 +46,7 @@ public sealed class UserMenuLayoutTests(WebAppFactory factory) : IClassFixture<W
         body.Should().Contain("user-menu--open");
         body.Should().Contain("class=\"user-balance\"");
         body.Should().Contain("$0.50");
+        body.Should().NotContain("Current balance in US dollars");
         billing.Calls.Should().Be(1);
     }
 

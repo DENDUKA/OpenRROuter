@@ -41,6 +41,9 @@
   <data name="A11y_UserMenu" xml:space="preserve">
     <value>User menu</value>
   </data>
+  <data name="A11y_Balance" xml:space="preserve">
+    <value>Current balance in US dollars</value>
+  </data>
   <data name="Footer_Offer" xml:space="preserve">
     <value>Public Offer</value>
   </data>

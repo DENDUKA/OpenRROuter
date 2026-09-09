@@ -12,6 +12,7 @@ export interface BotConfig {
   heartbeatEnabled: boolean;
   queueMaxItems: number;
   dedupMemory: number;
+  telegramRequestTimeoutMs: number;
 }
 
 export interface ConfigResult {
@@ -59,6 +60,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigResult {
       heartbeatEnabled: parseBool(env.HEARTBEAT_ENABLED, true),
       queueMaxItems: clampInt(env.QUEUE_MAX_ITEMS, 1, 10_000, 100),
       dedupMemory: clampInt(env.DEDUP_MEMORY, 1, 100_000, 1000),
+      telegramRequestTimeoutMs: clampInt(env.TELEGRAM_REQUEST_TIMEOUT_MS, 1000, 120_000, 30_000),
     },
     errors,
   };

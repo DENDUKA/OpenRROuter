@@ -3,7 +3,9 @@
 //   - 429: ждём retry_after (с потолком), повторяем; всего не больше maxAttempts;
 //   - 5xx: нарастающая пауза, повторяем в пределах maxAttempts;
 //   - прочие 4xx: постоянная ошибка, без повтора;
-//   - сетевой сбой/таймаут: результат «unknown» (запрос мог дойти), без повтора,
+//   - сбой подключения (connect error): запрос гарантированно не ушёл в Telegram,
+//     повторяем до maxAttempts с нарастающей паузой;
+//   - таймаут ответа/неизвестный сбой: результат «unknown» (запрос мог дойти), без повтора,
 //     чтобы не плодить дубли; absolute exactly-once не обещается.
 // Токен не попадает в логи: ошибки проходят через sanitizeError.
 
@@ -29,9 +31,43 @@ export interface TelegramOptions {
   chatId: string;
 }
 
-const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_ATTEMPTS = 3;
 const DEFAULT_MAX_RETRY_AFTER_MS = 30_000;
+
+export function isConnectError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false;
+
+  const checkSingle = (e: unknown): boolean => {
+    if (!e || typeof e !== 'object') return false;
+    const rec = e as Record<string, unknown>;
+    if (rec.syscall === 'connect' || rec.syscall === 'getaddrinfo') return true;
+    if (typeof rec.code === 'string') {
+      const connectCodes = [
+        'ECONNREFUSED',
+        'ENETUNREACH',
+        'EHOSTUNREACH',
+        'EADDRNOTAVAIL',
+        'ENETDOWN',
+        'ENOTFOUND',
+        'ETIMEDOUT',
+      ];
+      if (connectCodes.includes(rec.code)) return true;
+    }
+    return false;
+  };
+
+  const anyErr = err as { cause?: unknown };
+  if (checkSingle(anyErr)) return true;
+  if (anyErr.cause && checkSingle(anyErr.cause)) return true;
+
+  const cause = (anyErr.cause ?? anyErr) as { errors?: unknown[] };
+  if (Array.isArray(cause.errors) && cause.errors.length > 0) {
+    if (cause.errors.every(checkSingle)) return true;
+  }
+
+  return false;
+}
 
 async function readRetryAfterMs(res: Response): Promise<number> {
   try {
@@ -71,6 +107,21 @@ export function createTelegramTransport(options: TelegramOptions, deps: Telegram
         });
       } catch (err) {
         clearTimeout(timer);
+        if (isConnectError(err)) {
+          if (attempt < maxAttempts) {
+            logger?.warn('telegram_send_connect_retry', {
+              attempt,
+              reason: sanitizeError(err, options.botToken),
+            });
+            await sleep(attempt * 1000);
+            continue;
+          }
+          logger?.error('telegram_send_connect_failed', {
+            attempt,
+            reason: sanitizeError(err, options.botToken),
+          });
+          return 'failed';
+        }
         logger?.warn('telegram_send_unknown', { attempt, reason: sanitizeError(err, options.botToken) });
         return 'unknown';
       }

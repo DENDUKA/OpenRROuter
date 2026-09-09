@@ -12,6 +12,7 @@ describe('loadConfig', () => {
     expect(config.heartbeatEnabled).toBe(true);
     expect(config.queueMaxItems).toBe(100);
     expect(config.dedupMemory).toBe(1000);
+    expect(config.telegramRequestTimeoutMs).toBe(30_000);
   });
 
   it('сообщает об отсутствующих секретах только именами переменных', () => {
@@ -30,12 +31,14 @@ describe('loadConfig', () => {
       PORT: '9090',
       QUEUE_MAX_ITEMS: '5',
       DEDUP_MEMORY: '10',
+      TELEGRAM_REQUEST_TIMEOUT_MS: '45000',
     });
     expect(config.supportNotifyEnabled).toBe(false);
     expect(config.heartbeatEnabled).toBe(false);
     expect(config.port).toBe(9090);
     expect(config.queueMaxItems).toBe(5);
     expect(config.dedupMemory).toBe(10);
+    expect(config.telegramRequestTimeoutMs).toBe(45_000);
   });
 
   it('некорректный порт откатывается к значению по умолчанию', () => {

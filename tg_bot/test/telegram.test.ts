@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTelegramTransport } from '../src/telegram.js';
+import { createTelegramTransport, isConnectError } from '../src/telegram.js';
 import type { SafeLogger } from '../src/safelog.js';
 
 interface MockStep {
@@ -100,5 +100,42 @@ describe('createTelegramTransport', () => {
     const serialized = JSON.stringify(warn);
     expect(serialized.includes(token)).toBe(false);
     expect(serialized.includes('***')).toBe(true);
+  });
+
+  it('сбой подключения (connect error) повторяется и завершается успехом', async () => {
+    const connectErr = Object.assign(new Error('connect ECONNREFUSED'), {
+      cause: { code: 'ECONNREFUSED', syscall: 'connect' },
+    });
+    const { transport, calls, waits, warn } = mockTransport([connectErr, { status: 200 }]);
+    expect(await transport.sendMessage('текст')).toBe('sent');
+    expect(calls.length).toBe(2);
+    expect(waits).toEqual([1000]);
+    expect(warn.some(([m]) => m === 'telegram_send_connect_retry')).toBe(true);
+  });
+
+  it('сбой подключения исчерпывает попытки и возвращает failed', async () => {
+    const makeConnectErr = () =>
+      Object.assign(new Error('connect ETIMEDOUT'), {
+        cause: { code: 'ETIMEDOUT', syscall: 'connect' },
+      });
+    const { transport, calls, waits, errors } = mockTransport([
+      makeConnectErr(),
+      makeConnectErr(),
+      makeConnectErr(),
+    ]);
+    expect(await transport.sendMessage('текст')).toBe('failed');
+    expect(calls.length).toBe(3);
+    expect(waits).toEqual([1000, 2000]);
+    expect(errors.some(([m]) => m === 'telegram_send_connect_failed')).toBe(true);
+  });
+
+  it('isConnectError корректно определяет ошибки подключения', () => {
+    expect(isConnectError(null)).toBe(false);
+    expect(isConnectError(new Error('generic error'))).toBe(false);
+    expect(isConnectError({ name: 'AbortError' })).toBe(false);
+    expect(isConnectError({ syscall: 'connect' })).toBe(true);
+    expect(isConnectError({ code: 'ECONNREFUSED' })).toBe(true);
+    expect(isConnectError({ cause: { code: 'ENETUNREACH' } })).toBe(true);
+    expect(isConnectError({ cause: { errors: [{ code: 'ETIMEDOUT', syscall: 'connect' }] } })).toBe(true);
   });
 });

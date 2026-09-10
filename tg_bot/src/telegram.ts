@@ -83,6 +83,7 @@ async function readRetryAfterMs(res: Response): Promise<number> {
 }
 
 export function createTelegramTransport(options: TelegramOptions, deps: TelegramTransportDeps = {}): TelegramTransport {
+  let activeChatId = options.chatId;
   const fetchFn = deps.fetchFn ?? fetch;
   const sleep =
     deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
@@ -102,7 +103,7 @@ export function createTelegramTransport(options: TelegramOptions, deps: Telegram
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({
-            chat_id: options.chatId,
+            chat_id: activeChatId,
             text,
             link_preview_options: { is_disabled: true },
           }),
@@ -145,7 +146,40 @@ export function createTelegramTransport(options: TelegramOptions, deps: Telegram
         return 'failed';
       }
 
-      logger?.error('telegram_send_rejected', { attempt, status: res.status });
+      let description: string | undefined;
+      let migrateToChatId: number | undefined;
+      try {
+        const body = (await res.json()) as {
+          description?: string;
+          parameters?: { migrate_to_chat_id?: number };
+        };
+        if (typeof body.description === 'string') {
+          description = body.description.slice(0, 200);
+        }
+        if (typeof body.parameters?.migrate_to_chat_id === 'number') {
+          migrateToChatId = body.parameters.migrate_to_chat_id;
+        }
+      } catch {
+        // ignore parse error
+      }
+
+      if (migrateToChatId !== undefined) {
+        logger?.warn('telegram_chat_migrated', {
+          oldChatId: activeChatId,
+          newChatId: migrateToChatId,
+        });
+        activeChatId = String(migrateToChatId);
+        if (attempt < maxAttempts) {
+          continue;
+        }
+      }
+
+      logger?.error('telegram_send_rejected', {
+        attempt,
+        status: res.status,
+        ...(description ? { description: sanitizeError(description, options.botToken) } : {}),
+        ...(migrateToChatId !== undefined ? { migrateToChatId } : {}),
+      });
       return 'failed';
     }
     return 'failed';

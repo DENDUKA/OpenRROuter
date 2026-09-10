@@ -77,12 +77,50 @@ describe('createTelegramTransport', () => {
     expect(calls.length).toBe(3);
   });
 
-  it('не повторяет постоянную ошибку 4xx', async () => {
-    const { transport, calls, waits, errors } = mockTransport([{ status: 400 }]);
+  it('не повторяет постоянную ошибку 4xx, но логирует description', async () => {
+    const { transport, calls, waits, errors } = mockTransport([
+      { status: 400, body: { ok: false, description: 'Bad Request: chat not found' } },
+    ]);
     expect(await transport.sendMessage('текст')).toBe('failed');
     expect(calls.length).toBe(1);
     expect(waits).toEqual([]);
-    expect(errors.some(([m]) => m === 'telegram_send_rejected')).toBe(true);
+    const rejectedLog = errors.find(([m]) => m === 'telegram_send_rejected');
+    expect(rejectedLog).toBeDefined();
+    expect(rejectedLog?.[1]?.description).toBe('Bad Request: chat not found');
+  });
+
+  it('обрабатывает migrate_to_chat_id: переключается на новый chat_id и повторяет отправку', async () => {
+    const { transport, calls, warn } = mockTransport([
+      {
+        status: 400,
+        body: {
+          ok: false,
+          description: 'Bad Request: group chat was upgraded to a supergroup chat',
+          parameters: { migrate_to_chat_id: -1004463291412 },
+        },
+      },
+      { status: 200, body: { ok: true } },
+    ]);
+    expect(await transport.sendMessage('текст')).toBe('sent');
+    expect(calls.length).toBe(2);
+    expect(calls[0]?.body.chat_id).toBe('123456');
+    expect(calls[1]?.body.chat_id).toBe('-1004463291412');
+    expect(warn.some(([m]) => m === 'telegram_chat_migrated')).toBe(true);
+
+    // Следующее сообщение сразу отправляется в новый chat_id
+    const { transport: t2, calls: c2 } = mockTransport([
+      {
+        status: 400,
+        body: {
+          ok: false,
+          description: 'Bad Request: group chat was upgraded to a supergroup chat',
+          parameters: { migrate_to_chat_id: -1004463291412 },
+        },
+      },
+      { status: 200, body: { ok: true } },
+    ]);
+    await t2.sendMessage('msg 1');
+    expect(c2[1]?.body.chat_id).toBe('-1004463291412');
   });
 
   it('сетевой сбой даёт unknown без повторов', async () => {

@@ -411,7 +411,7 @@ public sealed partial class BillingRepository
         payment.PayUrl, payment.BonusPercent, payment.BonusUsd
     };
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
         DateTimeOffset sinceUtc, CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -422,9 +422,15 @@ public sealed partial class BillingRepository
                 coalesce(sum(credited_usd_amount), 0) as total_usd
             from billing.payments
             where status = 'Paid' and confirmed_at_utc >= @SinceUtc;
+
+            select count(distinct user_id)
+            from billing.usage_records
+            where created_at_utc >= @SinceUtc;
             """;
-        var row = await connection.QuerySingleAsync<(int TopupsCount, decimal TotalRub, decimal TotalUsd)>(
+        using var multi = await connection.QueryMultipleAsync(
             new CommandDefinition(sql, new { SinceUtc = sinceUtc }, cancellationToken: ct)).ConfigureAwait(false);
-        return row;
+        var row = await multi.ReadSingleAsync<(int TopupsCount, decimal TotalRub, decimal TotalUsd)>().ConfigureAwait(false);
+        var activeApiUsers = await multi.ReadSingleAsync<int>().ConfigureAwait(false);
+        return (row.TopupsCount, row.TotalRub, row.TotalUsd, activeApiUsers);
     }
 }

@@ -4,7 +4,7 @@ import type { DailySummaryData } from '../src/format.js';
 
 const summary: DailySummaryData = {
   newRegistrations: 2, topupsCount: 1, topupsTotalRub: 100,
-  topupsTotalUsd: 1.1, uniqueUsers: 3,
+  topupsTotalUsd: 1.1, uniqueUsers: 3, activeApiUsers: 4,
 };
 const state: HeartbeatSnapshot = {
   queueDepth: 0, supportSentToday: 4, lastSupportSentAt: null,

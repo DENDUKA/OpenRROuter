@@ -555,10 +555,34 @@ public sealed class BillingApplicationServiceTests
             Options.Create(new BillingPaginationOptions { DefaultPageSize = 1000, MaxPageSize = 5000 }),
             NullLogger<BillingApplicationService>.Instance);
 
-        var (count, rub, usd) = await service.GetDailyStatsAsync(DateTimeOffset.UtcNow.AddHours(-24));
+        var since = DateTimeOffset.UtcNow.AddHours(-24);
+        var (count, rub, usd, activeApiUsers) = await service.GetDailyStatsAsync(since);
         count.Should().Be(0);
         rub.Should().Be(0m);
         usd.Should().Be(0m);
+        activeApiUsers.Should().Be(0);
+
+        // Add usage records for two distinct users, and one duplicate user
+        await repo.RecordUsageWithTransactionAsync(
+            new ActivityByTokenRecord("req-1", "key-1", "sk-1", "gpt-4", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(1), since.AddHours(1)),
+            new UsageRecord("req-1", "user-1", "key-1", "gpt-4", "v1", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(1)),
+            null);
+        await repo.RecordUsageWithTransactionAsync(
+            new ActivityByTokenRecord("req-2", "key-1", "sk-1", "gpt-4", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(2), since.AddHours(2)),
+            new UsageRecord("req-2", "user-1", "key-1", "gpt-4", "v1", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(2)),
+            null);
+        await repo.RecordUsageWithTransactionAsync(
+            new ActivityByTokenRecord("req-3", "key-2", "sk-2", "gpt-4", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(3), since.AddHours(3)),
+            new UsageRecord("req-3", "user-2", "key-2", "gpt-4", "v1", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(3)),
+            null);
+        // Add one older usage record outside window
+        await repo.RecordUsageWithTransactionAsync(
+            new ActivityByTokenRecord("req-4", "key-3", "sk-3", "gpt-4", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(-1), since.AddHours(-1)),
+            new UsageRecord("req-4", "user-3", "key-3", "gpt-4", "v1", "node-1", new TokenUsage(10, 20, 0), MoneyAmount.Usd(0.01m), "completed", since.AddHours(-1)),
+            null);
+
+        var stats = await service.GetDailyStatsAsync(since);
+        stats.ActiveApiUsers.Should().Be(2);
     }
 
     private sealed class RecordingTelegramBotNotifier : OpenRussiaRouter.BillingService.Infrastructure.Telegram.ITelegramBotNotifier

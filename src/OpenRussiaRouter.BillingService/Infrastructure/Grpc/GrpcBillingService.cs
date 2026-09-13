@@ -1226,12 +1226,13 @@ public sealed class GrpcBillingService(
             ? dt
             : DateTimeOffset.UtcNow.AddHours(-24);
 
-        var (count, rub, usd) = await billing.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
+        var (count, rub, usd, activeApiUsers) = await billing.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
         return new GetDailyStatsResponse
         {
             TopupsCount = count,
             TotalRub = rub.ToString("F2", CultureInfo.InvariantCulture),
-            TotalUsd = usd.ToString("F2", CultureInfo.InvariantCulture)
+            TotalUsd = usd.ToString("F2", CultureInfo.InvariantCulture),
+            ActiveApiUsers = activeApiUsers
         };
     }
 }

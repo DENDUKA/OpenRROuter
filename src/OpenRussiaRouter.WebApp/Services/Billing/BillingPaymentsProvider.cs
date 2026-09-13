@@ -389,7 +389,7 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
             throw new BillingException(response.ErrorCode);
     }
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
         DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
     {
         var response = await client.GetDailyStatsAsync(
@@ -402,7 +402,8 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
         return (
             response.TopupsCount,
             ParseDecimal(response.TotalRub),
-            ParseDecimal(response.TotalUsd));
+            ParseDecimal(response.TotalUsd),
+            response.ActiveApiUsers);
     }
 
     private static decimal ParseDecimal(string value) =>

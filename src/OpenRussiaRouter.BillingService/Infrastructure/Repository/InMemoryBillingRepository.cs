@@ -1072,14 +1072,20 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             weeklyLimit.HasValue && weeklySpent >= weeklyLimit.Value.Amount);
     }
 
-    public Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default)
+    public Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default)
     {
         var paid = _payments.Values
             .Where(p => p.Status == PaymentStatus.Paid && p.ConfirmedAtUtc >= sinceUtc)
             .ToList();
+        var activeApiUsers = _usageByRequestId.Values
+            .Where(u => u.CreatedAtUtc >= sinceUtc)
+            .Select(u => u.UserId)
+            .Distinct(StringComparer.Ordinal)
+            .Count();
         return Task.FromResult((
             paid.Count,
             paid.Sum(p => p.ProviderAmount),
-            paid.Sum(p => p.CreditedUsd.Amount)));
+            paid.Sum(p => p.CreditedUsd.Amount),
+            activeApiUsers));
     }
 }

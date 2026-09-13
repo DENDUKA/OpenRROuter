@@ -33,7 +33,7 @@ public static class BotDailySummaryEndpoint
 
         if (string.IsNullOrWhiteSpace(settings.AuthToken))
         {
-            return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
+            return Results.Json(new { error = "service_unavailable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
         }
 
         var header = http.Request.Headers.Authorization.ToString();
@@ -47,7 +47,7 @@ public static class BotDailySummaryEndpoint
 
         if (!isAuthorized)
         {
-            return Results.Unauthorized();
+            return Results.Json(new { error = "unauthorized" }, statusCode: StatusCodes.Status401Unauthorized);
         }
 
         var sinceUtc = DateTimeOffset.UtcNow.AddHours(-24);
@@ -66,9 +66,10 @@ public static class BotDailySummaryEndpoint
         int topupsCount = 0;
         decimal totalRub = 0m;
         decimal totalUsd = 0m;
+        int activeApiUsers = 0;
         try
         {
-            (topupsCount, totalRub, totalUsd) = await billing.GetDailyStatsAsync(sinceUtc, ct);
+            (topupsCount, totalRub, totalUsd, activeApiUsers) = await billing.GetDailyStatsAsync(sinceUtc, ct);
         }
         catch (Exception ex)
         {
@@ -104,7 +105,8 @@ public static class BotDailySummaryEndpoint
             topupsCount,
             topupsTotalRub = totalRub,
             topupsTotalUsd = totalUsd,
-            uniqueUsers
+            uniqueUsers,
+            activeApiUsers
         });
     }
 }

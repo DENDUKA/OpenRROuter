@@ -784,5 +784,6 @@ message GetDailyStatsResponse {
   int32 topups_count = 1;
   string total_rub = 2;
   string total_usd = 3;
+  int32 active_api_users = 4;
 }
 

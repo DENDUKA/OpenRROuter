@@ -878,7 +878,7 @@ public sealed partial class BillingApplicationService(
         return await repository.HasUserHadPaidTopUpAsync(userId, ct: ct).ConfigureAwait(false);
     }
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(
+    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
         DateTimeOffset sinceUtc, CancellationToken ct = default)
     {
         return await repository.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);

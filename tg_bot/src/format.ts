@@ -80,6 +80,7 @@ export interface DailySummaryData {
   topupsTotalRub: number;
   topupsTotalUsd: number;
   uniqueUsers: number;
+  activeApiUsers?: number;
 }
 
 export function formatDailySummaryMessage(summary: DailySummaryData): string {
@@ -92,6 +93,7 @@ export function formatDailySummaryMessage(summary: DailySummaryData): string {
     `👥 Новых регистраций: ${summary.newRegistrations}`,
     `💳 Пополнений: ${summary.topupsCount} на сумму ${rub} ₽ ($${usd})`,
     `🌐 Уникальных пользователей: ${summary.uniqueUsers}`,
+    `⚡️ Пользовались API: ${summary.activeApiUsers ?? 0}`,
   ].join('\n');
 }
 

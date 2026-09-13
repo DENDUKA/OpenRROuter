@@ -123,10 +123,23 @@ describe('formatDailySummaryMessage', () => {
       topupsTotalRub: 4500,
       topupsTotalUsd: 48.5,
       uniqueUsers: 72,
+      activeApiUsers: 15,
     });
     expect(text).toContain('📊 Утренняя сводка Rawrter');
     expect(text).toContain('👥 Новых регистраций: 10');
     expect(text).toContain('💳 Пополнений: 3');
     expect(text).toContain('🌐 Уникальных пользователей: 72');
+    expect(text).toContain('⚡️ Пользовались API: 15');
+  });
+
+  it('подставляет 0 если activeApiUsers не передан', () => {
+    const text = formatDailySummaryMessage({
+      newRegistrations: 1,
+      topupsCount: 0,
+      topupsTotalRub: 0,
+      topupsTotalUsd: 0,
+      uniqueUsers: 5,
+    });
+    expect(text).toContain('⚡️ Пользовались API: 0');
   });
 });

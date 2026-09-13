@@ -160,5 +160,5 @@ public interface IBillingRepository
     Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);
     Task DeleteModelProviderAsync(string id, CancellationToken ct = default);
 
-    Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
+    Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
 }

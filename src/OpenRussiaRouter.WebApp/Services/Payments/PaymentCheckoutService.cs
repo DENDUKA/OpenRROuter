@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Options;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Services.Payments;
 
@@ -25,15 +27,21 @@ public sealed class PaymentCheckoutService
     private readonly BillingProvider _billing;
     private readonly PaymentProviderRegistry _registry;
     private readonly ILogger<PaymentCheckoutService> _logger;
+    private readonly AuthProvider? _auth;
+    private readonly ISupportBotNotifier? _botNotifier;
 
     public PaymentCheckoutService(
         BillingProvider billing,
         PaymentProviderRegistry registry,
-        ILogger<PaymentCheckoutService> logger)
+        ILogger<PaymentCheckoutService> logger,
+        AuthProvider? auth = null,
+        ISupportBotNotifier? botNotifier = null)
     {
         _billing = billing;
         _registry = registry;
         _logger = logger;
+        _auth = auth;
+        _botNotifier = botNotifier;
     }
 
     /// <summary>
@@ -201,6 +209,40 @@ public sealed class PaymentCheckoutService
                 "provider-side payment is orphaned.",
                 created.PaymentId, providerCreated.ProviderPaymentId);
             throw;
+        }
+
+        // Notify bot about created payment (best-effort)
+        try
+        {
+            if (_botNotifier is not null)
+            {
+                string email = "";
+                if (!string.IsNullOrEmpty(userId) && _auth is not null)
+                {
+                    var user = await _auth.GetUserAsync(userId, ct);
+                    email = user?.Email ?? "";
+                }
+
+                if (!string.IsNullOrEmpty(email))
+                {
+                    var providerDisplay = provider.Name.Equals("rollypay", StringComparison.OrdinalIgnoreCase)
+                        ? "Rollypay (СБП)"
+                        : provider.Name.Equals("yandexpay", StringComparison.OrdinalIgnoreCase)
+                            ? "Yandex Pay"
+                            : provider.Name;
+
+                    _botNotifier.NotifyPaymentCreated(
+                        email,
+                        providerAmount,
+                        created.CreditedUsdAmount,
+                        providerDisplay,
+                        created.PaymentId);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to notify bot about created payment {PaymentId}", created.PaymentId);
         }
 
         return new CheckoutResult(

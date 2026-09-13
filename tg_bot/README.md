@@ -10,6 +10,7 @@
 - `POST /v1/events/registration`: `user_registered`, payload `{email}`.
 - `POST /v1/events/topup`: `topup_completed`, payload `{email, amountRub, creditedUsd, provider}`.
 - `POST /v1/events/first-api-request`: `first_api_request`, payload `{email, model}`.
+- `POST /v1/events/payment-created`: `payment_created`, payload `{email, amountRub, creditedUsd, provider}`.
 - Все события: `{id, type, occurredAt, payload}`, `Authorization: Bearer <INBOUND_AUTH_TOKEN>`. Ответы: 202 принято в память, 200 дубль, 400 невалидный вход, 401 отказ доступа, 413 большой запрос, 503 выключено/конфигурация/переполнение. Получатель фиксирован конфигурацией.
 - `GET /healthz`: безопасная локальная диагностика. HTTP 200 может содержать `status: degraded`; Compose проверяет именно `status: ok`.
 - В 10:00 UTC+3 (07:00 UTC) бот читает `GET <WEBAPP_BASE_URL>/internal/bot/daily-summary` с Bearer-аутентификацией, таймаут 10 с. Успех → бизнес-сводка за последние 24 часа, недоступность → технический «Бот жив». После рестарта в интервале 07:00–24:00 UTC — догоняющая отправка через 5 с.

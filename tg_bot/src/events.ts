@@ -61,11 +61,26 @@ export interface FirstApiRequestEvent {
   payload: FirstApiRequestPayload;
 }
 
+export interface PaymentCreatedPayload {
+  email: string;
+  amountRub: number;
+  creditedUsd: number;
+  provider: string;
+}
+
+export interface PaymentCreatedEvent {
+  id: string;
+  type: 'payment_created';
+  occurredAt: string;
+  payload: PaymentCreatedPayload;
+}
+
 export type BotEvent =
   | SupportTicketEvent
   | UserRegisteredEvent
   | TopUpCompletedEvent
-  | FirstApiRequestEvent;
+  | FirstApiRequestEvent
+  | PaymentCreatedEvent;
 
 export interface FieldError {
   field: string;
@@ -280,6 +295,66 @@ export function parseFirstApiRequestEvent(input: unknown): ParseResult<FirstApiR
           type: 'first_api_request',
           occurredAt,
           payload: { email, model },
+        },
+      };
+    }
+  }
+
+  return { ok: false, errors };
+}
+
+export function parsePaymentCreatedEvent(input: unknown): ParseResult<PaymentCreatedEvent> {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    return { ok: false, errors: [{ field: 'body', reason: 'ожидается объект события' }] };
+  }
+  const obj = input as Record<string, unknown>;
+  const errors: FieldError[] = [];
+
+  const id = readString(obj.id);
+  if (id === null || id.length === 0) errors.push({ field: 'id', reason: 'обязательная строка' });
+  else if (id.length > EVENT_LIMITS.idMax) errors.push({ field: 'id', reason: `длина больше ${EVENT_LIMITS.idMax}` });
+
+  if (obj.type !== 'payment_created') errors.push({ field: 'type', reason: "допустимо только 'payment_created'" });
+
+  const occurredAt = readString(obj.occurredAt);
+  if (occurredAt === null || occurredAt.length === 0) {
+    errors.push({ field: 'occurredAt', reason: 'обязательная строка' });
+  } else if (occurredAt.length > EVENT_LIMITS.occurredAtMax || Number.isNaN(Date.parse(occurredAt))) {
+    errors.push({ field: 'occurredAt', reason: 'ожидается корректная дата в ISO 8601' });
+  }
+
+  if (typeof obj.payload !== 'object' || obj.payload === null || Array.isArray(obj.payload)) {
+    errors.push({ field: 'payload', reason: 'ожидается объект payload' });
+  } else {
+    const payloadObj = obj.payload as Record<string, unknown>;
+    const email = readString(payloadObj.email) ?? '';
+    const amountRub = readNumber(payloadObj.amountRub);
+    const creditedUsd = readNumber(payloadObj.creditedUsd);
+    const provider = readString(payloadObj.provider) ?? 'СБП';
+
+    if (email.length === 0) errors.push({ field: 'payload.email', reason: 'обязательная строка' });
+    else if (email.length > EVENT_LIMITS.emailMax || !email.includes('@') || /\s/.test(email)) {
+      errors.push({ field: 'payload.email', reason: 'некорректный адрес' });
+    }
+
+    if (amountRub === null || amountRub <= 0) {
+      errors.push({ field: 'payload.amountRub', reason: 'ожидается положительное число' });
+    }
+    if (creditedUsd === null || creditedUsd <= 0) {
+      errors.push({ field: 'payload.creditedUsd', reason: 'ожидается положительное число' });
+    }
+    if (provider.length > EVENT_LIMITS.providerMax) {
+      errors.push({ field: 'payload.provider', reason: `длина больше ${EVENT_LIMITS.providerMax}` });
+    }
+
+    if (errors.length === 0 && id !== null && occurredAt !== null && amountRub !== null && creditedUsd !== null) {
+      return {
+        ok: true,
+        event: {
+          id,
+          type: 'payment_created',
+          occurredAt,
+          payload: { email, amountRub, creditedUsd, provider },
         },
       };
     }

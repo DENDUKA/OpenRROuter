@@ -188,7 +188,7 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.HasDisplayCurrency ? u.DisplayCurrency : "RUB")).ToList();
     }
 
-    public async Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
+    public virtual async Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
     {
         var response = await client.GetUserAsync(new GetUserRequest { UserId = userId }, cancellationToken: cancellationToken);
         if (response.User == null) return null;

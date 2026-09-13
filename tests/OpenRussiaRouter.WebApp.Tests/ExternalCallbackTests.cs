@@ -143,6 +143,7 @@ public sealed class ExternalCallbackTests
         public void NotifySupportTicket(string email, string subject, string message) { }
         public void NotifyUserRegistered(string email) => RegisteredEmails.Add(email);
         public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
+        public void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }
 
     [Fact]

@@ -16,6 +16,7 @@ public sealed record SupportBotEvent(
     public const string SupportTicketType = "support_ticket";
     public const string UserRegisteredType = "user_registered";
     public const string TopUpCompletedType = "topup_completed";
+    public const string PaymentCreatedType = "payment_created";
 
     /// <summary>Backward-compatible alias for <see cref="SupportTicketType"/>.</summary>
     public const string Type = SupportTicketType;
@@ -38,6 +39,15 @@ public sealed record SupportBotEvent(
     public static SupportBotEvent TopUpCompleted(
         string id, DateTimeOffset occurredAt, string email, decimal amountRub, decimal creditedUsd, string provider)
         => new(id, occurredAt, email, null, null, TopUpCompletedType)
+        {
+            AmountRub = amountRub,
+            CreditedUsd = creditedUsd,
+            Provider = provider
+        };
+
+    public static SupportBotEvent PaymentCreated(
+        string id, DateTimeOffset occurredAt, string email, decimal amountRub, decimal creditedUsd, string provider)
+        => new(id, occurredAt, email, null, null, PaymentCreatedType)
         {
             AmountRub = amountRub,
             CreditedUsd = creditedUsd,

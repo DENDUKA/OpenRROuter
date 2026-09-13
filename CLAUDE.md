@@ -430,7 +430,7 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 По решению владельца production-исходники отдельного бота включены в этот репозиторий.
 TypeScript/Node.js 24/Fastify, отдельный Compose-проект `rawrter-tg-bot`, не .NET-библиотека.
 Перед правками читать `tg_bot/AGENTS.md` и `tg_bot/README.md`; обязательны npm typecheck/test/build.
-Бот принимает Support/registration/topup/first-api-request и получает суточную сводку через
+Бот принимает Support/registration/topup/first-api-request/payment-created и получает суточную сводку через
 закрытый HTTP API WebApp. Команд Telegram/топиков пока нет. Отдельную БД не создавать;
 будущий доступ к существующей БД — только чтение, текущая очередь остаётся in-memory.
 

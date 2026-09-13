@@ -131,3 +131,29 @@ describe('POST /v1/events/first-api-request', () => {
     expect(JSON.parse(res.body)).toEqual({ status: 'queued' });
   });
 });
+
+describe('POST /v1/events/payment-created', () => {
+  const paymentPayload = (id: string) => ({
+    id,
+    type: 'payment_created',
+    occurredAt: '2026-09-08T10:00:00Z',
+    payload: {
+      email: 'payer@example.com',
+      amountRub: 1500,
+      creditedUsd: 16.25,
+      provider: 'Rollypay (СБП)',
+    },
+  });
+
+  it('принимает валидное событие создания платежа (202)', async () => {
+    const app = makeApp();
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/events/payment-created',
+      headers: authHeaders,
+      payload: paymentPayload('pay-1'),
+    });
+    expect(res.statusCode).toBe(202);
+    expect(JSON.parse(res.body)).toEqual({ status: 'queued' });
+  });
+});

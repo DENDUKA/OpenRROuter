@@ -20,4 +20,10 @@ public interface ISupportBotNotifier
     /// never performs I/O — the bot channel must not affect payment confirmation or balance credit.
     /// </summary>
     void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null);
+
+    /// <summary>
+    /// Queues a payment-created event for the Telegram bot. Contractually never throws and
+    /// never performs I/O — the bot channel must not affect checkout creation.
+    /// </summary>
+    void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null);
 }

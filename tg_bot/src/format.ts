@@ -3,12 +3,14 @@
 // 2) Регистрация пользователя: краткое сообщение с email.
 // 3) Успешное пополнение: email, сумма RUB и USD, способ оплаты.
 // 4) Первый API-запрос: email, модель.
-// 5) Утренняя сводка (daily digest): статистика за 24 часа.
+// 5) Создание платежа: email, сумма RUB и USD, способ оплаты.
+// 6) Утренняя сводка (daily digest): статистика за 24 часа.
 // Отправляется обычным текстом: parse_mode не используется, предпросмотр ссылок отключается в транспорте.
 
 import type {
   BotEvent,
   FirstApiRequestEvent,
+  PaymentCreatedEvent,
   SupportTicketEvent,
   TopUpCompletedEvent,
   UserRegisteredEvent,
@@ -60,6 +62,17 @@ export function formatFirstApiRequestNotification(event: FirstApiRequestEvent): 
   ].join('\n');
 }
 
+export function formatPaymentCreatedNotification(event: PaymentCreatedEvent): string {
+  const rub = formatRub(event.payload.amountRub);
+  const usd = formatUsd(event.payload.creditedUsd);
+  return [
+    '🧾 Создан платёж',
+    `Пользователь: ${event.payload.email}`,
+    `Сумма: ${rub} ₽ ($${usd})`,
+    `Способ: ${event.payload.provider}`,
+  ].join('\n');
+}
+
 export interface DailySummaryData {
   periodHours?: number;
   newRegistrations: number;
@@ -90,6 +103,8 @@ export function formatEventNotification(event: BotEvent): string {
       return formatTopUpNotification(event);
     case 'first_api_request':
       return formatFirstApiRequestNotification(event);
+    case 'payment_created':
+      return formatPaymentCreatedNotification(event);
     case 'support_ticket':
     default:
       return formatSupportNotification(event);

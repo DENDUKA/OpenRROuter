@@ -4,6 +4,7 @@
 //   POST /v1/events/registration      — регистрация пользователя (Bearer INBOUND_AUTH_TOKEN);
 //   POST /v1/events/topup             — успешное пополнение (Bearer INBOUND_AUTH_TOKEN);
 //   POST /v1/events/first-api-request — первый API-запрос (Bearer INBOUND_AUTH_TOKEN);
+//   POST /v1/events/payment-created   — создание платежа (Bearer INBOUND_AUTH_TOKEN);
 //   GET  /healthz                     — безопасная диагностика без секретов.
 // Принятие в очередь (202) не означает доставку в Telegram.
 
@@ -12,6 +13,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import type { BotConfig } from './config.js';
 import {
   parseFirstApiRequestEvent,
+  parsePaymentCreatedEvent,
   parseSupportTicketEvent,
   parseTopUpCompletedEvent,
   parseUserRegisteredEvent,
@@ -62,6 +64,8 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       parsed = parseTopUpCompletedEvent(request.body);
     } else if (body?.type === 'first_api_request') {
       parsed = parseFirstApiRequestEvent(request.body);
+    } else if (body?.type === 'payment_created') {
+      parsed = parsePaymentCreatedEvent(request.body);
     } else {
       parsed = parseSupportTicketEvent(request.body);
     }
@@ -125,6 +129,26 @@ export function buildApp(deps: AppDeps): FastifyInstance {
       return reply.code(503).send({ error: 'notifications_disabled' });
     }
     const parsed = parseFirstApiRequestEvent(request.body);
+    if (!parsed.ok) {
+      return reply.code(400).send({ error: 'invalid_event', fields: parsed.errors });
+    }
+    const result = deps.queue.push(parsed.event, now());
+    if (result === 'accepted') return reply.code(202).send({ status: 'queued' });
+    if (result === 'duplicate') return reply.code(200).send({ status: 'duplicate' });
+    return reply.code(503).send({ status: 'queue_full' });
+  });
+
+  app.post('/v1/events/payment-created', async (request, reply) => {
+    if (!authOk(request.headers.authorization)) {
+      return reply.code(401).send({ error: 'unauthorized' });
+    }
+    if (deps.configErrors.length > 0) {
+      return reply.code(503).send({ error: 'bot_misconfigured' });
+    }
+    if (!deps.config.supportNotifyEnabled) {
+      return reply.code(503).send({ error: 'notifications_disabled' });
+    }
+    const parsed = parsePaymentCreatedEvent(request.body);
     if (!parsed.ok) {
       return reply.code(400).send({ error: 'invalid_event', fields: parsed.errors });
     }

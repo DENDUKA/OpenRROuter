@@ -1,7 +1,9 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
+using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Payments;
+using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Tests;
 
@@ -297,5 +299,64 @@ public class PaymentCheckoutServiceTests
 
         await act.Should().ThrowAsync<ArgumentException>()
             .WithMessage("*clientToken is required*");
+    }
+
+    [Fact]
+    public async Task CreateAsync_notifies_bot_about_created_payment()
+    {
+        var billing = new CheckoutFakeBilling();
+        var provider = new StubProvider("rollypay");
+        var registry = new PaymentProviderRegistry(
+            [provider],
+            Microsoft.Extensions.Options.Options.Create(new PaymentSettings { ActiveProvider = "rollypay" }));
+        var auth = new FakeUserAuthProvider("payer@example.com");
+        var botNotifier = new RecordingBotNotifier();
+
+        var svc = new PaymentCheckoutService(
+            billing,
+            registry,
+            NullLogger<PaymentCheckoutService>.Instance,
+            auth,
+            botNotifier);
+
+        var result = await svc.CreateAsync(
+            userId: "user-42",
+            displayAmount: 1500m,
+            displayCurrency: "RUB",
+            providerName: "rollypay",
+            clientToken: "idem-42",
+            CancellationToken.None);
+
+        result.PaymentId.Should().Be("pay-1");
+        botNotifier.CreatedPayments.Should().ContainSingle();
+        var created = botNotifier.CreatedPayments[0];
+        created.Email.Should().Be("payer@example.com");
+        created.AmountRub.Should().Be(1500m);
+        created.CreditedUsd.Should().Be(1m);
+        created.Provider.Should().Be("Rollypay (СБП)");
+        created.PaymentId.Should().Be("pay-1");
+    }
+
+    private sealed class RecordingBotNotifier : ISupportBotNotifier
+    {
+        public List<(string Email, decimal AmountRub, decimal CreditedUsd, string Provider, string? PaymentId)> CreatedPayments { get; } = [];
+
+        public void NotifySupportTicket(string email, string subject, string message) { }
+        public void NotifyUserRegistered(string email) { }
+        public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
+        public void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null)
+            => CreatedPayments.Add((email, amountRub, creditedUsd, provider, paymentId));
+    }
+
+    private sealed class FakeUserAuthProvider : AuthProvider
+    {
+        private readonly string _email;
+        public FakeUserAuthProvider(string email) : base(null!) => _email = email;
+
+        public override Task<UserInfo?> GetUserAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult<UserInfo?>(new UserInfo(
+                userId, _email, "user", "active", DateTimeOffset.UtcNow, null, 5, "RUB"));
+        }
     }
 }

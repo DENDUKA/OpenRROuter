@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   EVENT_LIMITS,
   parseFirstApiRequestEvent,
+  parsePaymentCreatedEvent,
   parseSupportTicketEvent,
   parseTopUpCompletedEvent,
   parseUserRegisteredEvent,
@@ -148,5 +149,39 @@ describe('parseFirstApiRequestEvent', () => {
 
   it('отклоняет событие без модели', () => {
     expect(parseFirstApiRequestEvent({ ...validReq, payload: { ...validReq.payload, model: '' } }).ok).toBe(false);
+  });
+});
+
+describe('parsePaymentCreatedEvent', () => {
+  const validPayment = {
+    id: 'pay-1',
+    type: 'payment_created',
+    occurredAt: '2026-09-08T10:00:00Z',
+    payload: {
+      email: 'payer@example.com',
+      amountRub: 1500,
+      creditedUsd: 16.25,
+      provider: 'Rollypay (СБП)',
+    },
+  };
+
+  it('принимает корректное событие создания платежа', () => {
+    const res = parsePaymentCreatedEvent(validPayment);
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.event.type).toBe('payment_created');
+      expect(res.event.payload.amountRub).toBe(1500);
+      expect(res.event.payload.creditedUsd).toBe(16.25);
+      expect(res.event.payload.provider).toBe('Rollypay (СБП)');
+    }
+  });
+
+  it('отклоняет нулевую или отрицательную сумму', () => {
+    expect(parsePaymentCreatedEvent({ ...validPayment, payload: { ...validPayment.payload, amountRub: 0 } }).ok).toBe(false);
+    expect(parsePaymentCreatedEvent({ ...validPayment, payload: { ...validPayment.payload, creditedUsd: -1 } }).ok).toBe(false);
+  });
+
+  it('отклоняет некорректный email', () => {
+    expect(parsePaymentCreatedEvent({ ...validPayment, payload: { ...validPayment.payload, email: 'bad' } }).ok).toBe(false);
   });
 });

@@ -131,6 +131,14 @@ public sealed class SupportBotEventWorker : BackgroundService
                 return _settings.Endpoint[..^8] + "/topup";
             }
         }
+        else if (supportEvent.EventType == SupportBotEvent.PaymentCreatedType)
+        {
+            if (!string.IsNullOrWhiteSpace(_settings.Endpoint) &&
+                _settings.Endpoint.EndsWith("/support", StringComparison.OrdinalIgnoreCase))
+            {
+                return _settings.Endpoint[..^8] + "/payment-created";
+            }
+        }
 
         return _settings.Endpoint ?? "";
     }
@@ -144,6 +152,11 @@ public sealed class SupportBotEventWorker : BackgroundService
         {
             SupportBotEvent.UserRegisteredType => new UserRegisteredPayloadDto(supportEvent.Email),
             SupportBotEvent.TopUpCompletedType => new TopUpCompletedPayloadDto(
+                supportEvent.Email,
+                supportEvent.AmountRub ?? 0m,
+                supportEvent.CreditedUsd ?? 0m,
+                supportEvent.Provider ?? "СБП"),
+            SupportBotEvent.PaymentCreatedType => new PaymentCreatedPayloadDto(
                 supportEvent.Email,
                 supportEvent.AmountRub ?? 0m,
                 supportEvent.CreditedUsd ?? 0m,
@@ -199,4 +212,6 @@ public sealed class SupportBotEventWorker : BackgroundService
     private sealed record UserRegisteredPayloadDto(string Email);
 
     private sealed record TopUpCompletedPayloadDto(string Email, decimal AmountRub, decimal CreditedUsd, string Provider);
+
+    private sealed record PaymentCreatedPayloadDto(string Email, decimal AmountRub, decimal CreditedUsd, string Provider);
 }

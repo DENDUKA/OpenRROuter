@@ -10,6 +10,7 @@ const cases = [
   ['registration', 'user_registered', { email: 'user@example.com' }],
   ['topup', 'topup_completed', { email: 'user@example.com', amountRub: 100, creditedUsd: 1, provider: 'test' }],
   ['first-api-request', 'first_api_request', { email: 'user@example.com', model: 'test-model' }],
+  ['payment-created', 'payment_created', { email: 'user@example.com', amountRub: 100, creditedUsd: 1, provider: 'test' }],
 ] as const;
 
 describe.each(cases)('%s route', (route, type, payload) => {

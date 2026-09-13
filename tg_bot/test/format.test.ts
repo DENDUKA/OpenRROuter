@@ -5,6 +5,7 @@ import {
   formatDailySummaryMessage,
   formatEventNotification,
   formatFirstApiRequestNotification,
+  formatPaymentCreatedNotification,
   formatRegistrationNotification,
   formatSupportNotification,
   formatTopUpNotification,
@@ -79,6 +80,38 @@ describe('formatFirstApiRequestNotification', () => {
     expect(text).toContain('⚡️ Первый API-запрос пользователя');
     expect(text).toContain('Пользователь: user@example.com');
     expect(text).toContain('Модель: anthropic/claude-3-5-sonnet');
+  });
+});
+
+describe('formatPaymentCreatedNotification', () => {
+  it('формирует сообщение о создании платежа', () => {
+    const text = formatPaymentCreatedNotification({
+      id: 'pay-1',
+      type: 'payment_created',
+      occurredAt: '2026-09-08T10:00:00Z',
+      payload: {
+        email: 'payer@example.com',
+        amountRub: 1500,
+        creditedUsd: 16.25,
+        provider: 'Rollypay (СБП)',
+      },
+    });
+    expect(text).toContain('🧾 Создан платёж');
+    expect(text).toContain('Пользователь: payer@example.com');
+    expect(text).toContain('16.25');
+
+    const dispatched = formatEventNotification({
+      id: 'pay-1',
+      type: 'payment_created',
+      occurredAt: '2026-09-08T10:00:00Z',
+      payload: {
+        email: 'payer@example.com',
+        amountRub: 1500,
+        creditedUsd: 16.25,
+        provider: 'Rollypay (СБП)',
+      },
+    });
+    expect(dispatched).toBe(text);
   });
 });
 

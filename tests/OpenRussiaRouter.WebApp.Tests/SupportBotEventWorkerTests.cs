@@ -149,6 +149,36 @@ public class SupportBotEventWorkerTests
     }
 
     [Fact]
+    public async Task Payment_created_event_posts_to_payment_created_endpoint_with_payload()
+    {
+        var (queue, worker, _, handler, _) = CreateWorker(Settings());
+        queue.TryEnqueue(SupportBotEvent.PaymentCreated(
+            "pay-created-order-1", DateTimeOffset.UtcNow, "payer@example.com", 1500m, 16.25m, "Rollypay (СБП)"));
+
+        await RunWorkerAsync(async () =>
+        {
+            await worker.StartAsync(CancellationToken.None);
+            await WaitForRequestsAsync(handler, 1);
+            await worker.StopAsync(CancellationToken.None);
+        });
+
+        var request = handler.Captured.Single();
+        request.Method.Should().Be("POST");
+        request.Uri.Should().Be("http://support-bot:8080/v1/events/payment-created");
+        request.Authorization.Should().Be($"Bearer {Token}");
+
+        using var doc = JsonDocument.Parse(request.Body!);
+        var root = doc.RootElement;
+        root.GetProperty("id").GetString().Should().Be("pay-created-order-1");
+        root.GetProperty("type").GetString().Should().Be("payment_created");
+        var payload = root.GetProperty("payload");
+        payload.GetProperty("email").GetString().Should().Be("payer@example.com");
+        payload.GetProperty("amountRub").GetDecimal().Should().Be(1500m);
+        payload.GetProperty("creditedUsd").GetDecimal().Should().Be(16.25m);
+        payload.GetProperty("provider").GetString().Should().Be("Rollypay (СБП)");
+    }
+
+    [Fact]
     public async Task Duplicate_200_is_terminal_success_no_retry()
     {
         var (queue, worker, _, handler, _) = CreateWorker(Settings());

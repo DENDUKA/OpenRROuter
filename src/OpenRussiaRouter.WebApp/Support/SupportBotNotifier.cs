@@ -105,4 +105,31 @@ public sealed class SupportBotNotifier : ISupportBotNotifier
             _logger.LogError(ex, "Failed to queue a topup notification.");
         }
     }
+
+    public void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null)
+    {
+        try
+        {
+            if (!_settings.Enabled)
+                return;
+
+            if (string.IsNullOrWhiteSpace(_settings.Endpoint) || string.IsNullOrWhiteSpace(_settings.AuthToken))
+            {
+                _logger.LogError(
+                    "Support bot channel is enabled but Endpoint/AuthToken is not configured; payment created notification dropped.");
+                return;
+            }
+
+            var eventId = !string.IsNullOrWhiteSpace(paymentId) ? $"pay-created-{paymentId}" : Guid.NewGuid().ToString("N");
+            var paymentEvent = SupportBotEvent.PaymentCreated(
+                eventId, DateTimeOffset.UtcNow, email, amountRub, creditedUsd, provider);
+
+            if (!_queue.TryEnqueue(paymentEvent))
+                _logger.LogWarning("Support bot event queue is full; payment created notification dropped (best-effort channel).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to queue a payment created notification.");
+        }
+    }
 }

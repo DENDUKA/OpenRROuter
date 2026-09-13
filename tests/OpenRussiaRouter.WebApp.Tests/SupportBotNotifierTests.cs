@@ -157,6 +157,35 @@ public class SupportBotNotifierTests
         queue.Reader.TryRead(out _).Should().BeFalse();
     }
 
+    [Fact]
+    public void NotifyPaymentCreated_valid_configuration_queues_payment_created_event()
+    {
+        var (queue, notifier) = Create(EnabledSettings());
+        var before = DateTimeOffset.UtcNow;
+
+        notifier.NotifyPaymentCreated("payer@example.com", 1500m, 16.25m, "Rollypay (СБП)", "pay-123");
+
+        queue.Reader.TryRead(out var evt).Should().BeTrue();
+        evt!.Id.Should().Be("pay-created-pay-123");
+        evt.OccurredAt.Should().BeOnOrAfter(before - TimeSpan.FromSeconds(1));
+        evt.Email.Should().Be("payer@example.com");
+        evt.EventType.Should().Be(SupportBotEvent.PaymentCreatedType);
+        evt.AmountRub.Should().Be(1500m);
+        evt.CreditedUsd.Should().Be(16.25m);
+        evt.Provider.Should().Be("Rollypay (СБП)");
+        queue.Reader.TryRead(out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public void NotifyPaymentCreated_disabled_channel_is_a_silent_no_op()
+    {
+        var (queue, notifier) = Create(new SupportBotSettings { Enabled = false, Endpoint = "http://bot", AuthToken = "t" });
+
+        notifier.NotifyPaymentCreated("payer@example.com", 1500m, 16.25m, "Rollypay (СБП)", "pay-123");
+
+        queue.Reader.TryRead(out _).Should().BeFalse();
+    }
+
     private sealed class ThrowingQueue : ISupportBotEventQueue
     {
         public int Calls { get; private set; }

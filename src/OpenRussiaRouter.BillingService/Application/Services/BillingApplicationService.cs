@@ -216,7 +216,9 @@ public sealed partial class BillingApplicationService(
             null,
             model.SupportsReasoning,
             model.AllowedReasoningEfforts,
-            model.DefaultReasoningEffort);
+            model.DefaultReasoningEffort,
+            model.Price.InputPerMillion,
+            model.Price.OutputPerMillion);
     }
 
     public async Task<IReadOnlyCollection<PublicModel>> ListPublicModelsAsync(CancellationToken ct = default)

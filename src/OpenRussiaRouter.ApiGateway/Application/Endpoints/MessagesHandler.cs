@@ -56,7 +56,7 @@ public sealed class MessagesHandler(
 
     private async Task ExecuteNonStreamingAsync(HttpContext context, AnthropicRequestBodyNode body, string requestId)
     {
-        var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+        var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted, body.Node);
         if (authorization is null)
             return;
 
@@ -193,7 +193,7 @@ public sealed class MessagesHandler(
 
     private async Task ExecuteStreamingAsync(HttpContext context, AnthropicRequestBodyNode body, string requestId)
     {
-        var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+        var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted, body.Node);
         if (authorization is null)
             return;
 

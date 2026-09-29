@@ -91,7 +91,8 @@ public sealed class ChatCompletionHandler(
                     context.Response.ContentType = response.ContentType;
                     await context.Response.WriteAsync(response.Body, ct);
                 },
-                context.RequestAborted);
+                context.RequestAborted,
+                body.Node);
         }
         catch (OperationCanceledException)
         {
@@ -117,7 +118,7 @@ public sealed class ChatCompletionHandler(
         try
         {
             // Шаг 1: аутентификация + проверка баланса — один раз до retry-цикла.
-            var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted);
+            var authorization = await pipeline.AuthorizeAsync(context, body.Metadata.Model, requestId, context.RequestAborted, body.Node);
             if (authorization is null)
                 return;
 

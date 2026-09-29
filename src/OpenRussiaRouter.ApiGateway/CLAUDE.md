@@ -62,6 +62,20 @@
    `apiKeyId` обязателен — по нему Billing считает spend-лимиты ключа. Маппинг кодов в OpenAI-типы:
    `InsufficientBalance`/`ApiKeyLimitExceeded` → `billing_error` (402), `ModelUnavailable` → `invalid_request_error` (400),
    `InternalError` → `internal_error`, остальное → `invalid_request_error`;
+4a. **Spend pre-authorization (T-070)** — только если хендлер передал разобранное тело
+   (`AuthorizeAsync(..., requestBody)`: chat completions stream/non-stream и `/v1/messages`; image/TTS — нет).
+   [SpendBudgetGuard](Billing/SpendBudgetGuard.cs) берёт баланс и цены модели из ответа Billing
+   (`input/output_price_per_million_usd`; пусто или 0 — модель бесплатна/Billing старый → no-op):
+   - вход оценивается как «символы всех строк и имён полей тела / 3», base64 (`data:`-URL и поле `data`)
+     не считается; кэш не учитывается — цена входа полная (консервативно);
+   - вход дороже баланса или на выход остаётся < 256 токенов → 402 `insufficient_balance` до выбора ноды;
+   - иначе лимит выхода урезается под остаток: клиентский `max_completion_tokens`/`max_tokens`
+     (Anthropic — `max_tokens`, `thinking.budget_tokens` держится `< max_tokens`, при остатке ≤ 1024 `thinking`
+     удаляется) понижается; если лимита не было — `max_tokens` пишется **только когда он ≤ 4096**
+     (больший мог бы превысить max output модели и дать 400 у провайдера).
+   Стрим gateway не рвёт: модель упирается в лимит, провайдер штатно закрывает стрим с
+   `finish_reason: length` и настоящим usage. Патч делается один раз до retry-цикла прямо в `JsonNode`
+   тела; последующие патчеры `max_tokens` не трогают, поэтому лимит переживает ретраи.
 5. `controlPlaneProvider.SelectRouterNodeAsync(...)` → ControlPlane; `null` → 503 `RouterUnavailable`.
 
 **В ControlPlane передаётся `balanceResult.RouterModelId`** (upstream-ID ноды, напр. `glm-4.7`),

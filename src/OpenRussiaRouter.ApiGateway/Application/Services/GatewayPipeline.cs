@@ -1,9 +1,12 @@
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using OpenRussiaRouter.ApiGateway.Auth;
 using OpenRussiaRouter.ApiGateway.Billing;
 using OpenRussiaRouter.ApiGateway.ControlPlane;
 using OpenRussiaRouter.ApiGateway.Http;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Metrics;
 using OpenRussiaRouter.BuildingBlocks.Telemetry;
 
 namespace OpenRussiaRouter.ApiGateway.Application.Services;
@@ -28,13 +31,17 @@ public interface IGatewayPipeline
     /// <summary>
     /// Шаг 1: валидация модели + аутентификация + проверка баланса.
     /// Вызывается один раз до retry-цикла. При ошибке записывает ошибку в ответ.
+    /// Если передано <paramref name="requestBody"/>, для платной модели запрос дополнительно
+    /// проверяется на покрытие остатком (<see cref="SpendBudgetGuard"/>, T-070): заведомо
+    /// неоплачиваемый — 402, иначе лимит выходных токенов в теле урезается под остаток.
     /// </summary>
     /// <returns>Результат авторизации или <c>null</c> + ошибка в ответе.</returns>
     Task<GatewayAuthorizationResult?> AuthorizeAsync(
         HttpContext context,
         string? model,
         string requestId,
-        CancellationToken cancellationToken);
+        CancellationToken cancellationToken,
+        JsonNode? requestBody = null);
 
     /// <summary>
     /// Шаг 2: выбор ноды с учётом исключённых.
@@ -52,7 +59,8 @@ public interface IGatewayPipeline
 public sealed class GatewayPipeline(
     IApiKeyProvider authProvider,
     IBillingProvider billingProvider,
-    IControlPlaneProvider controlPlaneProvider) : IGatewayPipeline
+    IControlPlaneProvider controlPlaneProvider,
+    ILogger<GatewayPipeline> logger) : IGatewayPipeline
 {
     public async Task<GatewayAuthorizedContext?> AuthorizeAndAcquireLeaseAsync(
         HttpContext context,
@@ -72,7 +80,8 @@ public sealed class GatewayPipeline(
         HttpContext context,
         string? model,
         string requestId,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        JsonNode? requestBody = null)
     {
         var isAnthropic = context.Request.Path.StartsWithSegments("/v1/messages", StringComparison.OrdinalIgnoreCase);
 
@@ -133,6 +142,9 @@ public sealed class GatewayPipeline(
             return null;
         }
 
+        if (requestBody is not null && !await EnforceSpendBudgetAsync(context, requestBody, isAnthropic, balanceResult, authResult.UserId!, model, requestId))
+            return null;
+
         var (preferredNodeId, preferredNodeControlToken) = ReadPreferredNode(context);
 
         return new GatewayAuthorizationResult(
@@ -147,6 +159,45 @@ public sealed class GatewayPipeline(
             balanceResult.AllowedReasoningEfforts,
             balanceResult.DefaultReasoningEffort,
             authResult.IsAdmin);
+    }
+
+    private async Task<bool> EnforceSpendBudgetAsync(
+        HttpContext context,
+        JsonNode requestBody,
+        bool isAnthropic,
+        GatewayBalanceCheckResult balanceResult,
+        string userId,
+        string model,
+        string requestId)
+    {
+        var decision = SpendBudgetGuard.Apply(
+            requestBody,
+            isAnthropic,
+            balanceResult.Balance.Amount,
+            balanceResult.InputPricePerMillionUsd,
+            balanceResult.OutputPricePerMillionUsd);
+
+        if (decision.OutputLimit is { } outputLimit)
+        {
+            logger.LogInformation(
+                "Output tokens limited by remaining balance. UserId: {UserId}; Model: {Model}; Balance: {Balance}; EstimatedInputTokens: {EstimatedInputTokens}; OutputLimit: {OutputLimit}",
+                userId, model, balanceResult.Balance.Amount, decision.EstimatedInputTokens, outputLimit);
+        }
+
+        if (!decision.Rejected)
+            return true;
+
+        logger.LogInformation(
+            "Request rejected: estimated cost exceeds remaining balance. UserId: {UserId}; Model: {Model}; Balance: {Balance}; EstimatedInputTokens: {EstimatedInputTokens}",
+            userId, model, balanceResult.Balance.Amount, decision.EstimatedInputTokens);
+        LimitMetrics.RecordRejection(LimitMetrics.LimitTypes.Balance, LimitMetrics.Subjects.User);
+
+        const string message = "Insufficient balance to process this request: its estimated cost exceeds the remaining balance.";
+        if (isAnthropic)
+            await GatewayErrors.WriteAnthropicAsync(context, "billing_error", ErrorCodes.InsufficientBalance, message, requestId);
+        else
+            await GatewayErrors.WriteAsync(context, "billing_error", ErrorCodes.InsufficientBalance, message, requestId);
+        return false;
     }
 
     public async Task<GatewayAuthorizedContext?> AcquireLeaseAsync(

@@ -163,6 +163,26 @@ public sealed class BillingApplicationServiceTests
     }
 
     [Fact]
+    public async Task RecordUsage_CostExceedsBalance_ClampsToZeroAndBlocksFurtherRequests()
+    {
+        var service = await CreateServiceWithModelAsync();
+        await service.CreateVirtualTopUpAsync("admin-1", "user-1", MoneyAmount.Usd(0.50m), "test", "topup-1", DateTimeOffset.UtcNow);
+
+        // 100k input tokens at $10 / 1M = $1.00 — more than the $0.50 balance.
+        var result = await service.RecordUsageAsync(
+            CreateUsageEvent("req-overdraft", new TokenUsage(100_000, 0, 0)),
+            DateTimeOffset.UtcNow);
+
+        result.Accepted.Should().BeTrue();
+        // The residual must be collected so the next pre-check fails instead of looping forever.
+        (await service.GetBalanceAsync("user-1")).Should().Be(MoneyAmount.Usd(0));
+
+        var check = await service.CheckBalanceAndModelAsync("user-1", "router/gpt-test");
+        check.Allowed.Should().BeFalse();
+        check.ErrorCode.Should().Be(ErrorCodes.InsufficientBalance);
+    }
+
+    [Fact]
     public async Task RecordUsage_SameRequestId_DoesNotChargeTwice()
     {
         var service = await CreateServiceWithModelAsync();

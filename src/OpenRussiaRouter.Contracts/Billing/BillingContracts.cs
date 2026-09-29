@@ -12,7 +12,9 @@ public sealed record BalanceCheckResult(
     string? ErrorCode,
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
-    string? DefaultReasoningEffort = null);
+    string? DefaultReasoningEffort = null,
+    MoneyAmount? InputPricePerMillion = null,
+    MoneyAmount? OutputPricePerMillion = null);
 
 public sealed record PublicModel(
     string Id,

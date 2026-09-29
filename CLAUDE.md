@@ -215,6 +215,12 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 1. Bearer-токен (`sk-or-*`) → валидация в AuthService (UserId, ApiKeyId, IsAdmin).
 2. Баланс, spend-лимиты ключа (суточный/недельный) и доступность модели в BillingService.
    Здесь публичный `ModelId` (`ORR/GLM-4.7`) резолвится во внутренний `RouterModelId` (`glm-4.7`).
+   Billing отдаёт и цены модели; gateway (`SpendBudgetGuard`, T-070) по ним оценивает вход:
+   не покрывается остатком → 402, иначе урезает `max_tokens` под остаток.
+   **Инвариант денег (T-070):** списание usage зажато остатком и сериализовано `for update` —
+   баланс не уходит в минус и не «застревает» на копейках. Раньше all-or-nothing-списание
+   оставляло остаток, который проходил pre-check `balance > 0`, и запросы шли бесплатно
+   бесконечно (инцидент 2026-09-28).
 3. Выбор ноды в ControlPlane — **передаётся `RouterModelId`**, иначе capability-store
    не сматчит модель. Capability-aware, при пустом store — fallback на least-load.
 4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —

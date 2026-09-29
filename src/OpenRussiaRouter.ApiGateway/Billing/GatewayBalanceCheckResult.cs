@@ -11,5 +11,7 @@ public sealed record GatewayBalanceCheckResult(
     string? ErrorCode,
     bool SupportsReasoning = false,
     IReadOnlyList<string>? AllowedReasoningEfforts = null,
-    string? DefaultReasoningEffort = null);
+    string? DefaultReasoningEffort = null,
+    decimal InputPricePerMillionUsd = 0m,
+    decimal OutputPricePerMillionUsd = 0m);
 

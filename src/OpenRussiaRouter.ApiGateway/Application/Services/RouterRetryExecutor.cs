@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -32,6 +33,7 @@ public sealed class RouterRetryExecutor(
     /// <param name="sendRequest">Отправка запроса на ноду.</param>
     /// <param name="onSuccess">Обработка успешного ответа (запись в response, usage и т.п.).</param>
     /// <param name="cancellationToken">Токен отмены от клиента.</param>
+    /// <param name="requestBody">Разобранное тело для проверки стоимости по остатку (T-070); <c>null</c> — без проверки.</param>
     public async Task ExecuteAsync(
         HttpContext context,
         string model,
@@ -39,11 +41,12 @@ public sealed class RouterRetryExecutor(
         Func<GatewayAuthorizedContext, string> patchBody,
         Func<GatewayAuthorizedContext, string, CancellationToken, Task<RouterProxyResponse>> sendRequest,
         Func<GatewayAuthorizedContext, RouterProxyResponse, DateTimeOffset, DateTimeOffset, CancellationToken, Task> onSuccess,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        JsonNode? requestBody = null)
     {
         // Шаг 1: аутентификация + проверка баланса — один раз до retry-цикла.
         var authorization = await pipeline.AuthorizeAsync(
-            context, model, requestId, cancellationToken);
+            context, model, requestId, cancellationToken, requestBody);
         if (authorization is null)
             return;
 

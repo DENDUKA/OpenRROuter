@@ -43,6 +43,8 @@ public sealed class GrpcBillingService(
             response.AllowedReasoningEfforts.AddRange(result.AllowedReasoningEfforts);
         }
         response.DefaultReasoningEffort = result.DefaultReasoningEffort ?? string.Empty;
+        response.InputPricePerMillionUsd = result.InputPricePerMillion?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
+        response.OutputPricePerMillionUsd = result.OutputPricePerMillion?.Amount.ToString(CultureInfo.InvariantCulture) ?? string.Empty;
 
         return response;
     }

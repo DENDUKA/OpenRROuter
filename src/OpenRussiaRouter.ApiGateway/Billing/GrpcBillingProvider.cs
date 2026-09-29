@@ -63,7 +63,9 @@ public sealed class GrpcBillingProvider(
                 string.IsNullOrWhiteSpace(response.ErrorCode) ? null : response.ErrorCode,
                 response.SupportsReasoning,
                 response.AllowedReasoningEfforts.Count > 0 ? response.AllowedReasoningEfforts.ToArray() : null,
-                string.IsNullOrWhiteSpace(response.DefaultReasoningEffort) ? null : response.DefaultReasoningEffort);
+                string.IsNullOrWhiteSpace(response.DefaultReasoningEffort) ? null : response.DefaultReasoningEffort,
+                ParseDecimal(response.InputPricePerMillionUsd),
+                ParseDecimal(response.OutputPricePerMillionUsd));
         }
         catch (RpcException ex) when (!cancellationToken.IsCancellationRequested)
         {

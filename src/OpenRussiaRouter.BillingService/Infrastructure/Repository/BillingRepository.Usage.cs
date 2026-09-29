@@ -224,31 +224,44 @@ public sealed partial class BillingRepository
 
         if (ledgerEntry is not null)
         {
-            // T-069: Three-step CTE ensures atomicity and idempotency:
-            // 1) balance_ok: check if balance is sufficient (read-only gate)
-            // 2) ledger: insert the entry ONLY if balance_ok returned a row (cross-join);
-            //    ON CONFLICT DO NOTHING makes the insert a no-op on idempotent repeat
-            // 3) balance: debit ONLY if ledger actually inserted a row (EXISTS check)
+            // T-069: Four-step CTE ensures atomicity, idempotency and a balance that never
+            // gets stuck positive-but-unspendable:
+            // 1) target: read the current balance FOR UPDATE — concurrent charges of the same user
+            //    serialize here and each one sees the balance left by the previous commit;
+            //    without the lock two parallel requests both collect the same residual and the
+            //    balance goes negative
+            // 2) charge: cap the debit at the remaining balance (greatest(@Amount, -balance)) so
+            //    the balance can never go negative and the residual is collected in full. The old
+            //    "all-or-nothing" gate let a balance land on a tiny positive remainder that no
+            //    charge could ever cover, so the pre-check (balance > 0) kept authorizing requests
+            //    forever while no ledger entry was written (fail-open free usage).
+            // 3) ledger: insert the (capped) entry; ON CONFLICT DO NOTHING makes it a no-op on
+            //    an idempotent repeat
+            // 4) balance: debit ONLY if ledger actually inserted a row (EXISTS check)
             //
             // This guarantees: (a) double-calling with the same requestId debits only once,
-            // (b) insufficient balance produces neither ledger entry nor debit.
+            // (b) the balance ends at exactly 0 when the charge exceeded the remainder, so the
+            //     next ApiGateway pre-check returns InsufficientBalance instead of looping.
             var newBalance = await connection.ExecuteScalarAsync<decimal?>(new CommandDefinition(
                 """
-                with balance_ok as (
-                    select 1 from billing.user_balances
-                    where user_id = @UserId and balance_amount + @Amount >= 0
+                with target as (
+                    select balance_amount from billing.user_balances where user_id = @UserId
+                    for update
+                ),
+                charge as (
+                    select greatest(@Amount, -balance_amount) as amount from target
                 ),
                 ledger as (
                     insert into billing.ledger_entries
                         (id, user_id, type, amount, currency, idempotency_key, reason, created_at_utc, is_user_payment)
-                    select @Id, @UserId, @Type, @Amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment
-                    from balance_ok
+                    select @Id, @UserId, @Type, c.amount, @Currency, @IdempotencyKey, @Reason, @CreatedAtUtc, @IsUserPayment
+                    from charge c
                     on conflict (idempotency_key) do nothing
                     returning id
                 ),
                 balance as (
                     update billing.user_balances
-                    set balance_amount = balance_amount + @Amount, updated_at_utc = now()
+                    set balance_amount = balance_amount + (select amount from charge), updated_at_utc = now()
                     where user_id = @UserId and exists (select 1 from ledger)
                     returning balance_amount
                 )

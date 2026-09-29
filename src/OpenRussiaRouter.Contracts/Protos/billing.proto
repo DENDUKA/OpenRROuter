@@ -85,6 +85,9 @@ message CheckBalanceAndModelResponse {
   bool supports_reasoning = 7;
   repeated string allowed_reasoning_efforts = 8;
   string default_reasoning_effort = 9;
+  // T-070: model prices for gateway-side spend pre-authorization; empty = unknown (skip).
+  string input_price_per_million_usd = 10;
+  string output_price_per_million_usd = 11;
 }
 
 message TokenUsage {

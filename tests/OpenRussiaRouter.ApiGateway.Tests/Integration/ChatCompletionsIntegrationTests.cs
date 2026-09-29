@@ -86,6 +86,45 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
     }
 
     [Fact]
+    public async Task NonStreaming_BalanceBelowRequestCost_Returns402AndDoesNotCallRouter()
+    {
+        // T-070: a tiny positive balance passes Billing, but cannot pay for even the minimum output.
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true, "gpt-4", "gpt-4", null, MoneyAmount.Usd(0.000854m), null,
+                InputPricePerMillionUsd: 1m, OutputPricePerMillionUsd: 10m)
+        };
+        var router = new StubRouterProxy();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4","messages":[{"role":"user","content":"hi"}]}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.PaymentRequired);
+        await AssertErrorCode(response, ErrorCodes.InsufficientBalance);
+        router.LastRequestJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task NonStreaming_LowBalance_SendsOutputLimitToRouter()
+    {
+        var billing = new StubBillingProvider
+        {
+            CheckResult = new GatewayBalanceCheckResult(
+                true, "gpt-4", "gpt-4", null, MoneyAmount.Usd(0.01m), null,
+                InputPricePerMillionUsd: 1m, OutputPricePerMillionUsd: 10m)
+        };
+        var router = new StubRouterProxy();
+        var client = CreateClient(new StubAuthenticator(), billing, new StubControlPlane(), router);
+
+        await PostChatAsync(client, """{"model":"gpt-4","max_tokens":50000,"messages":[{"role":"user","content":"hi"}]}""", bearer: "sk-ok_key");
+
+        router.LastRequestJson.Should().NotBeNull();
+        using var sent = JsonDocument.Parse(router.LastRequestJson!);
+        sent.RootElement.GetProperty("max_tokens").GetInt32().Should().BeInRange(256, 1_000);
+    }
+
+    [Fact]
     public async Task NonStreaming_UnknownModel_ReturnsBillingError()
     {
         var billing = new StubBillingProvider

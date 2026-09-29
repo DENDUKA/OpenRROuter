@@ -110,7 +110,7 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-се�
 
 ## Деньги: инварианты
 
-- **Баланс = `billing.user_balances`** — денормализованная таблица `user_balances(user_id PK, balance_amount numeric(18,6))`, синхронизируемая при каждом изменении леджера. Чтение — `O(1)`, запись — атомарный `UPDATE ... SET balance = balance + amount WHERE balance + amount >= 0` внутри транзакции списания (T-028). Кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`. Идемпотентность на уровне репозитория (T-069): ledger insert идёт ПЕРВЫМ через CTE с `ON CONFLICT DO NOTHING`; `user_balances` обновляется ТОЛЬКО если insert реально вставил строку (cross-join + `EXISTS`). Двойной вызов с одним `requestId` дебетует баланс ровно один раз.
+- **Баланс = `billing.user_balances`** — денормализованная таблица `user_balances(user_id PK, balance_amount numeric(18,6))`, синхронизируемая при каждом изменении леджера. Чтение — `O(1)`, запись — атомарный `UPDATE ... SET balance = balance + amount` внутри транзакции списания (T-028), причём `amount` **зажат остатком** (`greatest(amount, -balance)`, T-070), так что баланс не уходит в минус. Кеша нет. Леджер append-only, глобальный unique-индекс на `idempotency_key`. Идемпотентность на уровне репозитория (T-069): ledger insert идёт ПЕРВЫМ через CTE с `ON CONFLICT DO NOTHING`; `user_balances` обновляется ТОЛЬКО если insert реально вставил строку (cross-join + `EXISTS`). Двойной вызов с одним `requestId` дебетует баланс ровно один раз.
 - Ключи идемпотентности: `usage:{requestId}`, `payment:{paymentId}`, `refund:{paymentId}`,
   `chargeback:{paymentId}`, `refund_bonus:{paymentId}`, `promo1:{userId}`,
   `first_top_up_bonus:{paymentId}`; админское пополнение — ключ от вызывающего.
@@ -120,8 +120,17 @@ singleton `FxQuoteService` (named HTTP-клиент `BillingFx`) и hosted-се�
   поэтому сохранённое значение = посчитанному; никаких inline `decimal.Round(..., AwayFromZero)`.
   В частности, `bonus_usd` округляется **в C# до** `UpdatePaymentBonusAsync`, иначе леджер и
   `payments.bonus_usd` разъезжаются в 6-м знаке (T-033).
-- Предварительная проверка — только `balance > 0`, а не «хватит на запрос»: **за один вызов баланс
-  может уйти в минус**, это осознанный компромисс.
+- Предварительная проверка — только `balance > 0`, а не «хватит на запрос»: **за один вызов
+  баланс может уйти в ноль**, это осознанный компромисс. Списание в `RecordUsageWithTransactionAsync`
+  ограничено остатком (`greatest(@Amount, -balance_amount)`): баланс никогда не уходит в минус,
+  но остаток взыскивается **полностью**, поэтому после нехватки баланс становится ровно `0` и
+  следующий pre-check возвращает `InsufficientBalance`. **Не возвращать all-or-nothing-гейт**
+  (`where balance_amount + @Amount >= 0`): при нём баланс замирал на крошечном положительном
+  остатке, который не покрывал ни один запрос, и pre-check (`balance > 0`) пускал запросы вечно
+  без единой проводки (fail-open бесплатный usage — инцидент 2026-09-28, T-070).
+  Остаток читается **`for update`** (CTE `target`): параллельные списания одного пользователя
+  сериализуются на строке `user_balances`. Без блокировки две транзакции видели один и тот же
+  остаток, обе его «забирали», и баланс уходил в минус (constraint `>= 0` на таблице нет).
 - **`credited_usd` считается только по своей котировке** (`FxQuoteService.GetQuote` → `usdPerUnit`),
   затем сверяется с `PaymentOptions.MinTopUpUsd/MaxTopUpUsd`. Поддерживаются `RUB`/`USD`/`EUR`,
   всё остальное — `UnsupportedCurrency`.

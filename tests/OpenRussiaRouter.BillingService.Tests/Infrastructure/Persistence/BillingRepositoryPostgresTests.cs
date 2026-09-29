@@ -494,6 +494,107 @@ public sealed class BillingRepositoryPostgresTests
 
     [Fact]
     [Trait("Category", "PostgreSQL")]
+    public async Task RecordUsageWithTransactionAsync_CostExceedsBalance_ClampsBalanceToZero()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+
+        await repository.AddLedgerEntryAsync(new LedgerEntry(
+            "tx-topup-1", "user-1", LedgerEntryType.VirtualTopUp,
+            MoneyAmount.Usd(0.50m), "test-topup", "seed", now));
+
+        var activity = new ActivityByTokenRecord(
+            "tx-overdraft", "key-1", "sk-...", "gpt-test", "node-1",
+            new TokenUsage(100_000, 0, 0), MoneyAmount.Usd(1m), "succeeded", now, now, null, null);
+
+        var usage = new UsageRecord(
+            "tx-overdraft", "user-1", "key-1", "gpt-test", "v1", "node-1",
+            new TokenUsage(100_000, 0, 0), MoneyAmount.Usd(1m), "succeeded", now, null, null);
+
+        var ledgerEntry = new LedgerEntry(
+            "tx-ledger-overdraft", "user-1", LedgerEntryType.UsageCharge,
+            MoneyAmount.Usd(-1m), "usage:tx-overdraft", "charge", now);
+
+        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry);
+
+        // The $0.50 residual is collected in full; balance must not stay positive-and-unspendable.
+        (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(0m);
+
+        // Idempotent repeat must not debit again.
+        await repository.RecordUsageWithTransactionAsync(activity, usage, ledgerEntry);
+        (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(0m);
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task RecordUsageWithTransactionAsync_ParallelOverdrafts_CollectResidualOnce()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var now = DateTimeOffset.UtcNow;
+
+        await repository.AddLedgerEntryAsync(new LedgerEntry(
+            "tx-topup-1", "user-1", LedgerEntryType.VirtualTopUp,
+            MoneyAmount.Usd(0.50m), "test-topup", "seed", now));
+
+        // All charges pass the pre-check against the same $0.50; the row lock must make every
+        // later one see the zeroed balance instead of collecting the residual again.
+        // An earlier usage makes the charges below non-first: otherwise each of them enqueues the
+        // same `first_api_request` outbox row and the unique key serializes them before the debit,
+        // hiding the race this test is about.
+        var warmupUsage = new TokenUsage(10, 0, 0);
+        await repository.RecordUsageWithTransactionAsync(
+            new ActivityByTokenRecord("tx-warmup", "key-1", "sk-...", "gpt-test", "node-1",
+                warmupUsage, MoneyAmount.Usd(0m), "succeeded", now, now, null, null),
+            new UsageRecord("tx-warmup", "user-1", "key-1", "gpt-test", "v1", "node-1",
+                warmupUsage, MoneyAmount.Usd(0m), "succeeded", now, null, null),
+            ledgerEntry: null);
+
+        // A separate transaction holds the balance row so every charge is in flight at once:
+        // without `for update` each one reads $0.50, queues on the UPDATE and then applies its
+        // stale -$0.50 on top of the previous commit, driving the balance negative.
+        await using var holder = new NpgsqlConnection(database.ConnectionString);
+        await holder.OpenAsync();
+        await using var holderTransaction = await holder.BeginTransactionAsync();
+        await holder.ExecuteAsync(
+            "select 1 from billing.user_balances where user_id = 'user-1' for update",
+            transaction: holderTransaction);
+
+        var charges = Enumerable.Range(1, 8).Select(i =>
+        {
+            var requestId = $"tx-parallel-{i}";
+            var usage = new TokenUsage(100_000, 0, 0);
+            return repository.RecordUsageWithTransactionAsync(
+                new ActivityByTokenRecord(requestId, "key-1", "sk-...", "gpt-test", "node-1",
+                    usage, MoneyAmount.Usd(1m), "succeeded", now, now, null, null),
+                new UsageRecord(requestId, "user-1", "key-1", "gpt-test", "v1", "node-1",
+                    usage, MoneyAmount.Usd(1m), "succeeded", now, null, null),
+                new LedgerEntry($"tx-ledger-{i}", "user-1", LedgerEntryType.UsageCharge,
+                    MoneyAmount.Usd(-1m), $"usage:{requestId}", "charge", now));
+        }).ToArray();
+
+        // Give every charge time to reach the locked balance row, then release it.
+        await Task.Delay(TimeSpan.FromSeconds(2));
+        await holderTransaction.RollbackAsync();
+        await Task.WhenAll(charges);
+
+        (await repository.GetBalanceAsync("user-1")).Amount.Should().Be(0m);
+        var charged = await holder.ExecuteScalarAsync<decimal>(
+            "select coalesce(sum(amount), 0) from billing.ledger_entries where user_id = 'user-1' and type = 'UsageCharge'");
+        charged.Should().Be(-0.50m);
+    }
+
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
     public async Task ApiKeySpendLimits_RoundTripAndSummariesUseUsageWindows()
     {
         await using var database = await PostgresTestDatabase.StartAsync();

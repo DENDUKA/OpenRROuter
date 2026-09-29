@@ -283,13 +283,18 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
         {
             // T-069: Check idempotency BEFORE debit to match PG behavior.
             // On idempotent repeat, TryAdd returns false — balance must not change.
+            // Cap the debit at the remaining balance (mirrors the PG `greatest(@Amount, -balance)`)
+            // so the balance never goes negative and never gets stuck positive-but-unspendable.
             lock (_paymentSync)
             {
                 var current = _userBalances.GetValueOrDefault(ledgerEntry.UserId);
-                if (current + ledgerEntry.Amount.Amount >= 0
-                    && _ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, ledgerEntry))
+                var cappedAmount = Math.Max(ledgerEntry.Amount.Amount, -current);
+                var cappedEntry = cappedAmount == ledgerEntry.Amount.Amount
+                    ? ledgerEntry
+                    : ledgerEntry with { Amount = MoneyAmount.Usd(cappedAmount) };
+                if (_ledgerByIdempotencyKey.TryAdd(ledgerEntry.IdempotencyKey, cappedEntry))
                 {
-                    _userBalances[ledgerEntry.UserId] = current + ledgerEntry.Amount.Amount;
+                    _userBalances[ledgerEntry.UserId] = current + cappedAmount;
                 }
             }
         }

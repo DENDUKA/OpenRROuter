@@ -196,6 +196,19 @@ public sealed class ChatCompletionHandler(
                         // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", CancellationToken.None);
                         
+                        // 4xx errors should not retry across nodes (client error / validation error)
+                        if (session.StatusCode >= 400 && session.StatusCode < 500 && session.StatusCode != 429)
+                        {
+                            if (!context.Response.HasStarted)
+                            {
+                                context.Response.StatusCode = session.StatusCode;
+                                context.Response.ContentType = "application/json";
+                                await context.Response.WriteAsync(errorBody, context.RequestAborted);
+                            }
+                            await session.DisposeAsync();
+                            return;
+                        }
+
                         excludedNodes ??= new HashSet<string>();
                         excludedNodes.Add(lease.NodeId);
 

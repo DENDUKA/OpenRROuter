@@ -94,6 +94,18 @@ public sealed class RouterRetryExecutor(
                         "Downstream error. StatusCode: {StatusCode}, Node: {NodeId}, RequestId: {RequestId}",
                         response.StatusCode, auth.Lease.NodeId, requestId);
 
+                    // 4xx errors should not retry across nodes (client error / validation error)
+                    if (response.StatusCode >= 400 && response.StatusCode < 500 && response.StatusCode != 429)
+                    {
+                        if (!context.Response.HasStarted)
+                        {
+                            context.Response.StatusCode = response.StatusCode;
+                            context.Response.ContentType = response.ContentType;
+                            await context.Response.WriteAsync(response.Body);
+                        }
+                        return;
+                    }
+
                     excludedNodes ??= new HashSet<string>();
                     excludedNodes.Add(auth.Lease.NodeId);
                     lastResponse = response;

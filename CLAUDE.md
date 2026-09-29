@@ -486,13 +486,17 @@ ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes 
 ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "cd /opt/orr && bash update-prod.sh"
 ```
 
-**Один сервис:**
+**Выката одного сервиса нет:** `update-prod.sh` игнорирует аргументы. Он всегда пересобирает все
+.NET-сервисы, перезаливает `compose.yml`/`Caddyfile`/`prometheus.yml`/`grafana/` из
+`app/deploy/compose`, рестартит caddy/prometheus/grafana и обновляет tg-бота.
 
-```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "cd /opt/orr && bash update-prod.sh api-gateway"
-```
+**Перед выкатом** проверь, что клон `/opt/orr/app` чистый (`git -C /opt/orr/app status --short`).
+Любая правка, сделанная прямо на сервере, роняет `git pull --ff-only`. Такие правки переносим в git,
+вслепую не сносим (2026-09-29 так нашлись хотфикс gateway и миграция 032, жившие только на проде).
 
-Допустимые имена: `auth-service`, `billing-service`, `control-plane`, `content-service`, `collector`, `api-gateway`, `webapp`.
+**Workflow `deploy-prod.yml` живой прод не обновляет:** секрет `PROD_SSH_HOST` указывает на другой
+хост, который с 2026-08-05 стоит на `1f8a35a6` с локальными правками `compose.yml`, и каждый
+запуск падает на `git pull`.
 
 **Для подключения через plink** (PuTTY):
 

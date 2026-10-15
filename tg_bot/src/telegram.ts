@@ -29,6 +29,8 @@ export interface TelegramTransportDeps {
 export interface TelegramOptions {
   botToken: string;
   chatId: string;
+  /** По умолчанию https://api.telegram.org. Без завершающего '/'. */
+  apiBaseUrl?: string;
 }
 
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
@@ -93,7 +95,7 @@ export function createTelegramTransport(options: TelegramOptions, deps: Telegram
   const maxRetryAfterMs = deps.maxRetryAfterMs ?? DEFAULT_MAX_RETRY_AFTER_MS;
 
   async function sendMessage(text: string): Promise<SendOutcome> {
-    const url = `https://api.telegram.org/bot${options.botToken}/sendMessage`;
+    const url = `${options.apiBaseUrl ?? 'https://api.telegram.org'}/bot${options.botToken}/sendMessage`;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), requestTimeoutMs);

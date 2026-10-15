@@ -6,6 +6,8 @@ export interface BotConfig {
   port: number;
   telegramBotToken: string;
   telegramChatId: string;
+  /** База Bot API без завершающего '/'. Подменяется, когда api.telegram.org недоступен напрямую. */
+  telegramApiBaseUrl: string;
   inboundAuthToken: string;
   webappBaseUrl: string;
   supportNotifyEnabled: boolean;
@@ -44,6 +46,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigResult {
   const telegramChatId = (env.TELEGRAM_CHAT_ID ?? '').trim();
   const inboundAuthToken = (env.INBOUND_AUTH_TOKEN ?? '').trim();
   const webappBaseUrl = (env.WEBAPP_BASE_URL ?? 'http://webapp:8080').trim().replace(/\/+$/, '');
+  const telegramApiBaseUrl =
+    (env.TELEGRAM_API_BASE_URL ?? '').trim().replace(/\/+$/, '') || 'https://api.telegram.org';
 
   if (telegramBotToken.length === 0) errors.push('TELEGRAM_BOT_TOKEN не задан');
   if (telegramChatId.length === 0) errors.push('TELEGRAM_CHAT_ID не задан');
@@ -54,6 +58,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ConfigResult {
       port: parsePort(env.PORT) ?? 8080,
       telegramBotToken,
       telegramChatId,
+      telegramApiBaseUrl,
       inboundAuthToken,
       webappBaseUrl,
       supportNotifyEnabled: parseBool(env.SUPPORT_NOTIFY_ENABLED, true),

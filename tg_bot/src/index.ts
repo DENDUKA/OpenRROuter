@@ -45,7 +45,7 @@ async function main(): Promise<void> {
   const stats = new DeliveryStats();
   const queue = new BoundedEventQueue(config.queueMaxItems, config.dedupMemory);
   const transport = createTelegramTransport(
-    { botToken: config.telegramBotToken, chatId: config.telegramChatId },
+    { botToken: config.telegramBotToken, chatId: config.telegramChatId, apiBaseUrl: config.telegramApiBaseUrl },
     { logger, requestTimeoutMs: config.telegramRequestTimeoutMs },
   );
   const app = buildApp({ config, configErrors: errors, queue, stats });

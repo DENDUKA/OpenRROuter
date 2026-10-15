@@ -48,6 +48,20 @@ describe('createTelegramTransport', () => {
     expect(calls[0]?.body).not.toHaveProperty('parse_mode');
   });
 
+  it('шлёт на подменённую базу Bot API', async () => {
+    const urls: string[] = [];
+    const fetchFn = (async (url: string) => {
+      urls.push(url);
+      return new Response('{"ok":true}', { status: 200 });
+    }) as typeof fetch;
+    const transport = createTelegramTransport(
+      { botToken: 'synthetic-token', chatId: '1', apiBaseUrl: 'https://tg.example.com' },
+      { fetchFn },
+    );
+    expect(await transport.sendMessage('текст')).toBe('sent');
+    expect(urls).toEqual(['https://tg.example.com/botsynthetic-token/sendMessage']);
+  });
+
   it('уважает retry_after при 429', async () => {
     const { transport, calls, waits } = mockTransport([
       { status: 429, body: { parameters: { retry_after: 7 } } },

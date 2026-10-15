@@ -13,6 +13,16 @@ describe('loadConfig', () => {
     expect(config.queueMaxItems).toBe(100);
     expect(config.dedupMemory).toBe(1000);
     expect(config.telegramRequestTimeoutMs).toBe(30_000);
+    expect(config.telegramApiBaseUrl).toBe('https://api.telegram.org');
+  });
+
+  it('TELEGRAM_API_BASE_URL подменяет базу Bot API и теряет завершающий слеш', () => {
+    expect(loadConfig({ ...baseEnv, TELEGRAM_API_BASE_URL: ' https://tg.example.com/ ' }).config.telegramApiBaseUrl).toBe(
+      'https://tg.example.com',
+    );
+    expect(loadConfig({ ...baseEnv, TELEGRAM_API_BASE_URL: '  ' }).config.telegramApiBaseUrl).toBe(
+      'https://api.telegram.org',
+    );
   });
 
   it('сообщает об отсутствующих секретах только именами переменных', () => {

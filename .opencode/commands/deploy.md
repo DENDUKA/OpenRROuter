@@ -1,11 +1,11 @@
 ---
-description: Деплой на прод (201.51.6.246) — только изменившиеся .NET-сервисы, через готовый update-orr.sh.
+description: Деплой на прод (89.191.225.228) — только изменившиеся .NET-сервисы, через готовый update-orr.sh.
 agent: build
 ---
 
 # Деплой .NET-сервисов на прод
 
-Прод: `root@201.51.6.246` (основной сервис OpenRussiaRouter). Деплоим **только** сервисы,
+Прод: `root@89.191.225.228` (основной сервис OpenRussiaRouter). Деплоим **только** сервисы,
 изменившиеся по сравнению с тем, что уже на сервере. Если изменений нет — выходим без деплоя.
 
 `31.76.49.2` — это нода 9Router, её этой командой не трогаем.
@@ -35,7 +35,7 @@ agent: build
 Import-Module Posh-SSH
 $pass = ConvertTo-SecureString (Get-Content -Raw "$HOME\.config\opencode\secrets\orr-prod.password").Trim() -AsPlainText -Force
 $cred = New-Object System.Management.Automation.PSCredential('root', $pass)
-$s = New-SSHSession -ComputerName '201.51.6.246' -Credential $cred -AcceptKey -ConnectionTimeout 45
+$s = New-SSHSession -ComputerName '89.191.225.228' -Credential $cred -AcceptKey -ConnectionTimeout 45
 $r = Invoke-SSHCommand -SessionId $s.SessionId -Command 'git -C /opt/orr/app fetch origin -q && git -C /opt/orr/app rev-parse HEAD' -TimeOut 60
 $serverCommit = $r.Output.Trim()
 ```

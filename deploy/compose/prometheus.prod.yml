@@ -1,4 +1,4 @@
-# Prometheus scrape config for the PROD compose box (201.51.6.246).
+# Prometheus scrape config for the PROD compose box (89.191.225.228).
 #
 # Targets use compose service DNS on the `orr` network. Every ORR service exposes OTel's
 # Prometheus exporter at /metrics (see BuildingBlocks/Metrics/OpenTelemetryExtensions.cs),

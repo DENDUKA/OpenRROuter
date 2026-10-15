@@ -26,7 +26,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 
-DEFAULT_SSH_HOST = "root@201.51.6.246"
+DEFAULT_SSH_HOST = "root@89.191.225.228"
 DEFAULT_METRIKA_COUNTER = "111582266"
 
 
@@ -315,7 +315,7 @@ def fetch_metrika_data(token, counter_id, reg_time_utc, first_payment_time_utc=N
 def main():
     parser = argparse.ArgumentParser(description="User Lifecycle & Journey Inspector")
     parser.add_argument("--email", required=True, help="User email")
-    parser.add_argument("--ssh-host", default=DEFAULT_SSH_HOST, help="SSH host (default: root@201.51.6.246)")
+    parser.add_argument("--ssh-host", default=DEFAULT_SSH_HOST, help="SSH host (default: root@89.191.225.228)")
     parser.add_argument("--metrika-token", help="Yandex OAuth Token (or set YANDEX_OAUTH_TOKEN env)")
     parser.add_argument("--metrika-token-file", help="Path to token file")
     parser.add_argument("--metrika-counter", default=DEFAULT_METRIKA_COUNTER, help="Yandex Metrika Counter ID")

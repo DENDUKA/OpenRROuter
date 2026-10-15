@@ -469,21 +469,30 @@ Legacy `deploy-prod.yml`/`update-orr.sh` не обновляет бот. Вне�
 - Health-чек ноды 9Router: в dev-оверлее обязателен `RouterHealthChecks__HealthPath=/api/health`.
   Базовый дефолт `/v1/models` отдаёт 401 от f9router, и нода никогда не станет Healthy.
 
-### SSH-деплой на прод (201.51.6.246)
+### SSH-деплой на прод (89.191.225.228)
 
-Прод-сервер: `201.51.6.246`, пользователь `root`, репо в `/opt/orr`.
+Прод-сервер: `89.191.225.228` (AdminVPS, Москва; 2 vCPU / 4 ГБ / 60 ГБ), пользователь `root`, репо в `/opt/orr`.
+Переехал 2026-10-15 со старого `201.51.6.246`. Старый бокс до конца аренды только пробрасывает 80/443 на новый.
 
 **SSH-ключ** (без пароля): `~/.ssh/id_ed25519_opencode` (ed25519, fingerprint `SHA256:amHOzogynksICpE1pFQfJeu5wsDAk70e4uz3V9ghcBw`).
-Ключ уже в `~/.ssh/authorized_keys` на сервере. ssh.exe использует его через `-i`:
+Ключ уже в `~/.ssh/authorized_keys` на сервере. Host key сервера: `SHA256:1NEmEMTQxhvhWLkK5U/0xohOhFw0koJXoXxh7C+kc8I`.
+При первом подключении сверь его и прими (`-o StrictHostKeyChecking=accept-new`). ssh.exe использует ключ через `-i`:
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "<команда>"
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@89.191.225.228 "<команда>"
 ```
+
+**Особенности бокса:**
+- 4 ГБ RAM. Сервисы собираются по одному (`update-prod.sh`), параллельная сборка может упереться в OOM.
+- `/etc/resolv.conf` зафиксирован (`chattr +i`) на Яндекс DNS. Дефолтный резолвер хостера 195.208.4.1
+  отдавал устаревший NXDOMAIN и мусорные A-записи.
+- Из РФ `api.telegram.org` режется по SNI. tg-бот ходит в Bot API через наш прокси
+  `https://tg.rawrter.com` (Caddy на 2.26.108.249, см. `deploy/tg-proxy/`), задано через `TELEGRAM_API_BASE_URL`.
 
 **Деплой всех сервисов** — `update-prod.sh` (git pull → sync compose → build → restart → health-gate → rollback при ошибке):
 
 ```powershell
-ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246 "cd /opt/orr && bash update-prod.sh"
+ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@89.191.225.228 "cd /opt/orr && bash update-prod.sh"
 ```
 
 **Выката одного сервиса нет:** `update-prod.sh` игнорирует аргументы. Он всегда пересобирает все
@@ -501,7 +510,7 @@ ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes 
 **Для подключения через plink** (PuTTY):
 
 ```powershell
-& "C:\Program Files\PuTTY\plink.exe" -hostkey "ssh-ed25519 255 SHA256:0wUJ9GDwPh1tByk1H5m0o3sy2owKN2ZY7qOn7PBL5YA" -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" root@201.51.6.246 "<команда>"
+& "C:\Program Files\PuTTY\plink.exe" -hostkey "ssh-ed25519 255 SHA256:1NEmEMTQxhvhWLkK5U/0xohOhFw0koJXoXxh7C+kc8I" -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" root@89.191.225.228 "<команда>"
 ```
 
 Полная пошаговая регистрация ноды 9Router в kind-кластере (секреты, endpoint URL,

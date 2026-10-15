@@ -47,7 +47,7 @@ k6 version
 
 SSH-туннель к Grafana (метрики прода):
 ```powershell
-ssh -L 3001:127.0.0.1:3001 root@201.51.6.246
+ssh -L 3001:127.0.0.1:3001 root@89.191.225.228
 # затем http://localhost:3001 — дашборды ORR
 ```
 

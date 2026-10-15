@@ -1,11 +1,11 @@
 ---
-description: Деплой на прод (201.51.6.246) — только изменившиеся .NET-сервисы, через update-prod.sh. Запускать только по явному вызову пользователя.
+description: Деплой на прод (89.191.225.228) — только изменившиеся .NET-сервисы, через update-prod.sh. Запускать только по явному вызову пользователя.
 argument-hint: "[Service|all]"
 ---
 
 # Деплой .NET-сервисов на прод
 
-Прод: `root@201.51.6.246` (основной сервис OpenRussiaRouter). Деплоим **только** сервисы,
+Прод: `root@89.191.225.228` (основной сервис OpenRussiaRouter). Деплоим **только** сервисы,
 изменившиеся по сравнению с тем, что уже на сервере. Если изменений нет — выходим без деплоя.
 
 `31.76.49.2` — это нода 9Router, её этой командой не трогаем.
@@ -32,7 +32,7 @@ argument-hint: "[Service|all]"
 Базовая строка подключения:
 
 ```bash
-SSH_CMD='ssh -i ~/.ssh/id_ed25519_opencode -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@201.51.6.246'
+SSH_CMD='ssh -i ~/.ssh/id_ed25519_opencode -o StrictHostKeyChecking=yes -o PasswordAuthentication=no root@89.191.225.228'
 ```
 
 ## 1. Коммит на сервере

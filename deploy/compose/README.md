@@ -7,7 +7,7 @@ topology. There is also a k8s/Kustomize/ArgoCD setup under `infra/`.
 
 ## Production variant (`compose.prod.yml`)
 
-The prod box (`201.51.6.246`) runs an **ORR-only** stack (no f9router — 9R lives
+The prod box (`89.191.225.228`) runs an **ORR-only** stack (no f9router — 9R lives
 elsewhere) fronted by **Caddy** with automatic Let's Encrypt TLS. It is driven by:
 
 - `compose.prod.yml` — same services minus f9router, plus a `caddy` reverse proxy and

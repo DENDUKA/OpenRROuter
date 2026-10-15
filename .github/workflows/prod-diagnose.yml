@@ -1,6 +1,6 @@
 name: 🔎 Diagnose production
 
-# Read-only inspection of the prod box (201.51.6.246) over the same SSH channel the deploy uses.
+# Read-only inspection of the prod box (89.191.225.228) over the same SSH channel the deploy uses.
 # Nothing here mutates the server: no git write, no docker up/build, no .env edit. Exists because
 # a blind full-stack deploy across a large gap is unsafe — the live compose file, the state of the
 # app/ clone and the .env key set all have to be known first.

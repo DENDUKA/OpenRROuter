@@ -1,8 +1,13 @@
 name: orr
 
-# PRODUCTION compose for host 201.51.6.246 (zetalink VDS). ORR-only — NO f9router
-# (9R runs on the dev box; this server serves only the .NET stack). Adds a Caddy
-# reverse proxy with automatic HTTPS in front of the WebApp (cabinet + payment webhook).
+# PRODUCTION compose for host 89.191.225.228 (AdminVPS, Moscow; moved from 201.51.6.246 in
+# 2026-10). ORR-only — NO f9router (9R runs on the dev box; this server serves only the
+# .NET stack). Adds a Caddy reverse proxy with automatic HTTPS in front of the WebApp
+# (cabinet + payment webhook).
+#
+# Only Caddy (80/443) is public. Every other published port is bound to 127.0.0.1: Docker
+# writes its own iptables rules and bypasses ufw, so a bare "5001:8080" is open to the whole
+# internet no matter what the host firewall says. Reach Seq/gRPC/health over an SSH tunnel.
 #
 # This file is the single source of truth for the prod box: deploy-prod.sh / update-prod.sh
 # copy it to /opt/orr/compose.yml on every run, so the box never hand-diverges from git.
@@ -34,7 +39,7 @@ services:
       ACCEPT_EULA: "Y"
       SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
     ports:
-      - "5341:80"
+      - "127.0.0.1:5341:80"
     volumes:
       - seq_data:/data
     mem_limit: 1g
@@ -49,7 +54,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5001:8080"
+      - "127.0.0.1:5001:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
@@ -82,7 +87,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5002:8080"
+      - "127.0.0.1:5002:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
@@ -125,7 +130,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5003:8080"
+      - "127.0.0.1:5003:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
@@ -152,7 +157,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5007:8080"
+      - "127.0.0.1:5007:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # gRPC stays on 8080 as cleartext HTTP/2; 8082 is an HTTP/1.1 side door for
@@ -177,8 +182,8 @@ services:
       control-plane:
         condition: service_started
     ports:
-      - "5005:8081"
-      - "5006:8080"
+      - "127.0.0.1:5005:8081"
+      - "127.0.0.1:5006:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       Kestrel__Endpoints__Http__Url: "http://+:8080"
@@ -206,7 +211,7 @@ services:
       control-plane:
         condition: service_started
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       GrpcServices__Auth: "http://auth-service:8080"
@@ -238,7 +243,7 @@ services:
       content-service:
         condition: service_started
     ports:
-      - "3000:8080"
+      - "127.0.0.1:3000:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       GrpcServices__Auth: "http://auth-service:8080"
@@ -368,7 +373,7 @@ services:
 
   # ---------------------------------------------------------------------------
   # Monitoring. Both are bound to 127.0.0.1 only — reach them over an SSH tunnel:
-  #   ssh -i .deploy/orr_prod_vps_access -L 3001:127.0.0.1:3001 root@201.51.6.246
+  #   ssh -i .deploy/orr_prod_ru_vps_access -L 3001:127.0.0.1:3001 root@89.191.225.228
   # Do NOT publish them on 0.0.0.0: Grafana holds read access to the billing DB.
   # ---------------------------------------------------------------------------
 

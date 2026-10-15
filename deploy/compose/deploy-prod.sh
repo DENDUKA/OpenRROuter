@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full PROD deploy for OpenRussiaRouter (host 201.51.6.246, ORR-only + Caddy TLS).
+# Full PROD deploy for OpenRussiaRouter (host 89.191.225.228, ORR-only + Caddy TLS).
 #
 # Syncs the git-tracked prod compose + Caddyfile into /opt/orr/, then (re)builds the .NET
 # services and brings the WHOLE stack up — including Caddy. Use this on first deploy or when
@@ -30,8 +30,8 @@ cp "$SRC/prometheus.prod.yml" prometheus.yml
 rm -rf grafana
 cp -r "$SRC/grafana" grafana
 
-echo "==> [prod] build .NET services"
-docker compose build $APP_SERVICES
+echo "==> [prod] build .NET services (one at a time — 4 GB box, parallel builds can OOM)"
+for s in $APP_SERVICES; do docker compose build "$s"; done
 
 echo "==> [prod] up (all services incl. caddy)"
 docker compose up -d --remove-orphans

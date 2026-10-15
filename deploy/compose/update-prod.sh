@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Routine PROD update for OpenRussiaRouter (host 201.51.6.246, ORR-only + Caddy TLS):
+# Routine PROD update for OpenRussiaRouter (host 89.191.225.228, ORR-only + Caddy TLS):
 # git pull -> re-sync tracked compose.prod.yml/Caddyfile -> rebuild .NET services -> restart
 # -> health-gate -> rollback to the previous commit on failure.
 #
@@ -36,6 +36,12 @@ reload_monitoring() {
     || echo "    !! grafana restart skipped"
 }
 
+# One service at a time: the box has 4 GB RAM, and compose builds every service in parallel
+# by default — seven concurrent `dotnet publish` runs can OOM the host mid-deploy.
+build_services() {
+  for s in $SERVICES; do docker compose build "$s"; done
+}
+
 health() {
   curl -fsS --max-time 8 http://127.0.0.1:8080/health >/dev/null 2>&1 || return 1
   curl -fsS --max-time 8 http://127.0.0.1:5006/health >/dev/null 2>&1 || return 1
@@ -56,7 +62,7 @@ echo "==> [prod] sync compose.prod.yml + Caddyfile from git"
 sync_tracked
 
 echo "==> [prod] build"
-docker compose build $SERVICES
+build_services
 echo "==> [prod] restart app + caddy + monitoring"
 docker compose up -d $SERVICES caddy prometheus grafana
 reload_monitoring
@@ -70,7 +76,7 @@ if [ "$ok" != "1" ]; then
     echo "!! [prod] rolling back to ${before:0:9} and rebuilding"
     git -C "$DIR" reset --hard "$before"
     sync_tracked
-    docker compose build $SERVICES
+    build_services
     docker compose up -d $SERVICES caddy prometheus grafana
   fi
   docker compose ps --format 'table {{.Service}}\t{{.Status}}'

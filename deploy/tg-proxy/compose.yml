@@ -1,0 +1,26 @@
+# Telegram Bot API proxy (see Caddyfile). Lives in /opt/tg-proxy on the Frankfurt box:
+#   scp deploy/tg-proxy/{compose.yml,Caddyfile} root@2.26.108.249:/opt/tg-proxy/
+#   ssh root@2.26.108.249 'cd /opt/tg-proxy && docker compose up -d'
+name: tg-proxy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    mem_limit: 128m
+
+volumes:
+  caddy_data:
+  caddy_config:

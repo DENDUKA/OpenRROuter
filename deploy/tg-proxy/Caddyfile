@@ -1,0 +1,26 @@
+# Telegram Bot API reverse proxy for rawrter-tg-bot. Runs on the Frankfurt box (2.26.108.249).
+#
+# Why: prod lives in RF, where api.telegram.org is cut by SNI-based DPI — raw TCP to a foreign
+# host passes, a TLS handshake with SNI api.telegram.org does not. The bot talks to
+# https://tg.rawrter.com instead (TELEGRAM_API_BASE_URL in /opt/rawrter-tg-bot/.env); this Caddy
+# terminates TLS and re-originates to api.telegram.org from outside RF.
+#
+# Prereq: A record tg.rawrter.com -> 2.26.108.249 (Caddy needs it for the Let's Encrypt cert).
+# Only the prod boxes may use it: everyone else gets the connection dropped. The bot token is in
+# the URL path, so no access log is configured — Caddy logs no requests by default.
+{
+	email nusferatus64@gmail.com
+}
+
+tg.rawrter.com {
+	# 89.191.225.228 = prod (AdminVPS, Moscow); 201.51.6.246 = old prod, until it is retired.
+	@prod remote_ip 89.191.225.228 201.51.6.246
+	handle @prod {
+		reverse_proxy https://api.telegram.org {
+			header_up Host api.telegram.org
+		}
+	}
+	handle {
+		abort
+	}
+}

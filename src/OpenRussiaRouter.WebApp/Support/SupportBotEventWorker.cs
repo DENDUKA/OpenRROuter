@@ -150,7 +150,10 @@ public sealed class SupportBotEventWorker : BackgroundService
         var endpoint = ResolveEndpoint(supportEvent);
         object payloadDto = supportEvent.EventType switch
         {
-            SupportBotEvent.UserRegisteredType => new UserRegisteredPayloadDto(supportEvent.Email),
+            SupportBotEvent.UserRegisteredType => new UserRegisteredPayloadDto(
+                supportEvent.Email,
+                supportEvent.IsDuplicate,
+                supportEvent.Duplicates?.Select(d => new DuplicateAccountDto(d.Email, d.BalanceUsd)).ToList()),
             SupportBotEvent.TopUpCompletedType => new TopUpCompletedPayloadDto(
                 supportEvent.Email,
                 supportEvent.AmountRub ?? 0m,
@@ -209,7 +212,12 @@ public sealed class SupportBotEventWorker : BackgroundService
 
     private sealed record SupportBotPayloadDto(string Email, string Subject, string Message);
 
-    private sealed record UserRegisteredPayloadDto(string Email);
+    private sealed record DuplicateAccountDto(string Email, decimal BalanceUsd);
+
+    private sealed record UserRegisteredPayloadDto(
+        string Email,
+        bool IsDuplicate = false,
+        IReadOnlyList<DuplicateAccountDto>? Duplicates = null);
 
     private sealed record TopUpCompletedPayloadDto(string Email, decimal AmountRub, decimal CreditedUsd, string Provider);
 

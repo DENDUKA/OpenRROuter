@@ -53,7 +53,10 @@ public sealed class SupportBotNotifier : ISupportBotNotifier
         }
     }
 
-    public void NotifyUserRegistered(string email)
+    public void NotifyUserRegistered(
+        string email,
+        bool isDuplicate = false,
+        IReadOnlyList<DuplicateAccountInfo>? duplicates = null)
     {
         try
         {
@@ -68,7 +71,7 @@ public sealed class SupportBotNotifier : ISupportBotNotifier
             }
 
             var regEvent = SupportBotEvent.UserRegistered(
-                Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, email);
+                Guid.NewGuid().ToString("N"), DateTimeOffset.UtcNow, email, isDuplicate, duplicates);
 
             if (!_queue.TryEnqueue(regEvent))
                 _logger.LogWarning("Support bot event queue is full; registration notification dropped (best-effort channel).");

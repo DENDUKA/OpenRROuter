@@ -122,7 +122,7 @@ public class SupportModelTests
     private sealed class NoopSupportBotNotifier : ISupportBotNotifier
     {
         public void NotifySupportTicket(string email, string subject, string message) { }
-        public void NotifyUserRegistered(string email) { }
+        public void NotifyUserRegistered(string email, bool isDuplicate = false, IReadOnlyList<DuplicateAccountInfo>? duplicates = null) { }
         public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
         public void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }
@@ -134,7 +134,7 @@ public class SupportModelTests
         public void NotifySupportTicket(string email, string subject, string message)
             => Tickets.Add((email, subject, message));
 
-        public void NotifyUserRegistered(string email) { }
+        public void NotifyUserRegistered(string email, bool isDuplicate = false, IReadOnlyList<DuplicateAccountInfo>? duplicates = null) { }
         public void NotifyTopUpCompleted(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
         public void NotifyPaymentCreated(string email, decimal amountRub, decimal creditedUsd, string provider, string? paymentId = null) { }
     }

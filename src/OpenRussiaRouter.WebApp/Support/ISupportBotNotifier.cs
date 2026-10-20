@@ -13,7 +13,10 @@ public interface ISupportBotNotifier
     /// Queues a user-registered event for the Telegram bot. Contractually never throws and
     /// never performs I/O — the bot channel must not affect registration, login or promo grants.
     /// </summary>
-    void NotifyUserRegistered(string email);
+    void NotifyUserRegistered(
+        string email,
+        bool isDuplicate = false,
+        IReadOnlyList<DuplicateAccountInfo>? duplicates = null);
 
     /// <summary>
     /// Queues a topup-completed event for the Telegram bot. Contractually never throws and

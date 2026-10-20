@@ -13,4 +13,11 @@ public sealed class NoOpYandexMetrikaIdentityStore : IYandexMetrikaIdentityStore
     /// <inheritdoc />
     public Task<string?> GetClientIdAsync(string userId, CancellationToken ct = default) =>
         Task.FromResult<string?>(null);
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<string>> FindRelatedUserIdsAsync(
+        string clientId,
+        string? excludeUserId = null,
+        CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
 }

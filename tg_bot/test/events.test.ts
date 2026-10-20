@@ -91,6 +91,30 @@ describe('parseUserRegisteredEvent', () => {
     }
   });
 
+  it('принимает корректное событие регистрации с дублями', () => {
+    const res = parseUserRegisteredEvent({
+      ...validReg,
+      payload: {
+        email: 'newuser@example.com',
+        isDuplicate: true,
+        duplicates: [
+          { email: 'olduser@example.com', balanceUsd: 0.25 },
+        ],
+      },
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.event.payload.isDuplicate).toBe(true);
+      const dups = res.event.payload.duplicates;
+      expect(dups).toBeDefined();
+      if (dups && dups[0]) {
+        expect(dups).toHaveLength(1);
+        expect(dups[0].email).toBe('olduser@example.com');
+        expect(dups[0].balanceUsd).toBe(0.25);
+      }
+    }
+  });
+
   it('отклоняет некорректный email', () => {
     expect(parseUserRegisteredEvent({ ...validReg, payload: { email: '' } }).ok).toBe(false);
     expect(parseUserRegisteredEvent({ ...validReg, payload: { email: 'invalid' } }).ok).toBe(false);

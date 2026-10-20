@@ -24,8 +24,15 @@ export interface SupportTicketEvent {
   payload: SupportTicketPayload;
 }
 
+export interface DuplicateAccountSummary {
+  email: string;
+  balanceUsd: number;
+}
+
 export interface UserRegisteredPayload {
   email: string;
+  isDuplicate?: boolean;
+  duplicates?: DuplicateAccountSummary[];
 }
 
 export interface UserRegisteredEvent {
@@ -182,8 +189,40 @@ export function parseUserRegisteredEvent(input: unknown): ParseResult<UserRegist
     else if (email.length > EVENT_LIMITS.emailMax || !email.includes('@') || /\s/.test(email)) {
       errors.push({ field: 'payload.email', reason: 'некорректный адрес' });
     }
+
+    const isDuplicate = typeof payloadObj.isDuplicate === 'boolean'
+      ? payloadObj.isDuplicate
+      : (typeof payloadObj.isDuplicate === 'string' ? payloadObj.isDuplicate === 'true' : false);
+
+    let duplicates: DuplicateAccountSummary[] | undefined;
+    if (Array.isArray(payloadObj.duplicates)) {
+      duplicates = [];
+      for (const item of payloadObj.duplicates) {
+        if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+          const itemObj = item as Record<string, unknown>;
+          const dupEmail = readString(itemObj.email) ?? '';
+          const dupBalance = readNumber(itemObj.balanceUsd) ?? 0;
+          if (dupEmail.length > 0 && dupEmail.includes('@')) {
+            duplicates.push({ email: dupEmail, balanceUsd: dupBalance });
+          }
+        }
+      }
+    }
+
     if (errors.length === 0 && id !== null && occurredAt !== null) {
-      return { ok: true, event: { id, type: 'user_registered', occurredAt, payload: { email } } };
+      return {
+        ok: true,
+        event: {
+          id,
+          type: 'user_registered',
+          occurredAt,
+          payload: {
+            email,
+            ...(isDuplicate ? { isDuplicate: true } : {}),
+            ...(duplicates && duplicates.length > 0 ? { duplicates } : {}),
+          },
+        },
+      };
     }
   }
 

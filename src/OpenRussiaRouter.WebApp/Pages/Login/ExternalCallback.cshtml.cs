@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.Extensions.Logging;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -17,7 +18,8 @@ public sealed class ExternalCallbackModel(
     AuthProvider AuthProvider,
     BillingProvider? BillingProvider = null,
     ILogger<ExternalCallbackModel>? Logger = null,
-    ISupportBotNotifier? BotNotifier = null) : PageModel
+    ISupportBotNotifier? BotNotifier = null,
+    IYandexMetrikaIdentityStore? IdentityStore = null) : PageModel
 {
     public async Task<IActionResult> OnGetAsync()
     {
@@ -68,7 +70,31 @@ public sealed class ExternalCallbackModel(
 
         if (loginResult.IsNewUser)
         {
-            BotNotifier?.NotifyUserRegistered(loginResult.Email);
+            var duplicates = new List<DuplicateAccountInfo>();
+            if (IdentityStore is not null && HttpContext.Request.Cookies.TryGetValue("_ym_uid", out var ymUid) && !string.IsNullOrWhiteSpace(ymUid))
+            {
+                try
+                {
+                    var relatedUserIds = await IdentityStore.FindRelatedUserIdsAsync(ymUid, loginResult.UserId, HttpContext.RequestAborted);
+                    foreach (var relatedId in relatedUserIds)
+                    {
+                        var relatedUser = await AuthProvider.GetUserAsync(relatedId, HttpContext.RequestAborted);
+                        if (relatedUser is not null)
+                        {
+                            var balance = BillingProvider is not null
+                                ? await BillingProvider.GetBalanceAsync(relatedId, HttpContext.RequestAborted)
+                                : null;
+                            duplicates.Add(new DuplicateAccountInfo(relatedUser.Email, balance?.Amount ?? 0m));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Failed to resolve duplicate accounts via Yandex Metrica identity for UserId={UserId}", loginResult.UserId);
+                }
+            }
+
+            BotNotifier?.NotifyUserRegistered(loginResult.Email, duplicates.Count > 0, duplicates);
 
             // Grant start balance if promotion is enabled (best-effort)
             if (BillingProvider is not null)

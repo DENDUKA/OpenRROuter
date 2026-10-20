@@ -132,5 +132,8 @@ public sealed class YandexMetrikaIdentityMiddlewareTests
 
         public Task<string?> GetClientIdAsync(string userId, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
+
+        public Task<IReadOnlyList<string>> FindRelatedUserIdsAsync(string clientId, string? excludeUserId = null, CancellationToken ct = default) =>
+            Task.FromResult<IReadOnlyList<string>>(Array.Empty<string>());
     }
 }

@@ -225,6 +225,16 @@ public sealed class YandexMetrikaOfflineConversionsEndToEndTests
             _store.TryGetValue(userId, out var clientId);
             return Task.FromResult(clientId);
         }
+
+        public Task<IReadOnlyList<string>> FindRelatedUserIdsAsync(string clientId, string? excludeUserId, CancellationToken ct)
+        {
+            var list = _store
+                .Where(pair => string.Equals(pair.Value, clientId, StringComparison.Ordinal)
+                               && (excludeUserId is null || !string.Equals(pair.Key, excludeUserId, StringComparison.Ordinal)))
+                .Select(pair => pair.Key)
+                .ToList();
+            return Task.FromResult<IReadOnlyList<string>>(list);
+        }
     }
 
     private sealed class FixedTimeProvider(DateTimeOffset nowUtc) : TimeProvider

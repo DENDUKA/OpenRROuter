@@ -4,8 +4,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using OpenRussiaRouter.BuildingBlocks.Analytics;
 using OpenRussiaRouter.WebApp.Email;
-using OpenRussiaRouter.WebApp;
 using OpenRussiaRouter.WebApp.Services.Analytics;
 using OpenRussiaRouter.WebApp.Services.Auth;
 using OpenRussiaRouter.WebApp.Services.Billing;
@@ -13,7 +13,7 @@ using OpenRussiaRouter.WebApp.Support;
 
 namespace OpenRussiaRouter.WebApp.Pages;
 
-public class VerifyEmailModel : PageModelBase
+public sealed class VerifyEmailModel : PageModelBase
 {
     private readonly AuthProvider _authClient;
     private readonly BillingProvider _billingProvider;
@@ -21,6 +21,7 @@ public class VerifyEmailModel : PageModelBase
     private readonly IStringLocalizer<SharedResource> _localizer;
     private readonly ILogger<VerifyEmailModel> _logger;
     private readonly ISupportBotNotifier? _botNotifier;
+    private readonly IYandexMetrikaIdentityStore? _identityStore;
 
     [BindProperty(SupportsGet = true)]
     public string Email { get; set; } = "";
@@ -39,7 +40,8 @@ public class VerifyEmailModel : PageModelBase
         IEmailDispatchQueue emailQueue,
         IStringLocalizer<SharedResource> localizer,
         ILogger<VerifyEmailModel> logger,
-        ISupportBotNotifier? botNotifier = null)
+        ISupportBotNotifier? botNotifier = null,
+        IYandexMetrikaIdentityStore? identityStore = null)
     {
         _authClient = authProvider;
         _billingProvider = billingProvider;
@@ -47,6 +49,7 @@ public class VerifyEmailModel : PageModelBase
         _localizer = localizer;
         _logger = logger;
         _botNotifier = botNotifier;
+        _identityStore = identityStore;
     }
 
     public IActionResult OnGet()
@@ -72,7 +75,29 @@ public class VerifyEmailModel : PageModelBase
         {
             var response = await _authClient.VerifyEmailAsync(Email, Code);
 
-            _botNotifier?.NotifyUserRegistered(response.Email);
+            var duplicates = new List<DuplicateAccountInfo>();
+            if (_identityStore is not null && HttpContext.Request.Cookies.TryGetValue("_ym_uid", out var ymUid) && !string.IsNullOrWhiteSpace(ymUid))
+            {
+                try
+                {
+                    var relatedUserIds = await _identityStore.FindRelatedUserIdsAsync(ymUid, response.UserId, HttpContext.RequestAborted);
+                    foreach (var relatedId in relatedUserIds)
+                    {
+                        var relatedUser = await _authClient.GetUserAsync(relatedId, HttpContext.RequestAborted);
+                        if (relatedUser is not null)
+                        {
+                            var balance = await _billingProvider.GetBalanceAsync(relatedId, HttpContext.RequestAborted);
+                            duplicates.Add(new DuplicateAccountInfo(relatedUser.Email, balance?.Amount ?? 0m));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to resolve duplicate accounts via Yandex Metrica identity for UserId={UserId}", response.UserId);
+                }
+            }
+
+            _botNotifier?.NotifyUserRegistered(response.Email, duplicates.Count > 0, duplicates);
 
             var claims = new[]
             {

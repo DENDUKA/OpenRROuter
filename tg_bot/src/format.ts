@@ -40,7 +40,23 @@ export function formatSupportNotification(event: SupportTicketEvent): string {
 }
 
 export function formatRegistrationNotification(event: UserRegisteredEvent): string {
-  return `🎉 Новая регистрация\nEmail: ${event.payload.email}`;
+  const lines = [
+    '🎉 Новая регистрация',
+    `Email: ${event.payload.email}`,
+  ];
+
+  if (event.payload.isDuplicate || (event.payload.duplicates && event.payload.duplicates.length > 0)) {
+    lines.push('');
+    lines.push('⚠️ Подозрение на дубль (совпадение по Яндекс.Метрике)');
+    if (event.payload.duplicates && event.payload.duplicates.length > 0) {
+      lines.push('Связанные аккаунты:');
+      for (const dup of event.payload.duplicates) {
+        lines.push(`• ${dup.email} — баланс: $${formatUsd(dup.balanceUsd)}`);
+      }
+    }
+  }
+
+  return lines.join('\n');
 }
 
 export function formatTopUpNotification(event: TopUpCompletedEvent): string {

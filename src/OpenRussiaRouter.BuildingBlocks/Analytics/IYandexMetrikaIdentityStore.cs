@@ -12,4 +12,10 @@ public interface IYandexMetrikaIdentityStore
 
     /// <summary>Returns the most recently observed ClientID for a user, if available.</summary>
     Task<string?> GetClientIdAsync(string userId, CancellationToken ct = default);
+
+    /// <summary>Finds other user IDs associated with the specified ClientID.</summary>
+    Task<IReadOnlyList<string>> FindRelatedUserIdsAsync(
+        string clientId,
+        string? excludeUserId = null,
+        CancellationToken ct = default);
 }

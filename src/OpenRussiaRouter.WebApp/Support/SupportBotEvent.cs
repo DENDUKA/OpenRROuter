@@ -24,6 +24,8 @@ public sealed record SupportBotEvent(
     public decimal? AmountRub { get; init; }
     public decimal? CreditedUsd { get; init; }
     public string? Provider { get; init; }
+    public bool IsDuplicate { get; init; }
+    public IReadOnlyList<DuplicateAccountInfo>? Duplicates { get; init; }
 
     public SupportBotEvent(string id, DateTimeOffset occurredAt, string email, string subject, string message)
         : this(id, occurredAt, email, subject, message, SupportTicketType)
@@ -33,8 +35,17 @@ public sealed record SupportBotEvent(
     public static SupportBotEvent SupportTicket(string id, DateTimeOffset occurredAt, string email, string subject, string message)
         => new(id, occurredAt, email, subject, message, SupportTicketType);
 
-    public static SupportBotEvent UserRegistered(string id, DateTimeOffset occurredAt, string email)
-        => new(id, occurredAt, email, null, null, UserRegisteredType);
+    public static SupportBotEvent UserRegistered(
+        string id,
+        DateTimeOffset occurredAt,
+        string email,
+        bool isDuplicate = false,
+        IReadOnlyList<DuplicateAccountInfo>? duplicates = null)
+        => new(id, occurredAt, email, null, null, UserRegisteredType)
+        {
+            IsDuplicate = isDuplicate,
+            Duplicates = duplicates
+        };
 
     public static SupportBotEvent TopUpCompleted(
         string id, DateTimeOffset occurredAt, string email, decimal amountRub, decimal creditedUsd, string provider)
@@ -54,3 +65,6 @@ public sealed record SupportBotEvent(
             Provider = provider
         };
 }
+
+/// <summary>Summary of a duplicate/suspected account associated with the registrant.</summary>
+public sealed record DuplicateAccountInfo(string Email, decimal BalanceUsd);

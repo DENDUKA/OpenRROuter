@@ -58,4 +58,35 @@ public sealed class PostgresYandexMetrikaIdentityStore(NpgsqlDataSource dataSour
         command.Parameters.AddWithValue("userId", userId);
         return (string?)await command.ExecuteScalarAsync(ct).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<string>> FindRelatedUserIdsAsync(
+        string clientId,
+        string? excludeUserId = null,
+        CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+        const string sql = """
+            select user_id
+            from analytics.yandex_metrika_identities
+            where client_id = @clientId
+              and (@excludeUserId is null or user_id <> @excludeUserId)
+            order by last_seen_at_utc desc;
+            """;
+
+        await using var connection = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var command = new NpgsqlCommand(sql, connection);
+        command.Parameters.AddWithValue("clientId", clientId);
+        command.Parameters.AddWithValue("excludeUserId", (object?)excludeUserId ?? DBNull.Value);
+
+        var userIds = new List<string>();
+        await using var reader = await command.ExecuteReaderAsync(ct).ConfigureAwait(false);
+        while (await reader.ReadAsync(ct).ConfigureAwait(false))
+        {
+            userIds.Add(reader.GetString(0));
+        }
+
+        return userIds;
+    }
 }

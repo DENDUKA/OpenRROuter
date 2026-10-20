@@ -45,6 +45,27 @@ describe('formatRegistrationNotification', () => {
     });
     expect(text).toBe('🎉 Новая регистрация\nEmail: user@example.com');
   });
+
+  it('формирует предупреждение о дубле с балансами связанных аккаунтов', () => {
+    const text = formatRegistrationNotification({
+      id: 'reg-2',
+      type: 'user_registered',
+      occurredAt: '2026-09-07T09:00:00Z',
+      payload: {
+        email: 'user2@example.com',
+        isDuplicate: true,
+        duplicates: [
+          { email: 'user1@example.com', balanceUsd: 0.15 },
+          { email: 'user0@example.com', balanceUsd: 0 },
+        ],
+      },
+    });
+    expect(text).toContain('🎉 Новая регистрация');
+    expect(text).toContain('Email: user2@example.com');
+    expect(text).toContain('⚠️ Подозрение на дубль (совпадение по Яндекс.Метрике)');
+    expect(text).toContain('• user1@example.com — баланс: $0.15');
+    expect(text).toContain('• user0@example.com — баланс: $0.00');
+  });
 });
 
 describe('formatTopUpNotification', () => {

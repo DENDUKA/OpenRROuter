@@ -95,7 +95,8 @@ ApiGateway зовёт это через свою обёртку `RouterUsageExtr
 ## Продуктовая аналитика (`Analytics/`)
 
 `IYandexMetrikaIdentityStore` хранит в analytics-БД разрешённую пользователем связь
-`user_id → ClientID` (`analytics.yandex_metrika_identities`). Более старое наблюдение не должно
+`user_id → ClientID` (`analytics.yandex_metrika_identities`), а также позволяет искать связанные аккаунты
+по ClientID (`FindRelatedUserIdsAsync`). Более старое наблюдение не должно
 перезаписывать новый ClientID. Postgres-регистрация добавляется тем же `AddProductAnalytics`, а
 no-op путь остаётся безопасным. `IProductAnalyticsErasure.PurgeUserAsync` удаляет одновременно
 `analytics.events` и связь ClientID.

@@ -149,8 +149,15 @@ constant-time (`CryptographicOperations.FixedTimeEquals`). Единственн�
 
 ## БД
 
-Одна миграция — [db/migrations/content/001_initial.sql](../../db/migrations/content/001_initial.sql)
-(схема `content`); применённые файлы не редактируем, только добавляем следующий префикс.
+Схема `content` — [db/migrations/content/001_initial.sql](../../db/migrations/content/001_initial.sql);
+применённые файлы не редактируем, только добавляем следующий префикс.
+[002_api_base_url_placeholder.sql](../../db/migrations/content/002_api_base_url_placeholder.sql) —
+разовая data-миграция: вшитые `https://api.{openrussiarouter,rawrter}.com` в `description_*`/`setup_*`
+заменены на плейсхолдер `{{API_BASE_URL}}`.
+
+- **Хост API в markdown инструментов не вшивать — только `{{API_BASE_URL}}`** (без `/v1` и хвостового
+  слэша: `{{API_BASE_URL}}/v1`). Подставляет его WebApp при рендере (`ToolDetailsModel`), сервис
+  хранит текст как есть. Иначе гайды снова отстанут от смены домена API, как после переезда на rawrter.
 
 - `content.tool_categories` — слаг PK, `name_ru`/`name_en`, `sort_order`;
   миграция засевает `ide`, `cli`, `chat-ui`, `agent`, `other`.

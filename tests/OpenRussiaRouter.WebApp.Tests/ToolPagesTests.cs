@@ -2,8 +2,12 @@ using System.Globalization;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using OpenRussiaRouter.WebApp.Pages;
+using OpenRussiaRouter.WebApp.Services;
+using OpenRussiaRouter.WebApp.Services.Billing;
 using OpenRussiaRouter.WebApp.Services.Content;
 
 namespace OpenRussiaRouter.WebApp.Tests;
@@ -34,14 +38,23 @@ public class ToolPagesTests
         return model;
     }
 
-    private static ToolDetailsModel CreateDetailsModel(FakeContentProvider content, string id)
+    private static ToolDetailsModel CreateDetailsModel(
+        FakeContentProvider content, string id, string? platformApiBaseUrl = null)
     {
+        var resolver = new ApiBaseUrlResolver(
+            new ConfigurationBuilder().Build(),
+            new FakeBillingProvider(platformApiBaseUrl),
+            new MemoryCache(new MemoryCacheOptions()),
+            NullLogger<ApiBaseUrlResolver>.Instance);
         var model = new ToolDetailsModel(
-            content, NullStringLocalizer<SharedResource>.Instance, NullLogger<ToolDetailsModel>.Instance)
+            content, resolver, NullStringLocalizer<SharedResource>.Instance, NullLogger<ToolDetailsModel>.Instance)
         {
             Id = id
         };
-        model.PageContext = new PageContext { HttpContext = new DefaultHttpContext() };
+        var httpContext = new DefaultHttpContext();
+        httpContext.Request.Scheme = "https";
+        httpContext.Request.Host = new HostString("test.local");
+        model.PageContext = new PageContext { HttpContext = httpContext };
         return model;
     }
 
@@ -185,6 +198,41 @@ public class ToolPagesTests
     }
 
     [Fact]
+    public async Task ToolDetails_SubstitutesApiBaseUrlPlaceholder_FromPlatformSetting()
+    {
+        var tool = new ToolInfo(
+            "cline",
+            "Cline",
+            SetupEn: "Base URL: `{{API_BASE_URL}}/v1`",
+            DescriptionEn: "[API]({{API_BASE_URL}}/v1/models)");
+        var model = CreateDetailsModel(
+            new FakeContentProvider([], tool), "cline", platformApiBaseUrl: "https://api.rawrter.com/");
+
+        await WithCulture("en", async () =>
+        {
+            await model.OnGetAsync();
+
+            model.SetupHtml.Should().Contain("https://api.rawrter.com/v1");
+            model.SetupHtml.Should().NotContain("{{API_BASE_URL}}");
+            model.DescriptionHtml.Should().Contain("href=\"https://api.rawrter.com/v1/models\"");
+        });
+    }
+
+    [Fact]
+    public async Task ToolDetails_ApiBaseUrlPlaceholder_FallsBackToRequestOrigin()
+    {
+        var tool = new ToolInfo("cline", "Cline", SetupRu: "`{{API_BASE_URL}}/v1`");
+        var model = CreateDetailsModel(new FakeContentProvider([], tool), "cline");
+
+        await WithCulture("ru", async () =>
+        {
+            await model.OnGetAsync();
+
+            model.SetupHtml.Should().Contain("https://test.local/v1");
+        });
+    }
+
+    [Fact]
     public async Task ToolDetails_ProviderFailure_SetsErrorInsteadOfThrowing()
     {
         var model = CreateDetailsModel(new FakeContentProvider([], throwOnList: true), "cline");
@@ -192,6 +240,12 @@ public class ToolPagesTests
         await model.OnGetAsync();
 
         model.ErrorMessage.Should().NotBeNull();
+    }
+
+    private sealed class FakeBillingProvider(string? publicApiBaseUrl) : BillingProvider(client: default!)
+    {
+        public override Task<string?> GetPlatformSettingAsync(string key, CancellationToken cancellationToken = default) =>
+            Task.FromResult(key == PlatformSettingKeys.PublicApiBaseUrl ? publicApiBaseUrl : null);
     }
 
     private sealed class FakeContentProvider(

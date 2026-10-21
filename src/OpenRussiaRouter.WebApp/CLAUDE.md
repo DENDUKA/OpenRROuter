@@ -595,7 +595,9 @@ BillingService своей котировкой.
   полагаться на него как на единственную защиту.
 - `ApiBaseUrlResolver`: `platform_settings` (админская настройка) → `PublicApiBaseUrl` → origin
   запроса. Ошибка Billing не валит страницу, просто уводит на фолбэк. Используется только для
-  **API-примеров** (`base_url`, `/docs`) — не для SEO. Для crawler-метаданных отдельный
+  **API-примеров** (`base_url`, `/docs`, плейсхолдер `{{API_BASE_URL}}` в описании и гайде
+  подключения `/tools/{id}` — `ToolDetailsModel.ApiBaseUrlPlaceholder`, подстановка до
+  `MarkdownRenderer`) — не для SEO. Для crawler-метаданных отдельный
   `SiteBaseUrlResolver` (`PublicSiteBaseUrl` → origin), чтобы api-поддомен не утекал в
   canonical/og/sitemap.
 - `ReasoningEnrichmentWorker` крутится **в каждой реплике**, идемпотентен по `model_id` и **не

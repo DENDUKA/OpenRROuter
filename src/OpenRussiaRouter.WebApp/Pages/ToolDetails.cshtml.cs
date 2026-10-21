@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
+using OpenRussiaRouter.WebApp.Services;
 using OpenRussiaRouter.WebApp.Services.Content;
 using OpenRussiaRouter.WebApp.Services.Markup;
 
@@ -9,15 +10,25 @@ namespace OpenRussiaRouter.WebApp.Pages;
 
 public class ToolDetailsModel(
     ContentProvider contentProvider,
+    ApiBaseUrlResolver apiBaseUrlResolver,
     IStringLocalizer<SharedResource> localizer,
     ILogger<ToolDetailsModel> logger) : PageModelBase
 {
+    /// <summary>
+    /// Written by admins into description/setup markdown instead of a literal API host, so guides
+    /// follow the admin API base URL setting (no trailing slash, without <c>/v1</c>).
+    /// </summary>
+    public const string ApiBaseUrlPlaceholder = "{{API_BASE_URL}}";
+
     [BindProperty(SupportsGet = true)]
     public string Id { get; set; } = "";
 
     public ToolInfo? Tool { get; private set; }
     public string? CategoryName { get; private set; }
     public string? ErrorMessage { get; private set; }
+
+    /// <summary>User-facing API base URL substituted for <see cref="ApiBaseUrlPlaceholder"/>.</summary>
+    public string ApiBaseUrl { get; private set; } = "";
 
     public string LogoUrl =>
         $"/tools/logo/{Uri.EscapeDataString(Id)}?v={Tool?.UpdatedAtUtc.UtcDateTime.Ticks ?? 0}";
@@ -26,10 +37,10 @@ public class ToolDetailsModel(
 
     /// <summary>Rendered with the strict pipeline: admin-authored, and only our own images allowed.</summary>
     public string DescriptionHtml =>
-        MarkdownRenderer.RenderStrict(PickLocalized(Tool?.DescriptionRu, Tool?.DescriptionEn));
+        MarkdownRenderer.RenderStrict(SubstituteApiBaseUrl(PickLocalized(Tool?.DescriptionRu, Tool?.DescriptionEn)));
 
     public string SetupHtml =>
-        MarkdownRenderer.RenderStrict(PickLocalized(Tool?.SetupRu, Tool?.SetupEn));
+        MarkdownRenderer.RenderStrict(SubstituteApiBaseUrl(PickLocalized(Tool?.SetupRu, Tool?.SetupEn)));
 
     public async Task<IActionResult> OnGetAsync()
     {
@@ -44,6 +55,8 @@ public class ToolDetailsModel(
                 ErrorMessage = localizer["ToolDetails_NotFound"];
                 return Page();
             }
+
+            ApiBaseUrl = await apiBaseUrlResolver.ResolveAsync(Request, HttpContext.RequestAborted);
 
             if (Tool.CategoryId is not null)
             {
@@ -63,6 +76,9 @@ public class ToolDetailsModel(
 
     private static bool IsRussian =>
         CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "ru";
+
+    private string? SubstituteApiBaseUrl(string? markdown) =>
+        markdown?.Replace(ApiBaseUrlPlaceholder, ApiBaseUrl, StringComparison.Ordinal);
 
     private static string? PickLocalized(string? ru, string? en)
     {

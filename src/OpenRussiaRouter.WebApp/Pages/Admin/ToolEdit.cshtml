@@ -114,6 +114,7 @@
             <div class="form-group">
                 <label asp-for="Form.SetupRu" class="form-label">How to connect (Markdown)</label>
                 <textarea asp-for="Form.SetupRu" class="form-control md-editor" rows="14"></textarea>
+                <small class="text-muted">Write <code>{{API_BASE_URL}}</code> instead of the API host, e.g. <code>{{API_BASE_URL}}/v1</code> — it renders as the current API base URL from the platform settings.</small>
             </div>
         </div>
     </div>
@@ -132,6 +133,7 @@
             <div class="form-group">
                 <label asp-for="Form.SetupEn" class="form-label">How to connect (Markdown)</label>
                 <textarea asp-for="Form.SetupEn" class="form-control md-editor" rows="14"></textarea>
+                <small class="text-muted">Write <code>{{API_BASE_URL}}</code> instead of the API host, e.g. <code>{{API_BASE_URL}}/v1</code> — it renders as the current API base URL from the platform settings.</small>
             </div>
         </div>
     </div>

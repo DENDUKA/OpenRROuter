@@ -16,8 +16,8 @@ public class LegalDocumentService
             ["RWT_SERVICE_NAME"] = "Rawrter",
             ["RWT_DOCUMENT_DATE"] = "05.08.2026",
             ["RWT_PUBLIC_DOMAIN"] = "https://rawrter.com",
-            ["RWT_OPERATOR_NAME"] = "Rawrter",
-            ["RWT_OPERATOR_DETAILS"] = "официальный сайт: https://rawrter.com",
+            ["RWT_OPERATOR_NAME"] = "Зоткин Денис Игоревич",
+            ["RWT_OPERATOR_DETAILS"] = "ИНН: 645293322359, официальный сайт: https://rawrter.com",
             ["RWT_SUPPORT_CONTACT"] = "через официальный интерфейс Rawrter"
         };
 

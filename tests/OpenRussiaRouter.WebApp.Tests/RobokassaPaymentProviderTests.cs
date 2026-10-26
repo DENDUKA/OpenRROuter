@@ -1,10 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using OpenRussiaRouter.WebApp.Services.Payments;
 using OpenRussiaRouter.WebApp.Services.Payments.Robokassa;
 
@@ -14,8 +16,11 @@ public class RobokassaPaymentProviderTests
 {
     private const string Login = "rawrter";
     private const string Pass1 = "pass-one";
-    private const string Pass2 = "pass-two";
+    private const string NotifyUrl = "https://rawrter.com/webhook/robokassa";
     private const string OrderId = "9b1f6a52-2d1c-4f5e-8d0e-1a2b3c4d5e6f";
+
+    // Stands in for Robokassa's signing key: the provider takes the public half through its internal ctor.
+    private static readonly RSA TestKey = RSA.Create(2048);
 
     [Fact]
     public void Name_is_robokassa_and_settles_in_RUB()
@@ -27,7 +32,7 @@ public class RobokassaPaymentProviderTests
     }
 
     [Fact]
-    public async Task CreateAsync_builds_signed_url_with_receipt_and_order_id_in_Shp_param()
+    public async Task CreateAsync_builds_signed_url_with_receipt_and_once_encoded_ResultUrl2()
     {
         var provider = CreateProvider();
 
@@ -35,25 +40,30 @@ public class RobokassaPaymentProviderTests
             new PaymentRequest(OrderId, 1500m, "RUB", "Top-up 15 USD"), CancellationToken.None);
 
         created.ProviderPaymentId.Should().Be(OrderId);
-        var query = QueryHelpers.ParseQuery(new Uri(created.PayUrl).Query);
+        var uri = new Uri(created.PayUrl);
+        var query = QueryHelpers.ParseQuery(uri.Query);
         query["MerchantLogin"].ToString().Should().Be(Login);
         query["OutSum"].ToString().Should().Be("1500.00");
-        query["Shp_orderid"].ToString().Should().Be(OrderId);
         query.ContainsKey("IsTest").Should().BeFalse();
 
         // Receipt travels url-encoded twice (once for the signature string, once for the query) and
         // the signature is computed over the once-encoded string.
         var receipt = query["Receipt"].ToString();
         receipt.Should().StartWith("%7B");
-        var invId = query["InvId"].ToString();
-        long.Parse(invId).Should().BePositive();
-        var expected = Md5($"{Login}:1500.00:{invId}:{receipt}:{Pass1}:Shp_orderid={OrderId}");
-        query["SignatureValue"].ToString().Should().Be(expected);
-
         var receiptJson = Uri.UnescapeDataString(receipt);
         receiptJson.Should().Contain("\"payment_method\":\"full_payment\"");
         receiptJson.Should().Contain("\"payment_object\":\"service\"");
         receiptJson.Should().Contain("\"sum\":1500,");
+
+        // ResultUrl2 is encoded exactly once, both in the query and in the signature string.
+        var encodedResultUrl2 = Uri.EscapeDataString($"{NotifyUrl}?order={OrderId}");
+        uri.Query.Should().Contain("&ResultUrl2=" + encodedResultUrl2);
+        query["ResultUrl2"].ToString().Should().Be($"{NotifyUrl}?order={OrderId}");
+
+        var invId = query["InvId"].ToString();
+        long.Parse(invId).Should().BePositive();
+        query["SignatureValue"].ToString()
+            .Should().Be(Md5($"{Login}:1500.00:{invId}:{receipt}:{encodedResultUrl2}:{Pass1}"));
     }
 
     [Fact]
@@ -79,6 +89,17 @@ public class RobokassaPaymentProviderTests
     }
 
     [Fact]
+    public async Task CreateAsync_refuses_to_run_without_NotifyUrl()
+    {
+        var provider = CreateProvider(notifyUrl: "");
+
+        var act = () => provider.CreateAsync(
+            new PaymentRequest(OrderId, 10m, "RUB", "x"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*NotifyUrl*");
+    }
+
+    [Fact]
     public async Task CreateAsync_invoice_id_is_stable_per_order_and_differs_between_orders()
     {
         var provider = CreateProvider();
@@ -92,106 +113,156 @@ public class RobokassaPaymentProviderTests
     }
 
     [Fact]
-    public void Verify_accepts_correct_signature_and_is_case_insensitive_on_hex()
+    public void Verify_accepts_a_correctly_signed_notification()
     {
-        var provider = CreateProvider();
-        var upper = Md5Upper($"100.000000:450009:{Pass2}:Shp_orderid={OrderId}");
-
-        provider.Verify(ResultBody("100.000000", "450009", OrderId, upper), new HeaderDictionary())
-            .Should().Be(WebhookVerificationResult.Valid);
-        provider.Verify(ResultBody("100.000000", "450009", OrderId, upper.ToLowerInvariant()), new HeaderDictionary())
+        CreateProvider().Verify(SignedJws(OrderId, "OK"), new HeaderDictionary())
             .Should().Be(WebhookVerificationResult.Valid);
     }
 
     [Fact]
-    public void Verify_rejects_tampered_amount()
+    public void Verify_accepts_the_token_wrapped_in_a_form_field_or_quotes()
     {
         var provider = CreateProvider();
-        var signature = Md5Upper($"100.000000:450009:{Pass2}:Shp_orderid={OrderId}");
+        var jws = SignedJws(OrderId, "OK");
 
-        var body = ResultBody("999.000000", "450009", OrderId, signature);
-
-        provider.Verify(body, new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
+        provider.Verify($"notification={jws}", new HeaderDictionary())
+            .Should().Be(WebhookVerificationResult.Valid);
+        provider.Verify($"\"{jws}\"\n", new HeaderDictionary())
+            .Should().Be(WebhookVerificationResult.Valid);
     }
 
     [Fact]
-    public void Verify_rejects_signature_made_with_password_one()
+    public void Verify_rejects_a_tampered_payload()
     {
-        var provider = CreateProvider();
-        var body = ResultBody("100.000000", "450009", OrderId, Md5Upper($"100.000000:450009:{Pass1}:Shp_orderid={OrderId}"));
+        var parts = SignedJws(OrderId, "OK", incSum: "10.00").Split('.');
+        var forged = Payload(new { shop = Login, invId = "1", incSum = "9999.00", state = "OK" });
 
-        provider.Verify(body, new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
-    }
-
-    [Fact]
-    public void Verify_rejects_everything_when_password_is_not_configured()
-    {
-        var provider = CreateProvider(pass2: "");
-        var body = ResultBody("100.000000", "450009", OrderId, Md5Upper($"100.000000:450009::Shp_orderid={OrderId}"));
-
-        provider.Verify(body, new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
-    }
-
-    [Fact]
-    public void Verify_rejects_missing_signature_or_garbage_body()
-    {
-        var provider = CreateProvider();
-
-        provider.Verify($"OutSum=1&InvId=2&Shp_orderid={OrderId}", new HeaderDictionary())
-            .Should().Be(WebhookVerificationResult.Invalid);
-        provider.Verify("not-a-form-body", new HeaderDictionary())
+        CreateProvider().Verify($"{parts[0]}.{forged}.{parts[2]}", new HeaderDictionary())
             .Should().Be(WebhookVerificationResult.Invalid);
     }
 
     [Fact]
-    public void Parse_returns_paid_event_with_amount_in_rub_and_order_id()
+    public void Verify_rejects_a_non_RS256_header()
+    {
+        var parts = SignedJws(OrderId, "OK").Split('.');
+        var header = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes("""{"alg":"none"}"""));
+
+        CreateProvider().Verify($"{header}.{parts[1]}.{parts[2]}", new HeaderDictionary())
+            .Should().Be(WebhookVerificationResult.Invalid);
+    }
+
+    [Fact]
+    public void Verify_with_the_pinned_Robokassa_key_rejects_a_token_signed_by_anyone_else()
+    {
+        var pinned = new RobokassaPaymentProvider(
+            new StaticOptionsMonitor<PaymentSettings>(new PaymentSettings()),
+            NullLogger<RobokassaPaymentProvider>.Instance);
+
+        pinned.Verify(SignedJws(OrderId, "OK"), new HeaderDictionary())
+            .Should().Be(WebhookVerificationResult.Invalid);
+    }
+
+    [Fact]
+    public void Verify_rejects_garbage_and_unsigned_tokens()
     {
         var provider = CreateProvider();
-        var body = ResultBody("100.000000", "450009", OrderId, "ignored-by-parse");
 
-        var evt = provider.Parse(body);
+        provider.Verify("not-a-jws", new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
+        provider.Verify("OutSum=1&InvId=2", new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
+        provider.Verify(UnsignedJws(OrderId, "OK"), new HeaderDictionary()).Should().Be(WebhookVerificationResult.Invalid);
+    }
+
+    [Fact]
+    public void Parse_returns_paid_event_bound_to_the_order_from_the_query()
+    {
+        var provider = CreateProvider();
+
+        var evt = provider.Parse(UnsignedJws(OrderId, "OK", incSum: "100.00"), OrderQuery(OrderId));
 
         evt.EventType.Should().Be(PaymentWebhookEventTypes.Paid);
         evt.ProviderPaymentId.Should().Be(OrderId);
         evt.OrderId.Should().Be(OrderId);
         evt.ConfirmedAmount.Should().Be(100m);
         evt.ConfirmedCurrency.Should().Be("RUB");
+        evt.ProviderEventId.Should().Be("op-key-1");
     }
 
     [Fact]
-    public void Parse_throws_when_order_id_is_missing()
+    public void Parse_treats_a_non_OK_state_as_a_no_op_event()
     {
-        var provider = CreateProvider();
+        var evt = CreateProvider().Parse(UnsignedJws(OrderId, "Pending"), OrderQuery(OrderId));
 
-        var act = () => provider.Parse("OutSum=1.000000&InvId=5&SignatureValue=x");
-
-        act.Should().Throw<InvalidOperationException>();
+        evt.EventType.Should().Be(PaymentWebhookEventTypes.Created);
     }
 
     [Fact]
-    public async Task WebhookAckText_is_OK_followed_by_invoice_id_matching_create()
+    public void Parse_rejects_an_order_id_that_does_not_match_the_signed_invId()
     {
         var provider = CreateProvider();
-        var evt = provider.Parse(ResultBody("100.000000", "450009", OrderId, "x"));
 
-        var created = await provider.CreateAsync(
-            new PaymentRequest(OrderId, 100m, "RUB", "x"), CancellationToken.None);
+        var act = () => provider.Parse(UnsignedJws(OrderId, "OK"), OrderQuery("someone-elses-order"));
 
-        provider.WebhookAckText(evt).Should().Be("OK" + InvId(created.PayUrl));
+        act.Should().Throw<InvalidOperationException>().WithMessage("*does not match*");
     }
+
+    [Fact]
+    public void Parse_rejects_missing_order_and_foreign_shop()
+    {
+        var provider = CreateProvider();
+
+        var noOrder = () => provider.Parse(UnsignedJws(OrderId, "OK"));
+        var foreignShop = () => provider.Parse(UnsignedJws(OrderId, "OK", shop: "other"), OrderQuery(OrderId));
+
+        noOrder.Should().Throw<InvalidOperationException>();
+        foreignShop.Should().Throw<InvalidOperationException>().WithMessage("*different shop*");
+    }
+
+    [Fact]
+    public void WebhookAckText_is_OK_followed_by_invoice_id()
+    {
+        var provider = CreateProvider();
+        var evt = provider.Parse(UnsignedJws(OrderId, "OK"), OrderQuery(OrderId));
+
+        provider.WebhookAckText(evt).Should().Be("OK" + RobokassaPaymentProvider.InvoiceId(OrderId));
+    }
+
+    private static IQueryCollection OrderQuery(string orderId) =>
+        new QueryCollection(new Dictionary<string, StringValues> { ["order"] = orderId });
+
+    /// <summary>A JWS-shaped token with a bogus signature: enough for Parse, which only runs after Verify.</summary>
+    private static string UnsignedJws(
+        string orderId, string state, string incSum = "10.00", string shop = Login) =>
+        string.Join('.',
+            WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes("""{"typ":"JWT","alg":"RS256"}""")),
+            Payload(new
+            {
+                shop,
+                opKey = "op-key-1",
+                invId = RobokassaPaymentProvider.InvoiceId(orderId).ToString(),
+                incSum,
+                state,
+            }),
+            WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(256)));
+
+    private static string SignedJws(string orderId, string state, string incSum = "10.00")
+    {
+        var unsigned = UnsignedJws(orderId, state, incSum);
+        var signingInput = unsigned[..unsigned.LastIndexOf('.')];
+        var signature = TestKey.SignData(
+            Encoding.ASCII.GetBytes(signingInput), HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+        return $"{signingInput}.{WebEncoders.Base64UrlEncode(signature)}";
+    }
+
+    private static string Payload(object data) =>
+        WebEncoders.Base64UrlEncode(JsonSerializer.SerializeToUtf8Bytes(new { data }));
 
     private static string InvId(string payUrl) =>
         QueryHelpers.ParseQuery(new Uri(payUrl).Query)["InvId"].ToString();
 
-    private static string ResultBody(string outSum, string invId, string orderId, string signature) =>
-        $"OutSum={outSum}&InvId={invId}&Fee=0&EMail=a%40b.c&SignatureValue={signature}&PaymentMethod=BankCard&IncCurrLabel=BankCardPSR&Shp_orderid={orderId}";
-
     private static string Md5(string value) =>
         Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
-    private static string Md5Upper(string value) => Md5(value).ToUpperInvariant();
-
-    private static RobokassaPaymentProvider CreateProvider(bool testMode = false, string pass2 = Pass2) =>
+    private static RobokassaPaymentProvider CreateProvider(bool testMode = false, string notifyUrl = NotifyUrl) =>
         new(
             new StaticOptionsMonitor<PaymentSettings>(new PaymentSettings
             {
@@ -199,11 +270,12 @@ public class RobokassaPaymentProviderTests
                 {
                     MerchantLogin = Login,
                     Password1 = Pass1,
-                    Password2 = pass2,
+                    NotifyUrl = notifyUrl,
                     TestMode = testMode,
                 },
             }),
-            NullLogger<RobokassaPaymentProvider>.Instance);
+            NullLogger<RobokassaPaymentProvider>.Instance,
+            TestKey.ExportSubjectPublicKeyInfo());
 
     private sealed class StaticOptionsMonitor<T>(T value) : IOptionsMonitor<T>
     {

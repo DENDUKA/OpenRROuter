@@ -46,6 +46,12 @@ public interface IPaymentProvider
     PaymentWebhookEvent Parse(string rawBody);
 
     /// <summary>
+    /// Same as <see cref="Parse(string)"/> for providers whose notification body does not identify
+    /// our order and which carry that in the webhook URL query instead (Robokassa ResultUrl2).
+    /// </summary>
+    PaymentWebhookEvent Parse(string rawBody, IQueryCollection query) => Parse(rawBody);
+
+    /// <summary>
     /// Fetch the current status of a payment at the provider. Used by the reconciliation worker
     /// to close dangling <c>Created</c> payments when webhooks were missed.
     /// </summary>

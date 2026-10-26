@@ -95,7 +95,7 @@ public sealed class RollypaySettings
 
 /// <summary>
 /// Configuration for Robokassa. Bound from <c>Payments:Robokassa</c>.
-/// <see cref="Password1"/> and <see cref="Password2"/> are secrets: environment / secret store only.
+/// <see cref="Password1"/> is a secret: environment / secret store only.
 /// </summary>
 /// <remarks>
 /// With <see cref="TestMode"/> Robokassa expects the TEST password pair from the shop's technical
@@ -110,8 +110,12 @@ public sealed class RobokassaSettings
     /// <summary>Password #1: signs the outgoing payment link.</summary>
     public string Password1 { get; set; } = string.Empty;
 
-    /// <summary>Password #2: verifies the incoming ResultURL webhook.</summary>
-    public string Password2 { get; set; } = string.Empty;
+    /// <summary>
+    /// Public webhook URL (<c>https://&lt;domain&gt;/webhook/robokassa</c>) sent with every payment as
+    /// <c>ResultUrl2</c>. The shop has no Password #2 / ResultURL, so this is how Robokassa reaches us;
+    /// the notification is a JWS verified against Robokassa's certificate.
+    /// </summary>
+    public string NotifyUrl { get; set; } = string.Empty;
 
     /// <summary>Hash algorithm chosen in the shop settings: <c>MD5</c> (default) or <c>SHA256</c>.</summary>
     public string HashAlgorithm { get; set; } = "MD5";

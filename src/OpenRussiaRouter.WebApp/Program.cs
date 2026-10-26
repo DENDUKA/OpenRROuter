@@ -434,7 +434,7 @@ builder.Services.AddSingleton<IPaymentProvider, RollypayPaymentProvider>();
 
 // Robokassa (cards incl. foreign-issued) — registered unconditionally; only active when
 // Payments:ActiveProvider="robokassa". Builds signed pay links, no outbound HTTP; fails safe when
-// unconfigured (no Password2 → webhooks 401; no Password1/MerchantLogin → create throws).
+// unconfigured (no Password1/MerchantLogin/NotifyUrl → create throws).
 builder.Services.AddSingleton<IPaymentProvider, RobokassaPaymentProvider>();
 
 // Yandex Pay (sandbox) — card-only alternative for admin testing. Registered unconditionally;

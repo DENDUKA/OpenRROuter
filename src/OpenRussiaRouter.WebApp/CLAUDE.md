@@ -439,6 +439,15 @@ onclick ссылкой не считает**. Пока имена моделей
   подписи, 400 при неразбираемом теле, 200 `ok`/`ignored`, 422 при отказе Billing.
   Незаконфигуренный `SigningSecret` → все вебхуки 401 (fail safe), пустой `ApiKey` → исходящие
   вызовы бросают.
+- **Robokassa** (`Services/Payments/Robokassa/`, Name=robokassa, SettlementCurrency=RUB) — только платёжная ссылка,
+  своего API нет. У магазина нет Password #2 и ResultURL, поэтому в каждую ссылку кладётся `ResultUrl2 =
+  Payments:Robokassa:NotifyUrl + ?order={orderId}` (подписывается паролем №1, **url-кодируется один раз**, в отличие
+  от Receipt). Уведомление — compact JWS RS256: `Verify` проверяет подпись зашитым сертификатом
+  (`docs.robokassa.ru/media/files/jwtsign.cer`, **истекает 2027-06-16 — заменить заранее**), `alg` ≠ RS256 отклоняется.
+  В JWS только `shop/invId/incSum/state/opKey`, поэтому order id берётся из query через
+  `IPaymentProvider.Parse(rawBody, query)` и сверяется с подписанным `invId` (`InvId` = хеш order id). Пример
+  JWS из документации подписан старым ключом и с текущим сертификатом не проходит — тесты подписывают своим ключом
+  через internal-конструктор. Сумма/режим налога в чеке — `Payments:Robokassa:*`, секрет один: `Password1`.
 - **Yandex Pay (sandbox)** — альтернативный платёжный провайдер (только карта, только sandbox,
   только для админов). Состав: `YandexPayPaymentProvider` (IPaymentProvider, Name=yandexpay,
   SettlementCurrency=RUB), `YandexPayClient` (HTTP к Merchant API, sandbox URL,

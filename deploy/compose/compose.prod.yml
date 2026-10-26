@@ -296,11 +296,11 @@ services:
       # Production — a test payment is free but still credits real balance.
       Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
       # Robokassa (cards incl. foreign-issued, СБП). Set PAYMENTS_ACTIVE_PROVIDER=robokassa only
-      # after the shop's ResultURL (POST) is https://${RWT_PUBLIC_DOMAIN}/webhook/robokassa and the
-      # login + passwords #1/#2 are filled in .env. Passwords are secrets — .env only.
+      # after login + password #1 are filled in .env. The shop has no password #2/ResultURL, so each
+      # payment link carries ResultUrl2 = NotifyUrl (JWS notification). Password is a secret — .env only.
       Payments__Robokassa__MerchantLogin: "${ROBOKASSA_MERCHANT_LOGIN:-}"
       Payments__Robokassa__Password1: "${ROBOKASSA_PASSWORD1:-}"
-      Payments__Robokassa__Password2: "${ROBOKASSA_PASSWORD2:-}"
+      Payments__Robokassa__NotifyUrl: "https://${RWT_PUBLIC_DOMAIN}/webhook/robokassa"
       Payments__Robokassa__HashAlgorithm: "${ROBOKASSA_HASH_ALGORITHM:-MD5}"
       Payments__Robokassa__TaxationSystem: "${ROBOKASSA_TAXATION_SYSTEM:-usn_income}"
       # IsTest=1 uses the test password pair; WebApp refuses to start with it on in Production.

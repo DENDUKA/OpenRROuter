@@ -112,7 +112,7 @@ public static class PaymentWebhookEndpoint
         PaymentWebhookEvent evt;
         try
         {
-            evt = impl.Parse(rawBody);
+            evt = impl.Parse(rawBody, http.Request.Query);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

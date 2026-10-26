@@ -314,7 +314,10 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
   напрямую. Флоу: Billing создаёт строку и `payment_id` (= `order_id`) → провайдер отдаёт свой id
   и pay URL → `AttachProviderRef` атомарно их привязывает.
 - **Провайдеры** за `IPaymentProvider` + `PaymentProviderRegistry`: `mock` (только dev),
-  `rollypay` (СБП-агрегатор, `Services/Payments/Rollypay/`) и
+  `rollypay` (СБП-агрегатор, `Services/Payments/Rollypay/`),
+  `robokassa` (карты, в т.ч. иностранные, `Services/Payments/Robokassa/`; у магазина нет пароля №2/ResultURL,
+  оплата подтверждается уведомлением **ResultUrl2** — JWS RS256 с зашитым сертификатом Robokassa, order id
+  едет в query вебхука и привязан к подписанному `invId`) и
   `yandexpay` (sandbox, карта, `Services/Payments/YandexPay/`). Активный публичный провайдер
   выбирается `Payments:ActiveProvider`; пустое значение просто выключает публичные платежи.
   Yandex Pay используется только через admin-only эндпоинт чекаута и не зависит от `ActiveProvider`.

@@ -60,8 +60,10 @@ public class LegalDocumentServiceTests : IDisposable
         Assert.NotNull(html);
         Assert.DoesNotContain("{{RWT_", html);
         Assert.Contains("Rawrter", html);
-        Assert.Contains("05.08.2026", html);
+        Assert.Contains("26.10.2026", html);
         Assert.Contains("https://rawrter.com", html);
+        Assert.Contains("ОГРНИП: 323645700043305", html);
+        Assert.Contains("denduka@yandex.ru", html);
     }
 
     [Fact]

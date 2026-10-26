@@ -14,11 +14,11 @@ public class LegalDocumentService
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["RWT_SERVICE_NAME"] = "Rawrter",
-            ["RWT_DOCUMENT_DATE"] = "05.08.2026",
+            ["RWT_DOCUMENT_DATE"] = "26.10.2026",
             ["RWT_PUBLIC_DOMAIN"] = "https://rawrter.com",
-            ["RWT_OPERATOR_NAME"] = "Зоткин Денис Игоревич",
-            ["RWT_OPERATOR_DETAILS"] = "ИНН: 645293322359, официальный сайт: https://rawrter.com",
-            ["RWT_SUPPORT_CONTACT"] = "через официальный интерфейс Rawrter"
+            ["RWT_OPERATOR_NAME"] = "Индивидуальный предприниматель Зоткин Денис Игоревич",
+            ["RWT_OPERATOR_DETAILS"] = "ИНН: 645293322359, ОГРНИП: 323645700043305, официальный сайт: https://rawrter.com",
+            ["RWT_SUPPORT_CONTACT"] = "электронная почта denduka@yandex.ru"
         };
 
     private static readonly HashSet<string> AllowedDocuments = new(StringComparer.OrdinalIgnoreCase)

@@ -50,4 +50,10 @@ public interface IPaymentProvider
     /// to close dangling <c>Created</c> payments when webhooks were missed.
     /// </summary>
     Task<ProviderPaymentStatus> GetPaymentAsync(string providerPaymentId, CancellationToken ct);
+
+    /// <summary>
+    /// Plain-text acknowledgement the provider expects in the webhook response body (e.g. Robokassa
+    /// wants <c>OK{InvId}</c>), or null to answer with the default JSON.
+    /// </summary>
+    string? WebhookAckText(PaymentWebhookEvent evt) => null;
 }

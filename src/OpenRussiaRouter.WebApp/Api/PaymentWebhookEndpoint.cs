@@ -129,14 +129,19 @@ public static class PaymentWebhookEndpoint
             signatureOk: true,
             ct);
 
+        // Some providers (Robokassa: "OK{InvId}") only accept a provider-specific plain-text ack.
+        var ack = impl.WebhookAckText(evt);
+
         return result.Outcome switch
         {
-            PaymentWebhookProcessor.ProcessOutcome.Applied => Results.Ok(new { status = "ok" }),
-            PaymentWebhookProcessor.ProcessOutcome.Ignored => Results.Ok(new { status = "ignored" }),
+            PaymentWebhookProcessor.ProcessOutcome.Applied =>
+                ack is null ? Results.Ok(new { status = "ok" }) : Results.Text(ack),
+            PaymentWebhookProcessor.ProcessOutcome.Ignored =>
+                ack is null ? Results.Ok(new { status = "ignored" }) : Results.Text(ack),
             // Final verdict: acknowledge so the provider stops redelivering an event we will never
             // accept. The reason stays visible in the body and in the processor's warning.
             PaymentWebhookProcessor.ProcessOutcome.RejectedPermanent =>
-                Results.Ok(new { status = "ignored", error = result.ErrorCode }),
+                ack is null ? Results.Ok(new { status = "ignored", error = result.ErrorCode }) : Results.Text(ack),
             PaymentWebhookProcessor.ProcessOutcome.Rejected => Results.Problem(
                 title: "Webhook rejected by billing",
                 detail: result.ErrorCode,

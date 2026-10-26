@@ -295,6 +295,16 @@ services:
       # Sandbox: same касса, same keys, no real money. WebApp refuses to start with this on in
       # Production — a test payment is free but still credits real balance.
       Payments__Rollypay__TestMode: "${ROLLYPAY_TEST_MODE:-false}"
+      # Robokassa (cards incl. foreign-issued, СБП). Set PAYMENTS_ACTIVE_PROVIDER=robokassa only
+      # after the shop's ResultURL (POST) is https://${RWT_PUBLIC_DOMAIN}/webhook/robokassa and the
+      # login + passwords #1/#2 are filled in .env. Passwords are secrets — .env only.
+      Payments__Robokassa__MerchantLogin: "${ROBOKASSA_MERCHANT_LOGIN:-}"
+      Payments__Robokassa__Password1: "${ROBOKASSA_PASSWORD1:-}"
+      Payments__Robokassa__Password2: "${ROBOKASSA_PASSWORD2:-}"
+      Payments__Robokassa__HashAlgorithm: "${ROBOKASSA_HASH_ALGORITHM:-MD5}"
+      Payments__Robokassa__TaxationSystem: "${ROBOKASSA_TAXATION_SYSTEM:-usn_income}"
+      # IsTest=1 uses the test password pair; WebApp refuses to start with it on in Production.
+      Payments__Robokassa__TestMode: "${ROBOKASSA_TEST_MODE:-false}"
       # Yandex Pay sandbox — card-only alternative for admin testing. Disabled by default;
       # enable via YANDEX_PAY_ENABLED=true + YANDEX_PAY_MERCHANT_ID in .env.
       Payments__YandexPay__Enabled: "${YANDEX_PAY_ENABLED:-false}"

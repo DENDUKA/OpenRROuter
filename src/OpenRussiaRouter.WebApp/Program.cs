@@ -21,6 +21,7 @@ using OpenRussiaRouter.WebApp.Services.ControlPlane;
 using OpenRussiaRouter.WebApp.Services.Enrichment;
 using OpenRussiaRouter.WebApp.Api;
 using OpenRussiaRouter.WebApp.Services.Payments;
+using OpenRussiaRouter.WebApp.Services.Payments.Robokassa;
 using OpenRussiaRouter.WebApp.Services.Payments.Rollypay;
 using OpenRussiaRouter.WebApp.Services.Payments.YandexPay;
 using OpenRussiaRouter.WebApp.Services.Currency;
@@ -430,6 +431,11 @@ builder.Services.AddHttpClient(RollypayPaymentProvider.HttpClientName, (sp, clie
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 builder.Services.AddSingleton<IPaymentProvider, RollypayPaymentProvider>();
+
+// Robokassa (cards incl. foreign-issued) — registered unconditionally; only active when
+// Payments:ActiveProvider="robokassa". Builds signed pay links, no outbound HTTP; fails safe when
+// unconfigured (no Password2 → webhooks 401; no Password1/MerchantLogin → create throws).
+builder.Services.AddSingleton<IPaymentProvider, RobokassaPaymentProvider>();
 
 // Yandex Pay (sandbox) — card-only alternative for admin testing. Registered unconditionally;
 // only active when Payments:YandexPay:Enabled=true. Fails safe when unconfigured.

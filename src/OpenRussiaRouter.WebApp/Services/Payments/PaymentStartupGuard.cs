@@ -61,5 +61,12 @@ public static class PaymentStartupGuard
                 "Payments:Rollypay:TestMode=true is forbidden in Production — test payments cost " +
                 "nothing but are still credited as real balance. Use it only in dev/staging.");
         }
+
+        if (string.Equals(active, "robokassa", StringComparison.OrdinalIgnoreCase) && settings.Robokassa.TestMode)
+        {
+            throw new InvalidOperationException(
+                "Payments:Robokassa:TestMode=true is forbidden in Production — test payments cost " +
+                "nothing but are still credited as real balance. Use it only in dev/staging.");
+        }
     }
 }

@@ -30,6 +30,9 @@ public sealed class PaymentSettings
     /// <summary>Rollypay (СБП aggregator) knobs. Read by <c>RollypayPaymentProvider</c>.</summary>
     public RollypaySettings Rollypay { get; set; } = new();
 
+    /// <summary>Robokassa knobs. Read by <c>RobokassaPaymentProvider</c>.</summary>
+    public RobokassaSettings Robokassa { get; set; } = new();
+
     /// <summary>Yandex Pay sandbox knobs. Read by <c>YandexPayPaymentProvider</c>.</summary>
     public YandexPaySettings YandexPay { get; set; } = new();
 
@@ -88,6 +91,54 @@ public sealed class RollypaySettings
     /// this MUST stay false in production — <c>PaymentStartupGuard</c> enforces that.</para>
     /// </remarks>
     public bool TestMode { get; set; }
+}
+
+/// <summary>
+/// Configuration for Robokassa. Bound from <c>Payments:Robokassa</c>.
+/// <see cref="Password1"/> and <see cref="Password2"/> are secrets: environment / secret store only.
+/// </summary>
+/// <remarks>
+/// With <see cref="TestMode"/> Robokassa expects the TEST password pair from the shop's technical
+/// settings. A test payment moves no money but Billing would still credit real balance, so
+/// <c>PaymentStartupGuard</c> forbids it in Production.
+/// </remarks>
+public sealed class RobokassaSettings
+{
+    /// <summary>Shop identifier (МerchantLogin) from the shop's technical settings.</summary>
+    public string MerchantLogin { get; set; } = string.Empty;
+
+    /// <summary>Password #1: signs the outgoing payment link.</summary>
+    public string Password1 { get; set; } = string.Empty;
+
+    /// <summary>Password #2: verifies the incoming ResultURL webhook.</summary>
+    public string Password2 { get; set; } = string.Empty;
+
+    /// <summary>Hash algorithm chosen in the shop settings: <c>MD5</c> (default) or <c>SHA256</c>.</summary>
+    public string HashAlgorithm { get; set; } = "MD5";
+
+    /// <summary>Payment page. Defaults to the production host.</summary>
+    public string PayUrl { get; set; } = "https://auth.robokassa.ru/Merchant/Index.aspx";
+
+    /// <summary>Send payments as test (<c>IsTest=1</c>). Must stay false in Production.</summary>
+    public bool TestMode { get; set; }
+
+    /// <summary>Attach the 54-ФЗ <c>Receipt</c> (needed for Робочеки fiscalisation).</summary>
+    public bool ReceiptEnabled { get; set; } = true;
+
+    /// <summary>Taxation system in the receipt: <c>usn_income</c> (УСН доходы), <c>usn_income_outcome</c>, <c>patent</c>, ...</summary>
+    public string TaxationSystem { get; set; } = "usn_income";
+
+    /// <summary>Receipt payment method. <c>full_payment</c> issues a single receipt at payment time.</summary>
+    public string PaymentMethod { get; set; } = "full_payment";
+
+    /// <summary>Receipt payment object: <c>service</c> for API access.</summary>
+    public string PaymentObject { get; set; } = "service";
+
+    /// <summary>Receipt VAT: <c>none</c> (without VAT) for a УСН sole proprietor.</summary>
+    public string Tax { get; set; } = "none";
+
+    /// <summary>Line name printed on the receipt.</summary>
+    public string ReceiptItemName { get; set; } = "Пополнение баланса Rawrter";
 }
 
 /// <summary>

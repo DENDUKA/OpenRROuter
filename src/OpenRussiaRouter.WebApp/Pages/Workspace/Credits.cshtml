@@ -77,6 +77,12 @@
                         <span class="btn-yapay-status" hidden>Создание платежа…</span>
                     </button>
                 }
+                @if (Model.IsAdmin && Model.RobokassaEnabled)
+                {
+                    @* Admin-only while Robokassa is being proven; the handler re-checks the role. *@
+                    <button type="submit" formaction="?handler=TopUpRobokassa" class="btn btn-outline-secondary"
+                            data-goal="checkout_started">Robokassa (admin)</button>
+                }
                 <button type="submit" class="btn btn-primary" data-goal="checkout_started">@Localizer["Credits_TopUpSubmit"]</button>
             </div>
             @* Show the limit in the user's own currency first: it is enforced in USD, so someone

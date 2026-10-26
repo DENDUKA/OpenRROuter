@@ -448,6 +448,9 @@ onclick ссылкой не считает**. Пока имена моделей
   `IPaymentProvider.Parse(rawBody, query)` и сверяется с подписанным `invId` (`InvId` = хеш order id). Пример
   JWS из документации подписан старым ключом и с текущим сертификатом не проходит — тесты подписывают своим ключом
   через internal-конструктор. Сумма/режим налога в чеке — `Payments:Robokassa:*`, секрет один: `Password1`.
+  **Пока админская**: на `/workspace/credits` кнопка «Robokassa (admin)» (handler `TopUpRobokassa`, проверка роли
+  и в разметке, и в хендлере) создаёт платёж с `providerName="robokassa"`, не трогая `ActiveProvider`; вебхук
+  `/webhook/robokassa` работает всегда, т.к. провайдер резолвится по имени из URL.
 - **Yandex Pay (sandbox)** — альтернативный платёжный провайдер (только карта, только sandbox,
   только для админов). Состав: `YandexPayPaymentProvider` (IPaymentProvider, Name=yandexpay,
   SettlementCurrency=RUB), `YandexPayClient` (HTTP к Merchant API, sandbox URL,

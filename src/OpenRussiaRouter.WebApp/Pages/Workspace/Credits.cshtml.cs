@@ -51,6 +51,10 @@ public class CreditsModel(
     public decimal FirstTopUpBonusPercent { get; set; }
     public bool IsAdmin => User.IsInRole("Admin");
     public bool YandexPayEnabled => paymentSettings.Value.YandexPay.Enabled;
+    public bool RobokassaEnabled => paymentSettings.Value.Robokassa is
+    {
+        MerchantLogin.Length: > 0, Password1.Length: > 0, NotifyUrl.Length: > 0
+    };
 
     public string FormatAmount(decimal usdAmount)
     {
@@ -97,7 +101,19 @@ public class CreditsModel(
         return Page();
     }
 
-    public async Task<IActionResult> OnPostTopUpAsync()
+    public Task<IActionResult> OnPostTopUpAsync() => TopUpAsync(providerName: null);
+
+    /// <summary>
+    /// Robokassa checkout for admins only while the provider is being proven in production. The
+    /// public flow keeps using the active provider; the button is hidden for everyone else and this
+    /// handler refuses them too, since a hidden button is not an access check.
+    /// </summary>
+    public Task<IActionResult> OnPostTopUpRobokassaAsync() =>
+        IsAdmin && RobokassaEnabled
+            ? TopUpAsync(providerName: "robokassa")
+            : Task.FromResult<IActionResult>(Forbid());
+
+    private async Task<IActionResult> TopUpAsync(string? providerName)
     {
         var userId = User.GetUserId();
 
@@ -131,7 +147,7 @@ public class CreditsModel(
         {
             var result = await checkoutService.CreateAsync(
                 userId, topUpAmount, SelectedCurrency,
-                providerName: null, clientToken,
+                providerName, clientToken,
                 HttpContext.RequestAborted);
 
             // Carry the amount the provider will actually charge (not what was typed) over to the

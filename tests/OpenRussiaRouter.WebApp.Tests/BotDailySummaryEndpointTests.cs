@@ -65,6 +65,7 @@ public sealed class BotDailySummaryEndpointTests : IClassFixture<WebApplicationF
         client0.GetProperty("totalTokens").GetInt64().Should().Be(45000);
         client0.GetProperty("totalCostUsd").GetDecimal().Should().Be(0.15m);
         client0.GetProperty("hasPaidTopup").GetBoolean().Should().BeTrue();
+        client0.GetProperty("balanceUsd").GetDecimal().Should().Be(10.5m);
         client0.GetProperty("models").GetArrayLength().Should().Be(2);
     }
 
@@ -75,7 +76,10 @@ public sealed class BotDailySummaryEndpointTests : IClassFixture<WebApplicationF
         public FakeBillingProvider() : base(new TestBillingClient()) { }
 
         public override Task<BotDailyStats> GetDailyStatsAsync(
-            DateTimeOffset sinceUtc, IReadOnlyCollection<string>? excludeUserIds = null, CancellationToken cancellationToken = default)
+            DateTimeOffset sinceUtc,
+            IReadOnlyCollection<string>? excludeUserIds = null,
+            IReadOnlyCollection<string>? newUserIds = null,
+            CancellationToken cancellationToken = default)
         {
             var userUsages = new List<BotUserUsageInfo>
             {
@@ -83,7 +87,7 @@ public sealed class BotDailySummaryEndpointTests : IClassFixture<WebApplicationF
                 {
                     new("gpt-4o", 35000, 0.12m, 10),
                     new("claude-3-5-sonnet", 10000, 0.03m, 5)
-                }, HasPaidTopup: true)
+                }, HasPaidTopup: true, BalanceUsd: 10.5m)
             };
 
             return Task.FromResult(new BotDailyStats(5, 1250m, 14.5m, 8, userUsages));

@@ -1081,6 +1081,7 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
     public Task<DailyStatsResult> GetDailyStatsAsync(
         DateTimeOffset sinceUtc,
         IReadOnlyCollection<string>? excludeUserIds = null,
+        IReadOnlyCollection<string>? newUserIds = null,
         CancellationToken ct = default)
     {
         var paid = _payments.Values
@@ -1121,16 +1122,26 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
                     ))
                     .OrderByDescending(m => m.Cost.Amount)
                     .ToList(),
-                HasPaidTopup: paidUserIds.Contains(ug.Key)
+                HasPaidTopup: paidUserIds.Contains(ug.Key),
+                Balance: MoneyAmount.Usd(_userBalances.TryGetValue(ug.Key, out var bal) ? bal : 0m)
             ))
             .OrderByDescending(u => u.Cost.Amount)
             .ToList();
+
+        var newUsers = newUserIds is { Count: > 0 }
+            ? newUserIds.Select(id => new DailyNewUserStat(
+                id,
+                MoneyAmount.Usd(_userBalances.TryGetValue(id, out var b) ? b : 0m),
+                paidUserIds.Contains(id)
+            )).ToList()
+            : (IReadOnlyList<DailyNewUserStat>)[];
 
         return Task.FromResult(new DailyStatsResult(
             paid.Count,
             paid.Sum(p => p.ProviderAmount),
             paid.Sum(p => p.CreditedUsd.Amount),
             activeApiUsers,
-            userUsages));
+            userUsages,
+            newUsers));
     }
 }

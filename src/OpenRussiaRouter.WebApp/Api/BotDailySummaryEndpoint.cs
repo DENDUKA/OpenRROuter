@@ -60,6 +60,12 @@ public static class BotDailySummaryEndpoint
             .Select(u => u.Id)
             .ToHashSet(StringComparer.Ordinal);
 
+        var newUsers = users
+            .Where(u => u.CreatedAt >= sinceUtc && !adminUserIds.Contains(u.Id))
+            .ToList();
+        newRegistrations = newUsers.Count;
+        var newUserIds = newUsers.Select(u => u.Id).ToList();
+
         var userEmails = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var u in users)
         {
@@ -71,15 +77,17 @@ public static class BotDailySummaryEndpoint
         decimal totalUsd = 0m;
         int activeApiUsers = 0;
         var clientsUsage = new List<object>();
+        var registeredUsers = new List<object>();
 
         try
         {
-            var stats = await billing.GetDailyStatsAsync(sinceUtc, adminUserIds, ct);
+            var stats = await billing.GetDailyStatsAsync(sinceUtc, adminUserIds, newUserIds, ct);
             topupsCount = stats.TopupsCount;
             totalRub = stats.TotalRub;
             totalUsd = stats.TotalUsd;
             activeApiUsers = stats.ActiveApiUsers;
             clientsUsage = BuildClientsUsage(stats, userEmails, adminUserIds);
+            registeredUsers = BuildRegisteredUsers(newUsers, stats);
         }
         catch (Exception ex)
         {
@@ -97,7 +105,8 @@ public static class BotDailySummaryEndpoint
             topupsTotalUsd = totalUsd,
             uniqueUsers,
             activeApiUsers,
-            clientsUsage
+            clientsUsage,
+            registeredUsers
         });
     }
 
@@ -136,12 +145,39 @@ public static class BotDailySummaryEndpoint
                 totalTokens = user.TotalTokens,
                 totalCostUsd = user.CostUsd,
                 hasPaidTopup = user.HasPaidTopup,
+                balanceUsd = user.BalanceUsd,
                 models = user.ModelUsages.Select(m => new
                 {
                     modelId = m.ModelId,
                     tokens = m.TotalTokens,
                     costUsd = m.CostUsd
                 }).ToList()
+            });
+        }
+        return result;
+    }
+
+    private static List<object> BuildRegisteredUsers(
+        IReadOnlyList<UserInfo> newUsers,
+        BotDailyStats stats)
+    {
+        var newUsersDict = stats.NewUsers?.ToDictionary(nu => nu.UserId, StringComparer.Ordinal);
+        var result = new List<object>();
+        foreach (var u in newUsers)
+        {
+            var balanceUsd = 0m;
+            var hasPaidTopup = false;
+            if (newUsersDict != null && newUsersDict.TryGetValue(u.Id, out var stat))
+            {
+                balanceUsd = stat.BalanceUsd;
+                hasPaidTopup = stat.HasPaidTopup;
+            }
+
+            result.Add(new
+            {
+                email = u.Email,
+                balanceUsd,
+                hasPaidTopup
             });
         }
         return result;

@@ -168,6 +168,10 @@ describe('formatDailySummaryMessage', () => {
   it('включает список клиентов, пометку об оплате и их модели в сводку', () => {
     const text = formatDailySummaryMessage({
       newRegistrations: 2,
+      registeredUsers: [
+        { email: 'new1@example.com', balanceUsd: 10, hasPaidTopup: true },
+        { email: 'new2@example.com', balanceUsd: 1, hasPaidTopup: false },
+      ],
       topupsCount: 1,
       topupsTotalRub: 1000,
       topupsTotalUsd: 11.2,
@@ -179,6 +183,7 @@ describe('formatDailySummaryMessage', () => {
           totalTokens: 45200,
           totalCostUsd: 0.15,
           hasPaidTopup: true,
+          balanceUsd: 12.5,
           models: [
             { modelId: 'gpt-4o', tokens: 35000, costUsd: 0.12 },
             { modelId: 'claude-3-5-sonnet', tokens: 10200, costUsd: 0.03 },
@@ -189,17 +194,21 @@ describe('formatDailySummaryMessage', () => {
           totalTokens: 1000,
           totalCostUsd: 0.005,
           hasPaidTopup: false,
+          balanceUsd: 0.99,
           models: [
             { modelId: 'gpt-4o-mini', tokens: 1000, costUsd: 0.005 },
           ],
         },
       ],
     });
+    expect(text).toContain('👥 Новых регистраций: 2');
+    expect(text).toContain('  • new1@example.com (пополнил, баланс: $10.00)');
+    expect(text).toContain('  • new2@example.com (не пополнял, баланс: $1.00)');
     expect(text).toContain('Клиенты API:');
-    expect(text).toContain('• payer@example.com (купленные $) — $0.15 (45 200 токенов)');
+    expect(text).toContain('• payer@example.com (купленные $, баланс: $12.50) — $0.15 (45 200 токенов)');
     expect(text).toContain('  └ gpt-4o: 35 000 токенов ($0.12)');
     expect(text).toContain('  └ claude-3-5-sonnet: 10 200 токенов ($0.03)');
-    expect(text).toContain('• free@example.com (бесплатные $) — $0.005 (1 000 токенов)');
+    expect(text).toContain('• free@example.com (бесплатные $, баланс: $0.99) — $0.005 (1 000 токенов)');
     expect(text).toContain('  └ gpt-4o-mini: 1 000 токенов ($0.005)');
   });
 

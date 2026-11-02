@@ -416,6 +416,7 @@ public sealed partial class BillingRepository
     public async Task<DailyStatsResult> GetDailyStatsAsync(
         DateTimeOffset sinceUtc,
         IReadOnlyCollection<string>? excludeUserIds = null,
+        IReadOnlyCollection<string>? newUserIds = null,
         CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
@@ -438,26 +439,40 @@ public sealed partial class BillingRepository
                 count(*) as Requests,
                 coalesce(sum(u.input_tokens + u.output_tokens), 0) as TotalTokens,
                 coalesce(sum(u.cost_amount), 0) as CostUsd,
-                (p.user_id is not null) as HasPaidTopup
+                (p.user_id is not null) as HasPaidTopup,
+                coalesce(b.balance_amount, 0) as BalanceUsd
             from billing.usage_records u
+            left join billing.user_balances b on b.user_id = u.user_id
             left join (
                 select distinct user_id from billing.ledger_entries where is_user_payment = true
             ) p on p.user_id = u.user_id
             where u.created_at_utc >= @SinceUtc
               and (@ExcludeUserIds::text[] is null or not (u.user_id = any(@ExcludeUserIds::text[])))
-            group by u.user_id, u.model_id, p.user_id
+            group by u.user_id, u.model_id, p.user_id, b.balance_amount
             order by u.user_id, CostUsd desc;
+
+            select
+                u.id as UserId,
+                coalesce(b.balance_amount, 0) as BalanceUsd,
+                (p.user_id is not null) as HasPaidTopup
+            from unnest(coalesce(@NewUserIds::text[], array[]::text[])) as u(id)
+            left join billing.user_balances b on b.user_id = u.id
+            left join (
+                select distinct user_id from billing.ledger_entries where is_user_payment = true
+            ) p on p.user_id = u.id;
             """;
         var parameters = new
         {
             SinceUtc = sinceUtc,
-            ExcludeUserIds = excludeUserIds is { Count: > 0 } ? excludeUserIds.ToArray() : null
+            ExcludeUserIds = excludeUserIds is { Count: > 0 } ? excludeUserIds.ToArray() : null,
+            NewUserIds = newUserIds is { Count: > 0 } ? newUserIds.ToArray() : null
         };
         using var multi = await connection.QueryMultipleAsync(
             new CommandDefinition(sql, parameters, cancellationToken: ct)).ConfigureAwait(false);
         var row = await multi.ReadSingleAsync<(int TopupsCount, decimal TotalRub, decimal TotalUsd)>().ConfigureAwait(false);
         var activeApiUsers = await multi.ReadSingleAsync<int>().ConfigureAwait(false);
         var rawRows = (await multi.ReadAsync<DailyUsageModelRow>().ConfigureAwait(false)).ToList();
+        var newUserRows = (await multi.ReadAsync<DailyNewUserRow>().ConfigureAwait(false)).ToList();
 
         var userUsages = rawRows
             .GroupBy(r => r.UserId)
@@ -471,12 +486,19 @@ public sealed partial class BillingRepository
                     Cost: MoneyAmount.Usd(r.CostUsd),
                     Requests: r.Requests
                 )).OrderByDescending(m => m.Cost.Amount).ToList(),
-                HasPaidTopup: ug.Any(r => r.HasPaidTopup)
+                HasPaidTopup: ug.Any(r => r.HasPaidTopup),
+                Balance: MoneyAmount.Usd(ug.First().BalanceUsd)
             ))
             .OrderByDescending(u => u.Cost.Amount)
             .ToList();
 
-        return new DailyStatsResult(row.TopupsCount, row.TotalRub, row.TotalUsd, activeApiUsers, userUsages);
+        var newUsers = newUserRows.Select(r => new DailyNewUserStat(
+            r.UserId,
+            MoneyAmount.Usd(r.BalanceUsd),
+            r.HasPaidTopup
+        )).ToList();
+
+        return new DailyStatsResult(row.TopupsCount, row.TotalRub, row.TotalUsd, activeApiUsers, userUsages, newUsers);
     }
 
     private sealed class DailyUsageModelRow
@@ -486,6 +508,14 @@ public sealed partial class BillingRepository
         public long Requests { get; set; }
         public long TotalTokens { get; set; }
         public decimal CostUsd { get; set; }
+        public bool HasPaidTopup { get; set; }
+        public decimal BalanceUsd { get; set; }
+    }
+
+    private sealed class DailyNewUserRow
+    {
+        public string UserId { get; set; } = string.Empty;
+        public decimal BalanceUsd { get; set; }
         public bool HasPaidTopup { get; set; }
     }
 }

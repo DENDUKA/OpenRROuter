@@ -881,9 +881,12 @@ public sealed partial class BillingApplicationService(
     }
 
     public async Task<DailyStatsResult> GetDailyStatsAsync(
-        DateTimeOffset sinceUtc, IReadOnlyCollection<string>? excludeUserIds = null, CancellationToken ct = default)
+        DateTimeOffset sinceUtc,
+        IReadOnlyCollection<string>? excludeUserIds = null,
+        IReadOnlyCollection<string>? newUserIds = null,
+        CancellationToken ct = default)
     {
-        return await repository.GetDailyStatsAsync(sinceUtc, excludeUserIds, ct).ConfigureAwait(false);
+        return await repository.GetDailyStatsAsync(sinceUtc, excludeUserIds, newUserIds, ct).ConfigureAwait(false);
     }
 
     private static int MapStatusToStatusCode(string? status)

@@ -100,7 +100,14 @@ export interface ClientUsageSummary {
   totalTokens: number;
   totalCostUsd: number;
   hasPaidTopup?: boolean;
+  balanceUsd?: number;
   models: ModelUsageSummary[];
+}
+
+export interface RegisteredUserSummary {
+  email: string;
+  balanceUsd?: number;
+  hasPaidTopup?: boolean;
 }
 
 export interface DailySummaryData {
@@ -112,6 +119,7 @@ export interface DailySummaryData {
   uniqueUsers: number;
   activeApiUsers?: number;
   clientsUsage?: ClientUsageSummary[];
+  registeredUsers?: RegisteredUserSummary[];
 }
 
 function formatTokens(count: number): string {
@@ -128,9 +136,10 @@ function formatCostUsd(amount: number): string {
 }
 
 function formatClientBlock(client: ClientUsageSummary): string {
-  const paymentTag = client.hasPaidTopup ? '(купленные $)' : '(бесплатные $)';
+  const paymentTag = client.hasPaidTopup ? 'купленные $' : 'бесплатные $';
+  const balanceStr = client.balanceUsd !== undefined ? `, баланс: $${formatCostUsd(client.balanceUsd)}` : '';
   const lines = [
-    `• ${client.email} ${paymentTag} — $${formatCostUsd(client.totalCostUsd)} (${formatTokens(client.totalTokens)} токенов)`,
+    `• ${client.email} (${paymentTag}${balanceStr}) — $${formatCostUsd(client.totalCostUsd)} (${formatTokens(client.totalTokens)} токенов)`,
   ];
   for (const m of client.models) {
     lines.push(`  └ ${m.modelId}: ${formatTokens(m.tokens)} токенов ($${formatCostUsd(m.costUsd)})`);
@@ -141,11 +150,21 @@ function formatClientBlock(client: ClientUsageSummary): string {
 export function formatDailySummaryMessages(summary: DailySummaryData): string[] {
   const rub = formatRub(summary.topupsTotalRub);
   const usd = formatUsd(summary.topupsTotalUsd);
+
+  const regLines: string[] = [`👥 Новых регистраций: ${summary.newRegistrations}`];
+  if (summary.registeredUsers && summary.registeredUsers.length > 0) {
+    for (const u of summary.registeredUsers) {
+      const status = u.hasPaidTopup ? 'пополнил' : 'не пополнял';
+      const bal = u.balanceUsd !== undefined ? `$${formatCostUsd(u.balanceUsd)}` : '$0.00';
+      regLines.push(`  • ${u.email} (${status}, баланс: ${bal})`);
+    }
+  }
+
   const baseText = [
     '📊 Утренняя сводка Rawrter',
     'Период: за последние 24 часа',
     '',
-    `👥 Новых регистраций: ${summary.newRegistrations}`,
+    ...regLines,
     `💳 Пополнений: ${summary.topupsCount} на сумму ${rub} ₽ ($${usd})`,
     `🌐 Уникальных пользователей: ${summary.uniqueUsers}`,
     `⚡️ Пользовались API: ${summary.activeApiUsers ?? 0}`,

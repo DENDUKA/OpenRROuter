@@ -1228,7 +1228,7 @@ public sealed class GrpcBillingService(
             ? dt
             : DateTimeOffset.UtcNow.AddHours(-24);
 
-        var stats = await billing.GetDailyStatsAsync(sinceUtc, request.ExcludeUserIds, ct).ConfigureAwait(false);
+        var stats = await billing.GetDailyStatsAsync(sinceUtc, request.ExcludeUserIds, request.NewUserIds, ct).ConfigureAwait(false);
         var response = new GetDailyStatsResponse
         {
             TopupsCount = stats.TopupsCount,
@@ -1244,7 +1244,8 @@ public sealed class GrpcBillingService(
                 UserId = user.UserId,
                 TotalTokens = user.TotalTokens,
                 CostUsd = user.Cost.Amount.ToString(CultureInfo.InvariantCulture),
-                HasPaidTopup = user.HasPaidTopup
+                HasPaidTopup = user.HasPaidTopup,
+                BalanceUsd = (user.Balance?.Amount ?? 0m).ToString(CultureInfo.InvariantCulture)
             };
             foreach (var model in user.ModelUsages)
             {
@@ -1257,6 +1258,19 @@ public sealed class GrpcBillingService(
                 });
             }
             response.UserUsages.Add(userStat);
+        }
+
+        if (stats.NewUsers != null)
+        {
+            foreach (var nu in stats.NewUsers)
+            {
+                response.NewUsers.Add(new NewUserStat
+                {
+                    UserId = nu.UserId,
+                    BalanceUsd = nu.Balance.Amount.ToString(CultureInfo.InvariantCulture),
+                    HasPaidTopup = nu.HasPaidTopup
+                });
+            }
         }
 
         return response;

@@ -164,5 +164,6 @@ public interface IBillingRepository
     Task<DailyStatsResult> GetDailyStatsAsync(
         DateTimeOffset sinceUtc,
         IReadOnlyCollection<string>? excludeUserIds = null,
+        IReadOnlyCollection<string>? newUserIds = null,
         CancellationToken ct = default);
 }

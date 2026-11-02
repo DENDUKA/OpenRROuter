@@ -392,6 +392,7 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
     public async Task<BotDailyStats> GetDailyStatsAsync(
         DateTimeOffset sinceUtc,
         IReadOnlyCollection<string>? excludeUserIds = null,
+        IReadOnlyCollection<string>? newUserIds = null,
         CancellationToken cancellationToken = default)
     {
         var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetDailyStatsRequest
@@ -401,6 +402,10 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
         if (excludeUserIds is { Count: > 0 })
         {
             request.ExcludeUserIds.AddRange(excludeUserIds);
+        }
+        if (newUserIds is { Count: > 0 })
+        {
+            request.NewUserIds.AddRange(newUserIds);
         }
 
         var response = await client.GetDailyStatsAsync(request, cancellationToken: cancellationToken);
@@ -415,7 +420,14 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
                 ParseDecimal(m.CostUsd),
                 m.Requests
             )).ToList(),
-            u.HasPaidTopup
+            u.HasPaidTopup,
+            ParseDecimal(u.BalanceUsd)
+        )).ToList();
+
+        var newUsers = response.NewUsers.Select(nu => new BotNewUserInfo(
+            nu.UserId,
+            ParseDecimal(nu.BalanceUsd),
+            nu.HasPaidTopup
         )).ToList();
 
         return new BotDailyStats(
@@ -423,7 +435,8 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
             ParseDecimal(response.TotalRub),
             ParseDecimal(response.TotalUsd),
             response.ActiveApiUsers,
-            userUsages);
+            userUsages,
+            newUsers);
     }
 
     private static decimal ParseDecimal(string value) =>

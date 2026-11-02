@@ -684,6 +684,12 @@ public sealed class BillingRepositoryPostgresTests
 
         var withExcludedEmpty = await repository.GetDailyStatsAsync(since, excludeUserIds: []);
         withExcludedEmpty.ActiveApiUsers.Should().Be(0);
+
+        var withNewUsers = await repository.GetDailyStatsAsync(since, newUserIds: ["new-user-1"]);
+        withNewUsers.NewUsers.Should().ContainSingle();
+        withNewUsers.NewUsers![0].UserId.Should().Be("new-user-1");
+        withNewUsers.NewUsers[0].Balance.Amount.Should().Be(0m);
+        withNewUsers.NewUsers[0].HasPaidTopup.Should().BeFalse();
     }
 
     private static Payment CreatePayment(string id, DateTimeOffset createdAt) =>

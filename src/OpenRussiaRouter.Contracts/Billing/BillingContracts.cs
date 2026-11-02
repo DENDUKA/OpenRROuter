@@ -62,14 +62,21 @@ public sealed record DailyUserUsageStat(
     long TotalTokens,
     MoneyAmount Cost,
     IReadOnlyList<DailyModelUsageStat> ModelUsages,
-    bool HasPaidTopup = false);
+    bool HasPaidTopup = false,
+    MoneyAmount? Balance = null);
+
+public sealed record DailyNewUserStat(
+    string UserId,
+    MoneyAmount Balance,
+    bool HasPaidTopup);
 
 public sealed record DailyStatsResult(
     int TopupsCount,
     decimal TotalRub,
     decimal TotalUsd,
     int ActiveApiUsers,
-    IReadOnlyList<DailyUserUsageStat> UserUsages)
+    IReadOnlyList<DailyUserUsageStat> UserUsages,
+    IReadOnlyList<DailyNewUserStat>? NewUsers = null)
 {
     public void Deconstruct(out int topupsCount, out decimal totalRub, out decimal totalUsd, out int activeApiUsers)
     {

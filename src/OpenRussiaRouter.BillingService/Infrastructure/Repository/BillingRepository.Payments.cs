@@ -3,8 +3,10 @@ using OpenRussiaRouter.BillingService.Application.Services;
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Infrastructure.Persistence;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BillingService.Domain;
+using OpenRussiaRouter.Contracts.Billing;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
@@ -411,8 +413,10 @@ public sealed partial class BillingRepository
         payment.PayUrl, payment.BonusPercent, payment.BonusUsd
     };
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
-        DateTimeOffset sinceUtc, CancellationToken ct = default)
+    public async Task<DailyStatsResult> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc,
+        IReadOnlyCollection<string>? excludeUserIds = null,
+        CancellationToken ct = default)
     {
         using var connection = connectionFactory.CreateConnection();
         const string sql = """
@@ -425,12 +429,57 @@ public sealed partial class BillingRepository
 
             select count(distinct user_id)
             from billing.usage_records
-            where created_at_utc >= @SinceUtc;
+            where created_at_utc >= @SinceUtc
+              and (@ExcludeUserIds::text[] is null or not (user_id = any(@ExcludeUserIds::text[])));
+
+            select
+                user_id as UserId,
+                model_id as ModelId,
+                count(*) as Requests,
+                coalesce(sum(input_tokens + output_tokens), 0) as TotalTokens,
+                coalesce(sum(cost_amount), 0) as CostUsd
+            from billing.usage_records
+            where created_at_utc >= @SinceUtc
+              and (@ExcludeUserIds::text[] is null or not (user_id = any(@ExcludeUserIds::text[])))
+            group by user_id, model_id
+            order by user_id, CostUsd desc;
             """;
+        var parameters = new
+        {
+            SinceUtc = sinceUtc,
+            ExcludeUserIds = excludeUserIds is { Count: > 0 } ? excludeUserIds.ToArray() : null
+        };
         using var multi = await connection.QueryMultipleAsync(
-            new CommandDefinition(sql, new { SinceUtc = sinceUtc }, cancellationToken: ct)).ConfigureAwait(false);
+            new CommandDefinition(sql, parameters, cancellationToken: ct)).ConfigureAwait(false);
         var row = await multi.ReadSingleAsync<(int TopupsCount, decimal TotalRub, decimal TotalUsd)>().ConfigureAwait(false);
         var activeApiUsers = await multi.ReadSingleAsync<int>().ConfigureAwait(false);
-        return (row.TopupsCount, row.TotalRub, row.TotalUsd, activeApiUsers);
+        var rawRows = (await multi.ReadAsync<DailyUsageModelRow>().ConfigureAwait(false)).ToList();
+
+        var userUsages = rawRows
+            .GroupBy(r => r.UserId)
+            .Select(ug => new DailyUserUsageStat(
+                UserId: ug.Key,
+                TotalTokens: ug.Sum(r => r.TotalTokens),
+                Cost: MoneyAmount.Usd(ug.Sum(r => r.CostUsd)),
+                ModelUsages: ug.Select(r => new DailyModelUsageStat(
+                    ModelId: r.ModelId,
+                    TotalTokens: r.TotalTokens,
+                    Cost: MoneyAmount.Usd(r.CostUsd),
+                    Requests: r.Requests
+                )).OrderByDescending(m => m.Cost.Amount).ToList()
+            ))
+            .OrderByDescending(u => u.Cost.Amount)
+            .ToList();
+
+        return new DailyStatsResult(row.TopupsCount, row.TotalRub, row.TotalUsd, activeApiUsers, userUsages);
+    }
+
+    private sealed class DailyUsageModelRow
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string ModelId { get; set; } = string.Empty;
+        public long Requests { get; set; }
+        public long TotalTokens { get; set; }
+        public decimal CostUsd { get; set; }
     }
 }

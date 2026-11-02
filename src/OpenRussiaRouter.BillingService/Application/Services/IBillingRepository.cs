@@ -1,6 +1,7 @@
 using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
+using OpenRussiaRouter.Contracts.Billing;
 
 namespace OpenRussiaRouter.BillingService.Application.Services;
 
@@ -160,5 +161,8 @@ public interface IBillingRepository
     Task<ModelProvider?> GetModelProviderLogoAsync(string id, CancellationToken ct = default);
     Task DeleteModelProviderAsync(string id, CancellationToken ct = default);
 
-    Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
+    Task<DailyStatsResult> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc,
+        IReadOnlyCollection<string>? excludeUserIds = null,
+        CancellationToken ct = default);
 }

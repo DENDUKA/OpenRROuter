@@ -603,6 +603,16 @@ public sealed class BillingApplicationServiceTests
 
         var stats = await service.GetDailyStatsAsync(since);
         stats.ActiveApiUsers.Should().Be(2);
+        stats.UserUsages.Should().HaveCount(2);
+
+        var user1Stat = stats.UserUsages.First(u => u.UserId == "user-1");
+        user1Stat.TotalTokens.Should().Be(60);
+        user1Stat.Cost.Amount.Should().Be(0.02m);
+        user1Stat.ModelUsages.Should().ContainSingle(m => m.ModelId == "gpt-4" && m.TotalTokens == 60 && m.Requests == 2);
+
+        var statsExcluded = await service.GetDailyStatsAsync(since, excludeUserIds: ["user-1"]);
+        statsExcluded.ActiveApiUsers.Should().Be(1);
+        statsExcluded.UserUsages.Should().ContainSingle(u => u.UserId == "user-2");
     }
 
     private sealed class RecordingTelegramBotNotifier : OpenRussiaRouter.BillingService.Infrastructure.Telegram.ITelegramBotNotifier

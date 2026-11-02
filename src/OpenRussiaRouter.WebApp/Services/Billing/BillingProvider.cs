@@ -190,7 +190,7 @@ public class BillingProvider(BillingGrpc.BillingServiceClient client)
         => _usage.GetAdminRequestsSummaryAsync(modelFilters, providerFilters, apiKeyFilters,
             nodeFilters, accountFilters, fromUtc, toUtc, cancellationToken);
 
-    public virtual Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
-        DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
-        => _payments.GetDailyStatsAsync(sinceUtc, cancellationToken);
+    public virtual Task<BotDailyStats> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, IReadOnlyCollection<string>? excludeUserIds = null, CancellationToken cancellationToken = default)
+        => _payments.GetDailyStatsAsync(sinceUtc, excludeUserIds, cancellationToken);
 }

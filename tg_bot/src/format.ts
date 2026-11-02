@@ -89,6 +89,19 @@ export function formatPaymentCreatedNotification(event: PaymentCreatedEvent): st
   ].join('\n');
 }
 
+export interface ModelUsageSummary {
+  modelId: string;
+  tokens: number;
+  costUsd: number;
+}
+
+export interface ClientUsageSummary {
+  email: string;
+  totalTokens: number;
+  totalCostUsd: number;
+  models: ModelUsageSummary[];
+}
+
 export interface DailySummaryData {
   periodHours?: number;
   newRegistrations: number;
@@ -97,12 +110,35 @@ export interface DailySummaryData {
   topupsTotalUsd: number;
   uniqueUsers: number;
   activeApiUsers?: number;
+  clientsUsage?: ClientUsageSummary[];
+}
+
+function formatTokens(count: number): string {
+  return count.toLocaleString('ru-RU').replace(/[\u00A0\u202F]/g, ' ');
+}
+
+function formatCostUsd(amount: number): string {
+  if (amount === 0) return '0.00';
+  if (amount < 0.0001) return '<0.0001';
+  return amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: amount < 0.01 ? 4 : 2,
+  });
+}
+
+function pluralClients(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 19) return 'клиентов';
+  if (mod10 === 1) return 'клиент';
+  if (mod10 >= 2 && mod10 <= 4) return 'клиента';
+  return 'клиентов';
 }
 
 export function formatDailySummaryMessage(summary: DailySummaryData): string {
   const rub = formatRub(summary.topupsTotalRub);
   const usd = formatUsd(summary.topupsTotalUsd);
-  return [
+  const lines = [
     '📊 Утренняя сводка Rawrter',
     'Период: за последние 24 часа',
     '',
@@ -110,7 +146,41 @@ export function formatDailySummaryMessage(summary: DailySummaryData): string {
     `💳 Пополнений: ${summary.topupsCount} на сумму ${rub} ₽ ($${usd})`,
     `🌐 Уникальных пользователей: ${summary.uniqueUsers}`,
     `⚡️ Пользовались API: ${summary.activeApiUsers ?? 0}`,
-  ].join('\n');
+  ];
+
+  if (summary.clientsUsage && summary.clientsUsage.length > 0) {
+    lines.push('');
+    lines.push('Клиенты API:');
+    let currentLength = lines.join('\n').length;
+    const clients = summary.clientsUsage;
+
+    for (let i = 0; i < clients.length; i++) {
+      const client = clients[i]!;
+      const clientLines: string[] = [
+        `• ${client.email} — $${formatCostUsd(client.totalCostUsd)} (${formatTokens(client.totalTokens)} токенов)`,
+      ];
+      for (const m of client.models) {
+        clientLines.push(`  └ ${m.modelId}: ${formatTokens(m.tokens)} токенов ($${formatCostUsd(m.costUsd)})`);
+      }
+      const clientBlock = clientLines.join('\n');
+
+      const remainingClients = clients.length - i;
+      const notice = `… и ещё ${remainingClients} ${pluralClients(remainingClients)}`;
+      const noticeReserve = remainingClients > 1 ? `\n${notice}`.length : 0;
+
+      if (currentLength + 1 + clientBlock.length + noticeReserve > TELEGRAM_MESSAGE_LIMIT) {
+        if (currentLength + 1 + notice.length <= TELEGRAM_MESSAGE_LIMIT) {
+          lines.push(notice);
+        }
+        break;
+      }
+
+      lines.push(...clientLines);
+      currentLength += 1 + clientBlock.length;
+    }
+  }
+
+  return lines.join('\n');
 }
 
 export function formatEventNotification(event: BotEvent): string {

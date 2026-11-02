@@ -5,6 +5,7 @@ using OpenRussiaRouter.BillingService.Domain.Entities;
 using OpenRussiaRouter.BillingService.Domain.Enums;
 using OpenRussiaRouter.BuildingBlocks.Money;
 using OpenRussiaRouter.BuildingBlocks.Errors;
+using OpenRussiaRouter.Contracts.Billing;
 
 namespace OpenRussiaRouter.BillingService.Infrastructure.Repository;
 
@@ -1077,20 +1078,53 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             weeklyLimit.HasValue && weeklySpent >= weeklyLimit.Value.Amount);
     }
 
-    public Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(DateTimeOffset sinceUtc, CancellationToken ct = default)
+    public Task<DailyStatsResult> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc,
+        IReadOnlyCollection<string>? excludeUserIds = null,
+        CancellationToken ct = default)
     {
         var paid = _payments.Values
             .Where(p => p.Status == PaymentStatus.Paid && p.ConfirmedAtUtc >= sinceUtc)
             .ToList();
-        var activeApiUsers = _usageByRequestId.Values
-            .Where(u => u.CreatedAtUtc >= sinceUtc)
+
+        var excludeSet = excludeUserIds is { Count: > 0 }
+            ? new HashSet<string>(excludeUserIds, StringComparer.Ordinal)
+            : null;
+
+        var usageQuery = _usageByRequestId.Values
+            .Where(u => u.CreatedAtUtc >= sinceUtc && (excludeSet == null || !excludeSet.Contains(u.UserId)))
+            .ToList();
+
+        var activeApiUsers = usageQuery
             .Select(u => u.UserId)
             .Distinct(StringComparer.Ordinal)
             .Count();
-        return Task.FromResult((
+
+        var userUsages = usageQuery
+            .GroupBy(u => u.UserId)
+            .Select(ug => new DailyUserUsageStat(
+                UserId: ug.Key,
+                TotalTokens: ug.Sum(u => u.Usage.TotalTokens),
+                Cost: MoneyAmount.Usd(ug.Sum(u => u.Cost.Amount)),
+                ModelUsages: ug
+                    .GroupBy(u => u.ModelId)
+                    .Select(mg => new DailyModelUsageStat(
+                        ModelId: mg.Key,
+                        TotalTokens: mg.Sum(u => u.Usage.TotalTokens),
+                        Cost: MoneyAmount.Usd(mg.Sum(u => u.Cost.Amount)),
+                        Requests: mg.Count()
+                    ))
+                    .OrderByDescending(m => m.Cost.Amount)
+                    .ToList()
+            ))
+            .OrderByDescending(u => u.Cost.Amount)
+            .ToList();
+
+        return Task.FromResult(new DailyStatsResult(
             paid.Count,
             paid.Sum(p => p.ProviderAmount),
             paid.Sum(p => p.CreditedUsd.Amount),
-            activeApiUsers));
+            activeApiUsers,
+            userUsages));
     }
 }

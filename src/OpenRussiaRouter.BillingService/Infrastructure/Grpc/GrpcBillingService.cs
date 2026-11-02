@@ -1228,13 +1228,36 @@ public sealed class GrpcBillingService(
             ? dt
             : DateTimeOffset.UtcNow.AddHours(-24);
 
-        var (count, rub, usd, activeApiUsers) = await billing.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
-        return new GetDailyStatsResponse
+        var stats = await billing.GetDailyStatsAsync(sinceUtc, request.ExcludeUserIds, ct).ConfigureAwait(false);
+        var response = new GetDailyStatsResponse
         {
-            TopupsCount = count,
-            TotalRub = rub.ToString("F2", CultureInfo.InvariantCulture),
-            TotalUsd = usd.ToString("F2", CultureInfo.InvariantCulture),
-            ActiveApiUsers = activeApiUsers
+            TopupsCount = stats.TopupsCount,
+            TotalRub = stats.TotalRub.ToString("F2", CultureInfo.InvariantCulture),
+            TotalUsd = stats.TotalUsd.ToString("F2", CultureInfo.InvariantCulture),
+            ActiveApiUsers = stats.ActiveApiUsers
         };
+
+        foreach (var user in stats.UserUsages)
+        {
+            var userStat = new UserUsageStat
+            {
+                UserId = user.UserId,
+                TotalTokens = user.TotalTokens,
+                CostUsd = user.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+            };
+            foreach (var model in user.ModelUsages)
+            {
+                userStat.ModelUsages.Add(new ModelUsageStat
+                {
+                    ModelId = model.ModelId,
+                    TotalTokens = model.TotalTokens,
+                    CostUsd = model.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+                    Requests = model.Requests
+                });
+            }
+            response.UserUsages.Add(userStat);
+        }
+
+        return response;
     }
 }

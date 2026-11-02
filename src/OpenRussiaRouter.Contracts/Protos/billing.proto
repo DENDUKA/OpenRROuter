@@ -781,6 +781,21 @@ message GrantFirstTopUpBonusResponse {
 
 message GetDailyStatsRequest {
   string since_utc = 1;
+  repeated string exclude_user_ids = 2;
+}
+
+message ModelUsageStat {
+  string model_id = 1;
+  int64 total_tokens = 2;
+  string cost_usd = 3;
+  int64 requests = 4;
+}
+
+message UserUsageStat {
+  string user_id = 1;
+  int64 total_tokens = 2;
+  string cost_usd = 3;
+  repeated ModelUsageStat model_usages = 4;
 }
 
 message GetDailyStatsResponse {
@@ -788,5 +803,6 @@ message GetDailyStatsResponse {
   string total_rub = 2;
   string total_usd = 3;
   int32 active_api_users = 4;
+  repeated UserUsageStat user_usages = 5;
 }
 

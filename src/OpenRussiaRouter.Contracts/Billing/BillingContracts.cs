@@ -51,3 +51,31 @@ public sealed record PromotionSettings(
 
 public sealed record GrantFirstTopUpBonusResult(bool Granted, string? LedgerEntryId, string? ErrorCode);
 
+public sealed record DailyModelUsageStat(
+    string ModelId,
+    long TotalTokens,
+    MoneyAmount Cost,
+    long Requests);
+
+public sealed record DailyUserUsageStat(
+    string UserId,
+    long TotalTokens,
+    MoneyAmount Cost,
+    IReadOnlyList<DailyModelUsageStat> ModelUsages);
+
+public sealed record DailyStatsResult(
+    int TopupsCount,
+    decimal TotalRub,
+    decimal TotalUsd,
+    int ActiveApiUsers,
+    IReadOnlyList<DailyUserUsageStat> UserUsages)
+{
+    public void Deconstruct(out int topupsCount, out decimal totalRub, out decimal totalUsd, out int activeApiUsers)
+    {
+        topupsCount = TopupsCount;
+        totalRub = TotalRub;
+        totalUsd = TotalUsd;
+        activeApiUsers = ActiveApiUsers;
+    }
+}
+

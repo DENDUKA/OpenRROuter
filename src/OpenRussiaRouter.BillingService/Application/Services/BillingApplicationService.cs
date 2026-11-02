@@ -880,10 +880,10 @@ public sealed partial class BillingApplicationService(
         return await repository.HasUserHadPaidTopUpAsync(userId, ct: ct).ConfigureAwait(false);
     }
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
-        DateTimeOffset sinceUtc, CancellationToken ct = default)
+    public async Task<DailyStatsResult> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc, IReadOnlyCollection<string>? excludeUserIds = null, CancellationToken ct = default)
     {
-        return await repository.GetDailyStatsAsync(sinceUtc, ct).ConfigureAwait(false);
+        return await repository.GetDailyStatsAsync(sinceUtc, excludeUserIds, ct).ConfigureAwait(false);
     }
 
     private static int MapStatusToStatusCode(string? status)

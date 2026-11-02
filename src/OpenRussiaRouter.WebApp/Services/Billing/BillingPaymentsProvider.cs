@@ -389,21 +389,40 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
             throw new BillingException(response.ErrorCode);
     }
 
-    public async Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
-        DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
+    public async Task<BotDailyStats> GetDailyStatsAsync(
+        DateTimeOffset sinceUtc,
+        IReadOnlyCollection<string>? excludeUserIds = null,
+        CancellationToken cancellationToken = default)
     {
-        var response = await client.GetDailyStatsAsync(
-            new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetDailyStatsRequest
-            {
-                SinceUtc = sinceUtc.ToString("O", CultureInfo.InvariantCulture)
-            },
-            cancellationToken: cancellationToken);
+        var request = new OpenRussiaRouter.Contracts.Grpc.Billing.V1.GetDailyStatsRequest
+        {
+            SinceUtc = sinceUtc.ToString("O", CultureInfo.InvariantCulture)
+        };
+        if (excludeUserIds is { Count: > 0 })
+        {
+            request.ExcludeUserIds.AddRange(excludeUserIds);
+        }
 
-        return (
+        var response = await client.GetDailyStatsAsync(request, cancellationToken: cancellationToken);
+
+        var userUsages = response.UserUsages.Select(u => new BotUserUsageInfo(
+            u.UserId,
+            u.TotalTokens,
+            ParseDecimal(u.CostUsd),
+            u.ModelUsages.Select(m => new BotModelUsageInfo(
+                m.ModelId,
+                m.TotalTokens,
+                ParseDecimal(m.CostUsd),
+                m.Requests
+            )).ToList()
+        )).ToList();
+
+        return new BotDailyStats(
             response.TopupsCount,
             ParseDecimal(response.TotalRub),
             ParseDecimal(response.TotalUsd),
-            response.ActiveApiUsers);
+            response.ActiveApiUsers,
+            userUsages);
     }
 
     private static decimal ParseDecimal(string value) =>

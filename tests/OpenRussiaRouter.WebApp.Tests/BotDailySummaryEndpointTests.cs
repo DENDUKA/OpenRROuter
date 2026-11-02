@@ -59,6 +59,12 @@ public sealed class BotDailySummaryEndpointTests : IClassFixture<WebApplicationF
         root.GetProperty("topupsTotalRub").GetDecimal().Should().Be(1250m);
         root.GetProperty("topupsTotalUsd").GetDecimal().Should().Be(14.5m);
         root.GetProperty("periodHours").GetInt32().Should().Be(24);
+        root.GetProperty("clientsUsage").GetArrayLength().Should().Be(1);
+        var client0 = root.GetProperty("clientsUsage")[0];
+        client0.GetProperty("email").GetString().Should().Be("user-1");
+        client0.GetProperty("totalTokens").GetInt64().Should().Be(45000);
+        client0.GetProperty("totalCostUsd").GetDecimal().Should().Be(0.15m);
+        client0.GetProperty("models").GetArrayLength().Should().Be(2);
     }
 
     private sealed class TestBillingClient : BillingGrpc.BillingServiceClient { }
@@ -67,10 +73,19 @@ public sealed class BotDailySummaryEndpointTests : IClassFixture<WebApplicationF
     {
         public FakeBillingProvider() : base(new TestBillingClient()) { }
 
-        public override Task<(int TopupsCount, decimal TotalRub, decimal TotalUsd, int ActiveApiUsers)> GetDailyStatsAsync(
-            DateTimeOffset sinceUtc, CancellationToken cancellationToken = default)
+        public override Task<BotDailyStats> GetDailyStatsAsync(
+            DateTimeOffset sinceUtc, IReadOnlyCollection<string>? excludeUserIds = null, CancellationToken cancellationToken = default)
         {
-            return Task.FromResult((5, 1250m, 14.5m, 8));
+            var userUsages = new List<BotUserUsageInfo>
+            {
+                new("user-1", 45000, 0.15m, new List<BotModelUsageInfo>
+                {
+                    new("gpt-4o", 35000, 0.12m, 10),
+                    new("claude-3-5-sonnet", 10000, 0.03m, 5)
+                })
+            };
+
+            return Task.FromResult(new BotDailyStats(5, 1250m, 14.5m, 8, userUsages));
         }
     }
 }

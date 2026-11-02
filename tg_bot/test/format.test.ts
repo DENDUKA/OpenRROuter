@@ -163,4 +163,56 @@ describe('formatDailySummaryMessage', () => {
     });
     expect(text).toContain('⚡️ Пользовались API: 0');
   });
+
+  it('включает список клиентов и их модели в сводку', () => {
+    const text = formatDailySummaryMessage({
+      newRegistrations: 2,
+      topupsCount: 1,
+      topupsTotalRub: 1000,
+      topupsTotalUsd: 11.2,
+      uniqueUsers: 10,
+      activeApiUsers: 1,
+      clientsUsage: [
+        {
+          email: 'client@example.com',
+          totalTokens: 45200,
+          totalCostUsd: 0.15,
+          models: [
+            { modelId: 'gpt-4o', tokens: 35000, costUsd: 0.12 },
+            { modelId: 'claude-3-5-sonnet', tokens: 10200, costUsd: 0.03 },
+          ],
+        },
+      ],
+    });
+    expect(text).toContain('Клиенты API:');
+    expect(text).toContain('• client@example.com — $0.15 (45 200 токенов)');
+    expect(text).toContain('  └ gpt-4o: 35 000 токенов ($0.12)');
+    expect(text).toContain('  └ claude-3-5-sonnet: 10 200 токенов ($0.03)');
+  });
+
+  it('безопасно усекает длинный список клиентов под лимит Telegram 4096', () => {
+    const manyClients = Array.from({ length: 100 }, (_, i) => ({
+      email: `client${i}@very-long-domain-name-example-test.org`,
+      totalTokens: 100000,
+      totalCostUsd: 1.5,
+      models: [
+        { modelId: 'openai/gpt-4o-latest-2026', tokens: 50000, costUsd: 1.0 },
+        { modelId: 'anthropic/claude-3-5-sonnet', tokens: 50000, costUsd: 0.5 },
+      ],
+    }));
+
+    const text = formatDailySummaryMessage({
+      newRegistrations: 5,
+      topupsCount: 10,
+      topupsTotalRub: 15000,
+      topupsTotalUsd: 160,
+      uniqueUsers: 200,
+      activeApiUsers: 100,
+      clientsUsage: manyClients,
+    });
+
+    expect(text.length).toBeLessThanOrEqual(4096);
+    expect(text).toContain('Клиенты API:');
+    expect(text).toMatch(/… и ещё \d+ клиентов/);
+  });
 });

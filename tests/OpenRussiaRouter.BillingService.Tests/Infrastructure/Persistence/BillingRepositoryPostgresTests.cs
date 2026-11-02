@@ -663,6 +663,29 @@ public sealed class BillingRepositoryPostgresTests
         byMaxAmount.Should().ContainSingle().Which.Amount.Amount.Should().Be(50);
     }
 
+    [Fact]
+    [Trait("Category", "PostgreSQL")]
+    public async Task GetDailyStatsAsync_ExcludesAdminUsers_AndReturnsModelUsage()
+    {
+        await using var database = await PostgresTestDatabase.StartAsync();
+        if (database is null) return;
+
+        database.ApplyMigration();
+        database.Truncate();
+        var repository = new BillingRepository(new BillingDbConnectionFactory(database.ConnectionString));
+        var since = DateTimeOffset.UtcNow.AddHours(-24);
+
+        var emptyStats = await repository.GetDailyStatsAsync(since);
+        emptyStats.ActiveApiUsers.Should().Be(0);
+        emptyStats.UserUsages.Should().BeEmpty();
+
+        var withExcludedNull = await repository.GetDailyStatsAsync(since, excludeUserIds: null);
+        withExcludedNull.ActiveApiUsers.Should().Be(0);
+
+        var withExcludedEmpty = await repository.GetDailyStatsAsync(since, excludeUserIds: []);
+        withExcludedEmpty.ActiveApiUsers.Should().Be(0);
+    }
+
     private static Payment CreatePayment(string id, DateTimeOffset createdAt) =>
         new(id, "user-1", "mock", null, id, $"client-{id}",
             10, "USD", 10, "USD", MoneyAmount.Usd(10), 1, "fallback", createdAt,

@@ -4,7 +4,7 @@
 // (новые регистрации, пополнения, уникальные посетители). При недоступности WebApp
 // отправляется технический сигнал «Бот жив».
 
-import { formatDailySummaryMessage, type DailySummaryData } from './format.js';
+import { formatDailySummaryMessage, formatDailySummaryMessages, type DailySummaryData } from './format.js';
 
 export const HEARTBEAT_UTC_HOUR = 7;
 export const DEFAULT_CATCHUP_DELAY_MS = 5_000;
@@ -112,25 +112,29 @@ export class HeartbeatScheduler {
     this.cancelTimer = null;
     if (this.stopped) return;
     const nowMs = this.now();
-    let text: string;
 
     if (this.deps.summaryFetcher) {
       try {
         const summary = await this.deps.summaryFetcher.fetchSummary();
         if (summary) {
-          text = formatDailySummaryMessage(summary);
-        } else {
-          text = formatHeartbeatMessage(this.getState(), nowMs);
+          const messages = formatDailySummaryMessages(summary);
+          for (const msg of messages) {
+            try {
+              await this.send(msg);
+            } catch {
+              // Транспорт сам логирует ошибки
+            }
+          }
+          if (!this.stopped) this.scheduleNext();
+          return;
         }
       } catch {
-        text = formatHeartbeatMessage(this.getState(), nowMs);
+        // фолбэк на HeartbeatMessage
       }
-    } else {
-      text = formatHeartbeatMessage(this.getState(), nowMs);
     }
 
     try {
-      await this.send(text);
+      await this.send(formatHeartbeatMessage(this.getState(), nowMs));
     } catch {
       // Транспорт сам логирует ошибки; сигнал повторится на следующий день.
     }

@@ -433,16 +433,20 @@ public sealed partial class BillingRepository
               and (@ExcludeUserIds::text[] is null or not (user_id = any(@ExcludeUserIds::text[])));
 
             select
-                user_id as UserId,
-                model_id as ModelId,
+                u.user_id as UserId,
+                u.model_id as ModelId,
                 count(*) as Requests,
-                coalesce(sum(input_tokens + output_tokens), 0) as TotalTokens,
-                coalesce(sum(cost_amount), 0) as CostUsd
-            from billing.usage_records
-            where created_at_utc >= @SinceUtc
-              and (@ExcludeUserIds::text[] is null or not (user_id = any(@ExcludeUserIds::text[])))
-            group by user_id, model_id
-            order by user_id, CostUsd desc;
+                coalesce(sum(u.input_tokens + u.output_tokens), 0) as TotalTokens,
+                coalesce(sum(u.cost_amount), 0) as CostUsd,
+                (p.user_id is not null) as HasPaidTopup
+            from billing.usage_records u
+            left join (
+                select distinct user_id from billing.ledger_entries where is_user_payment = true
+            ) p on p.user_id = u.user_id
+            where u.created_at_utc >= @SinceUtc
+              and (@ExcludeUserIds::text[] is null or not (u.user_id = any(@ExcludeUserIds::text[])))
+            group by u.user_id, u.model_id, p.user_id
+            order by u.user_id, CostUsd desc;
             """;
         var parameters = new
         {
@@ -466,7 +470,8 @@ public sealed partial class BillingRepository
                     TotalTokens: r.TotalTokens,
                     Cost: MoneyAmount.Usd(r.CostUsd),
                     Requests: r.Requests
-                )).OrderByDescending(m => m.Cost.Amount).ToList()
+                )).OrderByDescending(m => m.Cost.Amount).ToList(),
+                HasPaidTopup: ug.Any(r => r.HasPaidTopup)
             ))
             .OrderByDescending(u => u.Cost.Amount)
             .ToList();
@@ -481,5 +486,6 @@ public sealed partial class BillingRepository
         public long Requests { get; set; }
         public long TotalTokens { get; set; }
         public decimal CostUsd { get; set; }
+        public bool HasPaidTopup { get; set; }
     }
 }

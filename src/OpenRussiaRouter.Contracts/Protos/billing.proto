@@ -796,6 +796,7 @@ message UserUsageStat {
   int64 total_tokens = 2;
   string cost_usd = 3;
   repeated ModelUsageStat model_usages = 4;
+  bool has_paid_topup = 5;
 }
 
 message GetDailyStatsResponse {

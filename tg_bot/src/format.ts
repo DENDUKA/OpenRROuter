@@ -99,6 +99,7 @@ export interface ClientUsageSummary {
   email: string;
   totalTokens: number;
   totalCostUsd: number;
+  hasPaidTopup?: boolean;
   models: ModelUsageSummary[];
 }
 
@@ -126,19 +127,21 @@ function formatCostUsd(amount: number): string {
   });
 }
 
-function pluralClients(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 19) return 'клиентов';
-  if (mod10 === 1) return 'клиент';
-  if (mod10 >= 2 && mod10 <= 4) return 'клиента';
-  return 'клиентов';
+function formatClientBlock(client: ClientUsageSummary): string {
+  const paymentTag = client.hasPaidTopup ? '(купленные $)' : '(бесплатные $)';
+  const lines = [
+    `• ${client.email} ${paymentTag} — $${formatCostUsd(client.totalCostUsd)} (${formatTokens(client.totalTokens)} токенов)`,
+  ];
+  for (const m of client.models) {
+    lines.push(`  └ ${m.modelId}: ${formatTokens(m.tokens)} токенов ($${formatCostUsd(m.costUsd)})`);
+  }
+  return lines.join('\n');
 }
 
-export function formatDailySummaryMessage(summary: DailySummaryData): string {
+export function formatDailySummaryMessages(summary: DailySummaryData): string[] {
   const rub = formatRub(summary.topupsTotalRub);
   const usd = formatUsd(summary.topupsTotalUsd);
-  const lines = [
+  const baseText = [
     '📊 Утренняя сводка Rawrter',
     'Период: за последние 24 часа',
     '',
@@ -146,41 +149,63 @@ export function formatDailySummaryMessage(summary: DailySummaryData): string {
     `💳 Пополнений: ${summary.topupsCount} на сумму ${rub} ₽ ($${usd})`,
     `🌐 Уникальных пользователей: ${summary.uniqueUsers}`,
     `⚡️ Пользовались API: ${summary.activeApiUsers ?? 0}`,
-  ];
+  ].join('\n');
 
-  if (summary.clientsUsage && summary.clientsUsage.length > 0) {
-    lines.push('');
-    lines.push('Клиенты API:');
-    let currentLength = lines.join('\n').length;
-    const clients = summary.clientsUsage;
+  if (!summary.clientsUsage || summary.clientsUsage.length === 0) {
+    return [baseText];
+  }
 
-    for (let i = 0; i < clients.length; i++) {
-      const client = clients[i]!;
-      const clientLines: string[] = [
-        `• ${client.email} — $${formatCostUsd(client.totalCostUsd)} (${formatTokens(client.totalTokens)} токенов)`,
-      ];
-      for (const m of client.models) {
-        clientLines.push(`  └ ${m.modelId}: ${formatTokens(m.tokens)} токенов ($${formatCostUsd(m.costUsd)})`);
-      }
-      const clientBlock = clientLines.join('\n');
+  const clientBlocks = summary.clientsUsage.map(formatClientBlock);
 
-      const remainingClients = clients.length - i;
-      const notice = `… и ещё ${remainingClients} ${pluralClients(remainingClients)}`;
-      const noticeReserve = remainingClients > 1 ? `\n${notice}`.length : 0;
+  // Проверяем, помещаются ли все клиенты в одно сообщение
+  const singleHeader = '\n\nКлиенты API:\n';
+  const totalSingleLength = baseText.length + singleHeader.length + clientBlocks.join('\n').length;
+  if (totalSingleLength <= TELEGRAM_MESSAGE_LIMIT) {
+    return [`${baseText}${singleHeader}${clientBlocks.join('\n')}`];
+  }
 
-      if (currentLength + 1 + clientBlock.length + noticeReserve > TELEGRAM_MESSAGE_LIMIT) {
-        if (currentLength + 1 + notice.length <= TELEGRAM_MESSAGE_LIMIT) {
-          lines.push(notice);
-        }
-        break;
-      }
+  // Если не помещаются в одно сообщение, разбиваем клиентов на страницы (пагинация)
+  const pages: string[][] = [[]];
+  const maxFirstPage = TELEGRAM_MESSAGE_LIMIT - baseText.length - 60;
+  const maxFollowPage = TELEGRAM_MESSAGE_LIMIT - 60;
 
-      lines.push(...clientLines);
-      currentLength += 1 + clientBlock.length;
+  let currentPageIndex = 0;
+  let currentPageLength = 0;
+
+  for (const block of clientBlocks) {
+    const limit = currentPageIndex === 0 ? maxFirstPage : maxFollowPage;
+    const additionalLength = (currentPageLength > 0 ? 1 : 0) + block.length;
+
+    if (currentPageLength > 0 && currentPageLength + additionalLength > limit) {
+      currentPageIndex++;
+      pages[currentPageIndex] = [];
+      currentPageLength = 0;
+    }
+
+    pages[currentPageIndex]!.push(block);
+    currentPageLength += (currentPageLength > 0 ? 1 : 0) + block.length;
+  }
+
+  const totalPages = pages.length;
+  const result: string[] = [];
+
+  for (let i = 0; i < totalPages; i++) {
+    const pageBlocks = pages[i]!;
+    if (i === 0) {
+      const header = `\n\nКлиенты API (часть 1/${totalPages}):\n`;
+      result.push(`${baseText}${header}${pageBlocks.join('\n')}`);
+    } else {
+      const header = `Клиенты API (часть ${i + 1}/${totalPages}):\n`;
+      result.push(`${header}${pageBlocks.join('\n')}`);
     }
   }
 
-  return lines.join('\n');
+  return result;
+}
+
+export function formatDailySummaryMessage(summary: DailySummaryData): string {
+  const messages = formatDailySummaryMessages(summary);
+  return messages[0]!;
 }
 
 export function formatEventNotification(event: BotEvent): string {

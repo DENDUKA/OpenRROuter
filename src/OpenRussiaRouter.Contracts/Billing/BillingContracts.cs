@@ -61,7 +61,8 @@ public sealed record DailyUserUsageStat(
     string UserId,
     long TotalTokens,
     MoneyAmount Cost,
-    IReadOnlyList<DailyModelUsageStat> ModelUsages);
+    IReadOnlyList<DailyModelUsageStat> ModelUsages,
+    bool HasPaidTopup = false);
 
 public sealed record DailyStatsResult(
     int TopupsCount,

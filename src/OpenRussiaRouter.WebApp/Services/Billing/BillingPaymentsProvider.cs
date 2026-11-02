@@ -414,7 +414,8 @@ internal sealed class BillingPaymentsProvider(BillingGrpc.BillingServiceClient c
                 m.TotalTokens,
                 ParseDecimal(m.CostUsd),
                 m.Requests
-            )).ToList()
+            )).ToList(),
+            u.HasPaidTopup
         )).ToList();
 
         return new BotDailyStats(

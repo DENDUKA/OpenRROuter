@@ -1100,6 +1100,11 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
             .Distinct(StringComparer.Ordinal)
             .Count();
 
+        var paidUserIds = _ledgerByIdempotencyKey.Values
+            .Where(e => e.IsUserPayment)
+            .Select(e => e.UserId)
+            .ToHashSet(StringComparer.Ordinal);
+
         var userUsages = usageQuery
             .GroupBy(u => u.UserId)
             .Select(ug => new DailyUserUsageStat(
@@ -1115,7 +1120,8 @@ public sealed class InMemoryBillingRepository : IBillingRepository, IInMemoryBil
                         Requests: mg.Count()
                     ))
                     .OrderByDescending(m => m.Cost.Amount)
-                    .ToList()
+                    .ToList(),
+                HasPaidTopup: paidUserIds.Contains(ug.Key)
             ))
             .OrderByDescending(u => u.Cost.Amount)
             .ToList();

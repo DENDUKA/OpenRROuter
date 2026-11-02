@@ -135,6 +135,7 @@ public static class BotDailySummaryEndpoint
                 email,
                 totalTokens = user.TotalTokens,
                 totalCostUsd = user.CostUsd,
+                hasPaidTopup = user.HasPaidTopup,
                 models = user.ModelUsages.Select(m => new
                 {
                     modelId = m.ModelId,

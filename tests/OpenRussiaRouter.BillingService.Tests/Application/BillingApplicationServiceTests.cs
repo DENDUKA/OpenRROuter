@@ -608,7 +608,13 @@ public sealed class BillingApplicationServiceTests
         var user1Stat = stats.UserUsages.First(u => u.UserId == "user-1");
         user1Stat.TotalTokens.Should().Be(60);
         user1Stat.Cost.Amount.Should().Be(0.02m);
+        user1Stat.HasPaidTopup.Should().BeFalse();
         user1Stat.ModelUsages.Should().ContainSingle(m => m.ModelId == "gpt-4" && m.TotalTokens == 60 && m.Requests == 2);
+
+        // Add a paid ledger entry for user-1
+        await repo.AddLedgerEntryAsync(new LedgerEntry("l-1", "user-1", LedgerEntryType.ExternalTopUp, MoneyAmount.Usd(10), "idem-pay-1", "top-up", since, IsUserPayment: true));
+        var statsWithPaid = await service.GetDailyStatsAsync(since);
+        statsWithPaid.UserUsages.First(u => u.UserId == "user-1").HasPaidTopup.Should().BeTrue();
 
         var statsExcluded = await service.GetDailyStatsAsync(since, excludeUserIds: ["user-1"]);
         statsExcluded.ActiveApiUsers.Should().Be(1);

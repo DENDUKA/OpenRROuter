@@ -3,6 +3,7 @@ import {
   TELEGRAM_MESSAGE_LIMIT,
   TRUNCATION_NOTE,
   formatDailySummaryMessage,
+  formatDailySummaryMessages,
   formatEventNotification,
   formatFirstApiRequestNotification,
   formatPaymentCreatedNotification,
@@ -164,55 +165,71 @@ describe('formatDailySummaryMessage', () => {
     expect(text).toContain('⚡️ Пользовались API: 0');
   });
 
-  it('включает список клиентов и их модели в сводку', () => {
+  it('включает список клиентов, пометку об оплате и их модели в сводку', () => {
     const text = formatDailySummaryMessage({
       newRegistrations: 2,
       topupsCount: 1,
       topupsTotalRub: 1000,
       topupsTotalUsd: 11.2,
       uniqueUsers: 10,
-      activeApiUsers: 1,
+      activeApiUsers: 2,
       clientsUsage: [
         {
-          email: 'client@example.com',
+          email: 'payer@example.com',
           totalTokens: 45200,
           totalCostUsd: 0.15,
+          hasPaidTopup: true,
           models: [
             { modelId: 'gpt-4o', tokens: 35000, costUsd: 0.12 },
             { modelId: 'claude-3-5-sonnet', tokens: 10200, costUsd: 0.03 },
           ],
         },
+        {
+          email: 'free@example.com',
+          totalTokens: 1000,
+          totalCostUsd: 0.005,
+          hasPaidTopup: false,
+          models: [
+            { modelId: 'gpt-4o-mini', tokens: 1000, costUsd: 0.005 },
+          ],
+        },
       ],
     });
     expect(text).toContain('Клиенты API:');
-    expect(text).toContain('• client@example.com — $0.15 (45 200 токенов)');
+    expect(text).toContain('• payer@example.com (купленные $) — $0.15 (45 200 токенов)');
     expect(text).toContain('  └ gpt-4o: 35 000 токенов ($0.12)');
     expect(text).toContain('  └ claude-3-5-sonnet: 10 200 токенов ($0.03)');
+    expect(text).toContain('• free@example.com (бесплатные $) — $0.005 (1 000 токенов)');
+    expect(text).toContain('  └ gpt-4o-mini: 1 000 токенов ($0.005)');
   });
 
-  it('безопасно усекает длинный список клиентов под лимит Telegram 4096', () => {
-    const manyClients = Array.from({ length: 100 }, (_, i) => ({
+  it('разбивает длинный список клиентов на несколько сообщений (пагинация)', () => {
+    const manyClients = Array.from({ length: 80 }, (_, i) => ({
       email: `client${i}@very-long-domain-name-example-test.org`,
       totalTokens: 100000,
       totalCostUsd: 1.5,
+      hasPaidTopup: i % 2 === 0,
       models: [
         { modelId: 'openai/gpt-4o-latest-2026', tokens: 50000, costUsd: 1.0 },
         { modelId: 'anthropic/claude-3-5-sonnet', tokens: 50000, costUsd: 0.5 },
       ],
     }));
 
-    const text = formatDailySummaryMessage({
+    const messages = formatDailySummaryMessages({
       newRegistrations: 5,
       topupsCount: 10,
       topupsTotalRub: 15000,
       topupsTotalUsd: 160,
       uniqueUsers: 200,
-      activeApiUsers: 100,
+      activeApiUsers: 80,
       clientsUsage: manyClients,
     });
 
-    expect(text.length).toBeLessThanOrEqual(4096);
-    expect(text).toContain('Клиенты API:');
-    expect(text).toMatch(/… и ещё \d+ клиентов/);
+    expect(messages.length).toBeGreaterThan(1);
+    for (const msg of messages) {
+      expect(msg.length).toBeLessThanOrEqual(4096);
+    }
+    expect(messages[0]).toContain(`Клиенты API (часть 1/${messages.length}):`);
+    expect(messages[1]).toContain(`Клиенты API (часть 2/${messages.length}):`);
   });
 });

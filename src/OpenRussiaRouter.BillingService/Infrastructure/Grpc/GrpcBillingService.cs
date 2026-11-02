@@ -1243,7 +1243,8 @@ public sealed class GrpcBillingService(
             {
                 UserId = user.UserId,
                 TotalTokens = user.TotalTokens,
-                CostUsd = user.Cost.Amount.ToString(CultureInfo.InvariantCulture)
+                CostUsd = user.Cost.Amount.ToString(CultureInfo.InvariantCulture),
+                HasPaidTopup = user.HasPaidTopup
             };
             foreach (var model in user.ModelUsages)
             {

@@ -110,6 +110,9 @@ public sealed class RobokassaSettings
     /// <summary>Password #1: signs the outgoing payment link.</summary>
     public string Password1 { get; set; } = string.Empty;
 
+    /// <summary>Password #2: signs the incoming ResultURL payment notification.</summary>
+    public string Password2 { get; set; } = string.Empty;
+
     /// <summary>
     /// Public webhook URL (<c>https://&lt;domain&gt;/webhook/robokassa</c>) sent with every payment as
     /// <c>ResultUrl2</c>. The shop has no Password #2 / ResultURL, so this is how Robokassa reaches us;

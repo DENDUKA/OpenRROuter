@@ -300,6 +300,7 @@ services:
       # payment link carries ResultUrl2 = NotifyUrl (JWS notification). Password is a secret — .env only.
       Payments__Robokassa__MerchantLogin: "${ROBOKASSA_MERCHANT_LOGIN:-}"
       Payments__Robokassa__Password1: "${ROBOKASSA_PASSWORD1:-}"
+      Payments__Robokassa__Password2: "${ROBOKASSA_PASSWORD2:-}"
       Payments__Robokassa__NotifyUrl: "https://${RWT_PUBLIC_DOMAIN}/webhook/robokassa"
       Payments__Robokassa__HashAlgorithm: "${ROBOKASSA_HASH_ALGORITHM:-MD5}"
       Payments__Robokassa__TaxationSystem: "${ROBOKASSA_TAXATION_SYSTEM:-usn_income}"

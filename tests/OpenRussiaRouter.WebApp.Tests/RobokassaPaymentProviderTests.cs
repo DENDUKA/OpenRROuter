@@ -16,6 +16,7 @@ public class RobokassaPaymentProviderTests
 {
     private const string Login = "rawrter";
     private const string Pass1 = "pass-one";
+    private const string Pass2 = "pass-two";
     private const string NotifyUrl = "https://rawrter.com/webhook/robokassa";
     private const string OrderId = "9b1f6a52-2d1c-4f5e-8d0e-1a2b3c4d5e6f";
 
@@ -32,7 +33,7 @@ public class RobokassaPaymentProviderTests
     }
 
     [Fact]
-    public async Task CreateAsync_builds_signed_url_with_receipt_and_once_encoded_ResultUrl2()
+    public async Task CreateAsync_builds_signed_url_with_receipt_and_shp_order()
     {
         var provider = CreateProvider();
 
@@ -55,15 +56,12 @@ public class RobokassaPaymentProviderTests
         receiptJson.Should().Contain("\"payment_object\":\"service\"");
         receiptJson.Should().Contain("\"sum\":1500,");
 
-        // ResultUrl2 is encoded exactly once, both in the query and in the signature string.
-        var encodedResultUrl2 = Uri.EscapeDataString($"{NotifyUrl}?order={OrderId}");
-        uri.Query.Should().Contain("&ResultUrl2=" + encodedResultUrl2);
-        query["ResultUrl2"].ToString().Should().Be($"{NotifyUrl}?order={OrderId}");
+        query["Shp_order"].ToString().Should().Be(OrderId);
 
         var invId = query["InvId"].ToString();
         long.Parse(invId).Should().BePositive();
         query["SignatureValue"].ToString()
-            .Should().Be(Md5($"{Login}:1500.00:{invId}:{receipt}:{encodedResultUrl2}:{Pass1}"));
+            .Should().Be(Md5($"{Login}:1500.00:{invId}:{receipt}:{Pass1}:Shp_order={OrderId}"));
     }
 
     [Fact]
@@ -273,6 +271,33 @@ public class RobokassaPaymentProviderTests
     private static string Md5(string value) =>
         Convert.ToHexString(MD5.HashData(Encoding.UTF8.GetBytes(value))).ToLowerInvariant();
 
+    [Fact]
+    public void Verify_accepts_valid_form_notification()
+    {
+        var provider = CreateProvider();
+        var outSum = "1500.00";
+        var invId = "1001";
+        var sig = Md5($"{outSum}:{invId}:{Pass2}:Shp_order={OrderId}");
+        var form = $"OutSum={outSum}&InvId={invId}&SignatureValue={sig}&Shp_order={OrderId}";
+
+        provider.Verify(form, new HeaderDictionary()).Should().Be(WebhookVerificationResult.Valid);
+    }
+
+    [Fact]
+    public void Parse_extracts_order_and_amount_from_form_notification()
+    {
+        var provider = CreateProvider();
+        var form = $"OutSum=1500.00&InvId=1001&SignatureValue=abc&Shp_order={OrderId}";
+
+        var evt = provider.Parse(form);
+        evt.OrderId.Should().Be(OrderId);
+        evt.ConfirmedAmount.Should().Be(1500.00m);
+        evt.ConfirmedCurrency.Should().Be("RUB");
+        evt.ProviderPaymentId.Should().Be(OrderId);
+        evt.ProviderEventId.Should().Be("1001");
+        provider.WebhookAckText(evt).Should().Be("OK" + RobokassaPaymentProvider.InvoiceId(OrderId));
+    }
+
     private static RobokassaPaymentProvider CreateProvider(bool testMode = false, string notifyUrl = NotifyUrl) =>
         new(
             new StaticOptionsMonitor<PaymentSettings>(new PaymentSettings
@@ -281,6 +306,7 @@ public class RobokassaPaymentProviderTests
                 {
                     MerchantLogin = Login,
                     Password1 = Pass1,
+                    Password2 = Pass2,
                     NotifyUrl = notifyUrl,
                     TestMode = testMode,
                 },

@@ -125,10 +125,8 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
             parts.Add(receipt);
         }
 
-        // ResultUrl2 is signed and sent url-encoded exactly once (unlike Receipt, which is double-encoded).
-        var resultUrl2 = Uri.EscapeDataString($"{settings.NotifyUrl}?{OrderQueryParam}={request.OrderId}");
-        parts.Add(resultUrl2);
         parts.Add(settings.Password1);
+        parts.Add($"Shp_order={request.OrderId}");
         var signature = Hash(settings.HashAlgorithm, string.Join(':', parts));
 
         var query = new Dictionary<string, string?>
@@ -139,6 +137,7 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
             ["Description"] = Truncate(request.Description, 100),
             ["SignatureValue"] = signature,
             ["Culture"] = "ru",
+            ["Shp_order"] = request.OrderId,
         };
         if (receipt is not null) query["Receipt"] = receipt;
         if (settings.TestMode) query["IsTest"] = "1";
@@ -147,7 +146,7 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
             query["IncCurrLabel"] = request.PaymentMethodHint;
         }
 
-        var payUrl = QueryHelpers.AddQueryString(settings.PayUrl, query) + "&ResultUrl2=" + resultUrl2;
+        var payUrl = QueryHelpers.AddQueryString(settings.PayUrl, query);
 
         _logger.LogInformation(
             "Robokassa payment link built: order={OrderId} invId={InvId} amount={Amount} test={TestMode}",
@@ -159,14 +158,40 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
     public WebhookVerificationResult Verify(string rawBody, IHeaderDictionary headers)
     {
         var jws = FindJws(rawBody);
-        if (jws is null)
+        if (jws is not null)
         {
-            _logger.LogWarning(
-                "Robokassa webhook rejected: body is not a compact JWS (length={Length}, head='{Head}').",
-                rawBody.Length, Truncate(rawBody, 60));
+            return VerifyJws(jws);
+        }
+
+        var form = QueryHelpers.ParseQuery(rawBody);
+        if (!form.TryGetValue("OutSum", out var outSum) ||
+            !form.TryGetValue("InvId", out var invId) ||
+            !form.TryGetValue("SignatureValue", out var signature))
+        {
+            _logger.LogWarning("Robokassa webhook missing required form fields: {Body}", Truncate(rawBody, 100));
             return WebhookVerificationResult.Invalid;
         }
 
+        var settings = _settings.CurrentValue.Robokassa;
+        var parts = new List<string> { outSum.ToString(), invId.ToString(), settings.Password2 };
+
+        foreach (var key in form.Keys.Where(k => k.StartsWith("Shp_", StringComparison.OrdinalIgnoreCase)).OrderBy(k => k, StringComparer.Ordinal))
+        {
+            parts.Add($"{key}={form[key]}");
+        }
+
+        var expectedSignature = Hash(settings.HashAlgorithm, string.Join(':', parts));
+        if (string.Equals(expectedSignature, signature.ToString(), StringComparison.OrdinalIgnoreCase))
+        {
+            return WebhookVerificationResult.Valid;
+        }
+
+        _logger.LogWarning("Robokassa webhook signature mismatch. Expected {Expected}, got {Actual}", expectedSignature, signature);
+        return WebhookVerificationResult.Invalid;
+    }
+
+    private WebhookVerificationResult VerifyJws(string jws)
+    {
         var parts = jws.Split('.');
         try
         {
@@ -199,7 +224,39 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
 
     public PaymentWebhookEvent Parse(string rawBody, IQueryCollection query)
     {
-        var jws = FindJws(rawBody) ?? throw new InvalidOperationException("Robokassa webhook is not a JWS.");
+        var jws = FindJws(rawBody);
+        if (jws is not null)
+        {
+            return ParseJws(jws, query);
+        }
+
+        var form = QueryHelpers.ParseQuery(rawBody);
+        var orderId = form.TryGetValue("Shp_order", out var o) && !string.IsNullOrWhiteSpace(o)
+            ? o.ToString()
+            : (query.TryGetValue(OrderQueryParam, out var qo) ? qo.ToString() : "");
+
+        if (string.IsNullOrWhiteSpace(orderId))
+        {
+            throw new InvalidOperationException("Robokassa webhook is missing order identifier.");
+        }
+
+        var invId = form.TryGetValue("InvId", out var inv) ? inv.ToString() : "";
+        decimal? amount = form.TryGetValue("OutSum", out var sum) &&
+                          decimal.TryParse(sum, NumberStyles.Number, CultureInfo.InvariantCulture, out var d)
+            ? d : null;
+
+        return new PaymentWebhookEvent(
+            ProviderPaymentId: orderId,
+            OrderId: orderId,
+            EventType: PaymentWebhookEventTypes.Paid,
+            ConfirmedAmount: amount,
+            ConfirmedCurrency: SettlementCurrencyCode,
+            ProviderEventId: string.IsNullOrWhiteSpace(invId) ? null : invId,
+            Reason: null);
+    }
+
+    private PaymentWebhookEvent ParseJws(string jws, IQueryCollection query)
+    {
         var orderId = query.TryGetValue(OrderQueryParam, out var o) ? o.ToString() : "";
         if (string.IsNullOrWhiteSpace(orderId))
         {

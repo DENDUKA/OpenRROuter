@@ -439,18 +439,16 @@ onclick ссылкой не считает**. Пока имена моделей
   подписи, 400 при неразбираемом теле, 200 `ok`/`ignored`, 422 при отказе Billing.
   Незаконфигуренный `SigningSecret` → все вебхуки 401 (fail safe), пустой `ApiKey` → исходящие
   вызовы бросают.
-- **Robokassa** (`Services/Payments/Robokassa/`, Name=robokassa, SettlementCurrency=RUB) — только платёжная ссылка,
-  своего API нет. У магазина нет Password #2 и ResultURL, поэтому в каждую ссылку кладётся `ResultUrl2 =
-  Payments:Robokassa:NotifyUrl + ?order={orderId}` (подписывается паролем №1, **url-кодируется один раз**, в отличие
-  от Receipt). Уведомление — compact JWS RS256: `Verify` проверяет подпись зашитым сертификатом
-  (`docs.robokassa.ru/media/files/jwtsign.cer`, **истекает 2027-06-16 — заменить заранее**), `alg` ≠ RS256 отклоняется.
-  В JWS только `shop/invId/incSum/state/opKey`, поэтому order id берётся из query через
-  `IPaymentProvider.Parse(rawBody, query)` и сверяется с подписанным `invId` (`InvId` = хеш order id). Пример
-  JWS из документации подписан старым ключом и с текущим сертификатом не проходит — тесты подписывают своим ключом
-  через internal-конструктор. Сумма/режим налога в чеке — `Payments:Robokassa:*`, секрет один: `Password1`.
-  **Пока админская**: на `/workspace/credits` кнопка «Иностранные карты (admin)» (handler `TopUpRobokassa`, проверка роли
-  и в разметке, и в хендлере) создаёт платёж с `providerName="robokassa"`, не трогая `ActiveProvider`; вебхук
-  `/webhook/robokassa` работает всегда, т.к. провайдер резолвится по имени из URL.
+- **Robokassa** (`Services/Payments/Robokassa/`, Name=robokassa, SettlementCurrency=RUB) — платёжная ссылка,
+  подписываемая `Password1` по формуле `MerchantLogin:OutSum:InvId:Receipt:Password1:Shp_order={orderId}`. Кастомный
+  параметр `Shp_order` несёт billing payment ID. Поддерживает выбор способа оплаты через `PaymentMethodHint`
+  (передаётся в `IncCurrLabel`, например `SBP` для моментального открытия QR-кода СБП). Уведомление об оплате
+  приходит на `ResultURL` (`/webhook/robokassa`) как `application/x-www-form-urlencoded` POST, верифицируется через
+  `MD5(OutSum:InvId:Password2:Shp_order=...)`, в ответ отправляется plain text `OK{InvId}`. Также сохранена обратная
+  совместимость с уведомлениями ResultUrl2 (JWS RS256 с зашитым сертификатом Robokassa).
+  **Пока админская**: на `/workspace/credits` кнопки «Иностранные карты (admin)» (handler `TopUpRobokassa`) и
+  «СБП Robokassa (admin)» (handler `TopUpRobokassaSbp`), обе с проверкой роли `IsAdmin` в разметке и хендлере, создают платёж
+  с `providerName="robokassa"`, не трогая `ActiveProvider`. Вебхук `/webhook/robokassa` работает всегда.
 - **Yandex Pay (sandbox)** — альтернативный платёжный провайдер (только карта, только sandbox,
   только для админов). Состав: `YandexPayPaymentProvider` (IPaymentProvider, Name=yandexpay,
   SettlementCurrency=RUB), `YandexPayClient` (HTTP к Merchant API, sandbox URL,

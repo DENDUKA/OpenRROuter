@@ -80,6 +80,18 @@
   <data name="Credits_TopUpSubmit" xml:space="preserve">
     <value>Top Up</value>
   </data>
+  <data name="Credits_TopUpForeignCards" xml:space="preserve">
+    <value>Foreign cards (admin)</value>
+  </data>
+  <data name="Credits_TopUpForeignCardsTitle" xml:space="preserve">
+    <value>Accept foreign card payments via Robokassa (admin only)</value>
+  </data>
+  <data name="Credits_TopUpSbp" xml:space="preserve">
+    <value>Robokassa SBP (admin)</value>
+  </data>
+  <data name="Credits_TopUpSbpTitle" xml:space="preserve">
+    <value>Pay via Robokassa SBP (admin only)</value>
+  </data>
   <data name="WsNav_Credits" xml:space="preserve">
     <value>Credits</value>
   </data>

@@ -78,6 +78,17 @@ public class RobokassaPaymentProviderTests
     }
 
     [Fact]
+    public async Task CreateAsync_attaches_IncCurrLabel_when_payment_method_hint_provided()
+    {
+        var provider = CreateProvider();
+
+        var created = await provider.CreateAsync(
+            new PaymentRequest(OrderId, 10m, "RUB", "x", PaymentMethodHint: "SBP"), CancellationToken.None);
+
+        QueryHelpers.ParseQuery(new Uri(created.PayUrl).Query)["IncCurrLabel"].ToString().Should().Be("SBP");
+    }
+
+    [Fact]
     public async Task CreateAsync_rejects_non_rub_currency()
     {
         var provider = CreateProvider();

@@ -80,6 +80,18 @@
   <data name="Credits_TopUpSubmit" xml:space="preserve">
     <value>Пополнить</value>
   </data>
+  <data name="Credits_TopUpForeignCards" xml:space="preserve">
+    <value>Иностранные карты (admin)</value>
+  </data>
+  <data name="Credits_TopUpForeignCardsTitle" xml:space="preserve">
+    <value>Оплата зарубежными картами через Robokassa (только для администраторов)</value>
+  </data>
+  <data name="Credits_TopUpSbp" xml:space="preserve">
+    <value>СБП Robokassa (admin)</value>
+  </data>
+  <data name="Credits_TopUpSbpTitle" xml:space="preserve">
+    <value>Оплата через СБП Robokassa (только для администраторов)</value>
+  </data>
   <data name="WsNav_Credits" xml:space="preserve">
     <value>Баланс</value>
   </data>

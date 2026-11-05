@@ -113,7 +113,12 @@ public class CreditsModel(
             ? TopUpAsync(providerName: "robokassa")
             : Task.FromResult<IActionResult>(Forbid());
 
-    private async Task<IActionResult> TopUpAsync(string? providerName)
+    public Task<IActionResult> OnPostTopUpRobokassaSbpAsync() =>
+        IsAdmin && RobokassaEnabled
+            ? TopUpAsync(providerName: "robokassa", paymentMethodHint: "SBP")
+            : Task.FromResult<IActionResult>(Forbid());
+
+    private async Task<IActionResult> TopUpAsync(string? providerName, string? paymentMethodHint = null)
     {
         var userId = User.GetUserId();
 
@@ -148,7 +153,8 @@ public class CreditsModel(
             var result = await checkoutService.CreateAsync(
                 userId, topUpAmount, SelectedCurrency,
                 providerName, clientToken,
-                HttpContext.RequestAborted);
+                HttpContext.RequestAborted,
+                paymentMethodHint);
 
             // Carry the amount the provider will actually charge (not what was typed) over to the
             // return leg, where it becomes the goal value.

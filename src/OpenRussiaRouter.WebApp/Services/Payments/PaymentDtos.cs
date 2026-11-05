@@ -15,7 +15,8 @@ public sealed record PaymentRequest(
     decimal Amount,
     string Currency,
     string Description,
-    string? UserId = null);
+    string? UserId = null,
+    string? PaymentMethodHint = null);
 
 /// <summary>
 /// Result of <c>IPaymentProvider.CreateAsync</c>: provider-side identifier of the payment

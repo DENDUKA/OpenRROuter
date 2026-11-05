@@ -142,6 +142,10 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
         };
         if (receipt is not null) query["Receipt"] = receipt;
         if (settings.TestMode) query["IsTest"] = "1";
+        if (!string.IsNullOrWhiteSpace(request.PaymentMethodHint))
+        {
+            query["IncCurrLabel"] = request.PaymentMethodHint;
+        }
 
         var payUrl = QueryHelpers.AddQueryString(settings.PayUrl, query) + "&ResultUrl2=" + resultUrl2;
 

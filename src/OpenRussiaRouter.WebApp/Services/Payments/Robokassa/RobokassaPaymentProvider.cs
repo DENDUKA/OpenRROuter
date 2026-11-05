@@ -136,7 +136,7 @@ public sealed class RobokassaPaymentProvider : IPaymentProvider
             ["InvId"] = invId,
             ["Description"] = Truncate(request.Description, 100),
             ["SignatureValue"] = signature,
-            ["Culture"] = "ru",
+            ["Culture"] = string.Equals(request.Culture, "en", StringComparison.OrdinalIgnoreCase) ? "en" : "ru",
             ["Shp_order"] = request.OrderId,
         };
         if (receipt is not null) query["Receipt"] = receipt;

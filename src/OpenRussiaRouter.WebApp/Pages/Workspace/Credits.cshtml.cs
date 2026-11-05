@@ -150,11 +150,13 @@ public class CreditsModel(
 
         try
         {
+            var culture = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             var result = await checkoutService.CreateAsync(
                 userId, topUpAmount, SelectedCurrency,
                 providerName, clientToken,
                 HttpContext.RequestAborted,
-                paymentMethodHint);
+                paymentMethodHint,
+                culture);
 
             // Carry the amount the provider will actually charge (not what was typed) over to the
             // return leg, where it becomes the goal value.

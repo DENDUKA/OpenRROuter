@@ -73,7 +73,8 @@ public sealed class PaymentCheckoutService
         string? providerName,
         string clientToken,
         CancellationToken ct,
-        string? paymentMethodHint = null)
+        string? paymentMethodHint = null,
+        string? culture = null)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -174,7 +175,8 @@ public sealed class PaymentCheckoutService
                     Currency: providerCurrency,
                     Description: $"Top-up {displayAmount} {displayCurrency}",
                     UserId: userId,
-                    PaymentMethodHint: paymentMethodHint),
+                    PaymentMethodHint: paymentMethodHint,
+                    Culture: culture),
                 ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

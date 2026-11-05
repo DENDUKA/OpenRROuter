@@ -86,6 +86,22 @@ public class RobokassaPaymentProviderTests
         QueryHelpers.ParseQuery(new Uri(created.PayUrl).Query)["IncCurrLabel"].ToString().Should().Be("SBP");
     }
 
+    [Theory]
+    [InlineData("en", "en")]
+    [InlineData("EN", "en")]
+    [InlineData("ru", "ru")]
+    [InlineData(null, "ru")]
+    [InlineData("de", "ru")]
+    public async Task CreateAsync_sets_culture_appropriately(string? requestedCulture, string expectedCulture)
+    {
+        var provider = CreateProvider();
+
+        var created = await provider.CreateAsync(
+            new PaymentRequest(OrderId, 10m, "RUB", "x", Culture: requestedCulture), CancellationToken.None);
+
+        QueryHelpers.ParseQuery(new Uri(created.PayUrl).Query)["Culture"].ToString().Should().Be(expectedCulture);
+    }
+
     [Fact]
     public async Task CreateAsync_rejects_non_rub_currency()
     {

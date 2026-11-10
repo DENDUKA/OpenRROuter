@@ -17,7 +17,7 @@
   ```
 - **Наружу открыты только 80/443** (Caddy). Seq, gRPC, health, Grafana и Prometheus привязаны к 127.0.0.1, доступ к ним — через SSH-туннель.
 - **DNS бокса:** `/etc/resolv.conf` зафиксирован (`chattr +i`) на Яндекс DNS 77.88.8.8/77.88.8.1. Дефолтный 195.208.4.1 от хостера отдавал устаревший NXDOMAIN и мусорные A-записи.
-- **Telegram:** из РФ `api.telegram.org` режется по SNI. Бот ходит через `https://tg.rawrter.com`: это Caddy-прокси на франкфуртском боксе 2.26.108.249 (`deploy/tg-proxy/`, `/opt/tg-proxy`), пускает только IP прода.
+- **Telegram:** из РФ `api.telegram.org` режется по SNI. Бот ходит в `https://api.telegram.org` через внешний HTTP-прокси (`85.158.60.57:9355`), прописанный в `/opt/rawrter-tg-bot/.env` (`NODE_USE_ENV_PROXY=1`, `HTTPS_PROXY`, `NO_PROXY=127.0.0.1,localhost,webapp`). Старый Caddy-прокси `https://tg.rawrter.com` на 2.26.108.249 (`deploy/tg-proxy/`) отключён с 2026-11-06.
 - **Обновление (на боксе):**
   ```
   /opt/orr/update-prod.sh          # git pull main → пересинк compose+Caddyfile → build всех .NET → up с health-gate

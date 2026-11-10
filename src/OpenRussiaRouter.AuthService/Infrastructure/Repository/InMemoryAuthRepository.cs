@@ -1,5 +1,6 @@
 using OpenRussiaRouter.AuthService.Application.Services;
 using OpenRussiaRouter.AuthService.Domain.Entities;
+using OpenRussiaRouter.AuthService.Domain.Enums;
 
 namespace OpenRussiaRouter.AuthService.Infrastructure.Repository;
 
@@ -220,7 +221,7 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             IReadOnlyCollection<(string, string, string, string)> result = _apiKeys
-                .Where(k => k.DisabledAtUtc is null && k.RawKey is not null)
+                .Where(k => k.DisabledAtUtc is null && k.RawKey is not null && _users.TryGetValue(k.UserId, out var user) && user.Status == UserStatus.Active)
                 .Select(k => (k.Id, k.RawKey!, k.UserId, k.Name))
                 .ToArray();
             return Task.FromResult(result);
@@ -233,7 +234,11 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         {
             IReadOnlyCollection<(string, string, string, string, bool)> result = _apiKeys
                 .Where(k => k.DeletedAtUtc is null && k.RawKey is not null)
-                .Select(k => (k.Id, k.RawKey!, k.UserId, k.Name, k.IsActive))
+                .Select(k =>
+                {
+                    var isUserActive = _users.TryGetValue(k.UserId, out var user) && user.Status == UserStatus.Active;
+                    return (k.Id, k.RawKey!, k.UserId, k.Name, k.IsActive && isUserActive);
+                })
                 .ToArray();
             return Task.FromResult(result);
         }
@@ -244,6 +249,10 @@ public sealed class InMemoryAuthRepository : IAuthRepository
         lock (_gate)
         {
             var key = _apiKeys.SingleOrDefault(k => k.SecretHash == secretHash && k.IsActive);
+            if (key is not null && _users.TryGetValue(key.UserId, out var user) && user.Status != UserStatus.Active)
+            {
+                return Task.FromResult<ApiKey?>(null);
+            }
             return Task.FromResult(key);
         }
     }

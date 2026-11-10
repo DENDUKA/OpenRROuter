@@ -260,13 +260,25 @@ public sealed class AuthAccountApplicationService(
         return PasswordChangeResult.Success();
     }
 
-    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, CancellationToken ct = default)
+    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, string? status = null, CancellationToken ct = default)
     {
         var user = await repository.GetUserAsync(userId, ct).ConfigureAwait(false);
         if (user == null)
             throw new InvalidOperationException("User not found.");
 
         user.UpdateDetails(displayName, maxApiKeys, displayCurrency);
+        if (!string.IsNullOrWhiteSpace(status))
+        {
+            if (Enum.TryParse<UserStatus>(status, ignoreCase: true, out var parsedStatus))
+            {
+                user.SetStatus(parsedStatus);
+            }
+            else
+            {
+                throw new ArgumentException($"Invalid user status: {status}", nameof(status));
+            }
+        }
+
         await repository.UpdateUserAsync(user, ct).ConfigureAwait(false);
     }
 

@@ -112,7 +112,7 @@
                             <tr>
                                 <td>@user.Email</td>
                                 <td>@user.Role</td>
-                                <td><span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">@user.Status</span></td>
+                                <td><span class="badge @(user.Status == "Active" ? "badge-success" : user.Status == "Disabled" ? "badge-danger" : "badge-secondary")">@user.Status</span></td>
                                 <td>@user.CreatedAt.ToLocalTime().ToString("g")</td>
                                 <td>@Model.UserBalances.GetValueOrDefault(user.Id, 0).ToString("N2") $</td>
                                 <td class="adm-actions-cell">
@@ -127,6 +127,34 @@
                                             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
                                         </svg>
                                     </a>
+                                    @if (user.Id != User.GetUserId())
+                                    {
+                                        @if (user.Status == "Active")
+                                        {
+                                            <form method="post" asp-page-handler="DisableUser" style="display:inline">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <button type="submit" class="btn-icon btn-icon-danger" title="Disable User" aria-label="Disable User"
+                                                        onclick="return confirm('Disable user @user.Email?')">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <circle cx="12" cy="12" r="10"></circle>
+                                                        <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (user.Status == "Disabled")
+                                        {
+                                            <form method="post" asp-page-handler="EnableUser" style="display:inline">
+                                                <input type="hidden" name="userId" value="@user.Id" />
+                                                <button type="submit" class="btn-icon btn-icon-success" title="Enable User" aria-label="Enable User"
+                                                        onclick="return confirm('Enable user @user.Email?')">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polyline points="20 6 9 17 4 12"/>
+                                                    </svg>
+                                                </button>
+                                            </form>
+                                        }
+                                    }
                                 </td>
                             </tr>
                         }

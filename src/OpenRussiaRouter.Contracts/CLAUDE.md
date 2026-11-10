@@ -47,7 +47,7 @@
 - **инвайты** — `CreateInvite` / `CompleteInvite`;
 - **API-ключи пользователя** — `CreateApiKey`, `Rename/Enable/Disable/DeleteApiKey`, `ListApiKeys`;
 - **служебные выгрузки ключей для нод/синка** — `ListActiveApiKeyHashes`, `GetFirstActiveApiKeyRaw`, `ListAllActiveApiKeysRaw`, `ListAllNonDeletedApiKeysRaw` (последний использует ControlPlane при синке ключей на ноды);
-- **пользователи** — `ListUsers`, `GetUser`, `UpdateUser` (`display_name`, `max_api_keys`, `display_currency`).
+- **пользователи** — `ListUsers`, `GetUser`, `UpdateUser` (`display_name`, `max_api_keys`, `display_currency`, `status`).
 
 `RegisterUserResponse` / `ResendVerificationResponse` / `RequestPasswordResetResponse` отдают **сырой код** вызывающему (WebApp отправляет письмо) — в БД он в clear text не лежит.
 

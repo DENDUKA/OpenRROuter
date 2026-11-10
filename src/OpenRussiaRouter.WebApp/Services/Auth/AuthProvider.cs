@@ -201,15 +201,16 @@ public class AuthProvider(AuthGrpc.AuthServiceClient client)
             u.HasDisplayCurrency ? u.DisplayCurrency : "RUB");
     }
 
-    public async Task UpdateUserAsync(string userId, string? displayName, int maxApiKeys, string? displayCurrency = null, CancellationToken cancellationToken = default)
+    public async Task UpdateUserAsync(string userId, string? displayName = null, int? maxApiKeys = null, string? displayCurrency = null, string? status = null, CancellationToken cancellationToken = default)
     {
         var request = new UpdateUserRequest
         {
-            UserId = userId,
-            MaxApiKeys = maxApiKeys
+            UserId = userId
         };
         if (displayName != null) request.DisplayName = displayName;
+        if (maxApiKeys.HasValue) request.MaxApiKeys = maxApiKeys.Value;
         if (displayCurrency != null) request.DisplayCurrency = displayCurrency;
+        if (status != null) request.Status = status;
 
         var response = await client.UpdateUserAsync(request, cancellationToken: cancellationToken);
         if (!response.Succeeded) throw new AuthException(response.ErrorCode);

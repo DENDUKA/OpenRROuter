@@ -460,8 +460,9 @@ public sealed class GrpcAuthService(
             var displayName = request.HasDisplayName ? request.DisplayName : currentUser.DisplayName;
             var maxApiKeys = request.HasMaxApiKeys ? request.MaxApiKeys : currentUser.MaxApiKeys;
             var displayCurrency = request.HasDisplayCurrency ? request.DisplayCurrency : currentUser.DisplayCurrency;
+            var status = request.HasStatus ? request.Status : null;
 
-            await accounts.UpdateUserAsync(request.UserId, displayName, maxApiKeys, displayCurrency, ct).ConfigureAwait(false);
+            await accounts.UpdateUserAsync(request.UserId, displayName, maxApiKeys, displayCurrency, status, ct).ConfigureAwait(false);
 
             return new UpdateUserResponse { Succeeded = true };
         }

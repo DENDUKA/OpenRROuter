@@ -33,7 +33,7 @@ bash test-deploy.sh
 
 ## Конфигурация и ограничения
 
-Обязательные секреты/настройки: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `INBOUND_AUTH_TOKEN`. Дополнительные: `WEBAPP_BASE_URL` (по умолчанию `http://webapp:8080`), `TELEGRAM_API_BASE_URL` (по умолчанию `https://api.telegram.org`; на проде — обратный прокси во Франкфурте, потому что из РФ api.telegram.org режется по SNI), `PORT` (8080), `SUPPORT_NOTIFY_ENABLED`, `HEARTBEAT_ENABLED` (оба true), `QUEUE_MAX_ITEMS` (100), `DEDUP_MEMORY` (1000).
+Обязательные секреты/настройки: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `INBOUND_AUTH_TOKEN`. Дополнительные: `WEBAPP_BASE_URL` (по умолчанию `http://webapp:8080`), `TELEGRAM_API_BASE_URL` (по умолчанию `https://api.telegram.org`; на проде из РФ `api.telegram.org` режется по SNI, поэтому в `/opt/rawrter-tg-bot/.env` включён исходящий HTTP-прокси Node 24 через `NODE_USE_ENV_PROXY=1`, `HTTPS_PROXY` и `NO_PROXY=127.0.0.1,localhost,webapp`), `PORT` (8080), `SUPPORT_NOTIFY_ENABLED`, `HEARTBEAT_ENABLED` (оба true), `QUEUE_MAX_ITEMS` (100), `DEDUP_MEMORY` (1000).
 
 - Отдельную БД для бота не создаём. Будущий доступ к существующей `openrussiarouter` — только чтение по отдельной задаче; сейчас данные поступают через HTTP WebApp.
 - Очередь, дедупликация и флаг утреннего отчёта — в памяти. Рестарт теряет незавершённые задания и может повторить отчёт. Чтение бизнес-данных из БД НЕ восстанавливает историю доставки и НЕ заменяет outbox.

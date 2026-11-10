@@ -131,7 +131,8 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
             update auth.users
             set display_name = @DisplayName,
                 max_api_keys = @MaxApiKeys,
-                display_currency = @DisplayCurrency
+                display_currency = @DisplayCurrency,
+                status = @Status
             where id = @Id;
             """,
             ToParameters(user),
@@ -374,10 +375,12 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         using var connection = connectionFactory.CreateConnection();
         return (await connection.QueryAsync<(string ApiKeyId, string RawKey, string UserId, string Name)>(new CommandDefinition(
             """
-            select id as ApiKeyId, raw_key as RawKey, user_id as UserId, name as Name
-            from auth.api_keys
-            where disabled_at_utc is null
-              and raw_key is not null;
+            select ak.id as ApiKeyId, ak.raw_key as RawKey, ak.user_id as UserId, ak.name as Name
+            from auth.api_keys ak
+            inner join auth.users u on u.id = ak.user_id
+            where ak.disabled_at_utc is null
+              and u.status = 'Active'
+              and ak.raw_key is not null;
             """,
             cancellationToken: ct)).ConfigureAwait(false)).ToArray();
     }
@@ -387,14 +390,15 @@ public sealed class AuthRepository(IAuthDbConnectionFactory connectionFactory) :
         using var connection = connectionFactory.CreateConnection();
         return (await connection.QueryAsync<(string ApiKeyId, string RawKey, string UserId, string Name, bool IsActive)>(new CommandDefinition(
             """
-            select id as ApiKeyId,
-                   raw_key as RawKey,
-                   user_id as UserId,
-                   name as Name,
-                   (disabled_at_utc is null) as IsActive
-            from auth.api_keys
-            where deleted_at_utc is null
-              and raw_key is not null;
+            select ak.id as ApiKeyId,
+                   ak.raw_key as RawKey,
+                   ak.user_id as UserId,
+                   ak.name as Name,
+                   (ak.disabled_at_utc is null and u.status = 'Active') as IsActive
+            from auth.api_keys ak
+            inner join auth.users u on u.id = ak.user_id
+            where ak.deleted_at_utc is null
+              and ak.raw_key is not null;
             """,
             cancellationToken: ct)).ConfigureAwait(false)).ToArray();
     }

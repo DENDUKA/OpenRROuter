@@ -498,8 +498,7 @@ ssh -i "$env:USERPROFILE\.ssh\id_ed25519_opencode" -o StrictHostKeyChecking=yes 
 - 4 ГБ RAM. Сервисы собираются по одному (`update-prod.sh`), параллельная сборка может упереться в OOM.
 - `/etc/resolv.conf` зафиксирован (`chattr +i`) на Яндекс DNS. Дефолтный резолвер хостера 195.208.4.1
   отдавал устаревший NXDOMAIN и мусорные A-записи.
-- Из РФ `api.telegram.org` режется по SNI. tg-бот ходит в Bot API через наш прокси
-  `https://tg.rawrter.com` (Caddy на 2.26.108.249, см. `deploy/tg-proxy/`), задано через `TELEGRAM_API_BASE_URL`.
+- Из РФ `api.telegram.org` режется по SNI. tg-бот ходит в Bot API (`https://api.telegram.org`) через внешний HTTP-прокси (`85.158.60.57:9355`), заданный в `/opt/rawrter-tg-bot/.env` через встроенный механизм Node 24 (`NODE_USE_ENV_PROXY=1`, `HTTPS_PROXY`, `NO_PROXY=127.0.0.1,localhost,webapp`). Старый Caddy-прокси `https://tg.rawrter.com` на `2.26.108.249` (`deploy/tg-proxy/`) отключён с 2026-11-06.
 
 **Деплой всех сервисов** — `update-prod.sh` (git pull → sync compose → build → restart → health-gate → rollback при ошибке):
 

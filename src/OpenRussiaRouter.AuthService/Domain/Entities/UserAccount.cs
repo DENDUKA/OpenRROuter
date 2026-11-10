@@ -41,6 +41,8 @@ public sealed class UserAccount
 
     public void Activate() => Status = UserStatus.Active;
 
+    public void SetStatus(UserStatus status) => Status = status;
+
     public bool IsLockedOut(DateTimeOffset nowUtc) => LockedUntilUtc is { } until && nowUtc < until;
 
     /// <summary>

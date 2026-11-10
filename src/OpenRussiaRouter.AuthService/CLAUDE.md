@@ -142,7 +142,7 @@ DI-расширения — [AuthServiceExtensions.cs](Application/Extensions/Au
   (ControlPlane, `GrpcRouterControlPlaneService`) и `GetFirstActiveApiKeyRaw` (WebApp,
   `/admin/gatewaytest`, `/admin/nodes`). `ListAllActiveApiKeysRaw` и `ListActiveApiKeyHashes`
   потребителей в репозитории не имеют.
-- `UpdateUser` использует proto-`optional`: незаданные поля берутся из текущего пользователя.
+- `UpdateUser` использует proto-`optional`: незаданные поля берутся из текущего пользователя (`display_name`, `max_api_keys`, `display_currency`, `status`).
 
 ## Репозиторий ([IAuthRepository.cs](Application/Services/IAuthRepository.cs))
 

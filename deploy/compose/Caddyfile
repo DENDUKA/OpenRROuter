@@ -32,6 +32,10 @@
 	@docs path /docs /docs/*
 	reverse_proxy @docs docs:80
 
+	@fk path /fk-verify.html
+	header @fk Content-Type text/html; charset=utf-8
+	respond @fk "fbd7d6f5e8052ce21484ca86fa6e70ff" 200
+
 	reverse_proxy webapp:8080
 }
 

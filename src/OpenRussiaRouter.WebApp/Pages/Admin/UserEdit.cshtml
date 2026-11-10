@@ -21,7 +21,7 @@
     <div class="adm-card">
         <div class="adm-card-header">
             <span>@user.Email</span>
-            <span class="badge @(user.Status == "Active" ? "badge-success" : "badge-secondary")">@user.Status</span>
+            <span class="badge @(user.Status == "Active" ? "badge-success" : user.Status == "Disabled" ? "badge-danger" : "badge-secondary")">@user.Status</span>
         </div>
         <div class="adm-card-body">
             <form method="post">
@@ -37,6 +37,16 @@
                         <label asp-for="Form.MaxApiKeys" class="form-label">Max API Keys</label>
                         <input asp-for="Form.MaxApiKeys" class="form-control" type="number" min="0" />
                         <span asp-validation-for="Form.MaxApiKeys" class="validation-message"></span>
+                    </div>
+                </div>
+                <div class="adm-form-row">
+                    <div class="form-group">
+                        <label asp-for="Form.Status" class="form-label">Status</label>
+                        <select asp-for="Form.Status" class="form-control">
+                            <option value="Active">Active</option>
+                            <option value="Disabled">Disabled</option>
+                        </select>
+                        <span asp-validation-for="Form.Status" class="validation-message"></span>
                     </div>
                 </div>
                 <div class="adm-btn-row">

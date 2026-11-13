@@ -250,8 +250,50 @@ services:
     mem_limit: 1536m
     cpus: 1.0
 
+  krouter:
+    build:
+      context: ./krouter
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:20129:20128"
+    environment:
+      NODE_ENV: production
+      PORT: "20128"
+      HOSTNAME: 0.0.0.0
+      DATA_DIR: /app/data
+      JWT_SECRET: ${F9_JWT_SECRET}
+      INITIAL_PASSWORD: ${KROUTER_INITIAL_PASSWORD}
+      API_KEY_SECRET: ${F9_API_KEY_SECRET}
+      MACHINE_ID_SALT: ${F9_MACHINE_ID_SALT}
+      ROUTER_CONTROL_TOKEN: ${KROUTER_NODE_CONTROL_TOKEN}
+      ENABLE_REQUEST_LOGS: "false"
+      OBSERVABILITY_ENABLED: "true"
+      AUTH_COOKIE_SECURE: "false"
+      REQUIRE_API_KEY: "true"
+      BASE_URL: "http://localhost:20128"
+      NEXT_PUBLIC_BASE_URL: "http://localhost:20128"
+      CLOUD_URL: "https://krouter.com"
+      NEXT_PUBLIC_CLOUD_URL: "https://krouter.com"
+      NODE_OPTIONS: "--max-old-space-size=1024"
+    volumes:
+      - krouter_data:/app/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:20128/api/health >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+    mem_limit: 1536m
+    cpus: 1.0
+
 volumes:
   postgres_data:
   seq_data:
   f9router_data:
+  krouter_data:
   webapp_keys:

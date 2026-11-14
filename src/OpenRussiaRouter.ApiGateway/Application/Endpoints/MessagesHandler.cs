@@ -76,6 +76,14 @@ public sealed class MessagesHandler(
                     context.Response.ContentType = lastResponse.ContentType;
                     await context.Response.WriteAsync(lastResponse.Body, context.RequestAborted);
                 }
+                else if (!context.Response.HasStarted)
+                {
+                    // Nodes ran out without any downstream response — the pipeline
+                    // skipped its own 503 on retry iterations, so report it here.
+                    await GatewayErrors.WriteAnthropicAsync(
+                        context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                        "No router available", requestId);
+                }
                 return;
             }
 
@@ -114,11 +122,13 @@ public sealed class MessagesHandler(
                     queryString,
                     context.RequestAborted);
 
-                var isUpstreamError = response.StatusCode >= 500;
-                var releaseStatus = isUpstreamError ? "failed" : "completed";
+                // 404 (node lacks the model / active credentials), 429 and 5xx fail over
+                // to another node; other 4xx are client errors and pass through as-is.
+                var shouldFailOver = RouterFailoverPolicy.ShouldFailOver(response.StatusCode);
+                var releaseStatus = shouldFailOver ? "failed" : "completed";
                 await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, releaseStatus, CancellationToken.None);
 
-                if (isUpstreamError)
+                if (shouldFailOver)
                 {
                     logger.LogWarning("Upstream node {NodeId} returned {StatusCode} for messages. RequestId: {RequestId}",
                         lease.NodeId, response.StatusCode, requestId);
@@ -211,6 +221,14 @@ public sealed class MessagesHandler(
                 {
                     await PassThroughErrorAsync(context, lastFailedSession, context.RequestAborted);
                 }
+                else if (!context.Response.HasStarted)
+                {
+                    // Nodes ran out without any downstream response — the pipeline
+                    // skipped its own 503 on retry iterations, so report it here.
+                    await GatewayErrors.WriteAnthropicAsync(
+                        context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                        "No router available", requestId);
+                }
                 return;
             }
 
@@ -256,8 +274,10 @@ public sealed class MessagesHandler(
 
                     await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", CancellationToken.None);
 
-                    // 4xx errors should not retry across nodes (Anthropic client error / validation error)
-                    if (session.StatusCode >= 400 && session.StatusCode < 500)
+                    // Client errors (validation/auth) repeat on every node — pass through.
+                    // 404 (node lacks the model / active credentials), 429 and 5xx fail
+                    // over to another node via RouterFailoverPolicy.
+                    if (!RouterFailoverPolicy.ShouldFailOver(session.StatusCode))
                     {
                         context.Response.StatusCode = session.StatusCode;
                         context.Response.ContentType = "application/json";

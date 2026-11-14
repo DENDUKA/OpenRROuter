@@ -98,9 +98,22 @@
 отправка на ноду → `ReleaseRouterNodeAsync(leaseId, "completed"|"failed")`. При ошибке нода добавляется
 в `excludedNodes`, счётчик `attempts` инкрементится, цикл повторяется.
 
+- **Что триггерит failover** — единый классификатор [RouterFailoverPolicy](Application/Services/RouterFailoverPolicy.cs)
+  (`ShouldFailOver(statusCode)`): 5xx, 429 и **404**. 404 — нода не обслуживает модель
+  (нет активных credentials провайдера или модели нет в её каталоге), другая нода может её
+  иметь. Остальные 4xx — клиентские (валидация/аутентификация), повторятся на любой ноде и
+  отдаются клиенту как есть. Используется всеми четырьмя циклами: `RouterRetryExecutor`
+  (non-stream chat/image/tts), streaming chat и обоими циклами `/v1/messages`.
+  Не дублировать условия `>= 500 && != 429` по месту — только вызов классификатора.
 - **`MaxRouterAttempts`**: в `ChatCompletionHandler` — из конфига `GatewayRetry:MaxRouterAttempts`
   ([GatewayRetryOptions](Application/Extensions/GatewayOptions.cs), дефолт 5, `[Range(1,20)]`, секции в appsettings нет).
   В `ImageGenerationHandler`/`TextToSpeechHandler` — **захардкоженная `const int MaxRouterAttempts = 5`**.
+- **`AcquireLeaseAsync` пишет 503 `RouterUnavailable` только при первом выборе ноды**
+  (когда `excludedNodes` пуст). На retry-итерациях ответом владеет retry-цикл: он отдаёт
+  клиенту ошибку последней ноды (pass-through), а если её нет (все ноды упали по сети до
+  ответа) — сам пишет 503. Ранняя запись 503 в пайплайне делала `HasStarted=true` и молча
+  блокировала pass-through (до 2026-11 клиент всегда получал безликий 503 вместо «No active
+  credentials» от последней ноды).
 - Ноды кончились (pipeline вернул `null` на повторной итерации) → наружу отдаётся `lastResponse` от последней ноды.
 - **`HttpRequestException`/`IOException` трактуются как 5xx** — соединение порвалось до/во время получения ответа
   (краш ноды, протухший pooled HTTP/2-коннект): release `failed`, exclude, retry. Если попытки исчерпаны и

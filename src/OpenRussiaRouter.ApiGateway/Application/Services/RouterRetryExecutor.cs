@@ -70,6 +70,15 @@ public sealed class RouterRetryExecutor(
                     context.Response.ContentType = lastResponse.ContentType;
                     await context.Response.WriteAsync(lastResponse.Body);
                 }
+                else if (!context.Response.HasStarted)
+                {
+                    // Nodes ran out without any downstream response (e.g. all failed
+                    // with connection errors) — the pipeline skipped its own 503 on
+                    // retry iterations, so report it here.
+                    await GatewayErrors.WriteAsync(
+                        context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                        "No router available", requestId);
+                }
                 return;
             }
 
@@ -94,8 +103,10 @@ public sealed class RouterRetryExecutor(
                         "Downstream error. StatusCode: {StatusCode}, Node: {NodeId}, RequestId: {RequestId}",
                         response.StatusCode, auth.Lease.NodeId, requestId);
 
-                    // 4xx errors should not retry across nodes (client error / validation error)
-                    if (response.StatusCode >= 400 && response.StatusCode < 500 && response.StatusCode != 429)
+                    // Client errors (validation/auth) repeat on every node — pass through.
+                    // 404 (node lacks the model / active credentials), 429 and 5xx fail over
+                    // to another node via RouterFailoverPolicy, bounded by MaxRouterAttempts.
+                    if (!RouterFailoverPolicy.ShouldFailOver(response.StatusCode))
                     {
                         if (!context.Response.HasStarted)
                         {

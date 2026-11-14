@@ -235,8 +235,11 @@ OpenAI-совместимый LLM-шлюз с $-биллингом: .NET 8 ми�
 4. Патч тела: `model` заменяется на `RouterModelId`. Если id модели содержит "gemini" —
    `GeminiSchemaPatcher` инлайнит `$ref`/`$defs` в схемах тулов (Gemini их не принимает).
 5. Проксирование: YARP (non-streaming) либо `HttpCompletionOption.ResponseHeadersRead` (streaming).
-   Ретраи на другие ноды при 5xx/сетевой ошибке — цикл до `GatewayRetry:MaxRouterAttempts`
-   (дефолт 5), только пока первый байт не ушёл клиенту.
+   Ретраи на другие ноды при 5xx, 429, **404** (нода не обслуживает модель — нет активных
+   credentials провайдера или модели нет в её каталоге) и сетевой ошибке — цикл до
+   `GatewayRetry:MaxRouterAttempts` (дефолт 5), только пока первый байт не ушёл клиенту.
+   Остальные 4xx — клиентские, отдаются как есть. При исчерпании capable-нод клиенту
+   уходит ошибка последней ноды (pass-through), не безликий 503.
 6. Usage вынимается из JSON-тела или из финального SSE-чанка (`include_usage`).
 7. Событие usage кладётся в **PostgreSQL-outbox** (`db/migrations/gateway/`,
    `PostgresUsageOutboxRepository` + `UsageOutboxDispatcher`), лиза освобождается.

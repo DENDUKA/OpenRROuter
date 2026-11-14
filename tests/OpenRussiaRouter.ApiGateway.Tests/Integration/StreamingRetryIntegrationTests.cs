@@ -62,6 +62,40 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
     }
 
     [Fact]
+    public async Task Streaming_NodeReturns404_FailsOverToNextNode()
+    {
+        // Node A has no active credentials for the model (404) → retry on node B.
+        const string sseBody = "data: {\"choices\":[]}\n\ndata: [DONE]\n\n";
+        var router = new SequentialStreamingProxy(
+            CreateNotFoundSession(),
+            CreateSuccessSession(sseBody));
+        var control = new RetryTrackingControlPlane();
+        var client = CreateStreamingClient(control: control, router: router);
+
+        var response = await PostStreamAsync(client);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        control.SelectCallCount.Should().Be(2);
+        router.CallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Streaming_AllNodesReturn404_PassesThroughLastNodeError()
+    {
+        // No node serves the model → the client sees the last node's 404 body.
+        var router = new SequentialStreamingProxy(
+            CreateNotFoundSession(),
+            CreateNotFoundSession());
+        var control = new RetryTrackingControlPlane { MaxLeases = 2 };
+        var client = CreateStreamingClient(control: control, router: router);
+
+        var response = await PostStreamAsync(client);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        router.CallCount.Should().Be(2);
+    }
+
+    [Fact]
     public async Task Streaming_AllNodesFail_PassesThroughNodeError()
     {
         // When all nodes fail, the gateway passes through the last node's raw error body
@@ -217,6 +251,18 @@ public sealed class StreamingRetryIntegrationTests : IClassFixture<WebApplicatio
         {
             Content = new StringContent(
                 """{"error":{"message":"Service unavailable","type":"server_error","code":"node_unavailable"}}""",
+                Encoding.UTF8, "application/json")
+        };
+        return new RouterStreamSession(response);
+    }
+
+    private static RouterStreamSession CreateNotFoundSession()
+    {
+        // Realistic 9Router 404: the node has no active credentials for the model's provider.
+        var response = new HttpResponseMessage(HttpStatusCode.NotFound)
+        {
+            Content = new StringContent(
+                """{"error":{"message":"No active credentials for provider: antigravity / HTTP_404","type":"invalid_request_error","code":"HTTP_404"}}""",
                 Encoding.UTF8, "application/json")
         };
         return new RouterStreamSession(response);

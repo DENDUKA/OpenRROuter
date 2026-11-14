@@ -136,6 +136,14 @@ public sealed class ChatCompletionHandler(
                     {
                         await PassThroughErrorAsync(context, lastFailedSession, context.RequestAborted);
                     }
+                    else if (!context.Response.HasStarted)
+                    {
+                        // Nodes ran out without any downstream response — the pipeline
+                        // skipped its own 503 on retry iterations, so report it here.
+                        await GatewayErrors.WriteAsync(
+                            context, "service_unavailable", ErrorCodes.RouterUnavailable,
+                            "No router available", requestId);
+                    }
                     return;
                 }
 
@@ -196,8 +204,10 @@ public sealed class ChatCompletionHandler(
                         // Release must succeed even if client disconnected — don't cancel.
                         await controlPlaneProvider.ReleaseRouterNodeAsync(lease.LeaseId, "failed", CancellationToken.None);
                         
-                        // 4xx errors should not retry across nodes (client error / validation error)
-                        if (session.StatusCode >= 400 && session.StatusCode < 500 && session.StatusCode != 429)
+                        // Client errors (validation/auth) repeat on every node — pass through.
+                        // 404 (node lacks the model / active credentials), 429 and 5xx fail
+                        // over to another node via RouterFailoverPolicy.
+                        if (!RouterFailoverPolicy.ShouldFailOver(session.StatusCode))
                         {
                             if (!context.Response.HasStarted)
                             {

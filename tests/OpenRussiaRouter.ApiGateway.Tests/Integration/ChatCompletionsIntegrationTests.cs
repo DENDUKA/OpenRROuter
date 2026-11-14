@@ -264,6 +264,63 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
         control.LastReleasedStatus.Should().Be("failed");
     }
 
+    // --- Node failover on model-level 404 ---
+
+    [Fact]
+    public async Task NonStreaming_NodeReturns404_FailsOverToNextNode()
+    {
+        // Node A has no active credentials for the model (404) → the gateway must
+        // exclude it and retry on node B instead of returning the error to the client.
+        var router = new SequentialRouterProxy(
+            new RouterProxyResponse(404, "application/json",
+                """{"error":{"message":"No active credentials for provider: antigravity / HTTP_404"}}"""),
+            new RouterProxyResponse(200, "application/json", """{"id":"chatcmpl-2","choices":[]}"""));
+        var control = new TrackingControlPlane();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control, router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        router.CallCount.Should().Be(2);
+        control.SelectCallCount.Should().Be(2);
+        control.ReleasedStatuses.Should().Equal("failed", "completed");
+    }
+
+    [Fact]
+    public async Task NonStreaming_AllNodesReturn404_PassesThroughLastNodeError()
+    {
+        // No node serves the model → the last node's 404 body goes to the client.
+        // The loop is bounded: it ends when capable nodes run out, not after MaxRouterAttempts.
+        var router = new SequentialRouterProxy(
+            new RouterProxyResponse(404, "application/json", """{"error":{"message":"no credentials on A"}}"""),
+            new RouterProxyResponse(404, "application/json", """{"error":{"message":"no credentials on B"}}"""));
+        var control = new TrackingControlPlane();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control, router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("no credentials on B");
+        router.CallCount.Should().Be(2);
+        control.SelectCallCount.Should().Be(3); // third select finds no unexcluded node
+    }
+
+    [Fact]
+    public async Task NonStreaming_NodeReturns400_DoesNotFailOver()
+    {
+        // Client/validation errors repeat on every node — no failover, single attempt.
+        var router = new SequentialRouterProxy(
+            new RouterProxyResponse(400, "application/json", """{"error":{"message":"max_tokens is required"}}"""));
+        var control = new TrackingControlPlane();
+        var client = CreateClient(new StubAuthenticator(), new StubBillingProvider(), control, router);
+
+        var response = await PostChatAsync(client, """{"model":"gpt-4"}""", bearer: "sk-ok_key");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        router.CallCount.Should().Be(1);
+        control.SelectCallCount.Should().Be(1);
+    }
+
     [Fact]
     public async Task NonStreaming_UnsupportedReasoning_IsStrippedAndForwarded()
     {
@@ -744,6 +801,85 @@ public sealed class ChatCompletionsIntegrationTests : IClassFixture<WebApplicati
             LastReleasedStatus = status;
             return Task.CompletedTask;
         }
+    }
+
+    /// <summary>Emits leases node-1, node-2, … and returns null once every node is excluded.</summary>
+    private sealed class TrackingControlPlane : IControlPlaneProvider
+    {
+        private int leaseCounter;
+        public int SelectCallCount { get; private set; }
+        public int NodeCount { get; init; } = 2;
+        public List<string> ReleasedStatuses { get; } = [];
+        public IReadOnlyCollection<string>? LastExcludedNodeIds { get; private set; }
+
+        public Task<GatewayRouterLease?> SelectRouterNodeAsync(
+            string modelId,
+            string requestId,
+            string? preferredNodeId,
+            string? preferredNodeControlToken,
+            IReadOnlyCollection<string>? excludedNodeIds,
+            CancellationToken ct)
+        {
+            SelectCallCount++;
+            LastExcludedNodeIds = excludedNodeIds;
+            if (excludedNodeIds is not null && excludedNodeIds.Count >= NodeCount)
+                return Task.FromResult<GatewayRouterLease?>(null);
+
+            leaseCounter++;
+            return Task.FromResult<GatewayRouterLease?>(
+                new GatewayRouterLease($"lease-{leaseCounter}", $"node-{leaseCounter}", new Uri("https://router.example"), "secret"));
+        }
+
+        public Task ReleaseRouterNodeAsync(string leaseId, string status, CancellationToken ct)
+        {
+            ReleasedStatuses.Add(status);
+            return Task.CompletedTask;
+        }
+    }
+
+    /// <summary>Returns queued responses in order, one per downstream call.</summary>
+    private sealed class SequentialRouterProxy : IRouterProxyProvider
+    {
+        private readonly Queue<RouterProxyResponse> responses;
+        public int CallCount { get; private set; }
+
+        public SequentialRouterProxy(params RouterProxyResponse[] responses)
+        {
+            this.responses = new Queue<RouterProxyResponse>(responses);
+        }
+
+        public Task<RouterProxyResponse> SendChatCompletionAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+        {
+            CallCount++;
+            return Task.FromResult(responses.Dequeue());
+        }
+
+        public Task<RouterStreamSession> BeginStreamChatCompletionAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException("Use SequentialStreamingProxy for streaming tests.");
+
+        public Task<RouterProxyResponse> SendImageGenerationAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException();
+
+        public Task<RouterProxyResponse> SendTextToSpeechAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, CancellationToken ct)
+            => throw new NotSupportedException();
+
+        public Task<RouterProxyResponse> SendMessagesAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, IHeaderDictionary? clientHeaders, string? queryString, CancellationToken ct)
+            => throw new NotSupportedException();
+
+        public Task<OpenRussiaRouter.ApiGateway.Anthropic.AnthropicStreamSession> BeginStreamMessagesAsync(
+            GatewayRouterLease lease, string requestJson, string requestId,
+            string userApiKey, IHeaderDictionary? clientHeaders, string? queryString, CancellationToken ct)
+            => throw new NotSupportedException();
     }
 
     private sealed class StubRouterProxy : IRouterProxyProvider

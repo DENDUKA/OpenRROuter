@@ -216,11 +216,19 @@ public sealed class GatewayPipeline(
             cancellationToken);
         if (lease is null)
         {
-            var isAnthropic = context.Request.Path.StartsWithSegments("/v1/messages", StringComparison.OrdinalIgnoreCase);
-            if (isAnthropic)
-                await GatewayErrors.WriteAnthropicAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
-            else
-                await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            // First selection (nothing excluded yet): the caller has no fallback
+            // response, so report 503 here. On retry iterations (excludedNodeIds is
+            // not empty) the response belongs to the retry loop — it passes through
+            // the last node's error; writing 503 here would start the response and
+            // block that pass-through.
+            if (excludedNodeIds is not { Count: > 0 })
+            {
+                var isAnthropic = context.Request.Path.StartsWithSegments("/v1/messages", StringComparison.OrdinalIgnoreCase);
+                if (isAnthropic)
+                    await GatewayErrors.WriteAnthropicAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+                else
+                    await GatewayErrors.WriteAsync(context, "service_unavailable", ErrorCodes.RouterUnavailable, "No router available", requestId);
+            }
             return null;
         }
 

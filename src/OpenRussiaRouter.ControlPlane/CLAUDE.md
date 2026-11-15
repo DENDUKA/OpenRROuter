@@ -99,9 +99,15 @@ cleanup группирует удалённые лизы по ноде и уме
 
 `RouterHealthCheckWorker` ([файл](Infrastructure/Workers/RouterHealthCheckWorker.cs)) — каждые
 `RouterHealthChecks:Interval` последовательно обходит enabled-ноды: `healthClient.CheckAsync` →
-`controlPlane.ApplyHealthAsync(...)`. **Нет cooldown/anti-flapping** — статус меняется мгновенно
-(CONTROL-002). Отдельный `RouterLeaseCleanupWorker` чистит протухшие лизы; `RouterNodeSnapshotRefresher`
-раз в `RouterNodeSnapshot:RefreshInterval` заменяет снимок метаданных только после полного успешного чтения.
+`controlPlane.ApplyHealthAsync(...)`. **Anti-flapping через `RouterHealthChecks:UnhealthyThreshold`
+(по умолчанию 3)**: не-Healthy результат фиксируется в БД (errorCode, last_checked_at), но статус
+остаётся `Healthy`, пока подряд не провалится порог проверок; успешная проверка сбрасывает счётчик.
+Без этого одиночный таймаут/сетевой сбой на одном пробе снимал ноду с маршрутизации на весь интервал
+между чеками (~1 минута `No router available` на все её модели, см. CONTROL-002 по мгновенному
+переводу после порога). Счётчик неудач — in-memory в воркере, при рестарте сервиса начинается
+заново (статус в БД при этом сохраняется). Отдельный `RouterLeaseCleanupWorker` чистит протухшие
+лизы; `RouterNodeSnapshotRefresher` раз в `RouterNodeSnapshot:RefreshInterval` заменяет снимок
+метаданных только после полного успешного чтения.
 
 `RouterNodeHealthProvider` ([файл](Infrastructure/Http/RouterNodeHealthProvider.cs)):
 GET `{EndpointUrl}{HealthPath}`, **только заголовок `NodeTokenHeader` (`X-ORR-Node-Token`) с control-токеном**

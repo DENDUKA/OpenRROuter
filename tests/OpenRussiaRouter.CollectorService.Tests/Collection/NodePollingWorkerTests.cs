@@ -53,6 +53,55 @@ public class NodePollingWorkerTests
     }
 
     [Fact]
+    public async Task RunOnceAsync_CarriesForwardLastGoodCatalog_WhenNodeProbeFails()
+    {
+        var nodes = new Mock<INodeListProvider>();
+        nodes.Setup(n => n.GetNodesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<CollectorNode>
+            {
+                new("n1", new Uri("http://n1/"), "t", true, "Healthy", true),
+                new("n2", new Uri("http://n2/"), "t", true, "Healthy", true)
+            });
+
+        var calls = 0;
+        var client = new Mock<INodeAdminClient>();
+        // n2 starts failing after the first successful cycle (transient outage, e.g. mid-restart).
+        client.Setup(c => c.ListProvidersWithModelsAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Uri, string, CancellationToken>((uri, _, _) =>
+            {
+                var n = System.Threading.Interlocked.Increment(ref calls);
+                if (uri.Host == "n2" && n > 2)
+                    throw new HttpRequestException("connection refused");
+                return Task.FromResult(new NodeProvidersWithModelsResponse
+                {
+                    Connections = [new NodeProviderWithModels
+                    {
+                        Id = uri.Host == "n2" ? "c2" : "c1",
+                        IsActive = true,
+                        Models = [new NodeProviderModelInfo { Id = "m" + uri.Host, PublicId = "m" + uri.Host, Enabled = true }]
+                    }]
+                });
+            });
+        client.Setup(c => c.ListCombosAsync(It.IsAny<Uri>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeCombosResponse());
+        client.Setup(c => c.GetProviderQuotaAsync(It.IsAny<Uri>(), It.IsAny<string>(), false, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new NodeProviderQuotaResponse());
+
+        var store = new CollectorSnapshotStore();
+        var worker = new NodePollingWorker(
+            nodes.Object, Collector(client.Object), QuotaCollector(client.Object), CatalogModels([]), store, new QuotaSnapshotStore(),
+            Options.Create(new CollectorOptions()).ToMonitor(),
+            NullLogger<NodePollingWorker>.Instance, TimeProvider.System);
+
+        await worker.RunOnceAsync(CancellationToken.None);
+        await worker.RunOnceAsync(CancellationToken.None);
+
+        var n2 = store.Current.Nodes.Should().ContainSingle(n => n.NodeId == "n2").Which;
+        n2.Unreachable.Should().BeFalse("last-good catalog must be carried forward within the grace window");
+        n2.Observations.Should().ContainSingle(o => o.PublicId == "mn2");
+    }
+
+    [Fact]
     public async Task RunOnceAsync_KeepsPreviousSnapshot_WhenNodeListFails()
     {
         var nodes = new Mock<INodeListProvider>();

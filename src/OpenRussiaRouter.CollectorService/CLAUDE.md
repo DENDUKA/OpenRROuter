@@ -77,8 +77,15 @@ observable-гейджи никогда не создаются и метрик �
    health-чекалась **ИЛИ** её `Status != "Unhealthy"`). `Enabled` — это «статус не `Disabled`»
    (см. [NodeListProvider.cs](Application/Collection/NodeListProvider.cs), ноды с невалидным
    `EndpointUrl` отбрасываются там же).
-3. Параллельно (`Task.WhenAll`) каталог каждой ноды → атомарно `store.Set(new CollectorSnapshot(...))`.
-4. Параллельно квоты каждой ноды + активные модели из Billing → обогащение
+3. Параллельно (`Task.WhenAll`) каталог каждой ноды → **keep-last-good**: нода, бывшая
+   Reachable в прошлом снимке, но отсутствующая в текущем цикле (проба вернула `Unreachable`
+   или нода временно не routable), переносится в новый снимок из последнего успешного
+   сбора, пока он не старше `CollectorOptions.KeepLastGoodCatalogsFor` (по умолчанию 10 мин).
+   Без переноса один сбойный цикл стирал ВСЕ её модели из capability-store до следующего
+   успешного сбора (~1 минута `No router available`, например при перезапуске ноды).
+   Безопасно: hot-path роутинга отдельно фильтрует кандидатов по health из control plane.
+4. Атомарно `store.Set(new CollectorSnapshot(...))`.
+5. Параллельно квоты каждой ноды + активные модели из Billing → обогащение
    (`ModelIds` по `ConnectionId`, `ActiveModelQuotaMeasurement`) → `quotaStore.Set(...)`.
 
 Ошибка цикла логируется и не убивает воркер. Источник времени — `TimeProvider`

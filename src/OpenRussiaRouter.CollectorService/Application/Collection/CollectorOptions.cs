@@ -15,4 +15,15 @@ public sealed class CollectorOptions
 
     [Range(typeof(TimeSpan), "00:00:01", "00:01:00")]
     public TimeSpan PerNodeTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Keep-last-good: если нода пропала из цикла сбора (проба не удалась или
+    /// нода временно не routable), её последний успешный каталог переносится
+    /// в новый снимок, пока он не старше этого окна. Без переноса одиночный
+    /// сбойный цикл стирал ВСЕ модели ноды из capability-store до следующего
+    /// успешного сбора (~1 минута "No router available"). Безопасно: hot-path
+    /// роутинга отдельно фильтрует ноды по их health из control plane.
+    /// </summary>
+    [Range(typeof(TimeSpan), "00:01:00", "01:00:00")]
+    public TimeSpan KeepLastGoodCatalogsFor { get; set; } = TimeSpan.FromMinutes(10);
 }

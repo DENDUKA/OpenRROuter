@@ -43,6 +43,7 @@ public sealed class NodePollingWorker(
 
         var catalogResults = await Task.WhenAll(
             routable.Select(node => collector.CollectAsync(node, cancellationToken))).ConfigureAwait(false);
+        catalogResults = CarryForwardLastGoodCatalogs(catalogResults, now);
         store.Set(new CollectorSnapshot(catalogResults, now));
 
         var quotaResults = await Task.WhenAll(
@@ -287,6 +288,68 @@ public sealed class NodePollingWorker(
             HashCode.Combine(
                 StringComparer.Ordinal.GetHashCode(obj.NodeId),
                 StringComparer.OrdinalIgnoreCase.GetHashCode(obj.ConnectionId));
+    }
+
+    /// <summary>
+    /// orr-fix — keep-last-good: нода, которая была в прошлом снимке со
+    /// статусом Reachable, но отсутствует в текущем цикле (проба вернула
+    /// Unreachable или нода временно не routable), переносится в новый снимок
+    /// из последнего успешного сбора, пока он не старше окна
+    /// <see cref="CollectorOptions.KeepLastGoodCatalogsFor"/>. Раньше один
+    /// сбойный цикл стирал все её модели из capability-store до следующего
+    /// успешного сбора (~1 минута "No router available" на все её модели,
+    /// например при перезапуске ноды). Безопасно, потому что hot-path
+    /// роутинга отдельно фильтрует кандидатов по health из control plane:
+    /// мёртвая нода всё равно не получит трафик.
+    /// </summary>
+    private NodeCatalogResult[] CarryForwardLastGoodCatalogs(
+        NodeCatalogResult[] current, DateTimeOffset now)
+    {
+        var previous = store.Current;
+        if (previous.Nodes.Count == 0 || previous.CollectedAtUtc is null)
+            return current;
+
+        var grace = options.CurrentValue.KeepLastGoodCatalogsFor;
+        if (previous.CollectedAtUtc.Value < now - grace)
+            return current;
+
+        var lastGoodByNode = previous.Nodes
+            .Where(prev => !prev.Unreachable)
+            .ToDictionary(prev => prev.NodeId, StringComparer.Ordinal);
+        if (lastGoodByNode.Count == 0)
+            return current;
+
+        var currentByNode = current.ToDictionary(result => result.NodeId, StringComparer.Ordinal);
+        var merged = new List<NodeCatalogResult>(current.Length + lastGoodByNode.Count);
+        var carried = new List<string>();
+        foreach (var result in current)
+        {
+            // Проба вернула Unreachable — подменяем последним успешным каталогом.
+            if (result.Unreachable && lastGoodByNode.TryGetValue(result.NodeId, out var good))
+            {
+                merged.Add(good);
+                carried.Add(result.NodeId);
+                continue;
+            }
+            merged.Add(result);
+        }
+        foreach (var (nodeId, good) in lastGoodByNode)
+        {
+            // Нода целиком пропала из цикла (временно не routable) — переносим.
+            if (!currentByNode.ContainsKey(nodeId))
+            {
+                merged.Add(good);
+                carried.Add(nodeId);
+            }
+        }
+
+        if (carried.Count == 0)
+            return current;
+
+        logger.LogWarning(
+            "Carried forward last-good catalog for {Count} node(s) with a failed or missing poll cycle: {NodeIds}",
+            carried.Count, string.Join(", ", carried));
+        return [.. merged];
     }
 
     /// <summary>

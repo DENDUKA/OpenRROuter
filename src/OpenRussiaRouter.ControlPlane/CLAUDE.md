@@ -174,6 +174,14 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
   (именно non-deleted, а не только активные — неактивные уезжают с `IsActive=false`) и bulk-пушит
   на ноду; возвращает added/disabled/reactivated/deleted. В ответе ноды есть ещё `adoptedCount`
   (см. ниже), в контракт ORR он сознательно не проброшен.
+- **Bulk-синк НЕ восстанавливает маппинги в `control.integration_key_sync`.** Ответ ноды на
+  `/keys/sync` содержит только счётчики, ни одного `router_key_id`, а `keyPreview` в списке ключей
+  усечён — сопоставить строку БД с ключом ноды нечем. Последствие: после `PushUserIntegrationKey`
+  для новых нод маппингов тоже нет, и точечные `UpdateUserIntegrationKeyStatus` /
+  `DeleteUserIntegrationKey` до такой ноды не доедут — их работу делает тот же sweep (≤ `Interval`,
+  дефолт 10 мин), потому что отозванный ключ уезжает с `IsActive=false`, а удалённый вообще
+  не приходит и снимается с ноды как `deleted`. Это осознанный размен, а не пропуск: точечные
+  RPC остаются быстрым путём для нод с маппингами, воркер — гарантией сходимости для всех.
 - **Нода обязана принимать bulk sync.** Контракт с нодой: `POST /api/integrations/keys/sync`.
   У kRouter исторически был баг — поиск существующих ключей только среди `managedBy='openrussia-router'`
   при `UNIQUE(apiKeys.key)`: ключ, лежавший ручной строкой, не находился, `INSERT` падал, транзакция

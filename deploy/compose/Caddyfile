@@ -36,6 +36,10 @@
 	header @fk Content-Type text/html; charset=utf-8
 	respond @fk "fbd7d6f5e8052ce21484ca86fa6e70ff" 200
 
+	@mulenpay path /mulen_pay.html
+	header @mulenpay Content-Type text/html; charset=utf-8
+	respond @mulenpay "437a8162b6864ed6ad65d19f92e4680a" 200
+
 	reverse_proxy webapp:8080
 }
 

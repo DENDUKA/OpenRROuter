@@ -41,6 +41,11 @@ public static class Startup
             .ValidateDataAnnotations()
             .ValidateOnStart();
 
+        services.AddOptions<IntegrationKeySyncOptions>()
+            .Bind(configuration.GetSection("IntegrationKeySync"))
+            .ValidateDataAnnotations()
+            .ValidateOnStart();
+
         var grpcCallDeadline = TimeSpan.FromSeconds(
             configuration.GetValue("GrpcServices:CallDeadlineSeconds", 30));
 

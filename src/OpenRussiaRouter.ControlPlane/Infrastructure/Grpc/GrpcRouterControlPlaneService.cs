@@ -17,6 +17,7 @@ public sealed class GrpcRouterControlPlaneService(
     RouterControlPlaneService controlPlane,
     IControlPlaneRepository repository,
     IRouterNodeProvider providerClient,
+    IntegrationKeySyncService keySyncService,
     AuthGrpc.AuthServiceClient authClient,
     ILogger<GrpcRouterControlPlaneService> logger)
     : ControlGrpc.RouterControlPlaneBase
@@ -386,34 +387,19 @@ public sealed class GrpcRouterControlPlaneService(
         if (node is null)
             return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.ValidationFailed };
 
-        var dbKeysResponse = await authClient.ListAllNonDeletedApiKeysRawAsync(
-            new Contracts.Grpc.Auth.V1.ListAllNonDeletedApiKeysRawRequest(),
-            cancellationToken: Ct(context)).ConfigureAwait(false);
-
-        var keysToSync = dbKeysResponse.Keys.Select(k => new RouterIntegrationKeySyncEntry
-        {
-            Name = k.Name,
-            Key = k.RawKey,
-            IsActive = k.IsActive
-        }).ToList();
-
-        try
-        {
-            var syncResult = await providerClient.SyncIntegrationKeysAsync(node, keysToSync, Ct(context)).ConfigureAwait(false);
-
-            return new SyncNodeIntegrationKeysResponse
-            {
-                AddedCount = syncResult.AddedCount,
-                DisabledCount = syncResult.DisabledCount,
-                ReactivatedCount = syncResult.ReactivatedCount,
-                DeletedCount = syncResult.DeletedCount
-            };
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to bulk sync keys on node {NodeId}", node.Id);
+        // Shared with IntegrationKeySyncWorker on purpose: the operator's button and the
+        // background sweep must reconcile identically, or "in sync" means two things.
+        var syncResult = await keySyncService.SyncNodeAsync(node, Ct(context)).ConfigureAwait(false);
+        if (syncResult is null)
             return new SyncNodeIntegrationKeysResponse { ErrorCode = ErrorCodes.RouterUnavailable };
-        }
+
+        return new SyncNodeIntegrationKeysResponse
+        {
+            AddedCount = syncResult.AddedCount,
+            DisabledCount = syncResult.DisabledCount,
+            ReactivatedCount = syncResult.ReactivatedCount,
+            DeletedCount = syncResult.DeletedCount
+        };
     }
 
     public override async Task<CheckNodeIntegrationKeysSyncResponse> CheckNodeIntegrationKeysSync(

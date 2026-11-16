@@ -396,12 +396,27 @@ public sealed class GrpcRouterControlPlaneServiceTests
         IControlPlaneRepository? repo = null,
         IRouterNodeProvider? providerClient = null)
     {
+        var authClient = new Moq.Mock<AuthGrpc.AuthServiceClient>().Object;
+        var effectiveRepo = repo ?? new InMemoryControlPlaneRepository();
+        var effectiveProvider = providerClient ?? NoOpProviderClient;
         return new GrpcRouterControlPlaneService(
             control,
-            repo ?? new InMemoryControlPlaneRepository(),
-            providerClient ?? NoOpProviderClient,
-            new Moq.Mock<AuthGrpc.AuthServiceClient>().Object,
+            effectiveRepo,
+            effectiveProvider,
+            new OpenRussiaRouter.ControlPlane.Application.Services.IntegrationKeySyncService(
+                control,
+                effectiveProvider,
+                new EmptyKeySource(),
+                NullLogger<OpenRussiaRouter.ControlPlane.Application.Services.IntegrationKeySyncService>.Instance),
+            authClient,
             NullLogger<GrpcRouterControlPlaneService>.Instance);
+    }
+
+    private sealed class EmptyKeySource : OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration.IIntegrationKeySource
+    {
+        public Task<IReadOnlyList<OpenRussiaRouter.ControlPlane.Application.Contracts.RouterIntegrationKeySyncEntry>?> LoadAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<OpenRussiaRouter.ControlPlane.Application.Contracts.RouterIntegrationKeySyncEntry>?>([]);
     }
 
     private static async Task<RouterControlPlaneService> CreateControlPlaneWithHealthyNodeAsync()

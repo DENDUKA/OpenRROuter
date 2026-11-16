@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using OpenRussiaRouter.ControlPlane.Application.Abstractions.Integration;
 using OpenRussiaRouter.ControlPlane.Application.Abstractions.Persistence;
 using OpenRussiaRouter.ControlPlane.Application.Services;
+using OpenRussiaRouter.ControlPlane.Infrastructure.Grpc;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Http;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Persistence;
 using OpenRussiaRouter.ControlPlane.Infrastructure.Repository;
@@ -41,10 +42,13 @@ public static class ControlPlaneExtensions
         services.AddSingleton<RouterNodeProviderCacheStore>();
         services.AddHttpClient<RouterNodeProvider>(c => c.Timeout = TimeSpan.FromSeconds(10));
         services.AddTransient<IRouterNodeProvider, CachedRouterNodeProvider>();
+        services.AddTransient<IIntegrationKeySource, AuthIntegrationKeySource>();
+        services.AddTransient<IntegrationKeySyncService>();
         services.AddHostedService<RouterHealthCheckWorker>();
         services.AddHostedService<RouterLeaseCleanupWorker>();
         services.AddHostedService<RouterNodeSnapshotRefresher>();
         services.AddHostedService<CapabilityReplicaRefresher>();
+        services.AddHostedService<IntegrationKeySyncWorker>();
 
         return services;
     }

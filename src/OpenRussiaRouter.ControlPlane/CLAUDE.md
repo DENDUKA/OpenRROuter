@@ -12,7 +12,8 @@ Seq-логирование + OTel-метрики → `Startup.ConfigureServices`
 `MapGrpcService<GrpcRouterControlPlaneService>` + контроллеры + `/health`.
 
 - Все опции — `ValidateDataAnnotations().ValidateOnStart()`: секции `RouterHealthChecks`,
-  `RouterNodeProviderCache`, `RouterLeaseCleanup`, `RouterNodeSnapshot`, `CapabilityReplica`. Невалидный конфиг роняет старт.
+  `RouterNodeProviderCache`, `RouterLeaseCleanup`, `RouterNodeSnapshot`, `CapabilityReplica`,
+  `IntegrationKeySync`. Невалидный конфиг роняет старт.
 - gRPC-клиенты: **Auth** (`GrpcServices:Auth`, дефолт `http://localhost:5001`) и **Collector**
   (`GrpcServices:Collector`, `:5005`) — keep-alive + `GrpcDeadlineInterceptor`.
 - **`ConnectionStrings:ControlPlaneDb`** (именно так, не `ControlDb`). Пустая строка ⇒
@@ -34,14 +35,14 @@ Seq-логирование + OTel-метрики → `Startup.ConfigureServices`
 | Слой | Где | Что |
 |---|---|---|
 | Domain | `Domain/` | `RouterNode` (логика статуса/лизинга/валидации внутри: `Lease()`, `Release()`, `ApplyHealth()`, `Update()`, `UpdateControlToken()`, `Disable()`/`Enable()`), `RouterLease` (record), `RouterNodeStatus` |
-| Application | `Application/Services` | `RouterControlPlaneService` (фасад), `NodeModelCapabilityStore`, `RouterNodeSnapshotStore` |
-| Application | `Application/Abstractions` | `IControlPlaneRepository`, `IRouterNodeProvider`, `IRouterNodeHealthProvider` |
+| Application | `Application/Services` | `RouterControlPlaneService` (фасад), `NodeModelCapabilityStore`, `RouterNodeSnapshotStore`, `IntegrationKeySyncService` (общий путь синка ключей) |
+| Application | `Application/Abstractions` | `IControlPlaneRepository`, `IRouterNodeProvider`, `IRouterNodeHealthProvider`, `IIntegrationKeySource` |
 | Application | `Application/Contracts` | DTO admin API нод + `RouterNodeProviderException` |
-| Application | `Application/Options` | `RouterHealthCheckOptions`, `RouterLeaseCleanupOptions`, `RouterNodeSnapshotOptions`, `RouterNodeProviderCacheOptions`, `CapabilityReplicaOptions` |
+| Application | `Application/Options` | `RouterHealthCheckOptions`, `RouterLeaseCleanupOptions`, `RouterNodeSnapshotOptions`, `RouterNodeProviderCacheOptions`, `CapabilityReplicaOptions`, `IntegrationKeySyncOptions` |
 | Application | `Application/Extensions` | `AddControlPlaneInfrastructure()` / `AddControlPlaneApplicationServices()` |
-| Infrastructure | `Infrastructure/Grpc` | `GrpcRouterControlPlaneService` — gRPC-фасад + оркестрация key-sync |
+| Infrastructure | `Infrastructure/Grpc` | `GrpcRouterControlPlaneService` — gRPC-фасад; `AuthIntegrationKeySource` — источник ключей из AuthService |
 | Infrastructure | `Infrastructure/Http` | `RouterNodeProvider` (admin API 9Router), `CachedRouterNodeProvider` + `RouterNodeProviderCacheStore`, `RouterNodeHealthProvider`, `HealthController` |
-| Infrastructure | `Infrastructure/Workers` | `RouterHealthCheckWorker`, `RouterLeaseCleanupWorker`, `RouterNodeSnapshotRefresher`, `CapabilityReplicaRefresher` (**воркеры живут здесь, не в Application/Services**) |
+| Infrastructure | `Infrastructure/Workers` | `RouterHealthCheckWorker`, `RouterLeaseCleanupWorker`, `RouterNodeSnapshotRefresher`, `CapabilityReplicaRefresher`, `IntegrationKeySyncWorker` (**воркеры живут здесь, не в Application/Services**) |
 | Infrastructure | `Infrastructure/Persistence` | Dapper-entity, `ControlPlanePersistenceMapper`, connection factory |
 | Infrastructure | `Infrastructure/Repository` | `ControlPlaneRepository` (PG) + `InMemoryControlPlaneRepository` |
 
@@ -145,17 +146,41 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 
 ## Синхронизация ключей — `GrpcRouterControlPlaneService` ([файл](Infrastructure/Grpc/GrpcRouterControlPlaneService.cs))
 
+- **Два пути, одна реализация.** `SyncNodeIntegrationKeys` (RPC, кнопка в админке) и
+  `IntegrationKeySyncWorker` (фон) оба идут через
+  [`IntegrationKeySyncService`](Application/Services/IntegrationKeySyncService.cs). Дублировать логику
+  нельзя: иначе «в синке» будет означать две разные вещи.
 - **`PushUserIntegrationKey`**: пушит ключ на все enabled-ноды (или одну `NodeId`) через
   `CreateIntegrationKeyAsync`; маппинг `(apiKeyId, nodeId, routerKeyId)` → `control.integration_key_sync`
   (`SaveIntegrationKeyMappingAsync`). Ошибки по нодам — log warning, весь пуш не валят,
   в ответе только `pushed_count`.
+- **Пуш при создании ключа — best-effort, поэтому есть воркер.** WebApp логирует неудачу и всё равно
+  отдаёт ключ пользователю (ключ уже в AuthService), так что нода, лежавшая в тот момент, или
+  зарегистрированная позже с пустой таблицей ключей, осталась бы навсегда без ключей и отвечала 401
+  на весь трафик — ретраить было некому. `IntegrationKeySyncWorker` раз в
+  `IntegrationKeySync:Interval` (дефолт 10 мин, `InitialDelay` 30 с) делает полный sweep по всем
+  enabled-нодам. Bulk-эндпоинт ноды идемпотентен и диффовый, поэтому sweep — один HTTP-вызов на ноду
+  и лечит все виды расхождения сразу (пропавшие ключи, протухшие флаги активности, отозванные пока
+  нода лежала). Логирует только когда что-то реально поехало.
+- **`IIntegrationKeySource`** — абстракция над AuthService (реализация
+  [`AuthIntegrationKeySource`](Infrastructure/Grpc/AuthIntegrationKeySource.cs)). Возвращает `null`
+  при недоступности, и это критично: пустой список нода прочитала бы как «все ключи удалены» и
+  снесла бы весь парк.
 - **`UpdateUserIntegrationKeyStatus`**: по маппингам → `UpdateIntegrationKeyStatusAsync(is_active)`.
   **Маппинг НЕ удаляет** — связь нужна для последующего полного удаления.
 - **`DeleteUserIntegrationKey`**: `DeleteIntegrationKeyAsync` по каждому маппингу, затем
   `RemoveIntegrationKeyMappingsAsync` (чистим только после попытки физического удаления).
 - **`SyncNodeIntegrationKeys`**: тянет из **AuthService** `ListAllNonDeletedApiKeysRawAsync`
   (именно non-deleted, а не только активные — неактивные уезжают с `IsActive=false`) и bulk-пушит
-  на ноду; возвращает added/disabled/reactivated/deleted.
+  на ноду; возвращает added/disabled/reactivated/deleted. В ответе ноды есть ещё `adoptedCount`
+  (см. ниже), в контракт ORR он сознательно не проброшен.
+- **Нода обязана принимать bulk sync.** Контракт с нодой: `POST /api/integrations/keys/sync`.
+  У kRouter исторически был баг — поиск существующих ключей только среди `managedBy='openrussia-router'`
+  при `UNIQUE(apiKeys.key)`: ключ, лежавший ручной строкой, не находился, `INSERT` падал, транзакция
+  откатывалась целиком, и нода оставалась **без единого** ключа сервиса (снаружи — непрозрачный
+  HTTP 500 от ноды и 401 на весь трафик). Починен на стороне ноды (`adoptedCount`), но при
+  диагностике «нода отдаёт 401» первым делом проверяй именно это: `GET /api/integrations/keys`
+  должен возвращать ключи, а не `{"keys":[]}`.
 - **`CheckNodeIntegrationKeysSync`**: read-only предпросмотр расхождений для админки
   (`/admin/nodes/{id}`), ничего не пишет. Сравнивает ключи БД с ключами ноды, **сопоставляя
   `dbKey.RawKey` с `nodeKey.Id`**; на удаление считает только ключи ноды с `managed_by == "service"`.
@@ -189,6 +214,7 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 | `RouterLeaseCleanup:Enabled` / `Interval` | `true` / 30с | prod: 1мин |
 | `RouterNodeSnapshot:Enabled` / `RefreshInterval` | `true` / 10с | hot-path читает только этот снимок; пустой снимок имеет стартовый DB fallback |
 | `CapabilityReplica:Enabled` / `RefreshInterval` | `true` / 1мин | опрос коллектора |
+| `IntegrationKeySync:Enabled` / `Interval` / `InitialDelay` | `true` / 10мин / 30с | фон-sweep ключей по всем enabled-нодам |
 | `GrpcServices:Auth` / `:Collector` / `:CallDeadlineSeconds` | `:5001` / `:5005` / 30 | `Collector` есть в `appsettings.json`, `Auth` — только дефолт в коде |
 | `ConnectionStrings:ControlPlaneDb` | пусто | пусто ⇒ in-memory репозиторий |
 
@@ -202,7 +228,7 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 | `control_token` в БД = имя секрета | `control_token` = **реальное значение токена**, шлётся напрямую `Bearer` (историческое имя колонки `token_secret_name` переименовано миграцией 002) |
 | `RouterHealthChecks:NodeTokens` резолвит токен | Такой логики нет — провайдеры берут `node.ControlToken` |
 | Валидация `control_token`/endpoint где-то в инфраструктуре | Уже в доменной сущности `RouterNode` (endpoint — только http/https, http разрешён для ClusterIP) — **не флагать как пропуск** |
-| Воркеры лежат в `Application/Services` | Все четыре — в `Infrastructure/Workers` |
+| Воркеры лежат в `Application/Services` | Все пять — в `Infrastructure/Workers` |
 | Capability-store можно спрашивать публичным `ModelId` | Только `RouterModelId` |
 | В капабилити-сторе `ConcurrentDictionary` / lock-free чтение | Обычный `Dictionary` под `lock` |
 
@@ -228,8 +254,12 @@ provider status (`PATCH .../providers/{id}/status`), integration keys (`GET/POST
 `tests/OpenRussiaRouter.ControlPlane.Tests` — unit на `InMemoryControlPlaneRepository` + фейковые
 провайдеры (`RouterControlPlaneServiceTests`, `GrpcRouterControlPlaneServiceTests`,
 `CapabilityReplicaRefresherTests`, `RouterHealthCheckWorkerTests`, `RouterLeaseCleanupWorkerTests`,
-`RouterNodeSnapshotRefresherTests`,
+`RouterNodeSnapshotRefresherTests`, `IntegrationKeySyncWorkerTests`,
 `CachedRouterNodeProviderTests`, `RouterNodeProviderClientTests`, `HttpRouterNodeHealthClientTests`) и
 Postgres-интеграционные на Testcontainers (`ControlPlaneRepositoryPostgresTests`,
 `GrpcRouterControlPlaneServicePostgresIntegrationTests`, `PostgresTestDatabase`). Переопределение
 строки подключения — `ORR_CONTROL_POSTGRES_TEST_CONNECTION` (тесты не включает, только переопределяет).
+
+`IntegrationKeySyncWorkerTests` держит два инварианта воркера: sweep покрывает **все** enabled-ноды
+и падение одной не лишает ключей остальные; плюс отозванный ключ обязан уехать с `IsActive=false`,
+а не быть пропущенным (пропуск нода читает как удаление).

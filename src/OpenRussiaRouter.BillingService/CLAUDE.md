@@ -166,7 +166,7 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
  По образцу `PaymentStartupGuard`; ни в коем случае не ослаблять — иначе интерцептору не с чем
   сравнивать токен, и любой, кто дотянется до порта 5002, обходят s2s полностью.
 
-## Схема БД (`db/migrations/billing/`, 30 файлов)
+## Схема БД (`db/migrations/billing/`, 36 файлов)
 
 | Таблица | Что |
 |---|---|
@@ -183,6 +183,22 @@ constant-time, затем caller проверяется по `ServiceAuth:Method
 
 `UpsertModelAsync` мержит описания хитро: перезаписывает описания/контекст/модальности только когда
 пришёл `description_source`, иначе `COALESCE` — ручные правки не затираются авто-обогащением.
+
+### `router_model_id` может указывать на комбо, а не на `provider/model`
+
+`gemini-4-argon` и `gemini-4-hydrogen` (миграция 034) держат в `router_model_id` **имя комбо
+ноды** (`gemini-4-argon` / `gemini-4-hydrogen`), а не пару `ag/<model>`. Это штатно: на ноде
+kRouter комбо резолвится раньше пары провайдер/модель, а `/api/integrations/providers/with-models`
+отдаёт комбо отдельным подключением `provider="combo"`, поэтому ControlPlane видит их как обычные
+модели. Смысл — зафиксировать публичный id: внутри комбо сейчас лежит ровно один `medium`-тир
+(`ag/gemini-4-argon-medium`), и смену тира можно сделать на ноде, не трогая каталог и не ломая
+сохранённые конфиги клиентов.
+
+Цена обеих — 0.80/4.00 $ за 1M (input/output), priority 100 у Argon и 95 у Hydrogen.
+⚠️ Argon с 2026-11-17 отдаёт `MODEL_CAPACITY_EXHAUSTED` (Google: «No capacity available for
+model … on the server») при живой квоте ~99%: запрос висит до таймаута, затем 503. Hydrogen
+на том же аккаунте и прокси отвечает за 5–11 с. Если Argon в каталоге мешает — выключать
+через `enabled=false`, а не удалять строку.
 
 ## Конфигурация
 
